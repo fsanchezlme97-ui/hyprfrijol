@@ -41,12 +41,18 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 
 ## Capturas
 
-> Por ahora son los renders del prototipo (`design/capturas/`, con datos de ejemplo). Sustitúyelos por capturas reales antes de publicar.
+Capturas reales del shell a 1920×1080, en una sesión de prueba con los fondos incluidos en `assets/wallpapers/`.
 
-| Escritorio | Spotlight | Ajustes |
-|---|---|---|
-| ![Escritorio](design/capturas/Main.png) | ![Spotlight](design/capturas/SpotlightClaro.png) | ![Ajustes](design/capturas/Ajustes.png) |
-| ![Vista general](design/capturas/VistaGeneral.png) | ![Selector de fondos](design/capturas/SelectorFondos.png) | ![Login](design/capturas/Login.png) |
+| | |
+|---|---|
+| ![Escritorio con la barra y los widgets](docs/capturas/escritorio.webp) | ![Centro de control en tema claro](docs/capturas/centro-de-control.webp) |
+| **Escritorio** · barra en archipiélago, widgets de clima, sistema y agenda; colores tomados del fondo | **Centro de control** · ajustes rápidos, notificaciones y agenda en un solo panel (tema claro) |
+| ![Spotlight con resultados](docs/capturas/spotlight.webp) | ![Ajustes › Apariencia con la paleta Rosé Pine](docs/capturas/ajustes-apariencia.webp) |
+| **Spotlight** · apps, acciones, archivos, calculadora, IA y web desde un solo buscador | **Ajustes › Apariencia** · estilos Aurora, Material, Mica y Suave, y 45 paletas (aquí Rosé Pine) |
+| ![Asistente de IA en el panel lateral](docs/capturas/asistente-ia.webp) | ![Vista general de los espacios de trabajo](docs/capturas/vista-general.webp) |
+| **Asistente de IA** · panel lateral que responde y cambia el escritorio con tu aprobación | **Vista general** · espacios de trabajo con sus ventanas y buscador |
+| ![Selector de fondos](docs/capturas/selector-de-fondos.webp) | ![Terminal kitty con los colores del tema](docs/capturas/terminal.webp) |
+| **Selector de fondos** · vista previa al instante, por pantalla o según la hora | **Terminal** · kitty, Qt/KDE, GTK y btop siguen la paleta activa |
 
 ## Instalación
 
@@ -160,7 +166,7 @@ scripts/           hf-session, hf-apply, hf-wallpaper, hf-profile, hf-lock, hf-c
 assets/wallpapers/ fondos incluidos
 greeter/           login con greetd
 dev/               try.sh (sesión anidada + captura) y DESARROLLO.md
-docs/              ARQUITECTURA.md, IA.md, AJUSTES.md
+docs/              ARQUITECTURA.md, IA.md, AJUSTES.md y capturas/ (las del README)
 design/            prototipo y capturas de cada pantalla
 ```
 

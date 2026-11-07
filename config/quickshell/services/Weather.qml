@@ -118,7 +118,8 @@ Singleton {
         return m < 1 ? "ahora mismo" : m < 60 ? "hace " + m + " min" : "hace " + Math.round(m / 60) + " h";
     }
 
-    Timer { running: root.users > 0; repeat: true; interval: 30 * 60 * 1000; triggeredOnStart: true; onTriggered: root.refresh() }
+    // Esperar a Settings: si no, la primera vuelta no ve la ciudad fija ni weatherIpLocation = false y pregunta por IP
+    Timer { running: root.users > 0 && Settings.loaded; repeat: true; interval: 30 * 60 * 1000; triggeredOnStart: true; onTriggered: root.refresh() }
     onSetLatChanged: if (users > 0) refresh()
     onSetLonChanged: if (users > 0) refresh()
 
@@ -146,6 +147,7 @@ Singleton {
                     const g = JSON.parse(text);
                     const ll = g.latitude !== undefined ? [g.latitude, g.longitude] : String(g.loc ?? "").split(",").map(Number);
                     if (ll.length !== 2 || isNaN(ll[0]) || isNaN(ll[1])) throw "sin ubicación";
+                    if (!isNaN(root.setLat) && !isNaN(root.setLon)) return;   // entretanto se puso una ciudad fija
                     root.loc = { lat: ll[0], lon: ll[1], city: g.city ?? "" };
                     if (root.users > 0) root.fetchWeather();
                     else { Quickshell.execDetached(["sh", "-c", 'mkdir -p "$1"', "sh", Paths.cache]); cache.setText(JSON.stringify({ loc: root.loc, data: root.lastData })); }
