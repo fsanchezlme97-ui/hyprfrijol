@@ -1,0 +1,10 @@
+# matugen genera la paleta (Material You) a partir del fondo (modo de color «Automático»).
+# Quickshell (Theme.qml) la lee y hf-apply lleva los colores a Hyprland y hyprlock.
+# hf-wallpaper sustituye @ROOT@ y @STATE@ y guarda una copia en ~/.local/state/hyprfrijol/matugen.toml,
+# así nunca toca ~/.config/matugen ni la configuración de otros shells.
+[config]
+version_check = false
+
+[templates.quickshell]
+input_path  = '@ROOT@/config/matugen/templates/colors.json'
+output_path = '@STATE@/colors.json'

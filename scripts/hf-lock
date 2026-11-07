@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# hf-lock — bloquea la sesión con la pantalla de bloqueo de hyprfrijol (Quickshell, módulo «lock»).
+# Si el shell no está en marcha (o no responde), usa hyprlock como respaldo. Una sola instancia.
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
+if [ "${HF_TRY:-}" = 1 ]; then echo "[hf-lock] (HF_TRY) bloquear"; exit 0; fi
+timeout 3 qs -p "$ROOT/config/quickshell" ipc call lock lock >/dev/null 2>&1 && exit 0
+pidof hyprlock >/dev/null || exec hyprlock -c "$ROOT/config/hypr/hyprlock.conf" "$@"

@@ -1,0 +1,1880 @@
+#!/usr/bin/env python3
+"""hf-ai — asistente de hyprfrijol (lo usan el panel lateral, el Spotlight «?» y hf-mcp).
+
+  hf-ai chat '<json>'        {"messages":[{"role":"user|ai","text":"…","images":["/ruta.png"]}], "context":{"window":true,"clipboard":true,"capture":false}}
+                             → {"text": "...", "actions": [...], "labels": [...], "code": "...", "error": null}
+  hf-ai ask "pregunta"       atajo de terminal: responde en texto plano
+  hf-ai apply '<acciones>'   aplica acciones al shell y guarda cómo deshacerlas → {"undo": "<id>", "labels": [...]}
+  hf-ai undo <id>            deshace un apply
+  hf-ai labels '<acciones>'  etiquetas en español de unas acciones (+ plan: ¿se puede deshacer?, ¿pide confirmación?)
+  hf-ai query <tipo> [texto] consulta de solo lectura: windows | active_window | screen | notifications | files <texto> |
+                             apps <texto> | settings <filtro> | system | timers   (o un JSON {"type":…})
+  hf-ai tool <nombre> '<json>'  herramienta (las mismas que hf-mcp): hf-ai tools las lista
+  hf-ai summon               atajo Super+Ctrl+A: guarda la ventana activa (y su captura) y abre el asistente con ella
+  hf-ai timers               temporizadores en marcha (acción "timer")
+  hf-ai handoff '<json>'     copia la conversación y la abre en Claude Desktop (o `claude` en kitty)
+  hf-ai attach <origen>…     adjunta imágenes al chat: clipboard | pick (selector de archivos) | - (base64 por stdin)
+                             | ruta | file://… | https://…  → {"images": [rutas], "error": …}
+  hf-ai capture [imagen]     captura de pantalla (o la imagen dada) + OCR (tesseract) → texto para el contexto
+  hf-ai status               proveedor y disponibilidad
+  hf-ai chat --print-request '<json>'   no llama al modelo: imprime la petición que enviaría (sin la clave)
+  hf-ai models [gemini]      modelos disponibles del proveedor → {"models": [[id, nombre]…], "error": …}
+  hf-ai test                 prueba la conexión con el proveedor → {"ok": bool, "text": "…"}
+  hf-ai transform "instrucción" < texto   aplica la instrucción al texto y lo imprime en plano (hf-dictate)
+  hf-ai key status|set|clear gemini   clave de Gemini: set la lee de stdin (o de HF_AI_KEY_IN), nunca de argv
+
+Proveedor (Ajustes › IA, settings.json):
+  aiProvider  "claude-code" (CLI `claude -p`, por defecto) | "ollama" | "openai-compatible" | "gemini" | "off"
+  aiModel     p. ej. "haiku" / "sonnet" (claude-code), "llama3.2" (ollama), "gpt-4o-mini", "gemini-2.5-flash"…
+  aiEndpoint  http://localhost:11434 (ollama) · https://api…/v1 (openai-compatible)
+  aiKeyEnv    variable de entorno con la clave (openai-compatible), por defecto HF_AI_KEY
+  Gemini      clave de https://aistudio.google.com/apikey: $GEMINI_API_KEY / $GOOGLE_API_KEY, o guardada con
+              `hf-ai key set gemini` en el llavero (secret-tool) o en ~/.config/hyprfrijol/secrets/gemini.key (600)
+Permisos (Ajustes › IA): aiContextCapture (leer capturas adjuntas y la pantalla), aiTerminal (proponer comandos),
+  aiControlShell (proponer/aplicar cambios al shell; también lo respeta hf-mcp), aiConfirm (lo aplica el panel),
+  aiReadDesktop (consultas de solo lectura: ventanas, avisos, archivos, estado), aiContextWindow (ventanas).
+Acciones: ajustes (cualquier clave de settings.json salvo las de la IA, comandos, red y seguridad), fondo, espacios,
+  ventanas (enfocar/cerrar/mover/…), abrir apps y webs, música, volumen, brillo, no molestar, cafeína, temporizadores,
+  pomodoro, borrar avisos, perfiles, vistas y comandos de terminal (siempre con confirmación). Casi todas se deshacen.
+Consultas: el modelo puede pedir datos con un bloque ```hf-query``` (hasta 3 rondas) antes de responder.
+Imágenes: con visión (claude-code por stream-json, Gemini inline_data, OpenAI image_url, Ollama si el modelo tiene
+  "vision") se mandan reducidas a 1568 px (ImageMagick); si no, su texto por OCR. aiVision true/false lo fuerza.
+Pruebas sin gastar: aiProvider "mock" responde con la lista JSON de $HF_AI_MOCK o ~/.cache/hyprfrijol/ai-mock.json.
+"""
+import json, os, re, subprocess, sys, time, pathlib, shutil, urllib.request, urllib.error
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+HOME = pathlib.Path.home()
+ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
+STATE = HOME / ".local/state/hyprfrijol"
+UNDO = HOME / ".cache/hyprfrijol/undo"
+SETTINGS = HOME / ".config/hyprfrijol/settings.json"
+QS = ["qs", "-p", str(ROOT / "config/quickshell")]
+
+# ---------------------------------------------------------------- ajustes
+def load(p, d=None):
+    try:
+        return json.loads(pathlib.Path(p).read_text())
+    except Exception:
+        return d
+
+def settings():
+    s = dict(load(ROOT / "config/defaults/settings.json", {}) or {})
+    s.update(load(SETTINGS, {}) or {})
+    return s
+
+def jrun(cmd):
+    try:
+        return json.loads(run(cmd) or "{}") or {}
+    except Exception:
+        return {}
+
+def run(cmd, timeout=10, input=None):
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, input=input)
+        return r.stdout.strip()
+    except Exception:
+        return ""
+
+# ---------------------------------------------------------------- acciones del shell
+# Esquema fijo: el modelo solo puede proponer estas acciones. Cada una tiene etiqueta en español y, casi
+# todas, forma de deshacerse (do_apply guarda el estado anterior; do_undo lo restaura en orden inverso).
+SET_KEYS = {
+    "estilo": ("Estilo", {"flat": "Material", "aurora": "Aurora", "mica": "Mica", "suave": "Suave"}),
+    "colorMode": ("Color", {"auto": "Automático (del fondo)", "elegir": "Paleta elegida", "mono": "Monocromo"}),
+    "palette": ("Paleta", {"grafito": "Grafito", "pizarra": "Pizarra", "claro": "Claro", "lavanda": "Lavanda",
+                           "verde": "Verde", "ambar": "Ámbar", "azul": "Azul", "rosa": "Rosa pastel",
+                           "menta": "Menta pastel", "lila": "Lila pastel", "melocoton": "Melocotón pastel",
+                           "cielo": "Cielo pastel"}),
+    "themeMode": ("Tema", {"oscuro": "Oscuro", "claro": "Claro", "auto": "Automático (por horas o según el sol)"}),
+    "barPos": ("Barra", {"abajo": "abajo", "arriba": "arriba", "izquierda": "lateral izquierda"}),
+    "barMode": ("Barra", {"fija": "fija", "flotante": "flotante"}),
+    "animado": ("Animaciones", {True: "activadas", False: "desactivadas"}),
+    "animPreset": ("Movimiento", {"fluido": "fluido", "equilibrado": "equilibrado", "rapido": "rápido",
+                                  "minimo": "mínimo (solo fundidos)", "ninguno": "sin animaciones"}),
+    "shadows": ("Sombras", {"ninguna": "ninguna", "suaves": "suaves", "marcadas": "marcadas"}),
+    "activeBorder": ("Resaltado de la ventana activa", {"sutil": "sutil", "color": "color", "brillo": "brillo",
+                                                        "ninguno": "ninguno"}),
+    "reduceTransparency": ("Reducir transparencia", {True: "sí", False: "no"}),
+    "reduceMotion": ("Reducir movimiento", {True: "sí", False: "no"}),
+    "gapsIn": ("Huecos interiores", None),
+    "gapsOut": ("Huecos exteriores", None),
+    "pipSize": ("Tamaño del PiP", {"minimo": "mínimo", "pequeno": "pequeño", "mediano": "mediano", "grande": "grande"}),
+    "pipCorner": ("Esquina del PiP", {"sup-der": "arriba a la derecha", "sup-izq": "arriba a la izquierda",
+                                       "inf-der": "abajo a la derecha", "inf-izq": "abajo a la izquierda"}),
+    "deskSort": ("Escritorio ordenado por", {"tipo": "tipo", "fecha": "fecha", "nombre": "nombre"}),
+    "notifyPosition": ("Posición de los avisos", {"auto": "según la barra", "sup-der": "arriba a la derecha",
+                                                   "sup-centro": "arriba en el centro", "sup-izq": "arriba a la izquierda",
+                                                   "inf-der": "abajo a la derecha", "inf-centro": "abajo en el centro",
+                                                   "inf-izq": "abajo a la izquierda"}),
+    "nightLight": ("Luz nocturna", {True: "activada", False: "desactivada"}),
+    "clock24": ("Reloj de 24 horas", {True: "sí", False: "no"}),
+}
+VIEWS = {"spotlight": "Spotlight", "ajustes": "ajustes rápidos", "vista": "vista general", "agenda": "agenda",
+         "portapapeles": "portapapeles", "snap": "organizar ventanas", "energia": "menú de energía", "fondos": "selector de fondos",
+         "captura": "captura de pantalla", "perfiles": "perfiles", "widgets": "widgets", "actualizaciones": "actualizaciones",
+         "notificaciones": "notificaciones", "ajustesapp": "Ajustes", "herramientas": "centro de herramientas"}
+PROFILES = {"trabajo": "Trabajo", "diseno": "Diseño 3D", "juego": "Juego", "personal": "Personal"}
+WINDOW_OPS = {"focus": "Enfocar", "close": "Cerrar", "fullscreen": "Pantalla completa", "maximize": "Maximizar",
+              "float": "Hacer flotante", "tile": "Poner en mosaico", "pin": "Fijar encima", "move": "Mover",
+              "minimize": "Minimizar", "restore": "Recuperar"}
+MEDIA_OPS = {"play": "Reproducir", "pause": "Pausar", "play-pause": "Reproducir / pausar", "next": "Siguiente pista",
+             "previous": "Pista anterior", "stop": "Detener la música"}
+# Claves de settings.json que la IA NO puede tocar aunque existan (sus propios permisos, comandos, red, seguridad)
+DENY_KEYS = re.compile(r"^(ai[A-Z]|windowMode$|monitors$|kb|binds?$|keybinds|terminal$|browser$|fileManager$|codeEditor$|textEditor$"
+                       r"|office$|taskManager$|volumeMixer$|welcomeDone$|primaryMonitor$|printer|remote|vnc|cockpit|sync"
+                       r"|plugins|autostart|lock|idleLock|gpuMode|updatesSnapshot|weatherLat|weatherLon)"
+                       r"|(Cmd|Command|Exec|Script|Path|Paths|Url|Urls|Key|Keys|Token|Secret|Password|Env)$")
+# Etiquetas de claves frecuentes que no están en SET_KEYS
+KEY_LABELS = {"barHeight": "Alto de la barra", "fontScale": "Tamaño de letra", "uiScale": "Escala de la interfaz",
+              "nightTemp": "Temperatura de la luz nocturna", "notifyTimeout": "Duración de los avisos",
+              "notifySound": "Sonido de los avisos", "notifyHistory": "Historial de avisos", "pomodoroFocus": "Minutos de foco",
+              "pomodoroBreak": "Minutos de descanso", "idleDim": "Atenuar por inactividad", "idleScreenOff": "Apagar pantalla",
+              "idleSuspend": "Suspender por inactividad", "rounding": "Esquinas", "roundness": "Redondez", "accent": "Acento",
+              "blurQuality": "Desenfoque", "layout": "Disposición de ventanas", "systemSounds": "Sonidos del sistema",
+              "highContrast": "Alto contraste", "bigCursor": "Cursor grande", "barModules": "Módulos de la barra",
+              "wallpaperRandom": "Fondo al azar", "wallpaperRotateMin": "Cambiar de fondo cada (min)"}
+
+def defaults():
+    return load(ROOT / "config/defaults/settings.json", {}) or {}
+
+def settable(k, d=None):
+    if k in SET_KEYS:
+        return True
+    d = defaults() if d is None else d
+    if k not in d or DENY_KEYS.search(k):
+        return False
+    v = d[k]
+    return isinstance(v, (bool, int, float, str)) or (isinstance(v, list) and all(isinstance(x, str) for x in v))
+
+SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden: puedes encadenar varios pasos):
+- {"type":"set","key":K,"value":V}  ajustes del escritorio. Claves principales: estilo (flat|aurora|mica|suave),
+  colorMode (auto|elegir|mono), palette (grafito|pizarra|claro|lavanda|verde|ambar|azul|rosa|menta|lila|melocoton|cielo;
+  implica colorMode "elegir"), themeMode (oscuro|claro|auto), animPreset (fluido|equilibrado|rapido|minimo|ninguno),
+  shadows (ninguna|suaves|marcadas), activeBorder (sutil|color|brillo|ninguno), barPos (abajo|arriba|izquierda),
+  barMode (fija|flotante), animado, reduceTransparency, reduceMotion, nightLight, clock24 (bool), gapsIn (0-30),
+  gapsOut (0-40), pipSize (minimo|pequeno|mediano|grande), pipCorner (sup-der|sup-izq|inf-der|inf-izq),
+  deskSort (tipo|fecha|nombre), notifyPosition (auto|sup-der|sup-centro|sup-izq|inf-der|inf-centro|inf-izq).
+  Cualquier otra clave de settings.json vale con su mismo tipo: búscala antes con la consulta "settings".
+- {"type":"wallpaper","value":"next"|"prev"|"random"|"/ruta/absoluta.jpg"}
+- {"type":"workspace","value":N}             ir al espacio N (el 5 es el espacio flotante)
+- {"type":"window","op":OP,"target":T,"workspace":N}   OP: focus|close|fullscreen|maximize|float|tile|pin|move|minimize|restore;
+                                              T: "active" o parte de la clase/título («firefox», «kitty»); workspace solo con move
+- {"type":"winmode","value":"mosaico"|"desplazamiento"|"flotante"}   modo de ventanas (de todo el escritorio)
+- {"type":"launch","app":"firefox"}         abrir una app instalada (nombre, id .desktop o clase)
+- {"type":"url","value":"https://…"}         abrir una web en el navegador
+- {"type":"media","value":"play"|"pause"|"play-pause"|"next"|"previous"|"stop"}
+- {"type":"volume","value":0-100|"+5"|"-5"|"mute"|"unmute"}
+- {"type":"brightness","value":0-100|"+10"|"-10"}
+- {"type":"dnd","value":true|false,"minutes":60}   no molestar (minutes opcional)
+- {"type":"caffeine","value":true|false,"minutes":0}   cafeína: que no se apague ni suspenda la pantalla
+- {"type":"timer","minutes":10,"label":"Té"}  temporizador con aviso al acabar · {"type":"timer","cancel":"all"|ID}
+- {"type":"pomodoro","value":"start"|"pause"|"reset","minutes":25}
+- {"type":"focus","value":true|false}        modo sin distracciones
+- {"type":"notifications","op":"clear"}      borrar las notificaciones
+- {"type":"profile","value":"trabajo"|"diseno"|"juego"|"personal"}
+- {"type":"open","value":VISTA}             abrir: spotlight, ajustes, vista, agenda, portapapeles, snap, energia, fondos,
+                                             captura, perfiles, widgets, actualizaciones, notificaciones, ajustesapp, herramientas
+- {"type":"run","command":"…"}               comando de terminal; el usuario debe confirmarlo antes"""
+
+QUERY_DOC = """Consultas (solo lectura; se ejecutan solas y te devuelvo el resultado para que sigas):
+```hf-query
+[ {"type":"windows"} ]
+```
+Tipos: windows (ventanas abiertas) · active_window (la ventana activa y su texto por OCR) · screen (texto de la pantalla
+por OCR) · notifications (avisos sin leer e historial) · files {"query":"informe","ext":"pdf"} (buscar en la carpeta
+personal) · apps {"query":"editor"} (apps instaladas) · settings {"filter":"barra"} (claves de ajustes y su valor) ·
+system (volumen, brillo, batería, música, no molestar, cafeína, modo de ventanas) · timers (temporizadores en marcha).
+Usa una consulta solo si la necesitas de verdad; después responde (con hf-actions si hay que cambiar algo)."""
+
+SYSTEM_BASE = """Eres el asistente de hyprfrijol, un escritorio Hyprland en Linux. Respondes en español, breve y claro
+(2–5 frases salvo que pidan más). Puedes explicar, resumir, redactar, ayudar con la terminal y MANEJAR el escritorio.
+Si el usuario pide hacer algo en el escritorio (ventanas, apps, ajustes, música, volumen, temporizadores…), NO digas que
+no puedes: responde con una frase ("Puedo hacerlo. Estos son los pasos:") y añade AL FINAL un bloque
+```hf-actions
+[ ...acciones... ]
+```
+con SOLO acciones del esquema, en el orden en que deben hacerse. El usuario verá el plan y pulsará Aplicar (podrá
+deshacerlo); tú no las ejecutas. Para comandos de terminal usa la acción "run" (se ejecuta solo si el usuario confirma).
+No inventes claves, valores ni ventanas: si no sabes qué hay abierto o qué clave usar, consulta primero.
+Si nada del esquema sirve, explica cómo hacerlo a mano.
+"""
+
+def allowed(s=None):
+    """(puede cambiar el shell, puede proponer comandos) según Ajustes › IA."""
+    s = s or settings()
+    return s.get("aiControlShell", True) is not False, s.get("aiTerminal", True) is not False
+
+def can_read(s=None):
+    s = s or settings()
+    return s.get("aiReadDesktop", True) is not False
+
+def system_prompt(s=None):
+    s = s or settings()
+    shell, term = allowed(s)
+    read = QUERY_DOC if can_read(s) else ""
+    if shell and term:
+        return SYSTEM_BASE + SCHEMA_DOC + ("\n\n" + read if read else "")
+    if not shell and not term:
+        return ("Eres el asistente de hyprfrijol, un escritorio Hyprland en Linux. Respondes en español, breve y claro "
+                "(2–5 frases salvo que pidan más). Puedes explicar, resumir y redactar. No propongas cambios al "
+                "escritorio ni comandos para ejecutar: el usuario los ha desactivado; si los pide, explica cómo hacerlo a mano."
+                + ("\n\n" + read if read else ""))
+    doc = SCHEMA_DOC
+    if not term:
+        doc = doc.replace('\n- {"type":"run","command":"…"}               comando de terminal; el usuario debe confirmarlo antes', "")
+        return SYSTEM_BASE.replace('Para comandos de terminal usa la acción "run" (se ejecuta solo si el usuario confirma).\n',
+                                   "No propongas comandos de terminal para ejecutar (desactivado por el usuario).\n") + doc \
+            + ("\n\n" + read if read else "")
+    # solo terminal
+    return SYSTEM_BASE.split("Si el usuario pide hacer algo")[0] + (
+        "No puedes cambiar el escritorio (desactivado por el usuario); si lo piden, explica cómo hacerlo a mano.\n"
+        "Para comandos de terminal útiles añade AL FINAL un bloque\n```hf-actions\n[{\"type\":\"run\",\"command\":\"…\"}]\n```\n"
+        "que solo se ejecuta si el usuario lo confirma." + ("\n\n" + read if read else ""))
+
+SYSTEM = SYSTEM_BASE + SCHEMA_DOC   # compatibilidad (hf-mcp y otros)
+
+def _app_name(a):
+    return str(a.get("target") or a.get("app") or "").strip()
+
+def label(a):
+    t = a.get("type")
+    v = a.get("value")
+    if t == "set":
+        k = a.get("key")
+        name, vals = SET_KEYS.get(k, (KEY_LABELS.get(k, k), None))
+        shown = vals.get(v, v) if vals else v
+        if isinstance(shown, bool):
+            shown = "sí" if shown else "no"
+        if isinstance(shown, list):
+            shown = ", ".join(map(str, shown))
+        if k == "palette":
+            return f"Color: {shown}"
+        return f"{name}: {shown}" if k not in ("barPos", "barMode", "deskSort") else f"{name} {shown}"
+    if t == "wallpaper":
+        return {"next": "Siguiente fondo", "prev": "Fondo anterior", "random": "Fondo al azar"}.get(v, f"Fondo: {pathlib.Path(str(v)).name}")
+    if t == "workspace":
+        return f"Ir al espacio {v}" + (" (flotante)" if str(v) == "5" else "")
+    if t == "window":
+        op, tg = a.get("op"), _app_name(a)
+        who = "la ventana activa" if tg in ("", "active") else ("la ventana de " + tg if op in ("close", "focus", "move", "pin") else tg)
+        if op == "move":
+            return f"Mover {who} al espacio {a.get('workspace')}"
+        return f"{WINDOW_OPS.get(op, op)} {who}"
+    if t == "launch":
+        return f"Abrir {a.get('name') or a.get('app')}"
+    if t == "winmode":
+        return "Ventanas en " + {"mosaico": "mosaico", "desplazamiento": "desplazamiento (columnas)", "flotante": "modo flotante"}.get(v, str(v))
+    if t == "url":
+        return "Abrir " + re.sub(r"^https?://(www\.)?", "", str(v))[:40]
+    if t == "media":
+        return MEDIA_OPS.get(v, "Música")
+    if t == "volume":
+        return {"mute": "Silenciar el sonido", "unmute": "Quitar el silencio"}.get(v) or (
+            f"{'Subir' if str(v)[0] == '+' else 'Bajar'} el volumen un {str(v)[1:]} %" if str(v)[:1] in "+-" else f"Volumen al {v} %")
+    if t == "brightness":
+        return f"{'Subir' if str(v)[0] == '+' else 'Bajar'} el brillo un {str(v)[1:]} %" if str(v)[:1] in "+-" else f"Brillo al {v} %"
+    if t == "profile":
+        return f"Perfil: {PROFILES.get(v, v)}"
+    if t == "dnd":
+        return ("Activar No molestar" + (f" durante {a['minutes']} min" if a.get("minutes") else "")) if v else "Desactivar No molestar"
+    if t == "caffeine":
+        return ("Activar cafeína" + (f" durante {a['minutes']} min" if a.get("minutes") else "")) if v else "Desactivar cafeína"
+    if t == "timer":
+        if a.get("cancel"):
+            return "Cancelar " + ("todos los temporizadores" if a["cancel"] == "all" else "el temporizador")
+        m = a.get("minutes", 0)
+        dur = f"{int(m)} min" if float(m) >= 1 else f"{round(float(m) * 60)} s"
+        return f"Temporizador de {dur}" + (f": {a['label']}" if a.get("label") else "")
+    if t == "pomodoro":
+        return {"start": f"Iniciar pomodoro de {a.get('minutes', 25)} min", "pause": "Pausar pomodoro", "reset": "Reiniciar pomodoro"}.get(v, "Pomodoro")
+    if t == "focus":
+        return "Entrar en modo sin distracciones" if v else "Salir del modo sin distracciones"
+    if t == "notifications":
+        return "Borrar las notificaciones"
+    if t == "open":
+        return f"Abrir {VIEWS.get(v, v)}"
+    if t == "run":
+        return "Ejecutar en la terminal"
+    return str(a)
+
+def meta(a):
+    """Para la tarjeta del plan: ¿se puede deshacer? ¿pide confirmación aunque aiConfirm esté apagado?"""
+    t = a.get("type")
+    irreversible = (t == "window" and a.get("op") == "close") or t in ("notifications", "url", "run") \
+        or (t == "media" and a.get("value") == "stop")
+    return {"label": label(a), "undo": not irreversible, "confirm": irreversible and t != "url"}
+
+def _num(v):
+    if isinstance(v, bool):
+        raise ValueError
+    return float(v)
+
+def validate(actions):
+    ok = []
+    d = defaults()
+    for a in actions if isinstance(actions, list) else []:
+        if not isinstance(a, dict):
+            continue
+        a = dict(a)
+        t = a.get("type")
+        try:
+            if t == "set":
+                k, v = a.get("key"), a.get("value")
+                if not settable(k, d):
+                    continue
+                vals = SET_KEYS[k][1] if k in SET_KEYS else None
+                if vals is not None:
+                    if v not in vals:
+                        continue
+                elif k in ("gapsIn", "gapsOut"):
+                    a["value"] = max(0, min(60, int(v)))
+                else:
+                    dv = d.get(k)
+                    if isinstance(dv, bool):
+                        if not isinstance(v, bool):
+                            continue
+                    elif isinstance(dv, (int, float)):
+                        n = _num(v)
+                        a["value"] = int(round(n)) if isinstance(dv, int) else n
+                    elif isinstance(dv, str):
+                        if not isinstance(v, str) or len(v) > 80 or "\n" in v:
+                            continue
+                    elif isinstance(dv, list):
+                        if not isinstance(v, list) or len(v) > 40 or not all(isinstance(x, str) and len(x) < 60 for x in v):
+                            continue
+                    elif dv is None and k not in SET_KEYS:
+                        continue
+                ok.append(a)
+                if k == "palette" and not any(isinstance(x, dict) and x.get("key") == "colorMode" for x in actions):
+                    ok.append({"type": "set", "key": "colorMode", "value": "elegir"})
+            elif t == "wallpaper" and isinstance(a.get("value"), str):
+                ok.append(a)
+            elif t == "workspace":
+                a["value"] = int(a.get("value")); ok.append(a)
+            elif t == "window" and a.get("op") in WINDOW_OPS:
+                a["target"] = str(a.get("target") or "active")[:80]
+                if a["op"] == "move":
+                    a["workspace"] = int(a.get("workspace"))
+                ok.append(a)
+            elif t == "launch" and isinstance(a.get("app"), str) and a["app"].strip():
+                e = find_app(a["app"])
+                if e:
+                    a["desktop"], a["name"] = e["id"], e["name"]
+                    ok.append(a)
+            elif t == "url" and isinstance(a.get("value"), str) and re.match(r"^https?://\S+$", a["value"]):
+                ok.append(a)
+            elif t == "winmode" and a.get("value") in ("mosaico", "desplazamiento", "flotante"):
+                ok.append(a)
+            elif t == "media" and a.get("value") in MEDIA_OPS:
+                ok.append(a)
+            elif t == "volume":
+                v = a.get("value")
+                if v in ("mute", "unmute"):
+                    ok.append(a)
+                elif isinstance(v, str) and re.fullmatch(r"[+-]\d{1,3}", v):
+                    ok.append(a)
+                else:
+                    a["value"] = max(0, min(100, int(_num(v)))); ok.append(a)
+            elif t == "brightness":
+                v = a.get("value")
+                if isinstance(v, str) and re.fullmatch(r"[+-]\d{1,3}", v):
+                    ok.append(a)
+                else:
+                    a["value"] = max(1, min(100, int(_num(v)))); ok.append(a)
+            elif t == "profile" and a.get("value") in PROFILES:
+                ok.append(a)
+            elif t in ("dnd", "focus", "caffeine") and isinstance(a.get("value"), bool):
+                if a.get("minutes") is not None:
+                    a["minutes"] = max(0, min(1440, int(_num(a["minutes"]))))
+                ok.append(a)
+            elif t == "timer":
+                if a.get("cancel"):
+                    a["cancel"] = str(a["cancel"]); ok.append(a)
+                else:
+                    a["minutes"] = max(0.1, min(1440.0, _num(a.get("minutes"))))
+                    a["label"] = str(a.get("label") or "")[:60]
+                    ok.append(a)
+            elif t == "pomodoro" and a.get("value") in ("start", "pause", "reset"):
+                ok.append(a)
+            elif t == "notifications" and a.get("op") == "clear":
+                ok.append(a)
+            elif t == "open" and a.get("value") in VIEWS:
+                ok.append(a)
+            elif t == "run" and isinstance(a.get("command"), str) and a["command"].strip():
+                ok.append(a)
+        except Exception:
+            continue
+    return ok
+
+# ---- ventanas, apps, sonido, brillo, temporizadores
+def hypr(lua):
+    run(["hyprctl", "dispatch", lua])
+
+def clients():
+    try:
+        return [c for c in json.loads(run(["hyprctl", "clients", "-j"]) or "[]") if c.get("mapped", True)]
+    except Exception:
+        return []
+
+def find_window(target):
+    t = str(target or "active").strip().lower()
+    if t in ("", "active", "activa", "actual"):
+        w = jrun(["hyprctl", "activewindow", "-j"])
+        return w if w.get("address") else None
+    cs = clients()
+    if t.startswith("address:"):
+        t = t[8:]
+    if t.startswith("0x"):
+        return next((c for c in cs if c.get("address") == t), None)
+    def score(c):
+        cl, ic, ti = (c.get("class") or "").lower(), (c.get("initialClass") or "").lower(), (c.get("title") or "").lower()
+        if t in (cl, ic):
+            return 3
+        if t in cl or t in ic:
+            return 2
+        return 1 if t in ti else 0
+    m = [c for c in cs if score(c) > 0]
+    m.sort(key=lambda c: (-score(c), c.get("focusHistoryID", 99)))
+    return m[0] if m else None
+
+def wsel(w):
+    return f'window = "address:{w["address"]}"'
+
+def _desktop_dirs():
+    xdg = os.environ.get("XDG_DATA_DIRS", "/usr/local/share:/usr/share").split(":")
+    dirs = [HOME / ".local/share/applications", HOME / ".local/share/flatpak/exports/share/applications",
+            pathlib.Path("/var/lib/flatpak/exports/share/applications")] + [pathlib.Path(x) / "applications" for x in xdg if x]
+    seen, out = set(), []
+    for d in dirs:
+        if d.is_dir() and str(d) not in seen:
+            seen.add(str(d)); out.append(d)
+    return out
+
+def desktop_entries():
+    out, ids = [], set()
+    for d in _desktop_dirs():
+        for f in sorted(d.glob("*.desktop")):
+            if f.name in ids:
+                continue
+            ids.add(f.name)
+            e = {"id": f.stem}
+            try:
+                sect = False
+                for line in f.read_text(errors="ignore").splitlines():
+                    if line.startswith("["):
+                        sect = line.strip() == "[Desktop Entry]"; continue
+                    if not sect or "=" not in line:
+                        continue
+                    k, v = line.split("=", 1)
+                    if k in ("Name", "Name[es]", "GenericName[es]", "GenericName", "Exec", "NoDisplay", "Hidden",
+                             "StartupWMClass", "Keywords", "Keywords[es]", "Type"):
+                        e.setdefault(k, v.strip())
+            except Exception:
+                continue
+            if e.get("Type", "Application") != "Application" or e.get("NoDisplay") == "true" or e.get("Hidden") == "true":
+                continue
+            e["name"] = e.get("Name[es]") or e.get("Name") or f.stem
+            out.append(e)
+    return out
+
+def find_app(q, many=False):
+    q = str(q).strip().lower()
+    if not q:
+        return [] if many else None
+    res = []
+    for e in desktop_entries():
+        name, idl = e["name"].lower(), e["id"].lower()
+        wm = (e.get("StartupWMClass") or "").lower()
+        exe = os.path.basename((e.get("Exec") or "").split(" ")[0]).lower()
+        kw = " ".join([e.get("GenericName[es]", ""), e.get("GenericName", ""), e.get("Keywords[es]", ""), e.get("Keywords", "")]).lower()
+        if q in (name, idl, wm, exe) or idl.endswith("." + q):
+            sc = 4
+        elif name.startswith(q) or exe.startswith(q):
+            sc = 3
+        elif q in name or q in idl:
+            sc = 2
+        elif q in kw:
+            sc = 1
+        else:
+            continue
+        res.append((sc, e))
+    res.sort(key=lambda x: (-x[0], len(x[1]["name"])))
+    if many:
+        return [e for _, e in res[:12]]
+    return res[0][1] if res else None
+
+def volume_get():
+    out = run(["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"])
+    m = re.search(r"([\d.]+)", out)
+    return {"vol": round(float(m.group(1)) * 100) if m else None, "muted": "MUTED" in out}
+
+def volume_set(v=None, muted=None):
+    if v is not None:
+        run(["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", f"{max(0, min(100, v)) / 100:.2f}"])
+    if muted is not None:
+        run(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "1" if muted else "0"])
+
+def brightness_get():
+    out = run(["brightnessctl", "-m", "-c", "backlight"]).split("\n")[0]
+    m = re.search(r",(\d+)%", out)
+    return int(m.group(1)) if m else None
+
+TIMERS = STATE / "ai-timers.json"
+
+def timers_list():
+    now = time.time()
+    out = []
+    for t in load(TIMERS, []) or []:
+        try:
+            os.kill(int(t["pid"]), 0)
+        except Exception:
+            continue
+        if t.get("end", 0) > now:
+            out.append(t)
+    return out
+
+def timer_start(minutes, lab):
+    secs = max(5, int(round(float(minutes) * 60)))
+    tid = time.strftime("%H%M%S") + str(os.getpid())[-3:]
+    title = lab or "Temporizador"
+    body = f"Han pasado {int(minutes)} min" if float(minutes) >= 1 else f"Han pasado {secs} s"
+    script = ('sleep "$1" && { notify-send -u critical -a Temporizador -i alarm-clock "⏰ $2" "$3"; '
+              'canberra-gtk-play -i alarm-clock-elapsed 2>/dev/null || pw-play /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null; true; }')
+    p = subprocess.Popen(["sh", "-c", script, "sh", str(secs), title, body], stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+    ts = timers_list() + [{"id": tid, "pid": p.pid, "label": title, "end": time.time() + secs}]
+    STATE.mkdir(parents=True, exist_ok=True)
+    TIMERS.write_text(json.dumps(ts, ensure_ascii=False))
+    return tid
+
+def timer_cancel(which):
+    keep = []
+    for t in timers_list():
+        if which in ("all", t["id"]):
+            try:
+                os.killpg(int(t["pid"]), 15)
+            except Exception:
+                try:
+                    os.kill(int(t["pid"]), 15)
+                except Exception:
+                    pass
+        else:
+            keep.append(t)
+    TIMERS.write_text(json.dumps(keep, ensure_ascii=False))
+
+def caffeine_status():
+    out = run([str(ROOT / "scripts/hf-caffeine"), "status"])
+    return out.startswith("on")
+
+def snapshot():
+    """Estado actual para poder deshacer."""
+    s = settings()
+    return {
+        "settings": {k: s.get(k) for k in SET_KEYS},
+        "settingsPresent": list((load(SETTINGS, {}) or {}).keys()),
+        "wallpaper": (STATE / "wallpaper-path").read_text().strip() if (STATE / "wallpaper-path").exists() else None,
+        "profile": (STATE / "profile").read_text().strip() if (STATE / "profile").exists() else None,
+        "dnd": (STATE / "dnd").exists(),
+        "workspace": jrun(["hyprctl", "activeworkspace", "-j"]).get("id"),
+        "focus": run(QS + ["ipc", "call", "shell", "current"]) == "enfoque",
+    }
+
+def qs_call(*args):
+    run(QS + ["ipc", "call", *map(str, args)])
+
+def set_settings(changes):
+    if changes:
+        subprocess.run([str(ROOT / "scripts/hf-apply"), "set", *[f"{k}={json.dumps(v)}" for k, v in changes.items()]],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+def exec_action(a):
+    """Ejecuta una acción (ya validada) y devuelve cómo deshacerla (o None)."""
+    t, v = a["type"], a.get("value")
+    if t == "wallpaper":
+        subprocess.Popen([str(ROOT / "scripts/hf-wallpaper"), v], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    elif t == "workspace":
+        hypr(f"hl.dsp.focus({{ workspace = {int(v)} }})")
+    elif t == "profile":
+        subprocess.Popen([str(ROOT / "scripts/hf-profile"), v], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    elif t == "dnd":
+        if v and a.get("minutes"):
+            qs_call("notifs", "dndFor", int(a["minutes"]))
+        else:
+            qs_call("notifs", "setDnd", "true" if v else "false")
+    elif t == "pomodoro":
+        if v == "start":
+            qs_call("pomodoro", "start", int(a.get("minutes", 25)))
+        else:
+            qs_call("pomodoro", "toggle" if v == "pause" else "reset")
+    elif t == "focus":
+        qs_call("shell", "focus")
+    elif t == "open":
+        qs_call("shell", "open", v)
+    elif t == "window":
+        w = find_window(a.get("target"))
+        if not w:
+            return {"kind": "error", "msg": f"No encuentro la ventana «{a.get('target')}»"}
+        op, sel = a["op"], wsel(w)
+        prev = jrun(["hyprctl", "activewindow", "-j"]).get("address")
+        ws = (w.get("workspace") or {})
+        if op == "focus":
+            hypr(f"hl.dsp.focus({{ {sel} }})")
+            return {"kind": "focus", "addr": prev} if prev and prev != w["address"] else None
+        if op == "close":
+            hypr(f"hl.dsp.window.close({{ {sel} }})")
+            return None
+        if op in ("fullscreen", "maximize"):
+            lua = f'hl.dsp.window.fullscreen({{ mode = "{"fullscreen" if op == "fullscreen" else "maximized"}", action = "toggle", {sel} }})'
+            hypr(lua)
+            return {"kind": "lua", "lua": lua}
+        if op in ("float", "tile"):
+            hypr(f'hl.dsp.window.float({{ action = "{"enable" if op == "float" else "disable"}", {sel} }})')
+            was = bool(w.get("floating"))
+            return {"kind": "lua", "lua": f'hl.dsp.window.float({{ action = "{"enable" if was else "disable"}", {sel} }})'}
+        if op == "pin":
+            hypr(f"hl.dsp.focus({{ {sel} }})")
+            hypr("hl.dsp.window.pin()")
+            return {"kind": "pin", "addr": w["address"]}
+        dest = f'"special:minimized"' if op == "minimize" else str(int(a["workspace"])) if op == "move" \
+            else str(jrun(["hyprctl", "activeworkspace", "-j"]).get("id") or 1)
+        hypr(f"hl.dsp.window.move({{ workspace = {dest}, follow = false, {sel} }})")
+        back = ws.get("id")
+        back = f'"{ws.get("name")}"' if (back is None or back < 0) else str(back)
+        return {"kind": "lua", "lua": f"hl.dsp.window.move({{ workspace = {back}, follow = false, {sel} }})"}
+    elif t == "launch":
+        before = [c.get("address") for c in clients()]
+        if shutil.which("gtk-launch"):
+            subprocess.Popen(["gtk-launch", a["desktop"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        else:
+            subprocess.Popen(["hyprctl", "dispatch", f'hl.dsp.exec_cmd("gtk-launch {a["desktop"]}")'], stdout=subprocess.DEVNULL)
+        return {"kind": "launch", "before": before, "match": [x.lower() for x in (a["desktop"].split(".")[-1], a.get("name", ""), a.get("app", "")) if x]}
+    elif t == "winmode":
+        prev = run(QS + ["ipc", "call", "winmode", "get", "0"])
+        qs_call("winmode", "set", v)
+        return {"kind": "winmode", "mode": prev} if prev in ("mosaico", "desplazamiento", "flotante") else None
+    elif t == "url":
+        subprocess.Popen(["xdg-open", v], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    elif t == "media":
+        run(["playerctl", v])
+        back = {"play": "pause", "pause": "play", "play-pause": "play-pause", "next": "previous", "previous": "next"}.get(v)
+        return {"kind": "media", "op": back} if back else None
+    elif t == "volume":
+        cur = volume_get()
+        if v in ("mute", "unmute"):
+            volume_set(muted=v == "mute")
+        elif isinstance(v, str):
+            volume_set((cur["vol"] or 0) + int(v), muted=False)
+        else:
+            volume_set(int(v), muted=False if v > 0 else None)
+        return {"kind": "volume", "vol": cur["vol"], "muted": cur["muted"]}
+    elif t == "brightness":
+        cur = brightness_get()
+        run(["brightnessctl", "-q", "set", (v[1:] + "%" + v[0]) if isinstance(v, str) else f"{int(v)}%"])
+        return {"kind": "brightness", "value": cur} if cur is not None else None
+    elif t == "caffeine":
+        was = caffeine_status()
+        if v:
+            qs_call("caffeine", "on", int(a.get("minutes") or 0))
+        else:
+            qs_call("caffeine", "off")
+        return {"kind": "caffeine", "on": was}
+    elif t == "timer":
+        if a.get("cancel"):
+            timer_cancel(a["cancel"])
+            return None
+        return {"kind": "timer", "id": timer_start(a["minutes"], a.get("label", ""))}
+    elif t == "notifications":
+        qs_call("notifs", "clear")
+    return None
+
+def undo_record(r):
+    k = r.get("kind")
+    if k == "focus" and r.get("addr"):
+        hypr(f'hl.dsp.focus({{ window = "address:{r["addr"]}" }})')
+    elif k == "lua":
+        hypr(r["lua"])
+    elif k == "pin":
+        hypr(f'hl.dsp.focus({{ window = "address:{r["addr"]}" }})')
+        hypr("hl.dsp.window.pin()")
+    elif k == "launch":
+        before = set(r.get("before") or [])
+        for c in clients():
+            cl = ((c.get("class") or "") + " " + (c.get("initialClass") or "")).lower()
+            if c.get("address") not in before and any(m and m in cl for m in r.get("match", [])):
+                hypr(f'hl.dsp.window.close({{ window = "address:{c["address"]}" }})')
+    elif k == "media":
+        run(["playerctl", r["op"]])
+    elif k == "winmode":
+        qs_call("winmode", "set", r["mode"])
+    elif k == "volume" and r.get("vol") is not None:
+        volume_set(int(r["vol"]), muted=bool(r.get("muted")))
+    elif k == "brightness":
+        run(["brightnessctl", "-q", "set", f"{int(r['value'])}%"])
+    elif k == "caffeine":
+        if r.get("on"):
+            qs_call("caffeine", "on", 0)
+        else:
+            qs_call("caffeine", "off")
+    elif k == "timer":
+        timer_cancel(r["id"])
+
+def do_apply(actions, record=True):
+    if not allowed()[0]:
+        return {"error": "Controlar el shell está desactivado en Ajustes › IA", "undo": None, "labels": []}
+    actions = [a for a in validate(actions) if a.get("type") != "run"]
+    before = snapshot() if record else None
+    # los ajustes van juntos (un solo hf-apply); el resto, en el orden del plan
+    changes = {a["key"]: a["value"] for a in actions if a["type"] == "set"}
+    if changes:
+        before["settingsAll"] = {k: (load(SETTINGS, {}) or {}).get(k) for k in changes}
+    set_settings(changes)
+    undos, errors = [], []
+    for a in actions:
+        if a["type"] == "set":
+            continue
+        try:
+            r = exec_action(a)
+        except Exception as e:
+            r = {"kind": "error", "msg": str(e)}
+        if r and r.get("kind") == "error":
+            errors.append(r["msg"])
+        elif r:
+            undos.append(r)
+        if a["type"] in ("window", "launch", "workspace") and len(actions) > 1:
+            time.sleep(0.25)        # deja que Hyprland procese el paso antes del siguiente
+    uid = None
+    if record:
+        UNDO.mkdir(parents=True, exist_ok=True)
+        uid = time.strftime("%Y%m%d-%H%M%S") + f"-{os.getpid()}"
+        (UNDO / f"{uid}.json").write_text(json.dumps({"before": before, "actions": actions, "undo": undos}, indent=2, ensure_ascii=False))
+        # guardar solo los 30 últimos
+        for old in sorted(UNDO.glob("*.json"))[:-30]:
+            old.unlink(missing_ok=True)
+    out = {"undo": uid, "labels": [label(a) for a in actions]}
+    if errors:
+        out["errors"] = errors
+    return out
+
+def do_undo(uid):
+    rec = load(UNDO / f"{uid}.json")
+    if not rec:
+        return {"error": "No encuentro ese cambio para deshacerlo"}
+    b, acts = rec["before"], rec["actions"]
+    types = {a["type"] for a in acts}
+    keys = [a["key"] for a in acts if a["type"] == "set"]
+    if keys:
+        cur = load(SETTINGS, {}) or {}
+        for k in keys:
+            if k in b["settingsPresent"]:
+                cur[k] = (b.get("settingsAll") or {}).get(k, b["settings"].get(k))
+            else:
+                cur.pop(k, None)
+        SETTINGS.parent.mkdir(parents=True, exist_ok=True)
+        SETTINGS.write_text(json.dumps(cur, indent=2, ensure_ascii=False) + "\n")
+        subprocess.run([str(ROOT / "scripts/hf-apply")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for r in reversed(rec.get("undo") or []):
+        try:
+            undo_record(r)
+        except Exception:
+            pass
+    if "wallpaper" in types and b.get("wallpaper"):
+        subprocess.Popen([str(ROOT / "scripts/hf-wallpaper"), b["wallpaper"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if "profile" in types and b.get("profile"):
+        subprocess.Popen([str(ROOT / "scripts/hf-profile"), b["profile"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if "dnd" in types:
+        qs_call("notifs", "setDnd", "true" if b.get("dnd") else "false")
+    if "workspace" in types and b.get("workspace"):
+        run(["hyprctl", "dispatch", f"hl.dsp.focus({{ workspace = {int(b['workspace'])} }})"])
+    if "focus" in types:
+        qs_call("shell", "focus")
+    (UNDO / f"{uid}.json").unlink(missing_ok=True)
+    return {"ok": True}
+
+# ---------------------------------------------------------------- consultas (solo lectura, para la IA)
+QUERY_LABELS = {"windows": "Miró las ventanas abiertas", "active_window": "Leyó la ventana activa",
+                "screen": "Leyó la pantalla", "notifications": "Revisó las notificaciones", "files": "Buscó archivos",
+                "apps": "Buscó apps instaladas", "settings": "Consultó los ajustes", "system": "Miró el estado del sistema",
+                "timers": "Miró los temporizadores"}
+WINDOW_CAP = HOME / ".cache/hyprfrijol/ai-window.png"
+WINDOW_INFO = HOME / ".cache/hyprfrijol/ai-window.json"
+
+def window_capture(w):
+    """Captura solo la ventana (región) en WINDOW_CAP. Devuelve la ruta o None."""
+    try:
+        (x, y), (wd, ht) = w["at"], w["size"]
+    except Exception:
+        return None
+    WINDOW_CAP.parent.mkdir(parents=True, exist_ok=True)
+    r = subprocess.run(["grim", "-g", f"{x},{y} {wd}x{ht}", str(WINDOW_CAP)], capture_output=True)
+    return str(WINDOW_CAP) if r.returncode == 0 else None
+
+def query_allowed(t, s, ctx):
+    if not can_read(s):
+        return "El usuario no permite consultar el escritorio (Ajustes › IA)."
+    if t in ("windows", "active_window") and ctx.get("window") is False:
+        return "El usuario no ha compartido sus ventanas en esta conversación."
+    if t in ("screen",) and s.get("aiContextCapture", True) is False:
+        return "El usuario no permite leer la pantalla (Ajustes › IA)."
+    return None
+
+def run_query(q, ctx=None, s=None):
+    """(etiqueta, resultado en texto/JSON) de una consulta de solo lectura."""
+    ctx, s = ctx or {}, s or settings()
+    t = q.get("type") if isinstance(q, dict) else str(q)
+    if t not in QUERY_LABELS:
+        return f"Consulta desconocida: {t}", "Consulta no disponible"
+    lab = QUERY_LABELS[t]
+    no = query_allowed(t, s, ctx)
+    if no:
+        return lab, no
+    if t == "windows":
+        act = jrun(["hyprctl", "activewindow", "-j"]).get("address")
+        ws = [{"class": c.get("class"), "title": (c.get("title") or "")[:90], "workspace": (c.get("workspace") or {}).get("name"),
+               "floating": c.get("floating"), "fullscreen": bool(c.get("fullscreen")), "active": c.get("address") == act,
+               "address": c.get("address")} for c in sorted(clients(), key=lambda c: c.get("focusHistoryID", 99))]
+        return lab, json.dumps(ws[:40], ensure_ascii=False)
+    if t == "active_window":
+        info = ctx.get("windowInfo") or {}
+        w = find_window(info.get("address")) if info.get("address") else None
+        w = w or jrun(["hyprctl", "activewindow", "-j"])
+        if not w.get("address"):
+            return lab, "No hay ventana activa"
+        out = {"class": w.get("class"), "title": w.get("title"), "workspace": (w.get("workspace") or {}).get("name")}
+        if s.get("aiContextCapture", True) is not False and shutil.which("tesseract"):
+            saved = load(WINDOW_INFO, {}) or {}
+            img = str(WINDOW_CAP) if saved.get("address") == w["address"] and WINDOW_CAP.is_file() \
+                and time.time() - WINDOW_CAP.stat().st_mtime < 900 else window_capture(w)
+            if img:
+                out["text"] = run(["tesseract", img, "-", "-l", "spa+eng"], timeout=30)[:5000]
+        return lab, json.dumps(out, ensure_ascii=False)
+    if t == "screen":
+        return lab, capture_text() or "(sin texto legible)"
+    if t == "notifications":
+        return lab, run(QS + ["ipc", "call", "notifs", "recent", "20"]) or "{}"
+    if t == "files":
+        qq = re.sub(r"[^\w .\-áéíóúñü]", "", str(q.get("query") or ""), flags=re.I).strip()[:60]
+        ext = re.sub(r"[^\w]", "", str(q.get("ext") or ""))[:8]
+        if not qq and not ext:
+            return lab, "Falta qué buscar"
+        if shutil.which("fd"):
+            cmd = ["fd", "-i", "--max-results", "30", "--changed-within", "3650d"] + (["-e", ext] if ext else []) \
+                + [re.escape(qq) if qq else ".", str(HOME)]
+        else:
+            cmd = ["find", str(HOME), "-not", "-path", "*/.*", "-iname", f"*{qq}*{('.' + ext) if ext else ''}"]
+        out = run(cmd, timeout=8).split("\n")
+        return lab, "\n".join(x for x in out if x)[:3500] or "Sin resultados"
+    if t == "apps":
+        return lab, json.dumps([{"app": e["id"], "name": e["name"]} for e in find_app(q.get("query") or "", many=True)], ensure_ascii=False) or "[]"
+    if t == "settings":
+        f = str(q.get("filter") or "").lower()
+        d, cur = defaults(), settings()
+        rows = []
+        for k in d:
+            if not settable(k, d):
+                continue
+            name = SET_KEYS.get(k, (KEY_LABELS.get(k, ""), None))[0]
+            if f and f not in k.lower() and f not in name.lower():
+                continue
+            vals = SET_KEYS.get(k, (None, None))[1]
+            rows.append({"key": k, "value": cur.get(k), **({"values": list(vals)} if vals else {}), **({"label": name} if name else {})})
+        return lab, json.dumps(rows[:60], ensure_ascii=False)
+    if t == "system":
+        vol = volume_get()
+        bat = run(["sh", "-c", "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1"])
+        media = run(["playerctl", "metadata", "--format", "{{status}} · {{artist}} — {{title}}"], timeout=3)
+        return lab, json.dumps({"volume": vol["vol"], "muted": vol["muted"], "brightness": brightness_get(),
+                                "battery": int(bat) if bat.isdigit() else None, "media": media or None,
+                                "dnd": (STATE / "dnd").exists(), "caffeine": caffeine_status(),
+                                "workspace": jrun(["hyprctl", "activeworkspace", "-j"]).get("id"),
+                                "windowMode": run(QS + ["ipc", "call", "winmode", "get", "0"]) or None,
+                                "timers": timers_list()}, ensure_ascii=False)
+    if t == "timers":
+        now = time.time()
+        return lab, json.dumps([{"id": x["id"], "label": x["label"], "left_s": int(x["end"] - now)} for x in timers_list()], ensure_ascii=False)
+    return lab, ""
+
+def do_summon():
+    """Atajo «Asistente con la ventana actual»: guarda la ventana activa (y su captura) y abre el panel."""
+    s = settings()
+    w = jrun(["hyprctl", "activewindow", "-j"])
+    info = {}
+    if w.get("address") and s.get("aiContextWindow", True) is not False:
+        info = {"address": w["address"], "class": w.get("class") or "", "title": (w.get("title") or "")[:120]}
+        WINDOW_INFO.parent.mkdir(parents=True, exist_ok=True)
+        WINDOW_INFO.write_text(json.dumps(info, ensure_ascii=False))
+        if s.get("aiContextCapture", True) is not False:
+            window_capture(w)
+    run(QS + ["ipc", "call", "shell", "openWith", "ia", json.dumps({"window": info}, ensure_ascii=False) if info else "ia"])
+    return {"window": info}
+
+# ---------------------------------------------------------------- contexto
+def capture_text(image=None):
+    STATE.mkdir(parents=True, exist_ok=True)
+    if image:
+        img = pathlib.Path(image)
+        if not img.is_file():
+            return ""
+    else:
+        img = HOME / ".cache/hyprfrijol/ai-capture.png"
+        img.parent.mkdir(parents=True, exist_ok=True)
+        if subprocess.run(["grim", str(img)], capture_output=True).returncode != 0:
+            return ""
+    if not shutil.which("tesseract"):
+        return ""
+    return run(["tesseract", str(img), "-", "-l", "spa+eng"], timeout=30)[:4000]
+
+def attached_image(ctx):
+    """Captura de «+ Captura» (pantalla entera), para proveedores con visión (en vez de su OCR)."""
+    if settings().get("aiContextCapture", True) is False:
+        return None
+    cap = HOME / ".cache/hyprfrijol/ai-capture.png"
+    if (ctx.get("capture") or ctx.get("captureText")) and cap.is_file() and time.time() - cap.stat().st_mtime < 3600:
+        return str(cap)
+    return None
+
+# ---------------------------------------------------------------- imágenes adjuntas
+# El panel manda las rutas en cada mensaje del usuario ({"role":"user","text":…,"images":[ruta…]}); también vale
+# context.images / context.image (Captura › «Preguntar a la IA», hf-mcp). `hf-ai attach` las consigue (portapapeles,
+# selector de archivos, URL, datos crudos de un arrastre). Con visión se mandan reducidas (≤ IMG_MAX_SIDE px,
+# ≤ IMG_MAX_BYTES); sin visión (o si el servidor las rechaza) va su texto por OCR (tesseract) con una nota.
+IMG_DIR = HOME / ".cache/hyprfrijol/ai-img"
+IMG_SEND = {"image/png", "image/jpeg", "image/webp", "image/gif"}
+IMG_EXT = re.compile(r"\.(png|jpe?g|webp|gif|bmp|tiff?|avif|heic|heif|jxl|svg|ico)$", re.I)
+IMG_MAX_SIDE = 1568
+IMG_MAX_BYTES = 3_500_000
+MAX_IMAGES = 6
+
+def sniff(data):
+    """Tipo MIME por los primeros bytes (None si no parece una imagen)."""
+    h = data[:16]
+    if h.startswith(b"\x89PNG"):
+        return "image/png"
+    if h.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if h[:4] == b"RIFF" and h[8:12] == b"WEBP":
+        return "image/webp"
+    if h[:4] == b"GIF8":
+        return "image/gif"
+    if h[:2] == b"BM":
+        return "image/bmp"
+    if h[:4] in (b"II*\x00", b"MM\x00*"):
+        return "image/tiff"
+    if h[4:12] in (b"ftypavif", b"ftypheic", b"ftypmif1", b"ftypheix"):
+        return "image/avif" if b"avif" in h else "image/heic"
+    if h.startswith(b"\xff\x0a") or h.startswith(b"\x00\x00\x00\x0cJXL"):
+        return "image/jxl"
+    if b"<svg" in data[:400].lower():
+        return "image/svg+xml"
+    return None
+
+def is_image(p):
+    try:
+        p = pathlib.Path(p)
+        if not p.is_file() or p.stat().st_size > 60 * 1024 * 1024:
+            return False
+        with open(p, "rb") as f:
+            return sniff(f.read(512)) is not None
+    except Exception:
+        return False
+
+def _store(data, mime, prefix="img"):
+    import hashlib
+    IMG_DIR.mkdir(parents=True, exist_ok=True)
+    ext = {"image/jpeg": "jpg", "image/svg+xml": "svg"}.get(mime, mime.split("/")[-1])
+    p = IMG_DIR / f"{prefix}-{hashlib.sha1(data).hexdigest()[:16]}.{ext}"
+    if not p.exists():
+        p.write_bytes(data)
+    return str(p)
+
+def _cleanup():
+    """Borra las imágenes guardadas hace más de 30 días."""
+    try:
+        old = time.time() - 30 * 86400
+        for f in IMG_DIR.iterdir():
+            if f.stat().st_mtime < old:
+                f.unlink()
+    except Exception:
+        pass
+
+def _uri_paths(text):
+    import urllib.parse
+    out = []
+    for line in text.replace("\r", "").split("\n"):
+        line = line.strip()
+        if line.startswith("file://"):
+            out.append(urllib.parse.unquote(urllib.parse.urlparse(line).path))
+        elif line.startswith("/"):
+            out.append(line)
+    return out
+
+def clipboard_images():
+    types = run(["wl-paste", "--list-types"], timeout=3).split("\n")
+    img = [t for t in types if t.startswith("image/")]
+    if img:
+        t = "image/png" if "image/png" in img else img[0]
+        try:
+            data = subprocess.run(["wl-paste", "-n", "-t", t], capture_output=True, timeout=10).stdout
+        except Exception:
+            data = b""
+        mime = sniff(data)
+        return [_store(data, mime, "clip")] if mime else []
+    if "text/uri-list" in types:   # archivos copiados en Dolphin / Nautilus
+        return [p for p in _uri_paths(run(["wl-paste", "-n", "-t", "text/uri-list"], timeout=3)) if is_image(p)]
+    return []
+
+def download_image(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 hyprfrijol"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        data = r.read(25 * 1024 * 1024 + 1)
+    if len(data) > 25 * 1024 * 1024:
+        raise AIError("La imagen es demasiado grande (más de 25 MB).")
+    mime = sniff(data)
+    if not mime:
+        raise AIError("Ese enlace no es una imagen.")
+    return _store(data, mime, "web")
+
+def portal_pick():
+    """Selector de archivos del portal (org.freedesktop.portal.FileChooser). None si no hay portal."""
+    try:
+        import gi
+        gi.require_version("Gio", "2.0")
+        from gi.repository import Gio, GLib
+        bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        token = f"hlai{os.getpid()}"
+        handle = f"/org/freedesktop/portal/desktop/request/{bus.get_unique_name()[1:].replace('.', '_')}/{token}"
+        loop, res = GLib.MainLoop(), {}
+        def on_resp(_c, _s, _p, _i, _sig, params, *_):
+            code, results = params.unpack()
+            res["code"], res["uris"] = code, results.get("uris", [])
+            loop.quit()
+        bus.signal_subscribe("org.freedesktop.portal.Desktop", "org.freedesktop.portal.Request", "Response", handle,
+                             None, Gio.DBusSignalFlags.NONE, on_resp)
+        opts = {"handle_token": GLib.Variant("s", token), "multiple": GLib.Variant("b", True), "modal": GLib.Variant("b", True),
+                "filters": GLib.Variant("a(sa(us))", [("Imágenes", [(1, "image/*")]), ("Todos los archivos", [(0, "*")])])}
+        bus.call_sync("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop", "org.freedesktop.portal.FileChooser",
+                      "OpenFile", GLib.Variant("(ssa{sv})", ("", "Adjuntar imágenes", opts)), None, Gio.DBusCallFlags.NONE, 5000, None)
+        GLib.timeout_add_seconds(900, loop.quit)
+        loop.run()
+        if "code" not in res:
+            return None
+        return _uri_paths("\n".join(res["uris"])) if res["code"] == 0 else []
+    except Exception:
+        return None
+
+def pick_images():
+    # en la sesión de prueba (dev/try.sh, HF_TRY) el portal es el del escritorio real: ahí se usa kdialog/zenity
+    got = None if os.environ.get("HF_AI_NO_PORTAL") or os.environ.get("HF_TRY") else portal_pick()
+    if got is not None:
+        return got
+    pics = os.path.isdir(HOME / "Imágenes") and str(HOME / "Imágenes") or str(HOME)
+    if shutil.which("kdialog"):
+        out = run(["kdialog", "--title", "Adjuntar imágenes", "--multiple", "--separate-output", "--getopenfilename", pics,
+                   "image/png image/jpeg image/webp image/gif image/bmp image/tiff image/avif image/svg+xml"], timeout=900)
+        return [l for l in out.split("\n") if l]
+    if shutil.which("zenity"):
+        out = run(["zenity", "--file-selection", "--multiple", "--separator=\n", "--title=Adjuntar imágenes", f"--filename={pics}/",
+                   "--file-filter=Imágenes | *.png *.jpg *.jpeg *.webp *.gif *.bmp *.tif *.tiff *.avif *.svg *.PNG *.JPG *.JPEG",
+                   "--file-filter=Todos los archivos | *"], timeout=900)
+        return [l for l in out.split("\n") if l]
+    raise AIError("No encuentro un selector de archivos (portal, kdialog o zenity).")
+
+def do_attach(src, mime=""):
+    """hf-ai attach clipboard|pick|-|<ruta|file://…|https://…> … → {"images": [rutas], "error": …}"""
+    _cleanup()
+    try:
+        if src == "clipboard":
+            got = clipboard_images()
+        elif src == "pick":
+            got = pick_images()
+        elif src == "-":   # datos crudos de un arrastre, en base64 por stdin
+            import base64
+            data = base64.b64decode(re.sub(r"^data:[^,]*,", "", sys.stdin.read().strip()) or b"")
+            m = sniff(data)
+            got = [_store(data, m, "drop")] if m else []
+        elif re.match(r"https?://", src):
+            got = [download_image(src)]
+        else:
+            got = _uri_paths(src) or [src]
+        good = [str(pathlib.Path(p).resolve()) for p in got if is_image(p)]
+        err = None if good or not got else "Eso no es una imagen."
+        return {"images": list(dict.fromkeys(good)), "error": err}
+    except AIError as e:
+        return {"images": [], "error": str(e)}
+    except Exception as e:
+        return {"images": [], "error": f"No pude adjuntar la imagen: {e}"}
+
+def prep_image(path):
+    """(mime, base64) listos para el modelo: reducida a IMG_MAX_SIDE px y ≤ IMG_MAX_BYTES (ImageMagick). None si falla."""
+    import base64, hashlib
+    try:
+        p = pathlib.Path(path)
+        data = p.read_bytes()
+    except Exception:
+        return None
+    mime = sniff(data)
+    if not mime:
+        return None
+    magick = shutil.which("magick") or shutil.which("convert")
+    big = len(data) > IMG_MAX_BYTES
+    if magick and not big and mime in IMG_SEND:
+        dims = run([magick, "identify", "-format", "%w %h ", f"{path}[0]"] if magick.endswith("magick")
+                   else ["identify", "-format", "%w %h ", f"{path}[0]"], timeout=10).split()
+        big = len(dims) >= 2 and max(int(dims[0]), int(dims[1])) > IMG_MAX_SIDE
+    if (big or mime not in IMG_SEND) and magick:
+        IMG_DIR.mkdir(parents=True, exist_ok=True)
+        h = hashlib.sha1(data).hexdigest()[:16]
+        for ext, extra in (("png", []), ("jpg", ["-background", "white", "-flatten", "-quality", "85"]),
+                           ("jpg", ["-background", "white", "-flatten", "-quality", "70", "-resize", "1024x1024>"])):
+            if ext == "png" and mime not in ("image/png", "image/gif", "image/svg+xml", "image/webp"):
+                continue
+            out = IMG_DIR / f"prep-{h}-{len(extra)}.{ext}"
+            if not out.exists():
+                subprocess.run([magick, f"{path}[0]", "-auto-orient", "-strip", "-resize", f"{IMG_MAX_SIDE}x{IMG_MAX_SIDE}>", *extra, str(out)],
+                               capture_output=True, timeout=60)
+            if out.is_file() and 0 < out.stat().st_size <= IMG_MAX_BYTES:
+                data, mime = out.read_bytes(), "image/png" if ext == "png" else "image/jpeg"
+                break
+        else:
+            return None
+    elif mime not in IMG_SEND or len(data) > 15 * 1024 * 1024:
+        return None   # sin ImageMagick no puedo convertir/reducir
+    return mime, base64.b64encode(data).decode()
+
+def ocr_image(path):
+    if not shutil.which("tesseract"):
+        return None
+    src = path
+    if not re.search(r"\.(png|jpe?g|tiff?|bmp|gif|webp)$", str(path), re.I) and (shutil.which("magick")):
+        src = str(IMG_DIR / "ocr-tmp.png")
+        IMG_DIR.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["magick", f"{path}[0]", src], capture_output=True, timeout=30)
+    return run(["tesseract", src, "-", "-l", "spa+eng"], timeout=30)[:4000]
+
+def message_images(msgs, ctx, s):
+    """Copia de los mensajes con "_paths" (imágenes de cada mensaje del usuario; las MAX_IMAGES más recientes)."""
+    msgs = [dict(m) for m in msgs]
+    if s.get("aiContextCapture", True) is False:
+        for m in msgs:
+            m.pop("images", None)
+        return msgs, 0
+    extra = [p for p in list(ctx.get("images") or []) + [ctx.get("image") or ""] if p]
+    last_user = max((i for i, m in enumerate(msgs) if m.get("role") == "user"), default=-1)
+    total = 0
+    for i in range(len(msgs) - 1, -1, -1):
+        m = msgs[i]
+        paths = [str(p) for p in (m.get("images") or []) if isinstance(p, str)]
+        if i == last_user:
+            paths += extra
+        paths = [p for p in dict.fromkeys(paths) if is_image(p)]
+        keep = paths[:max(0, MAX_IMAGES - total)]
+        total += len(keep)
+        m["_paths"] = keep
+        m["_dropped"] = len(paths) - len(keep)
+    return msgs, total
+
+def msg_text(m):
+    """Texto de un mensaje con una marca de sus imágenes (para todos los proveedores)."""
+    t = str(m.get("text", ""))
+    paths = m.get("_paths") if "_paths" in m else [p for p in (m.get("images") or []) if isinstance(p, str)]
+    n = len(paths or []) + int(m.get("_dropped") or 0)
+    if not n:
+        return t
+    names = ", ".join(pathlib.Path(p).name for p in (paths or []))
+    tag = f"[Adjunta {n} {'imágenes' if n > 1 else 'imagen'}" + (f": {names}" if names else "") + "]"
+    return (t + "\n" if t.strip() else "") + tag
+
+def attach_vision(msgs):
+    """Añade "_imgs" [(mime, base64, ruta)] a cada mensaje con imágenes. → nº de imágenes listas."""
+    n = 0
+    for m in msgs:
+        m["_imgs"] = [x + (p,) for p in (m.get("_paths") or []) for x in [prep_image(p)] if x]
+        n += len(m["_imgs"])
+    return n
+
+def ocr_context(msgs, why):
+    """Texto (OCR) de las imágenes adjuntas para un modelo sin visión."""
+    parts = []
+    for m in msgs[-12:]:
+        for p in m.get("_paths") or []:
+            t = ocr_image(p)
+            name = pathlib.Path(p).name
+            if t is None:
+                parts.append(f"Imagen adjunta «{name}»: no la puedo leer (falta tesseract para el OCR).")
+            else:
+                parts.append(f"Texto de la imagen adjunta «{name}» (OCR):\n" + (t.strip() or "(sin texto legible)"))
+    if not parts:
+        return ""
+    return f"Nota: {why}; te paso el texto que se extrajo de las imágenes con OCR (puede tener errores y no " \
+           "describe lo que no es texto; si hace falta, díselo al usuario).\n\n" + "\n\n".join(parts)
+
+def gather(ctx, ocr=True):
+    parts = []
+    if ctx.get("window", True):
+        w = jrun(["hyprctl", "activewindow", "-j"])
+        if w.get("title"):
+            parts.append(f"Ventana activa: {w.get('class', '')} — {w['title']}")
+    if ctx.get("clipboard", True):
+        c = run(["wl-paste", "-n", "-t", "text"], timeout=3)
+        if c:
+            parts.append("Portapapeles:\n" + c[:4000])
+    s = settings()
+    if s.get("aiContextCapture", True) is not False and ctx.get("capture") and ocr:
+        t = ctx.get("captureText") or capture_text()
+        if t.strip():
+            parts.append("Texto en pantalla (OCR):\n" + t)
+    parts.append(f"Estado del shell: estilo={s.get('estilo')}, color={s.get('colorMode')}/{s.get('palette')}, "
+                 f"barra={s.get('barPos')}/{s.get('barMode')}, perfil={(STATE / 'profile').read_text().strip() if (STATE / 'profile').exists() else 'trabajo'}")
+    return "\n\n".join(parts)
+
+# ---------------------------------------------------------------- proveedores
+class AIError(Exception):
+    def __init__(self, msg, code=0):
+        super().__init__(msg)
+        self.code = code     # código HTTP (400/415/422 con imágenes → se reintenta con OCR)
+
+def transcript(messages):
+    out = []
+    for m in messages[-12:]:
+        who = "Usuario" if m.get("role") == "user" else "Asistente"
+        out.append(f"{who}: {msg_text(m)}")
+    return "\n\n".join(out)
+
+def claude_input(messages, ctx_text):
+    """(texto, línea stream-json o None). Con imágenes se mandan como bloques image por --input-format stream-json."""
+    prompt = (f"Contexto del escritorio:\n{ctx_text}\n\n" if ctx_text else "") + \
+             "Conversación hasta ahora:\n" + transcript(messages) + "\n\nResponde al último mensaje del usuario."
+    imgs = [x for m in messages[-12:] for x in (m.get("_imgs") or [])]
+    if not imgs:
+        return prompt, None
+    content = [{"type": "text", "text": prompt}]
+    for i, (mime, data, path) in enumerate(imgs, 1):
+        content.append({"type": "text", "text": f"Imagen adjunta {i}: {pathlib.Path(path).name}"})
+        content.append({"type": "image", "source": {"type": "base64", "media_type": mime, "data": data}})
+    return prompt, json.dumps({"type": "user", "message": {"role": "user", "content": content}})
+
+def call_claude_code(system, messages, ctx_text, s):
+    exe = shutil.which("claude")
+    if not exe:
+        raise AIError("No encuentro el comando «claude». Instala Claude Code o elige otro proveedor en Ajustes › IA.")
+    prompt, stream = claude_input(messages, ctx_text)
+    cmd = [exe, "-p", "--system-prompt", system, "--tools", "", "--no-session-persistence", "--strict-mcp-config"]
+    cmd += ["--input-format", "stream-json", "--output-format", "stream-json", "--verbose"] if stream else ["--output-format", "json"]
+    if s.get("aiModel"):
+        cmd += ["--model", str(s["aiModel"])]
+    try:
+        r = subprocess.run(cmd, input=stream + "\n" if stream else prompt, capture_output=True, text=True, timeout=180, cwd=str(HOME))
+    except subprocess.TimeoutExpired:
+        raise AIError("El modelo tardó demasiado en responder.")
+    data = None
+    for line in (r.stdout.strip().split("\n") if stream else [r.stdout]):
+        try:
+            j = json.loads(line)
+        except Exception:
+            continue
+        if j.get("type") == "result" or not stream:
+            data = j
+    if data is None:
+        raise AIError((r.stderr or r.stdout or "Respuesta vacía de claude").strip()[:300])
+    if data.get("is_error"):
+        raise AIError(str(data.get("result") or "Error de Claude Code")[:300])
+    return data.get("result", "")
+
+def http_json(url, body, headers=None, timeout=120):
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json", **(headers or {})})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        try:
+            detail = e.read().decode(errors="replace")[:240]
+        except Exception:
+            detail = ""
+        raise AIError(f"{url} respondió con un error {e.code}: {detail}", e.code)
+    except urllib.error.URLError as e:
+        raise AIError(f"No puedo conectar con {url}: {getattr(e, 'reason', e)}")
+
+def chat_messages(system, messages, ctx_text, fmt="openai"):
+    """Mensajes estilo OpenAI / Ollama; las imágenes van como image_url (data URL) o "images" (base64)."""
+    msgs = [{"role": "system", "content": system + ("\n\nContexto del escritorio:\n" + ctx_text if ctx_text else "")}]
+    for m in messages[-12:]:
+        role = "user" if m.get("role") == "user" else "assistant"
+        imgs = m.get("_imgs") or []
+        if imgs and fmt == "ollama":
+            msgs.append({"role": role, "content": msg_text(m), "images": [d for _, d, _ in imgs]})
+        elif imgs:
+            msgs.append({"role": role, "content": [{"type": "text", "text": msg_text(m)}]
+                         + [{"type": "image_url", "image_url": {"url": f"data:{mi};base64,{d}"}} for mi, d, _ in imgs]})
+        else:
+            msgs.append({"role": role, "content": msg_text(m)})
+    return msgs
+
+def ollama_body(system, messages, ctx_text, s):
+    return {"model": s.get("aiModel") or "llama3.2", "stream": False, "messages": chat_messages(system, messages, ctx_text, "ollama")}
+
+def call_ollama(system, messages, ctx_text, s):
+    ep = (s.get("aiEndpoint") or "http://localhost:11434").rstrip("/")
+    data = http_json(ep + "/api/chat", ollama_body(system, messages, ctx_text, s))
+    return data.get("message", {}).get("content", "")
+
+def ollama_vision(s):
+    """¿El modelo de Ollama ve imágenes? (/api/show → capabilities contiene "vision")."""
+    ep = (s.get("aiEndpoint") or "http://localhost:11434").rstrip("/")
+    try:
+        caps = http_json(ep + "/api/show", {"model": s.get("aiModel") or "llama3.2"}, timeout=5).get("capabilities") or []
+        return "vision" in caps
+    except Exception:
+        return False
+
+def openai_body(system, messages, ctx_text, s):
+    return {"model": s.get("aiModel") or "gpt-4o-mini", "messages": chat_messages(system, messages, ctx_text)}
+
+def call_openai(system, messages, ctx_text, s):
+    ep = (s.get("aiEndpoint") or "https://api.openai.com/v1").rstrip("/")
+    key = os.environ.get(s.get("aiKeyEnv") or "HF_AI_KEY", "")
+    data = http_json(ep + "/chat/completions", openai_body(system, messages, ctx_text, s),
+                     {"Authorization": f"Bearer {key}"} if key else {})
+    return data["choices"][0]["message"]["content"]
+
+def provider_vision(prov, s):
+    """¿Se le pueden mandar imágenes? aiVision (true/false, oculto) lo fuerza; si no: Claude/Gemini/OpenAI sí,
+    Ollama según el modelo."""
+    v = s.get("aiVision")
+    if isinstance(v, bool):
+        return v
+    if prov == "ollama":
+        return ollama_vision(s)
+    return prov in ("claude-code", "gemini", "openai-compatible", "mock")
+
+# ---------------------------------------------------------------- Gemini (Google AI Studio, plan gratuito)
+GEMINI_API = os.environ.get("HF_GEMINI_API") or "https://generativelanguage.googleapis.com/v1beta"   # HF_GEMINI_API: solo para pruebas
+GEMINI_DEFAULT = "gemini-2.5-flash"
+GEMINI_FALLBACK = [["gemini-2.5-flash", "Gemini 2.5 Flash (recomendado)"], ["gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite (más rápido)"],
+                   ["gemini-2.5-pro", "Gemini 2.5 Pro (el más capaz, menos cuota)"]]
+SECRETS = HOME / ".config/hyprfrijol/secrets"
+SECRET_ATTRS = ["service", "hyprfrijol", "provider", "gemini"]
+OLD_SECRET_ATTRS = ["service", "hypr-liquid", "provider", "gemini"]   # nombre anterior: se sigue leyendo
+
+def _keyring_ok():
+    return bool(shutil.which("secret-tool")) and not os.environ.get("HF_AI_NO_KEYRING")
+
+def gemini_key():
+    """(clave, dónde): variable de entorno → llavero (secret-tool) → archivo 600."""
+    for env in ("GEMINI_API_KEY", "GOOGLE_API_KEY"):
+        if os.environ.get(env, "").strip():
+            return os.environ[env].strip(), "env:" + env
+    if _keyring_ok():
+        k = run(["secret-tool", "lookup", *SECRET_ATTRS], timeout=5) or run(["secret-tool", "lookup", *OLD_SECRET_ATTRS], timeout=5)
+        if k:
+            return k, "llavero"
+    f = SECRETS / "gemini.key"
+    try:
+        k = f.read_text().strip()
+        if k:
+            return k, "archivo"
+    except Exception:
+        pass
+    return "", ""
+
+def key_set(provider, key):
+    if provider != "gemini":
+        return {"ok": False, "error": f"Proveedor sin clave guardable: {provider}"}
+    key = (key or "").strip()
+    if not key:
+        return {"ok": False, "error": "La clave está vacía"}
+    if not re.fullmatch(r"[A-Za-z0-9_\-]{20,200}", key):
+        return {"ok": False, "error": "Eso no parece una clave de Gemini (suelen empezar por «AIza…»)"}
+    key_clear(provider)
+    if _keyring_ok():
+        try:
+            r = subprocess.run(["secret-tool", "store", "--label=hyprfrijol · clave de Gemini", *SECRET_ATTRS],
+                               input=key, capture_output=True, text=True, timeout=60)   # puede pedir desbloquear el llavero
+            if r.returncode == 0 and run(["secret-tool", "lookup", *SECRET_ATTRS], timeout=5) == key:
+                return {"ok": True, "where": "llavero"}
+        except Exception:
+            pass
+    SECRETS.mkdir(parents=True, exist_ok=True)
+    os.chmod(SECRETS, 0o700)
+    f = SECRETS / "gemini.key"
+    fd = os.open(f, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as h:
+        h.write(key + "\n")
+    os.chmod(f, 0o600)
+    return {"ok": True, "where": "archivo"}
+
+def key_clear(provider):
+    if _keyring_ok():
+        run(["secret-tool", "clear", *SECRET_ATTRS], timeout=5)
+        run(["secret-tool", "clear", *OLD_SECRET_ATTRS], timeout=5)
+    (SECRETS / "gemini.key").unlink(missing_ok=True)
+    return {"ok": True}
+
+def key_status(provider):
+    k, where = gemini_key()
+    return {"stored": bool(k), "where": where, "hint": (k[:4] + "…" + k[-4:]) if len(k) > 12 else ""}
+
+def gemini_model(s):
+    m = str(s.get("aiModel") or "").strip().removeprefix("models/")
+    return m if re.match(r"(gemini|gemma|learnlm)", m) else GEMINI_DEFAULT
+
+def gemini_http(method, path, key, body=None, timeout=120):
+    req = urllib.request.Request(GEMINI_API + path, method=method,
+                                 data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"Content-Type": "application/json", "x-goog-api-key": key})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read() or b"{}")
+    except urllib.error.HTTPError as e:
+        try:
+            err = json.loads(e.read()).get("error", {})
+        except Exception:
+            err = {}
+        msg, status = err.get("message", ""), err.get("status", "")
+        if e.code == 400 and ("API key" in msg or "API_KEY" in json.dumps(err)):
+            raise AIError("La clave de Gemini no es válida. Cópiala de nuevo desde aistudio.google.com/apikey.")
+        if e.code == 403:
+            raise AIError("Google rechazó la clave (sin permiso para la API de Gemini). " + msg[:160])
+        if e.code == 404:
+            raise AIError(f"El modelo «{path.split('/')[2].split(':')[0] if path.count('/') >= 2 else ''}» no existe o ya no está disponible. Elige otro en Ajustes › Asistente de IA.")
+        if e.code == 429 or status == "RESOURCE_EXHAUSTED":
+            raise AIError("Has llegado al límite del plan gratuito de Gemini. Espera un minuto o elige un modelo más ligero (Flash-Lite).")
+        if e.code >= 500:
+            raise AIError("Los servidores de Gemini no responden ahora mismo. Vuelve a intentarlo en un momento.")
+        raise AIError(f"Gemini respondió con un error {e.code}: {msg[:200] or status}")
+    except urllib.error.URLError as e:
+        raise AIError(f"No puedo conectar con Gemini: {getattr(e, 'reason', e)}. ¿Hay conexión a internet?")
+    except TimeoutError:
+        raise AIError("Gemini tardó demasiado en responder.")
+
+def gemini_request(system, messages, ctx_text, s):
+    """(ruta, cuerpo) de generateContent. Gemini usa los papeles «user» y «model» y exige que empiece el usuario.
+    Las imágenes de cada mensaje ("_imgs") van como inline_data."""
+    contents = []
+    for m in messages[-12:]:
+        role = "user" if m.get("role") == "user" else "model"
+        text = msg_text(m)
+        imgs = m.get("_imgs") or []
+        if not text.strip() and not imgs:
+            continue
+        parts = ([{"text": text}] if text.strip() else []) + \
+            [{"inline_data": {"mime_type": mi, "data": d}} for mi, d, _ in imgs]
+        if contents and contents[-1]["role"] == role:
+            contents[-1]["parts"] += parts
+        else:
+            contents.append({"role": role, "parts": parts})
+    while contents and contents[0]["role"] != "user":
+        contents.pop(0)
+    if not contents:
+        contents = [{"role": "user", "parts": [{"text": "Hola"}]}]
+    body = {
+        "system_instruction": {"parts": [{"text": system + ("\n\nContexto del escritorio:\n" + ctx_text if ctx_text else "")}]},
+        "contents": contents,
+        "generationConfig": {"temperature": 0.6, "maxOutputTokens": 2048},
+    }
+    return f"/models/{gemini_model(s)}:generateContent", body
+
+def call_gemini(system, messages, ctx_text, s):
+    key, _ = gemini_key()
+    if not key:
+        raise AIError("Falta la clave de Gemini. Consíguela gratis en aistudio.google.com/apikey y pégala en Ajustes › Asistente de IA.")
+    path, body = gemini_request(system, messages, ctx_text, s)
+    data = gemini_http("POST", path, key, body, timeout=120)
+    fb = data.get("promptFeedback") or {}
+    if fb.get("blockReason"):
+        raise AIError("Gemini no ha respondido a esto (bloqueado por sus filtros de seguridad).")
+    cands = data.get("candidates") or []
+    if not cands:
+        raise AIError("Gemini devolvió una respuesta vacía.")
+    parts = (cands[0].get("content") or {}).get("parts") or []
+    text = "".join(p.get("text", "") for p in parts if not p.get("thought"))
+    if not text.strip() and cands[0].get("finishReason") == "SAFETY":
+        raise AIError("Gemini no ha respondido a esto (bloqueado por sus filtros de seguridad).")
+    return text
+
+def gemini_models():
+    key, _ = gemini_key()
+    if not key:
+        return {"models": GEMINI_FALLBACK, "error": "Sin clave: estos son los modelos habituales"}
+    try:
+        out, token = [], ""
+        for _ in range(5):
+            data = gemini_http("GET", "/models?pageSize=200" + (f"&pageToken={token}" if token else ""), key, timeout=20)
+            for m in data.get("models", []):
+                mid = m.get("name", "").removeprefix("models/")
+                if "generateContent" in (m.get("supportedGenerationMethods") or []) and re.match(r"gemini|gemma", mid) \
+                        and not re.search(r"embedding|aqa|image|tts|audio|live|computer", mid):
+                    out.append([mid, m.get("displayName") or mid])
+            token = data.get("nextPageToken")
+            if not token:
+                break
+        # los «flash» estables primero
+        out.sort(key=lambda x: (not x[0].startswith("gemini"), "preview" in x[0] or "exp" in x[0], "flash" not in x[0], x[0]))
+        return {"models": out or GEMINI_FALLBACK, "error": None}
+    except AIError as e:
+        return {"models": GEMINI_FALLBACK, "error": str(e)}
+
+def test_provider():
+    s = settings()
+    prov = s.get("aiProvider") or "claude-code"
+    try:
+        if prov == "gemini":
+            key, where = gemini_key()
+            if not key:
+                return {"ok": False, "text": "Falta la clave de Gemini"}
+            gemini_http("GET", f"/models/{gemini_model(s)}", key, timeout=15)
+            txt = call_gemini("Responde solo con la palabra: listo", [{"role": "user", "text": "¿Funcionas?"}], "", s)
+            return {"ok": True, "text": f"Conectado · {gemini_model(s)} respondió «{txt.strip()[:40]}»"}
+        if prov == "off":
+            return {"ok": False, "text": "El asistente está desactivado"}
+        txt = PROVIDERS[prov]("Responde solo con la palabra: listo", [{"role": "user", "text": "¿Funcionas?"}], "", s)
+        return {"ok": True, "text": f"Conectado · respondió «{txt.strip()[:40]}»"}
+    except AIError as e:
+        return {"ok": False, "text": str(e)}
+    except KeyError:
+        return {"ok": False, "text": f"Proveedor desconocido: {prov}"}
+
+PROVIDERS = {"claude-code": call_claude_code, "ollama": call_ollama, "openai-compatible": call_openai, "gemini": call_gemini}
+
+def call_mock(system, messages, ctx_text, s):
+    """Proveedor de pruebas (aiProvider "mock"): respuestas de $HF_AI_MOCK o ~/.cache/hyprfrijol/ai-mock.json
+    (lista JSON; la ronda N de consultas usa la respuesta N). No llama a ningún modelo."""
+    src = os.environ.get("HF_AI_MOCK") or ""
+    try:
+        resp = json.loads(src) if src.strip().startswith("[") else load(src or HOME / ".cache/hyprfrijol/ai-mock.json", [])
+    except Exception:
+        resp = []
+    rounds = sum(1 for m in messages if str(m.get("text", "")).startswith(QUERY_RESULT_HEAD))
+    try:   # lo que «vio» el modelo de pruebas (para comprobar imágenes y OCR sin gastar)
+        (HOME / ".cache/hyprfrijol").mkdir(parents=True, exist_ok=True)
+        (HOME / ".cache/hyprfrijol/ai-mock-last.json").write_text(json.dumps({
+            "messages": [{"role": m.get("role"), "text": msg_text(m),
+                          "images": [{"mime": mi, "b64": len(d), "path": p} for mi, d, p in (m.get("_imgs") or [])]} for m in messages],
+            "context": ctx_text}, ensure_ascii=False, indent=1))
+    except Exception:
+        pass
+    if not resp:
+        return "(mock) Sin respuestas de prueba."
+    return resp[min(rounds, len(resp) - 1)]
+
+QUERY_RESULT_HEAD = "Resultados de tus consultas"
+MAX_ROUNDS = 3
+
+def parse_queries(raw):
+    m = re.search(r"```hf-query\s*(\[.*?\])\s*```", raw, re.S)
+    if not m:
+        return None, raw
+    try:
+        qs = [q for q in json.loads(m.group(1)) if isinstance(q, dict) and q.get("type") in QUERY_LABELS][:6]
+    except Exception:
+        qs = []
+    return qs, (raw[:m.start()] + raw[m.end():]).strip()
+
+def parse_reply(raw, s=None):
+    shell, term = allowed(s)
+    actions, code = [], ""
+    m = re.search(r"```(?:hf-actions|hl-actions|json)\s*(\[.*?\])\s*```", raw, re.S)
+    if m:
+        try:
+            actions = validate(json.loads(m.group(1)))
+        except Exception:
+            actions = []
+        raw = (raw[:m.start()] + raw[m.end():]).strip()
+    raw = re.sub(r"```hf-query.*?```", "", raw, flags=re.S).strip()
+    runs = [a for a in actions if a["type"] == "run"] if term else []
+    actions = [a for a in actions if a["type"] != "run"] if shell else []
+    if runs:
+        code = "\n".join(a["command"] for a in runs)
+    plan = [meta(a) for a in actions]
+    return {"text": raw.strip(), "actions": actions, "labels": [p["label"] for p in plan], "plan": plan,
+            "confirm": any(p["confirm"] for p in plan), "code": code, "error": None}
+
+def _elide(o):
+    """Copia de una petición con el base64 de las imágenes abreviado (para --print-request)."""
+    if isinstance(o, dict):
+        return {k: (f"<{len(v)} caracteres base64>" if k in ("data", "images") and isinstance(v, str) and len(v) > 200 else _elide(v))
+                for k, v in o.items()}
+    if isinstance(o, list):
+        return [_elide(x) for x in o]
+    if isinstance(o, str) and len(o) > 400 and (o.startswith("data:image/") or re.fullmatch(r"[A-Za-z0-9+/=]{400,}", o[:500])):
+        return f"<{len(o)} caracteres base64>"
+    return o
+
+def do_chat(req, print_request=False):
+    s = settings()
+    prov = s.get("aiProvider") or "claude-code"
+    if prov == "off":
+        return {"text": "", "actions": [], "labels": [], "code": "",
+                "error": "El asistente está desactivado. Actívalo en Ajustes › Asistente de IA."}
+    fn = PROVIDERS.get(prov)
+    if not fn:
+        return {"error": f"Proveedor desconocido: {prov}"}
+    ctx = req.get("context") or {}
+    info = ctx.get("windowInfo") or {}
+    cap = attached_image(ctx)
+    msgs0, nimg = message_images(list(req.get("messages") or []), ctx, s)
+    vision = (nimg or cap) and provider_vision(prov, s)
+    if cap and vision:    # «+ Captura» con visión: va la captura en vez de su OCR
+        msgs0, nimg = message_images(list(req.get("messages") or []), {**ctx, "images": list(ctx.get("images") or []) + [cap]}, s)
+    base_ctx = gather(ctx, ocr=not (cap and vision))
+    if info.get("title") and ctx.get("window", True):
+        base_ctx = f"El usuario abrió el asistente desde la ventana: {info.get('class', '')} — {info['title']}\n\n" + base_ctx
+    def without_vision(why):
+        extra = ocr_context(msgs0, why)
+        for m in msgs0:
+            m["_imgs"] = []
+        return base_ctx + ("\n\n" + extra if extra else "")
+    if nimg and vision and attach_vision(msgs0):
+        ctx_text = base_ctx + f"\n\nEl usuario adjunta imágenes (las ves en la conversación; «[Adjunta …]» marca en qué mensaje)."
+    else:
+        ctx_text = without_vision("este modelo no ve imágenes" if not vision else "no se pudieron preparar las imágenes") if nimg else base_ctx
+    if print_request:
+        sp = system_prompt(s)
+        out = {"provider": prov, "vision": bool(vision), "images": [{"message": i, "path": p, "mime": mi, "b64": len(d)}
+                                                                   for i, m in enumerate(msgs0) for mi, d, p in (m.get("_imgs") or [])]}
+        if prov == "gemini":
+            path, body = gemini_request(sp, msgs0, ctx_text, s)
+            return {**out, "method": "POST", "url": GEMINI_API + path,
+                    "headers": {"Content-Type": "application/json", "x-goog-api-key": "<clave oculta>" if gemini_key()[0] else "<falta la clave>"},
+                    "body": _elide(body)}
+        if prov == "openai-compatible":
+            return {**out, "body": _elide(openai_body(sp, msgs0, ctx_text, s))}
+        if prov == "ollama":
+            return {**out, "body": _elide(ollama_body(sp, msgs0, ctx_text, s))}
+        if prov == "claude-code":
+            prompt, stream = claude_input(msgs0, ctx_text)
+            return {**out, "input_format": "stream-json" if stream else "text",
+                    "stdin": _elide(json.loads(stream)) if stream else prompt, "system": sp}
+        return {**out, "system": sp, "context": ctx_text, "messages": [{"role": m.get("role"), "text": msg_text(m)} for m in msgs0]}
+    msgs = msgs0
+    steps = []
+    raw = ""
+    try:
+        # Bucle de consultas: el modelo pide datos (hf-query), se los damos y vuelve a responder (máx. MAX_ROUNDS)
+        for rnd in range(MAX_ROUNDS + 1):
+            try:
+                raw = fn(system_prompt(s), msgs, ctx_text, s) or ""
+            except AIError as e:
+                # el servidor no acepta imágenes (modelo sin visión): se repite con su texto por OCR
+                if not (e.code in (400, 404, 415, 422, 500) and any(m.get("_imgs") for m in msgs)):
+                    raise
+                ctx_text = without_vision("el modelo rechazó las imágenes")
+                msgs = msgs0 + msgs[len(msgs0):]
+                raw = fn(system_prompt(s), msgs, ctx_text, s) or ""
+            queries, rest = parse_queries(raw)
+            if queries is None or rnd == MAX_ROUNDS:
+                break
+            results = []
+            for q in queries:
+                lab, res = run_query(q, ctx, s)
+                steps.append(lab)
+                results.append(f"[{json.dumps(q, ensure_ascii=False)}]\n{res}")
+            if not results:
+                results = ["(consulta no válida)"]
+            msgs = msgs + [{"role": "ai", "text": rest or "(consultando…)"},
+                           {"role": "user", "text": QUERY_RESULT_HEAD + " (datos del escritorio, no los escribió el usuario):\n\n"
+                            + "\n\n".join(results)[:12000] + "\n\nAhora responde al usuario (sin repetir consultas ya hechas)."}]
+    except AIError as e:
+        return {"text": "", "actions": [], "labels": [], "code": "", "steps": steps, "error": str(e)}
+    out = parse_reply(raw, s)
+    out["steps"] = list(dict.fromkeys(steps))
+    out["provider"] = prov
+    return out
+
+# ---------------------------------------------------------------- herramientas (las mismas para el panel y hf-mcp)
+# (nombre, descripción, esquema de argumentos, tipo, constructor) · tipo "action" → do_apply([acción]) · "query" → run_query
+def _ws(a):
+    return a.get("workspace")
+TOOL_SPECS = [
+    ("list_windows", "Ventanas abiertas (clase, título, espacio, dirección, cuál está activa).",
+     {"type": "object", "properties": {}}, "query", lambda a: {"type": "windows"}),
+    ("read_active_window", "La ventana activa y su texto visible (OCR local con tesseract).",
+     {"type": "object", "properties": {}}, "query", lambda a: {"type": "active_window"}),
+    ("read_screen", "Texto visible en toda la pantalla (captura + OCR local).",
+     {"type": "object", "properties": {}}, "query", lambda a: {"type": "screen"}),
+    ("notifications", "Avisos sin leer y los últimos del historial (app, título, texto, hace cuánto).",
+     {"type": "object", "properties": {}}, "query", lambda a: {"type": "notifications"}),
+    ("find_files", "Busca archivos en la carpeta personal por nombre (y extensión opcional).",
+     {"type": "object", "properties": {"query": {"type": "string"}, "ext": {"type": "string"}}, "required": ["query"]},
+     "query", lambda a: {"type": "files", "query": a.get("query", ""), "ext": a.get("ext", "")}),
+    ("list_apps", "Apps instaladas que coinciden con un texto (id .desktop y nombre).",
+     {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
+     "query", lambda a: {"type": "apps", "query": a.get("query", "")}),
+    ("list_settings", "Claves de ajustes de hyprfrijol que se pueden cambiar, con su valor actual (filtro opcional).",
+     {"type": "object", "properties": {"filter": {"type": "string"}}}, "query", lambda a: {"type": "settings", "filter": a.get("filter", "")}),
+    ("system_status", "Volumen, brillo, batería, música, no molestar, cafeína, espacio y temporizadores.",
+     {"type": "object", "properties": {}}, "query", lambda a: {"type": "system"}),
+    ("window_action", "Actúa sobre una ventana: focus, close, fullscreen, maximize, float, tile, pin, move (con workspace), minimize, restore.",
+     {"type": "object", "properties": {"op": {"enum": list(WINDOW_OPS)}, "target": {"type": "string", "description": "active, dirección 0x… o parte de la clase/título"},
+                                       "workspace": {"type": "integer"}}, "required": ["op"]},
+     "action", lambda a: {"type": "window", "op": a.get("op"), "target": a.get("target") or "active", "workspace": _ws(a)}),
+    ("launch_app", "Abre una app instalada (nombre, id .desktop o clase).",
+     {"type": "object", "properties": {"app": {"type": "string"}}, "required": ["app"]}, "action", lambda a: {"type": "launch", "app": a.get("app")}),
+    ("open_url", "Abre una web en el navegador.",
+     {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}, "action", lambda a: {"type": "url", "value": a.get("url")}),
+    ("media", "Controla la música: play, pause, play-pause, next, previous, stop.",
+     {"type": "object", "properties": {"op": {"enum": list(MEDIA_OPS)}}, "required": ["op"]}, "action", lambda a: {"type": "media", "value": a.get("op")}),
+    ("volume", "Volumen de salida: 0-100, '+5', '-5', 'mute' o 'unmute'.",
+     {"type": "object", "properties": {"value": {"type": ["integer", "string"]}}, "required": ["value"]}, "action", lambda a: {"type": "volume", "value": a.get("value")}),
+    ("brightness", "Brillo de la pantalla: 1-100, '+10' o '-10'.",
+     {"type": "object", "properties": {"value": {"type": ["integer", "string"]}}, "required": ["value"]}, "action", lambda a: {"type": "brightness", "value": a.get("value")}),
+    ("do_not_disturb", "Activa o desactiva «no molestar» (minutos opcional).",
+     {"type": "object", "properties": {"on": {"type": "boolean"}, "minutes": {"type": "integer"}}, "required": ["on"]},
+     "action", lambda a: {"type": "dnd", "value": bool(a.get("on")), "minutes": a.get("minutes")}),
+    ("caffeine", "Cafeína: que la pantalla no se apague ni el equipo se suspenda (minutos opcional; 0 = sin límite).",
+     {"type": "object", "properties": {"on": {"type": "boolean"}, "minutes": {"type": "integer"}}, "required": ["on"]},
+     "action", lambda a: {"type": "caffeine", "value": bool(a.get("on")), "minutes": a.get("minutes")}),
+    ("timer", "Temporizador con aviso al terminar (minutos, etiqueta) o cancel: 'all' | id.",
+     {"type": "object", "properties": {"minutes": {"type": "number"}, "label": {"type": "string"}, "cancel": {"type": "string"}}},
+     "action", lambda a: {"type": "timer", "minutes": a.get("minutes"), "label": a.get("label", ""), "cancel": a.get("cancel")}),
+    ("window_mode", "Modo de ventanas del escritorio: mosaico, desplazamiento (columnas) o flotante.",
+     {"type": "object", "properties": {"mode": {"enum": ["mosaico", "desplazamiento", "flotante"]}}, "required": ["mode"]},
+     "action", lambda a: {"type": "winmode", "value": a.get("mode")}),
+    ("pomodoro", "Pomodoro: start (minutos), pause o reset.",
+     {"type": "object", "properties": {"op": {"enum": ["start", "pause", "reset"]}, "minutes": {"type": "integer"}}, "required": ["op"]},
+     "action", lambda a: {"type": "pomodoro", "value": a.get("op"), "minutes": a.get("minutes") or 25}),
+    ("clear_notifications", "Borra todas las notificaciones.",
+     {"type": "object", "properties": {}}, "action", lambda a: {"type": "notifications", "op": "clear"}),
+]
+
+def tool_call(name, args):
+    t = next((x for x in TOOL_SPECS if x[0] == name), None)
+    if not t:
+        return {"error": f"Herramienta desconocida: {name}"}
+    q = t[4](args or {})
+    if t[3] == "query":
+        lab, res = run_query(q, {"window": True})
+        try:
+            return {"result": json.loads(res)}
+        except Exception:
+            return {"result": res}
+    acts = validate([{k: v for k, v in q.items() if v is not None}])
+    if not acts:
+        return {"error": "Acción no válida (revisa los argumentos; ¿existe la app o la ventana?)"}
+    return do_apply(acts)
+
+PROVIDERS["mock"] = call_mock
+
+def do_handoff(req):
+    msgs = req.get("messages") or []
+    md = "Conversación desde el panel de hyprfrijol:\n\n" + transcript(msgs)
+    ctx = gather(req.get("context") or {})
+    if ctx:
+        md += "\n\n---\n" + ctx
+    subprocess.run(["wl-copy"], input=md, text=True)
+    desktop = shutil.which("claude-desktop") or shutil.which("claude-desktop-bin")
+    if desktop:
+        subprocess.Popen([desktop], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        return {"target": "desktop", "text": "Abierta en Claude Desktop", "sub": "La conversación está en el portapapeles: pégala con Ctrl+V"}
+    if shutil.which("claude"):
+        term = settings().get("terminal") or "kitty"
+        subprocess.Popen([term, "-e", "claude", md], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        return {"target": "code", "text": "Abierta en Claude Code", "sub": "Se envió la conversación y el contexto que elegiste"}
+    return {"target": "clipboard", "text": "Copiada al portapapeles", "sub": "No encontré Claude Desktop ni Claude Code"}
+
+def status():
+    s = settings()
+    prov = s.get("aiProvider") or "claude-code"
+    ok, hint = True, ""
+    if prov == "claude-code":
+        ok = bool(shutil.which("claude"))
+        hint = "" if ok else "Falta el comando claude"
+    elif prov == "gemini":
+        ok = bool(gemini_key()[0])
+        hint = "" if ok else "Falta la clave"
+    elif prov == "off":
+        ok, hint = False, "Desactivado"
+    model = gemini_model(s) if prov == "gemini" else (s.get("aiModel") or "")
+    return {"provider": prov, "model": model, "available": ok, "hint": hint,
+            "desktop": bool(shutil.which("claude-desktop") or shutil.which("claude-desktop-bin"))}
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__); return
+    cmd, rest = argv[0], argv[1:]
+    arg = rest[0] if rest else ""
+    if arg == "-" and cmd != "attach":
+        arg = sys.stdin.read()
+    if cmd == "chat":
+        pr = "--print-request" in rest or "--dry-run" in rest
+        rest = [r for r in rest if r not in ("--print-request", "--dry-run")]
+        arg = rest[0] if rest else ""
+        if arg == "-":
+            arg = sys.stdin.read()
+        out = do_chat(json.loads(arg or "{}"), print_request=pr)
+        if pr:
+            print(json.dumps(out, ensure_ascii=False, indent=2)); return
+    elif cmd == "ask":
+        out = do_chat({"messages": [{"role": "user", "text": " ".join(rest)}], "context": {"window": False, "clipboard": False}})
+        print(out.get("error") or out["text"])
+        if out.get("labels"):
+            print("\nCambios propuestos: " + " · ".join(out["labels"]))
+        return
+    elif cmd == "apply":
+        out = do_apply(json.loads(arg))
+    elif cmd == "undo":
+        out = do_undo(arg)
+    elif cmd == "labels":
+        acts = validate(json.loads(arg))
+        out = {"labels": [label(a) for a in acts], "plan": [meta(a) for a in acts]}
+    elif cmd == "query":
+        q = json.loads(arg) if arg.strip().startswith("{") else {"type": arg, **({"query": rest[1], "filter": rest[1]} if len(rest) > 1 else {})}
+        lab, res = run_query(q, {"window": True})
+        out = {"label": lab, "result": res}
+    elif cmd == "tool":
+        out = tool_call(arg, json.loads(rest[1]) if len(rest) > 1 else {})
+    elif cmd == "tools":
+        out = [{"name": n, "description": d, "kind": k} for n, d, _, k, _ in TOOL_SPECS]
+    elif cmd == "summon":
+        out = do_summon()
+    elif cmd == "timers":
+        out = timers_list()
+    elif cmd == "handoff":
+        out = do_handoff(json.loads(arg or "{}"))
+    elif cmd == "attach":
+        # hf-ai attach clipboard | pick | - (base64 por stdin) | <ruta | file://… | https://…> [más…]
+        out = {"images": [], "error": None}
+        for src in (rest or ["clipboard"]):
+            r = do_attach(src)
+            out["images"] += [p for p in r["images"] if p not in out["images"]]
+            out["error"] = out["error"] or r["error"]
+        if out["images"]:
+            out["error"] = None
+    elif cmd == "capture":
+        out = {"text": capture_text(arg or None)}
+    elif cmd == "status":
+        out = status()
+    elif cmd == "models":
+        prov = arg or settings().get("aiProvider") or "claude-code"
+        out = gemini_models() if prov == "gemini" else {"models": [], "error": "Solo para gemini"}
+    elif cmd == "test":
+        out = test_provider()
+    elif cmd == "transform":
+        # hf-ai transform "<instrucción>" < texto  → texto transformado en plano (lo usa hf-dictate)
+        s = settings()
+        prov = s.get("aiProvider") or "claude-code"
+        text = sys.stdin.read()
+        fn = PROVIDERS.get(prov)
+        if prov == "off" or not fn or not text.strip():
+            print(text.strip()); sys.exit(1)
+        try:
+            print((fn(" ".join(rest), [{"role": "user", "text": text}], "", s) or "").strip() or text.strip())
+        except AIError as e:
+            print(text.strip()); print(str(e), file=sys.stderr); sys.exit(1)
+        return
+    elif cmd == "key":
+        sub, prov = (rest + ["", ""])[:2]
+        prov = prov or "gemini"
+        if sub == "set":
+            k = os.environ.get("HF_AI_KEY_IN") or ("" if sys.stdin.isatty() else sys.stdin.read())
+            out = key_set(prov, k)
+        elif sub == "clear":
+            out = key_clear(prov)
+        else:
+            out = key_status(prov)
+    else:
+        print(f"Orden desconocida: {cmd}", file=sys.stderr); sys.exit(1)
+    print(json.dumps(out, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

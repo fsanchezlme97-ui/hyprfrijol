@@ -1,0 +1,189 @@
+#!/usr/bin/env bash
+# hf-migrate — pasa una instalación de hypr-liquid (nombre anterior) a hyprfrijol. Se puede repetir sin miedo.
+#
+#   hf-migrate                 migra todo lo de tu usuario e imprime los pasos con sudo que queden
+#   hf-migrate --dry-run       solo muestra lo que haría
+#   hf-migrate --dirs-only     solo las carpetas de ajustes/estado/datos/caché (lo usan hf-session, hf-apply y hyprland.lua)
+#   hf-migrate --quiet         sin mensajes (salvo errores)
+#   hf-migrate --repo DIR      carpeta del repo a renombrar (por defecto, la de este script)
+#   hf-migrate --repo-dest DIR nombre nuevo del repo (por defecto: …/hyprfrijol si el repo se llama hypr-liquid)
+#   hf-migrate --no-repo       no renombra la carpeta del repo
+#   hf-migrate --bin DIR       dónde instaló los enlaces ./install.sh (por defecto ~/.local/bin)
+#
+# Qué hace (solo en tu $HOME; nunca usa sudo):
+#   1. Repo  ~/…/hypr-liquid → ~/…/hyprfrijol y deja un enlace en la ruta antigua (el Hyprland en marcha,
+#      arrancado con --config <ruta antigua>/config/hypr/hyprland.lua, sigue funcionando).
+#   2. ~/.config, ~/.local/state, ~/.local/share y ~/.cache: hypr-liquid → hyprfrijol, con enlaces desde los nombres antiguos,
+#      y corrige las rutas antiguas dentro de los archivos generados (estado, caché, settings.json).
+#   3. Enlaces de ~/.local/bin: crea hf-* → repo/scripts/hf-* y convierte cada hl-* que hubiera en un enlace
+#      a su hf-* (la entrada de sesión antigua ejecuta ~/.local/bin/hl-session: sigue valiendo).
+#   4. Lanzadores de ~/.local/share/applications y ~/.config/autostart: hl-webapp-*.desktop → hf-webapp-*.desktop,
+#      hl-* → hf-* en Exec/StartupWMClass y X-HL-* → X-HF-*.
+#   5. Imprime (no ejecuta) los pasos con sudo: entrada de sesión, greetd, logind, udev.
+set -euo pipefail
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+
+OLD=hypr-liquid NEW=hyprfrijol
+DRY=0 QUIET=0 DIRS_ONLY=0 DO_REPO=1 REPO="" REPO_DEST="" BIN="$HOME/.local/bin"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run)   DRY=1 ;;
+    --quiet)     QUIET=1 ;;
+    --dirs-only) DIRS_ONLY=1 ;;
+    --no-repo)   DO_REPO=0 ;;
+    --repo)      REPO="${2:?--repo DIR}"; shift ;;
+    --repo-dest) REPO_DEST="${2:?--repo-dest DIR}"; shift ;;
+    --bin)       BIN="${2:?--bin DIR}"; shift ;;
+    -h|--help)   sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "Opción desconocida: $1 (usa --help)" >&2; exit 1 ;;
+  esac
+  shift
+done
+
+say()  { [ "$QUIET" = 1 ] || printf '\033[1;36m▸\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33m!\033[0m %s\n' "$*" >&2; }
+run()  { if [ "$DRY" = 1 ]; then [ "$QUIET" = 1 ] || { printf '  [dry-run]'; printf ' %q' "$@"; echo; }; else "$@"; fi; }
+abspath() { case "$1" in /*) printf '%s' "${1%/}";; *) printf '%s/%s' "$PWD" "${1%/}";; esac; }
+
+# ---------- 1. Repo ----------
+if [ -n "$REPO" ]; then REPO="$(abspath "$REPO")"; else REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"; fi
+OLD_REPO="$REPO" NEW_REPO="$REPO"
+if [ "$DIRS_ONLY" = 0 ] && [ "$DO_REPO" = 1 ]; then
+  if [ -n "$REPO_DEST" ]; then NEW_REPO="$(abspath "$REPO_DEST")"
+  elif [ "$(basename "$REPO")" = "$OLD" ]; then NEW_REPO="$(dirname "$REPO")/$NEW"
+  fi
+  if [ "$NEW_REPO" != "$OLD_REPO" ]; then
+    if [ -L "$OLD_REPO" ]; then
+      say "Repo: $OLD_REPO ya es un enlace a $(readlink "$OLD_REPO")"
+    elif [ -e "$NEW_REPO" ]; then
+      warn "Repo: ya existe $NEW_REPO; no muevo $OLD_REPO (hazlo a mano o usa --repo-dest)"
+      NEW_REPO="$OLD_REPO"
+    elif [ -d "$OLD_REPO" ]; then
+      say "Repo: $OLD_REPO → $NEW_REPO (con enlace en la ruta antigua)"
+      run mv "$OLD_REPO" "$NEW_REPO"
+      run ln -s "$NEW_REPO" "$OLD_REPO"
+    fi
+  fi
+fi
+# En --dry-run el repo aún no se ha movido: los scripts se buscan en la carpeta actual
+SCRIPTS_NOW="$NEW_REPO/scripts"; [ -d "$SCRIPTS_NOW" ] || SCRIPTS_NOW="$OLD_REPO/scripts"
+[ -e "$SCRIPTS_NOW/hf-session" ] || warn "El repo ($SCRIPTS_NOW) aún tiene los scripts antiguos (hl-*): actualízalo antes de migrar."
+
+OLD_REPO_CHANGED=""; [ "$OLD_REPO" != "$NEW_REPO" ] && OLD_REPO_CHANGED=1
+# ---------- 2. Carpetas del usuario ----------
+fix_paths() {   # corrige rutas antiguas dentro de los archivos de texto de una carpeta (o de un archivo)
+  local target="$1" f
+  # en --dry-run las carpetas aún tienen el nombre antiguo
+  [ -e "$target" ] || [ "$DRY" = 0 ] || target="$(printf '%s' "$target" | sed "s#/$NEW\(/\|\$\)#/$OLD\1#")"
+  [ -e "$target" ] || return 0
+  local -a exprs=(-e "s#$HOME/.local/state/$OLD#$HOME/.local/state/$NEW#g"
+                  -e "s#$HOME/.config/$OLD#$HOME/.config/$NEW#g"
+                  -e "s#$HOME/.local/share/$OLD#$HOME/.local/share/$NEW#g"
+                  -e "s#$HOME/.cache/$OLD#$HOME/.cache/$NEW#g")
+  [ "$OLD_REPO" != "$NEW_REPO" ] && exprs+=(-e "s#$OLD_REPO/#$NEW_REPO/#g")
+  while IFS= read -r -d '' f; do
+    [ "$(stat -c %s "$f")" -lt 2000000 ] || continue
+    grep -qIF -e "$HOME/.local/state/$OLD" -e "$HOME/.config/$OLD" -e "$HOME/.local/share/$OLD" -e "$HOME/.cache/$OLD" \
+      ${OLD_REPO_CHANGED:+-e "$OLD_REPO/"} "$f" 2>/dev/null || continue
+    say "  rutas: $f"
+    run sed -i "${exprs[@]}" "$f"
+  done < <(find "$target" -xdev -type f -print0 2>/dev/null)
+  # enlaces que apuntan a las rutas antiguas (p. ej. current-wallpaper)
+  while IFS= read -r -d '' f; do
+    local t; t="$(readlink "$f")"
+    case "$t" in
+      "$HOME/.local/state/$OLD"/*|"$HOME/.config/$OLD"/*|"$HOME/.local/share/$OLD"/*|"$HOME/.cache/$OLD"/*)
+        local nt; nt="$(printf '%s' "$t" | sed "s#/$OLD/#/$NEW/#")"
+        say "  enlace: $f → $nt"; run ln -sfn "$nt" "$f" ;;
+    esac
+  done < <(find "$target" -xdev -type l -print0 2>/dev/null)
+}
+for base in "$HOME/.config" "$HOME/.local/state" "$HOME/.local/share" "$HOME/.cache"; do
+  o="$base/$OLD" n="$base/$NEW"
+  if [ -L "$o" ] || [ ! -e "$o" ]; then continue; fi
+  if [ ! -d "$o" ]; then warn "$o no es una carpeta; no la toco"; continue; fi
+  if [ -e "$n" ]; then
+    # Las dos existen (la versión nueva arrancó antes de migrar): completa la nueva con lo que falte y aparta la antigua
+    say "$o → $n (ya existía: copio lo que falte; la antigua queda en $o.antes-$NEW)"
+    run cp -a -n "$o/." "$n/"
+    run mv "$o" "$o.antes-$NEW"
+  else
+    say "$o → $n"
+    run mkdir -p "$base"
+    run mv "$o" "$n"
+  fi
+  run ln -s "$n" "$o"
+done
+fix_paths "$HOME/.local/state/$NEW"
+fix_paths "$HOME/.cache/$NEW"
+fix_paths "$HOME/.config/$NEW/settings.json"
+
+[ "$DIRS_ONLY" = 1 ] && exit 0
+
+# ---------- 3. Enlaces en ~/.local/bin ----------
+if [ -d "$BIN" ]; then
+  for l in "$BIN"/hl-*; do
+    [ -e "$l" ] || [ -L "$l" ] || continue
+    s="${l##*/hl-}"; hf="$BIN/hf-$s"
+    if [ ! -L "$l" ]; then warn "$l no es un enlace; no lo toco"; continue; fi
+    [ "$(readlink "$l")" = "hf-$s" ] && continue   # ya migrado
+    if [ -e "$SCRIPTS_NOW/hf-$s" ]; then
+      say "$hf → $NEW_REPO/scripts/hf-$s  ·  ${l##*/} → hf-$s"
+      run ln -sfn "$NEW_REPO/scripts/hf-$s" "$hf"
+      run ln -sfn "hf-$s" "$l"
+    else
+      t="$(readlink "$l")"
+      if [ "$OLD_REPO" != "$NEW_REPO" ] && [ "${t#"$OLD_REPO"/}" != "$t" ]; then
+        say "${l##*/} → $NEW_REPO/${t#"$OLD_REPO"/} (no hay hf-$s en el repo)"
+        run ln -sfn "$NEW_REPO/${t#"$OLD_REPO"/}" "$l"
+      fi
+    fi
+  done
+fi
+
+# ---------- 4. Lanzadores (.desktop) ----------
+desktop_fix() {   # $1 archivo origen, $2 destino
+  local -a exprs=(-e "s#/scripts/hl-#/scripts/hf-#g" -e "s#^StartupWMClass=hl-#StartupWMClass=hf-#" -e "s#^X-HL-#X-HF-#"
+                  -e "s#$BIN/hl-#$BIN/hf-#g")
+  [ "$OLD_REPO" != "$NEW_REPO" ] && exprs+=(-e "s#$OLD_REPO/#$NEW_REPO/#g")
+  if [ "$1" = "$2" ]; then run sed -i "${exprs[@]}" "$1"
+  elif [ "$DRY" = 1 ]; then run sed "${exprs[@]}" "$1" ">" "$2"; run rm "$1"
+  else sed "${exprs[@]}" "$1" > "$2"; touch -r "$1" "$2"; rm "$1"; fi
+}
+for d in "${XDG_DATA_HOME:-$HOME/.local/share}/applications" "${XDG_CONFIG_HOME:-$HOME/.config}/autostart"; do
+  [ -d "$d" ] || continue
+  for f in "$d"/*.desktop; do
+    [ -f "$f" ] && [ ! -L "$f" ] || continue
+    b="${f##*/}"
+    if [ "${b#hl-}" != "$b" ]; then
+      say "$f → hf-${b#hl-}"; desktop_fix "$f" "$d/hf-${b#hl-}"
+    elif grep -qE "/scripts/hl-|^X-HL-" "$f" 2>/dev/null || { [ "$OLD_REPO" != "$NEW_REPO" ] && grep -qF "$OLD_REPO/" "$f" 2>/dev/null; }; then
+      say "  $f"; desktop_fix "$f" "$f"
+    fi
+  done
+done
+[ "$DRY" = 0 ] && command -v update-desktop-database >/dev/null && update-desktop-database -q "${XDG_DATA_HOME:-$HOME/.local/share}/applications" 2>/dev/null || true
+
+# ---------- 5. Pasos con sudo (solo se imprimen) ----------
+STEPS=()
+WS=/usr/share/wayland-sessions
+if [ -e "$WS/$OLD.desktop" ] || [ -e "$WS/$NEW.desktop" ]; then
+  [ -e "$WS/$NEW.desktop" ] || STEPS+=("printf '%s\\n' '[Desktop Entry]' 'Name=Hyprland (HyprFrijol)' 'Comment=Hyprland con el shell HyprFrijol' 'Exec=$BIN/hf-session' 'Type=Application' 'DesktopNames=Hyprland' 'Keywords=tiling;wayland;compositor;' | sudo tee $WS/$NEW.desktop >/dev/null")
+  [ -e "$WS/$OLD.desktop" ] && STEPS+=("sudo rm $WS/$OLD.desktop    # cuando hayas entrado una vez con «Hyprland (HyprFrijol)»; hasta entonces ~/.local/bin/hl-session sigue valiendo")
+fi
+[ -e /etc/greetd/hl-previous-dm ] && STEPS+=("sudo mv /etc/greetd/hl-previous-dm /etc/greetd/hf-previous-dm")
+[ -e "/etc/greetd/config.toml.antes-$OLD" ] && STEPS+=("sudo mv /etc/greetd/config.toml.antes-$OLD /etc/greetd/config.toml.antes-$NEW")
+grep -qs "$OLD" /etc/greetd/config.toml && STEPS+=("sudo sed -i 's/$OLD/$NEW/g' /etc/greetd/config.toml    # solo el comentario")
+[ -d /etc/greetd/quickshell ] && ! cmp -s /etc/greetd/quickshell/shell.qml "$SCRIPTS_NOW/../greeter/quickshell/shell.qml" && STEPS+=("$NEW_REPO/scripts/hf-greeter-sync    # copia el greeter renombrado a /etc/greetd/quickshell (pide la contraseña)")
+[ -e /etc/greetd/hyprland-greeter.lua ] && ! cmp -s /etc/greetd/hyprland-greeter.lua "$SCRIPTS_NOW/../greeter/hyprland-greeter.lua" \
+  && STEPS+=("sudo install -m644 $NEW_REPO/greeter/hyprland-greeter.lua /etc/greetd/hyprland-greeter.lua")
+[ -e "/etc/systemd/logind.conf.d/$OLD.conf" ] && STEPS+=("sudo mv /etc/systemd/logind.conf.d/$OLD.conf /etc/systemd/logind.conf.d/$NEW.conf && sudo systemctl kill -s HUP systemd-logind")
+[ -e "/etc/udev/rules.d/99-$OLD-charge.rules" ] && STEPS+=("sudo mv /etc/udev/rules.d/99-$OLD-charge.rules /etc/udev/rules.d/99-$NEW-charge.rules && sudo udevadm control --reload")
+
+if [ "${#STEPS[@]}" -gt 0 ]; then
+  echo
+  echo "Pasos con sudo que faltan (no los ejecuto; cópialos en una terminal):"
+  for s in "${STEPS[@]}"; do echo "  $s"; done
+fi
+say "Migración a $NEW lista$([ "$DRY" = 1 ] && echo ' (dry-run: no se ha cambiado nada)')."
+[ "$QUIET" = 1 ] || echo "   · Cierra sesión y vuelve a entrar para usar los nombres nuevos (atajos hf:…, variables HF_*)."

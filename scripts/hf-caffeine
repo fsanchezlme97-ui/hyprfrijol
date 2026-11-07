@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# hf-caffeine — modo cafeína: la pantalla no se atenúa, no se bloquea ni se apaga y el equipo no se suspende
+# por inactividad (Ajustes rápidos, indicador de la barra, Super + Alt + C).
+#   hf-caffeine on [min]   activa (con minutos: se apaga sola al acabar)
+#   hf-caffeine off | toggle [min]
+#   hf-caffeine status     → «on 0» (sin límite) · «on <fin en segundos epoch>» · «off»
+# Toma un cerrojo «idle» de systemd-inhibit, que hypridle respeta (también logind). El cerrojo vive en un proceso
+# aparte atado a esta sesión de Hyprland: sobrevive a reinicios del shell y se suelta solo al cerrar la sesión.
+# Suspender a mano (menú de energía, tapa) sigue funcionando: solo se bloquea la inactividad.
+set -u
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+SIG="${HYPRLAND_INSTANCE_SIGNATURE:-sin-hyprland}"
+RUN="${XDG_RUNTIME_DIR:-/tmp}/hyprfrijol"
+PIDF="$RUN/caffeine-$SIG"
+mkdir -p "$RUN"
+
+cur() {   # «pid fin» si está activa
+  local p e
+  read -r p e < "$PIDF" 2>/dev/null || return 1
+  [ -n "${p:-}" ] && kill -0 "$p" 2>/dev/null && echo "$p ${e:-0}"
+}
+hypr_pid() { hyprctl instances -j 2>/dev/null | jq -r --arg s "$SIG" '.[] | select(.instance == $s) | .pid' 2>/dev/null | head -n1; }
+
+on() {
+  cur >/dev/null && off
+  command -v systemd-inhibit >/dev/null || { echo "hf-caffeine: falta systemd-inhibit" >&2; exit 1; }
+  local hp mins="${1:-0}" until=0
+  hp=$(hypr_pid)
+  [ "$mins" -gt 0 ] 2>/dev/null && until=$(( $(date +%s) + mins * 60 ))
+  rm -f "$PIDF"
+  # el hijo de systemd-inhibit espera mientras viva la sesión (y, con minutos, hasta la hora de fin)
+  setsid -f systemd-inhibit --what=idle --who=hyprfrijol --why="Modo cafeína" --mode=block \
+    sh -c 'echo "$$ $3" > "$2"; while { [ -z "$1" ] || kill -0 "$1" 2>/dev/null; } && { [ "$3" = 0 ] || [ "$(date +%s)" -lt "$3" ]; }; do sleep 5; done; rm -f "$2"' \
+    hf-caffeine "$hp" "$PIDF" "$until" >/dev/null 2>&1
+  for _ in $(seq 20); do cur >/dev/null && return 0; sleep 0.05; done
+}
+off() {
+  local c; c=$(cur) || { rm -f "$PIDF"; return 0; }
+  kill "${c%% *}" 2>/dev/null; rm -f "$PIDF"
+}
+
+case "${1:-status}" in
+  on) on "${2:-0}" ;;
+  off) off ;;
+  toggle) if cur >/dev/null; then off; else on "${2:-0}"; fi ;;
+  status) c=$(cur) && echo "on ${c#* }" || echo off ;;
+  *) echo "uso: hf-caffeine on [min] | off | toggle [min] | status" >&2; exit 2 ;;
+esac

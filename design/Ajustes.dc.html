@@ -1,0 +1,1127 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Ajustes del escritorio</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;border:0;background:none;color:inherit;padding:0;cursor:pointer}
+input{font:inherit}
+input::placeholder{color:inherit;opacity:1}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11.5px}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; display: flex; background: {{c.s1}}; color: {{c.t}}; font-family: 'Inter', system-ui, sans-serif; font-size: 12.5px; letter-spacing: -0.005em; border-radius: 6px; overflow: hidden; border: 1px solid {{c.ov}}; box-sizing: border-box">
+
+  <nav aria-label="Secciones de ajustes" style="width: 236px; flex: none; background: {{c.bg}}; padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; box-sizing: border-box">
+    <label style="height: 34px; border-radius: 17px; background: {{c.s3}}; display: flex; align-items: center; padding: 0 12px; margin-bottom: 10px; color: {{c.tv}}">
+      <input aria-label="Buscar en ajustes" placeholder="Buscar ajuste…" style="flex: 1; background: none; border: 0; outline: none; color: {{c.t}}">
+    </label>
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="13">
+      <sc-if value="{{n.sep}}" hint-placeholder-val="{{ false }}"><span style="height: 1px; background: {{c.ov}}; margin: 6px 10px"></span></sc-if>
+      <button onClick="{{n.pick}}" style="height: 34px; border-radius: 5px; padding: 0 12px; display: flex; align-items: center; gap: 12px; text-align: left; background: {{n.bg}}; color: {{n.fg}}; font-weight: {{n.weight}}">
+        <span aria-hidden="true" style="width: 16px; text-align: center">{{n.glyph}}</span>{{n.label}}
+      </button>
+    </sc-for>
+  </nav>
+
+  <main style="flex: 1; min-width: 0; padding: 18px 22px; display: flex; flex-direction: column; gap: 12px; overflow: hidden">
+    <div style="display: flex; align-items: baseline; justify-content: space-between">
+      <h1 style="margin: 0; font-size: 22px; font-weight: 600">{{title}}</h1>
+      <span class="mono" style="color: {{c.tv}}">{{subtitle}}</span>
+    </div>
+
+    <!-- ================= APARIENCIA ================= -->
+    <sc-if value="{{sec.apariencia}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 15px; font-weight: 600">Fondo de pantalla</span>
+            <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+              <sc-for list="{{walls}}" as="w" hint-placeholder-count="6">
+                <button onClick="{{w.pick}}" aria-label="{{w.label}}" style="display: flex; flex-direction: column; gap: 4px; align-items: stretch">
+                  <span style="height: 82px; border-radius: 6px; overflow: hidden; position: relative; box-sizing: border-box; border: {{w.ring}}; background: {{w.base}}; display: block">
+                    <sc-if value="{{w.isScene}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; inset: 0; background: {{w.sky}}"></span><span style="position: absolute; width: 90px; height: 50px; border-radius: 50%; left: 40%; top: 24%; background: {{w.glow}}; filter: blur(14px); opacity: 0.7"></span><span style="position: absolute; width: 10px; height: 10px; border-radius: 50%; left: 64%; top: 42%; background: {{w.sun}}"></span><span style="position: absolute; left: 0; right: 0; top: 38%; height: 30%; background: {{w.far}}; clip-path: polygon(0 60%, 15% 30%, 30% 55%, 48% 20%, 62% 50%, 80% 25%, 100% 50%, 100% 100%, 0 100%)"></span><span style="position: absolute; left: 0; right: 0; top: 52%; height: 22%; background: {{w.near}}; clip-path: polygon(0 45%, 25% 75%, 45% 40%, 70% 70%, 100% 45%, 100% 100%, 0 100%)"></span><span style="position: absolute; left: 0; right: 0; top: 73%; bottom: 0; background: {{w.lake}}"></span></sc-if>
+                    <sc-if value="{{w.isNiebla}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; width: 110px; height: 110px; border-radius: 50%; right: -20px; top: -40px; background: {{c.pc}}; filter: blur(16px)"></span><span style="position: absolute; width: 90px; height: 90px; border-radius: 50%; left: -20px; bottom: -40px; background: {{c.sc}}; filter: blur(16px)"></span></sc-if>
+                    <sc-if value="{{w.isLineas}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; width: 30px; height: 30px; border-radius: 50%; right: 18px; bottom: 6px; background: {{c.pc}}"></span><span style="position: absolute; width: 70px; height: 70px; border-radius: 50%; right: -2px; bottom: -14px; border: 1px solid {{c.o}}"></span><span style="position: absolute; width: 120px; height: 120px; border-radius: 50%; right: -27px; bottom: -39px; border: 1px solid {{c.o}}"></span><span style="position: absolute; width: 180px; height: 180px; border-radius: 50%; right: -57px; bottom: -69px; border: 1px solid {{c.o}}"></span></sc-if>
+                    <sc-if value="{{w.isOrbes}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; width: 90px; height: 90px; border-radius: 50%; right: -20px; bottom: -40px; background: {{c.pc}}"></span><span style="position: absolute; width: 60px; height: 60px; border-radius: 50%; left: -14px; top: -14px; background: {{c.sc}}"></span><span style="position: absolute; width: 18px; height: 18px; border-radius: 50%; right: 34px; top: 12px; background: {{c.ter}}"></span></sc-if>
+                    <sc-if value="{{w.isOndas}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; width: 300px; height: 300px; border-radius: 50%; left: -80px; top: 36px; background: {{c.sc}}"></span><span style="position: absolute; width: 280px; height: 280px; border-radius: 50%; left: -20px; top: 50px; background: {{c.pc}}"></span><span style="position: absolute; width: 260px; height: 260px; border-radius: 50%; left: -110px; top: 64px; background: {{c.p}}; opacity: 0.55"></span></sc-if>
+                    <sc-if value="{{w.isDunas}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; width: 20px; height: 20px; border-radius: 50%; right: 30px; top: 12px; background: {{c.ter}}"></span><span style="position: absolute; width: 240px; height: 90px; border-radius: 50%; left: -60px; top: 40px; background: {{c.sc}}"></span><span style="position: absolute; width: 240px; height: 90px; border-radius: 50%; left: -70px; top: 60px; background: {{c.bg}}"></span></sc-if>
+                    <sc-if value="{{w.isPin}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; inset: 6px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px"><span style="border-radius: 5px; background: {{c.s4}}"></span><span style="border-radius: 5px; background: {{c.sc}}"></span><span style="border-radius: 5px; background: {{c.s4}}"></span></span></sc-if>
+                    <sc-if value="{{w.isAdd}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; color: {{c.p}}">+</span></sc-if>
+                  </span>
+                  <span style="font-size: 12px; text-align: center">{{w.label}}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 90px; color: {{c.tv}}">Fuente</span>
+              <div style="flex: 1; display: flex; height: 30px; border-radius: 15px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{wallSrc}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 90px; color: {{c.tv}}">Cambiar cada</span>
+              <div style="flex: 1; display: flex; height: 30px; border-radius: 15px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{wallEvery}}" as="o" hint-placeholder-count="4"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+            <span class="mono" style="color: {{c.tv}}">swww img ~/fondos/actual.png --transition-type grow</span>
+          </section>
+
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 15px; font-weight: 600">Estilo visual</span>
+            <div aria-label="Vista previa del estilo" role="img" style="height: 150px; border-radius: 6px; background: {{c.bg}}; position: relative; overflow: hidden">
+              <span style="position: absolute; width: 220px; height: 220px; border-radius: 50%; right: -40px; bottom: -110px; background: {{c.pc}}"></span>
+              <span style="position: absolute; width: 140px; height: 140px; border-radius: 50%; left: -40px; top: -50px; background: {{c.sc}}"></span>
+              <span style="position: absolute; width: 50px; height: 50px; border-radius: 50%; left: 46%; top: 30px; background: {{c.ter}}"></span>
+              <span style="position: absolute; top: 4px; left: 4px; right: 4px; height: 12px; border-radius: {{pv.barRad}}; background: {{pv.bg}}; border: {{pv.border}}; backdrop-filter: {{pv.blur}}; -webkit-backdrop-filter: {{pv.blur}}"></span>
+              <span style="position: absolute; top: 20px; left: 4px; right: 4px; bottom: 4px; display: grid; grid-template-columns: 1.6fr 1fr; grid-template-rows: 1fr 1fr; gap: {{pv.gap}}">
+                <span style="grid-row: span 2; border-radius: {{pv.rad}}; background: {{c.s1}}; border: 1.5px solid {{c.p}}"></span>
+                <span style="border-radius: {{pv.rad}}; background: {{c.s1}}"></span>
+                <span style="border-radius: {{pv.rad}}; background: {{pv.bg}}; border: {{pv.border}}; backdrop-filter: {{pv.blur}}; -webkit-backdrop-filter: {{pv.blur}}"></span>
+              </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 50px; color: {{c.tv}}">Estilo</span>
+              <div role="radiogroup" aria-label="Estilo" style="flex: 1; display: flex; height: 30px; border-radius: 6px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{estilos}}" as="o" hint-placeholder-count="3"><button role="radio" aria-checked="{{o.on}}" onClick="{{o.pick}}" style="flex: 1; font-size: 12.5px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+            <span style="font-size: 12px; color: {{c.tv}}">{{estiloHint}}</span>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 50px; color: {{c.tv}}">Color</span>
+              <div role="radiogroup" aria-label="Modo de color" style="flex: 1; display: flex; height: 30px; border-radius: 6px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{colorModes}}" as="o" hint-placeholder-count="3"><button role="radio" aria-checked="{{o.on}}" onClick="{{o.pick}}" style="flex: 1; font-size: 12.5px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+            <sc-if value="{{cm.auto}}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; align-items: center; gap: 10px; padding-left: 60px">
+                <span aria-hidden="true" style="display: flex; gap: 3px"><span style="width: 22px; height: 22px; border-radius: 5px; background: {{c.p}}"></span><span style="width: 22px; height: 22px; border-radius: 5px; background: {{c.pc}}"></span><span style="width: 22px; height: 22px; border-radius: 5px; background: {{c.sc}}"></span><span style="width: 22px; height: 22px; border-radius: 5px; background: {{c.ter}}"></span></span>
+                <span style="font-size: 12px; color: {{c.tv}}">Tomado del fondo «{{wallName}}» · cambia solo con cada fondo</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{cm.elegir}}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; align-items: center; gap: 8px; padding-left: 60px">
+                <sc-for list="{{swatches}}" as="s" hint-placeholder-count="8">
+                  <button onClick="{{s.pick}}" aria-label="{{s.name}}" style="width: 28px; height: 28px; border-radius: 7px; box-sizing: border-box; border: {{s.ring}}; padding: 3px; display: flex"><span style="flex: 1; border-radius: 4px; background: {{s.a}}"></span></button>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{cm.mono}}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; align-items: center; gap: 10px; padding-left: 60px">
+                <sc-for list="{{monoOpts}}" as="s" hint-placeholder-count="2">
+                  <button onClick="{{s.pick}}" style="height: 28px; padding: 0 10px 0 4px; border-radius: 6px; box-sizing: border-box; border: {{s.ring}}; display: flex; align-items: center; gap: 6px"><span style="width: 20px; height: 20px; border-radius: 4px; background: {{s.a}}; border: 1px solid {{c.ov}}"></span>{{s.name}}</button>
+                </sc-for>
+                <span style="flex: 1"></span>
+                <span style="font-size: 12px; color: {{c.tv}}">Fondo en blanco y negro</span>
+                <button role="switch" aria-checked="{{monoBg.on}}" aria-label="Fondo en blanco y negro" onClick="{{monoBg.toggle}}" style="width: 40px; height: 24px; border-radius: 12px; box-sizing: border-box; background: {{monoBg.track}}; border: {{monoBg.border}}; display: flex; align-items: center; justify-content: {{monoBg.justify}}; padding: 0 3px"><span style="width: {{monoBg.knob}}; height: {{monoBg.knob}}; border-radius: 50%; background: {{monoBg.knobBg}}"></span></button>
+              </div>
+            </sc-if>
+          </section>
+        </div>
+
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px">
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <span style="display: flex; justify-content: space-between"><span style="font-weight: 600">Esquinas</span><span class="mono" style="color: {{c.tv}}">rounding = {{radius}}</span></span>
+            <div style="display: flex; gap: 6px"><sc-for list="{{radii}}" as="r" hint-placeholder-count="5"><button onClick="{{r.pick}}" class="num" style="flex: 1; height: 30px; border-radius: 6px; font-weight: 600; background: {{r.bg}}; color: {{r.fg}}">{{r.label}}</button></sc-for></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <span style="display: flex; justify-content: space-between"><span style="font-weight: 600">Espacio entre ventanas</span><span class="mono" style="color: {{c.tv}}">gaps_in = {{gaps}}</span></span>
+            <div style="display: flex; gap: 6px"><sc-for list="{{gapOpts}}" as="g" hint-placeholder-count="5"><button onClick="{{g.pick}}" class="num" style="flex: 1; height: 30px; border-radius: 6px; font-weight: 600; background: {{g.bg}}; color: {{g.fg}}">{{g.label}}</button></sc-for></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <span style="display: flex; justify-content: space-between"><span style="font-weight: 600">Escala de la interfaz</span><span class="mono" style="color: {{c.tv}}">monitor scale</span></span>
+            <div style="display: flex; gap: 6px"><sc-for list="{{scales}}" as="g" hint-placeholder-count="4"><button onClick="{{g.pick}}" class="num" style="flex: 1; height: 30px; border-radius: 6px; font-weight: 600; background: {{g.bg}}; color: {{g.fg}}">{{g.label}}</button></sc-for></div>
+          </div>
+        </section>
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 2px 14px; display: flex; flex-direction: column">
+          <sc-for list="{{swAparien}}" as="w" hint-placeholder-count="3">
+            <div style="height: 48px; display: flex; align-items: center; gap: 14px; border-bottom: {{w.sep}}">
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">{{w.label}}</span><span class="mono" style="color: {{c.tv}}">{{w.sub}}</span></span>
+              <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 44px; height: 26px; border-radius: 13px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ================= BARRA ================= -->
+    <sc-if value="{{sec.barra}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 15px; font-weight: 600">Posición</span>
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+            <sc-for list="{{positions}}" as="p" hint-placeholder-count="4">
+              <button onClick="{{p.pick}}" style="display: flex; flex-direction: column; gap: 6px; align-items: center">
+                <span style="width: 100%; height: 96px; border-radius: 6px; box-sizing: border-box; background: {{c.bg}}; border: {{p.ring}}; position: relative; display: block">
+                  <span style="position: absolute; top: {{p.t}}; left: {{p.l}}; width: {{p.w}}; height: {{p.h}}; border-radius: 4px; background: {{p.strip}}"></span>
+                  <span style="position: absolute; top: {{p.at}}; left: {{p.al}}; right: {{p.ar}}; bottom: {{p.ab}}; border-radius: 6px; background: {{c.s3}}"></span>
+                </span>
+                <span style="font-weight: 600">{{p.label}}</span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 70px; color: {{c.tv}}">Forma</span><div style="flex: 1; display: flex; height: 30px; border-radius: 15px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{barModes}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 70px; color: {{c.tv}}">Altura</span><div style="flex: 1; display: flex; height: 30px; border-radius: 15px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{barSizes}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+          </div>
+        </section>
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <span style="display: flex; justify-content: space-between"><span style="font-size: 15px; font-weight: 600">Módulos visibles</span><span style="font-size: 12px; color: {{c.tv}}">Arrastra para reordenar · clic para mostrar u ocultar</span></span>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px">
+            <sc-for list="{{modules}}" as="m" hint-placeholder-count="12">
+              <button onClick="{{m.toggle}}" aria-pressed="{{m.on}}" style="height: 30px; padding: 0 12px; border-radius: 6px; box-sizing: border-box; font-weight: 600; background: {{m.bg}}; color: {{m.fg}}; border: {{m.border}}">{{m.mark}} {{m.label}}</button>
+            </sc-for>
+          </div>
+        </section>
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 2px 14px; display: flex; flex-direction: column">
+          <sc-for list="{{swBarra}}" as="w" hint-placeholder-count="4">
+            <div style="height: 48px; display: flex; align-items: center; gap: 14px; border-bottom: {{w.sep}}">
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">{{w.label}}</span><span class="mono" style="color: {{c.tv}}">{{w.sub}}</span></span>
+              <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 44px; height: 26px; border-radius: 13px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ================= ESCRITORIO Y GESTOS ================= -->
+    <sc-if value="{{sec.escritorio}}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 12px">
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <span style="display: flex; justify-content: space-between"><span style="font-size: 15px; font-weight: 600">Esquinas calientes</span><span style="font-size: 12px; color: {{c.tv}}">Clic en una esquina para cambiar su acción</span></span>
+          <div style="height: 300px; border-radius: 7px; background: {{c.bg}}; position: relative; border: 1px solid {{c.ov}}">
+            <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: {{c.tv}}; text-align: center; padding: 0 120px">Lleva el cursor a una esquina y espera {{cornerDelay}} para activar la acción</span>
+            <sc-for list="{{corners}}" as="k" hint-placeholder-count="4">
+              <button onClick="{{k.cycle}}" style="position: absolute; top: {{k.top}}; bottom: {{k.bottom}}; left: {{k.left}}; right: {{k.right}}; height: 52px; min-width: 150px; padding: 0 12px; border-radius: 7px; background: {{k.bg}}; color: {{k.fg}}; display: flex; flex-direction: column; justify-content: center; align-items: {{k.align}}; gap: 2px">
+                <span style="font-size: 11px; opacity: 0.85">{{k.where}}</span><span style="font-weight: 600">{{k.action}}</span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 120px; color: {{c.tv}}">Tiempo de espera</span><div style="flex: 1; display: flex; height: 30px; border-radius: 15px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{delays}}" as="o" hint-placeholder-count="4"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+        </section>
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 15px; font-weight: 600; margin-bottom: 4px">Gestos del touchpad</span>
+            <sc-for list="{{gestures}}" as="g" hint-placeholder-count="5">
+              <div style="height: 34px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid {{c.ov}}"><span style="font-weight: 600">{{g.k}}</span><span style="color: {{c.tv}}">{{g.v}}</span></div>
+            </sc-for>
+          </section>
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+            <span style="display: flex; justify-content: space-between"><span style="font-size: 15px; font-weight: 600">Diseño de mosaico</span><span class="mono" style="color: {{c.tv}}">general:layout = {{layout}}</span></span>
+            <div style="display: flex; height: 30px; border-radius: 15px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{layouts}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div>
+            <sc-for list="{{swEsc}}" as="w" hint-placeholder-count="2">
+              <div style="height: 42px; display: flex; align-items: center; gap: 14px">
+                <span style="flex: 1; font-weight: 600">{{w.label}}</span>
+                <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 44px; height: 26px; border-radius: 13px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button>
+              </div>
+            </sc-for>
+          </section>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= ENFOQUE ================= -->
+    <sc-if value="{{sec.enfoque}}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 12px">
+          <span style="display: flex; justify-content: space-between"><span style="font-size: 15px; font-weight: 600">Pomodoro</span><span style="font-size: 12px; color: {{c.tv}}">Visible en la barra y en ajustes rápidos</span></span>
+          <sc-for list="{{steppers}}" as="s" hint-placeholder-count="4">
+            <div style="display: flex; align-items: center; gap: 10px">
+              <span style="flex: 1; font-weight: 600">{{s.label}}</span>
+              <button onClick="{{s.dec}}" aria-label="Menos" style="width: 32px; height: 32px; border-radius: 16px; background: {{c.s4}}; font-size: 16px">−</button>
+              <span class="num" style="width: 64px; text-align: center; font-size: 16px; font-weight: 600">{{s.value}}</span>
+              <button onClick="{{s.inc}}" aria-label="Más" style="width: 32px; height: 32px; border-radius: 16px; background: {{c.s4}}; font-size: 16px">+</button>
+            </div>
+          </sc-for>
+          <div style="border-radius: 6px; background: {{c.s1}}; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 12px; color: {{c.tv}}">Un ciclo completo</span>
+            <div style="display: flex; gap: 3px; height: 14px"><sc-for list="{{cycle}}" as="b" hint-placeholder-count="8"><span style="border-radius: 3px; flex: {{b.flex}}; background: {{b.bg}}"></span></sc-for></div>
+            <span class="num" style="font-size: 12px; color: {{c.tv}}">{{cycleText}}</span>
+          </div>
+        </section>
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 2px 14px; display: flex; flex-direction: column">
+            <span style="font-size: 15px; font-weight: 600; padding: 12px 0 4px">Modo sin distracciones</span>
+            <sc-for list="{{swFoco}}" as="w" hint-placeholder-count="5">
+              <div style="height: 44px; display: flex; align-items: center; gap: 14px; border-bottom: {{w.sep}}">
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">{{w.label}}</span><span class="mono" style="color: {{c.tv}}">{{w.sub}}</span></span>
+                <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 44px; height: 26px; border-radius: 13px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button>
+              </div>
+            </sc-for>
+          </section>
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+            <span style="font-weight: 600">Bloquear durante el foco</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px">
+              <sc-for list="{{blocks}}" as="m" hint-placeholder-count="6">
+                <button onClick="{{m.toggle}}" aria-pressed="{{m.on}}" style="height: 30px; padding: 0 12px; border-radius: 6px; box-sizing: border-box; font-weight: 600; background: {{m.bg}}; color: {{m.fg}}; border: {{m.border}}">{{m.mark}} {{m.label}}</button>
+              </sc-for>
+            </div>
+          </section>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= IA ================= -->
+    <sc-if value="{{sec.ia}}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 12px">
+          <span style="font-size: 15px; font-weight: 600">Proveedor</span>
+          <div style="display: flex; height: 32px; border-radius: 16px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{providers}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div>
+          <span style="font-size: 12px; color: {{c.tv}}">{{providerHint}}</span>
+          <label style="display: flex; flex-direction: column; gap: 4px"><span style="color: {{c.tv}}">Modelo</span><input placeholder="[nombre del modelo]" style="height: 34px; border-radius: 6px; border: 1px solid {{c.o}}; background: {{c.s1}}; padding: 0 12px; color: {{c.t}}; outline: none"></label>
+          <label style="display: flex; flex-direction: column; gap: 4px"><span style="color: {{c.tv}}">Dirección del servidor</span><input value="{{endpoint}}" readonly style="height: 34px; border-radius: 6px; border: 1px solid {{c.o}}; background: {{c.s1}}; padding: 0 12px; color: {{c.t}}; outline: none; font-family: 'JetBrains Mono', monospace; font-size: 12px"></label>
+          <div style="display: flex; justify-content: space-between; align-items: center"><span style="font-weight: 600">Atajo para abrir</span><span style="padding: 5px 10px; border-radius: 8px; border: 1px solid {{c.o}}">Super + A</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center"><span style="font-weight: 600">Preguntar desde Spotlight</span><span style="padding: 5px 10px; border-radius: 8px; border: 1px solid {{c.o}}">Empieza con ?</span></div>
+        </section>
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 2px 14px; display: flex; flex-direction: column">
+          <span style="font-size: 15px; font-weight: 600; padding: 12px 0 4px">Permisos del asistente</span>
+          <sc-for list="{{swIA}}" as="w" hint-placeholder-count="6">
+            <div style="height: 44px; display: flex; align-items: center; gap: 14px; border-bottom: {{w.sep}}">
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 12px; color: {{c.tv}}">{{w.sub}}</span></span>
+              <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 44px; height: 26px; border-radius: 13px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ================= WEB APPS ================= -->
+    <sc-if value="{{sec.webapps}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 6px 14px; display: flex; flex-direction: column">
+          <div style="height: 30px; display: flex; align-items: center; gap: 14px; font-size: 12px; color: {{c.tv}}"><span style="flex: 1">App</span><span style="width: 90px; text-align: center">Atajo</span><span style="width: 90px; text-align: center">Avisos</span><span style="width: 90px; text-align: center">En la barra</span></div>
+          <sc-for list="{{webapps}}" as="a" hint-placeholder-count="6">
+            <div style="height: 54px; display: flex; align-items: center; gap: 14px; border-top: 1px solid {{c.ov}}">
+              <span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 6px; background: {{a.tile}}; color: {{a.tileFg}}; display: flex; align-items: center; justify-content: center; font-weight: 600">{{a.g}}</span>
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">{{a.name}}</span><span class="mono" style="color: {{c.tv}}">{{a.url}}</span></span>
+              <span style="width: 90px; text-align: center; color: {{c.tv}}">{{a.key}}</span>
+              <span style="width: 90px; display: flex; justify-content: center"><button role="switch" aria-checked="{{a.n.on}}" aria-label="Avisos de {{a.name}}" onClick="{{a.n.toggle}}" style="width: 44px; height: 26px; border-radius: 13px; box-sizing: border-box; background: {{a.n.track}}; border: {{a.n.border}}; display: flex; align-items: center; justify-content: {{a.n.justify}}; padding: 0 3px"><span style="width: {{a.n.knob}}; height: {{a.n.knob}}; border-radius: 50%; background: {{a.n.knobBg}}"></span></button></span>
+              <span style="width: 90px; display: flex; justify-content: center"><button role="switch" aria-checked="{{a.b.on}}" aria-label="{{a.name}} en la barra" onClick="{{a.b.toggle}}" style="width: 44px; height: 26px; border-radius: 13px; box-sizing: border-box; background: {{a.b.track}}; border: {{a.b.border}}; display: flex; align-items: center; justify-content: {{a.b.justify}}; padding: 0 3px"><span style="width: {{a.b.knob}}; height: {{a.b.knob}}; border-radius: 50%; background: {{a.b.knobBg}}"></span></button></span>
+            </div>
+          </sc-for>
+        </section>
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 15px; font-weight: 600">Crear web app</span>
+          <div style="display: flex; gap: 8px">
+            <label style="flex: 1; display: flex; flex-direction: column; gap: 4px"><span style="color: {{c.tv}}">Nombre</span><input placeholder="Ej. Calendario" style="height: 34px; border-radius: 6px; border: 1px solid {{c.o}}; background: {{c.s1}}; padding: 0 12px; color: {{c.t}}; outline: none"></label>
+            <label style="flex: 2; display: flex; flex-direction: column; gap: 4px"><span style="color: {{c.tv}}">Dirección web</span><input placeholder="https://" style="height: 34px; border-radius: 6px; border: 1px solid {{c.o}}; background: {{c.s1}}; padding: 0 12px; color: {{c.t}}; outline: none"></label>
+            <button style="align-self: flex-end; height: 34px; padding: 0 16px; border-radius: 17px; background: {{c.p}}; color: {{c.onP}}; font-weight: 600">Crear</button>
+          </div>
+          <span style="font-size: 12px; color: {{c.tv}}">Cada web app abre en su propia ventana, con ícono, atajo y notificaciones nativas, y aparece en Spotlight.</span>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ================= FONDOS ================= -->
+    <sc-if value="{{sec.fondos}}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px">
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <span style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 15px; font-weight: 600">Colección</span><span style="font-size: 12px; color: {{c.tv}}">{{wCount}} fondos · {{wAnimCount}} animados</span></span>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+            <sc-for list="{{coll}}" as="w" hint-placeholder-count="9">
+              <button onClick="{{w.pick}}" aria-label="{{w.label}}" style="display: flex; flex-direction: column; gap: 4px">
+                <span style="height: 92px; border-radius: 6px; overflow: hidden; position: relative; box-sizing: border-box; border: {{w.ring}}; background: {{w.base}}; display: block; width: 100%">
+                  <sc-if value="{{w.isScene}}" hint-placeholder-val="{{ true }}"><span style="position: absolute; inset: 0; background: {{w.sky}}"></span><span style="position: absolute; width: 100px; height: 54px; border-radius: 50%; left: 40%; top: 22%; background: {{w.glow}}; filter: blur(14px); opacity: 0.7"></span><span style="position: absolute; width: 11px; height: 11px; border-radius: 50%; left: 64%; top: 40%; background: {{w.sun}}"></span><span style="position: absolute; left: 0; right: 0; top: 38%; height: 30%; background: {{w.far}}; clip-path: polygon(0 60%, 15% 30%, 30% 55%, 48% 20%, 62% 50%, 80% 25%, 100% 50%, 100% 100%, 0 100%)"></span><span style="position: absolute; left: 0; right: 0; top: 52%; height: 22%; background: {{w.near}}; clip-path: polygon(0 45%, 25% 75%, 45% 40%, 70% 70%, 100% 45%, 100% 100%, 0 100%)"></span><span style="position: absolute; left: 0; right: 0; top: 73%; bottom: 0; background: {{w.lake}}"></span></sc-if>
+                  <sc-if value="{{w.isEmpty}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: {{c.tv}}; font-size: 12px; text-align: center; padding: 0 8px">{{w.hint}}</span></sc-if>
+                  <sc-if value="{{w.anim}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; left: 6px; top: 6px; height: 18px; padding: 0 7px; border-radius: 6px; background: rgba(0,0,0,0.55); color: #FFFFFF; font-size: 10.5px; font-weight: 600; display: flex; align-items: center; gap: 4px">▶ Animado</span></sc-if>
+                </span>
+                <span style="font-size: 12px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{w.label}}</span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap">
+            <span style="height: 28px; padding: 0 12px; border-radius: 8px; border: 1px solid {{c.ov}}; display: flex; align-items: center">Agregar carpeta</span>
+            <span style="height: 28px; padding: 0 12px; border-radius: 8px; border: 1px solid {{c.ov}}; display: flex; align-items: center">Conectar tablero de Pinterest</span>
+            <span style="height: 28px; padding: 0 12px; border-radius: 8px; border: 1px solid {{c.ov}}; display: flex; align-items: center">Importar video (.mp4 / .webm)</span>
+          </div>
+        </section>
+
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 12px 14px; display: flex; flex-direction: column; gap: 9px">
+            <div style="display: flex; align-items: center; gap: 14px">
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 600">Cambio automático</span><span style="font-size: 11.5px; color: {{c.tv}}">Rota los fondos de la colección</span></span>
+              <button role="switch" aria-checked="{{wAuto.on}}" aria-label="Cambio automático" onClick="{{wAuto.toggle}}" style="width: 40px; height: 24px; border-radius: 6px; box-sizing: border-box; background: {{wAuto.track}}; border: {{wAuto.border}}; display: flex; align-items: center; justify-content: {{wAuto.justify}}; padding: 0 3px"><span style="width: {{wAuto.knob}}; height: {{wAuto.knob}}; border-radius: 50%; background: {{wAuto.knobBg}}"></span></button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; opacity: {{autoOp}}">
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 84px; color: {{c.tv}}">Cada</span><div style="flex: 1; display: flex; height: 28px; border-radius: 8px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{wEvery}}" as="o" hint-placeholder-count="5"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 84px; color: {{c.tv}}">Orden</span><div style="flex: 1; display: flex; height: 28px; border-radius: 8px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{wOrder}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 84px; color: {{c.tv}}">Transición</span><div style="flex: 1; display: flex; height: 28px; border-radius: 8px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{wTrans}}" as="o" hint-placeholder-count="4"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+              <sc-for list="{{swAuto}}" as="w" hint-placeholder-count="2">
+                <div style="height: 36px; display: flex; align-items: center; gap: 14px; border-top: 1px solid {{c.ov}}">
+                  <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 11px; color: {{c.tv}}">{{w.sub}}</span></span>
+                  <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 6px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button>
+                </div>
+              </sc-for>
+              <span class="mono" style="color: {{c.tv}}">{{autoCmd}}</span>
+            </div>
+          </section>
+
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 12px 14px; display: flex; flex-direction: column; gap: 9px">
+            <div style="display: flex; align-items: center; gap: 14px">
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 600">Fondos en movimiento</span><span style="font-size: 11.5px; color: {{c.tv}}">Acepta videos, animaciones y escenas</span></span>
+              <button role="switch" aria-checked="{{wAnim.on}}" aria-label="Permitir fondos en movimiento" onClick="{{wAnim.toggle}}" style="width: 40px; height: 24px; border-radius: 6px; box-sizing: border-box; background: {{wAnim.track}}; border: {{wAnim.border}}; display: flex; align-items: center; justify-content: {{wAnim.justify}}; padding: 0 3px"><span style="width: {{wAnim.knob}}; height: {{wAnim.knob}}; border-radius: 50%; background: {{wAnim.knobBg}}"></span></button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; opacity: {{animOp}}">
+              <div style="display: flex; height: 28px; border-radius: 8px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{wEngine}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div>
+              <span style="font-size: 11.5px; color: {{c.tv}}">{{engineHint}}</span>
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 84px; color: {{c.tv}}">Límite FPS</span><div style="flex: 1; display: flex; height: 28px; border-radius: 8px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{wFps}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+              <span style="color: {{c.tv}}">Pausar cuando…</span>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap"><sc-for list="{{wPause}}" as="m" hint-placeholder-count="5"><button onClick="{{m.toggle}}" aria-pressed="{{m.on}}" style="height: 28px; padding: 0 10px; border-radius: 8px; box-sizing: border-box; font-weight: 600; background: {{m.bg}}; color: {{m.fg}}; border: {{m.border}}">{{m.mark}} {{m.label}}</button></sc-for></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= PANEL LATERAL Y PiP ================= -->
+    <sc-if value="{{sec.panel}}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: 1fr 1.15fr; gap: 12px">
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <span style="display: flex; justify-content: space-between"><span style="font-size: 15px; font-weight: 600">Panel lateral flotante</span><span style="padding: 3px 8px; border-radius: 5px; border: 1px solid {{c.o}}">Super + A</span></span>
+          <span style="font-size: 12px; color: {{c.tv}}">Apps que viven en el mismo panel que la IA, con su sesión abierta en segundo plano.</span>
+          <sc-for list="{{panelApps}}" as="a" hint-placeholder-count="7">
+            <div style="height: 40px; display: flex; align-items: center; gap: 12px; border-top: 1px solid {{c.ov}}">
+              <span aria-hidden="true" style="width: 24px; height: 24px; border-radius: 6px; background: {{a.tile}}; color: {{a.tileFg}}; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 11px">{{a.g}}</span>
+              <span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 600">{{a.label}}</span><span style="font-size: 11px; color: {{c.tv}}">{{a.sub}}</span></span>
+              <button role="switch" aria-checked="{{a.sw.on}}" aria-label="{{a.label}} en el panel" onClick="{{a.sw.toggle}}" style="width: 40px; height: 24px; border-radius: 12px; box-sizing: border-box; background: {{a.sw.track}}; border: {{a.sw.border}}; display: flex; align-items: center; justify-content: {{a.sw.justify}}; padding: 0 3px"><span style="width: {{a.sw.knob}}; height: {{a.sw.knob}}; border-radius: 50%; background: {{a.sw.knobBg}}"></span></button>
+            </div>
+          </sc-for>
+          <div style="display: flex; align-items: center; gap: 10px; border-top: 1px solid {{c.ov}}; padding-top: 10px"><span style="width: 70px; color: {{c.tv}}">Ancho</span><div style="flex: 1; display: flex; height: 28px; border-radius: 6px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{panelW}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 70px; color: {{c.tv}}">Lado</span><div style="flex: 1; display: flex; height: 28px; border-radius: 6px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{panelSide}}" as="o" hint-placeholder-count="2"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+        </section>
+
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 15px; font-weight: 600">Imagen en imagen (PiP)</span>
+          <div style="display: flex; gap: 14px">
+            <div aria-label="Posición del PiP" role="img" style="width: 240px; height: 150px; flex: none; border-radius: 5px; background: {{c.s1}}; border: 1px solid {{c.ov}}; position: relative">
+              <span style="position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: {{c.s4}}"></span>
+              <sc-for list="{{pipCorners}}" as="k" hint-placeholder-count="4">
+                <button onClick="{{k.pick}}" aria-label="{{k.label}}" style="position: absolute; top: {{k.top}}; bottom: {{k.bottom}}; left: {{k.left}}; right: {{k.right}}; width: {{k.w}}; height: {{k.h}}; border-radius: 3px; box-sizing: border-box; background: {{k.bg}}; border: {{k.border}}"></button>
+              </sc-for>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px">
+              <span style="color: {{c.tv}}">Esquina: <b style="color: {{c.t}}">{{pipCornerName}}</b></span>
+              <span style="color: {{c.tv}}">Tamaño</span>
+              <div style="display: flex; flex-direction: column; gap: 4px"><sc-for list="{{pipSizes}}" as="o" hint-placeholder-count="4"><button onClick="{{o.pick}}" style="height: 26px; border-radius: 5px; padding: 0 10px; text-align: left; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}; display: flex; justify-content: space-between"><span>{{o.label}}</span><span class="num" style="font-weight: 500">{{o.dim}}</span></button></sc-for></div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 92px; color: {{c.tv}}">Margen al borde</span><div style="flex: 1; display: flex; height: 26px; border-radius: 6px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{pipMargin}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 92px; color: {{c.tv}}">Opacidad</span><div style="flex: 1; display: flex; height: 26px; border-radius: 6px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{pipOp}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+          <sc-for list="{{swPip}}" as="w" hint-placeholder-count="5">
+            <div style="height: 34px; display: flex; align-items: center; gap: 14px; border-top: 1px solid {{c.ov}}">
+              <span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 11px; color: {{c.tv}}">{{w.sub}}</span></span>
+              <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 12px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button>
+            </div>
+          </sc-for>
+          <span class="mono" style="color: {{c.tv}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{pipRule}}</span>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ================= PANTALLAS ================= -->
+    <sc-if value="{{sec.pantallas}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <span style="display: flex; justify-content: space-between"><span style="font-size: 15px; font-weight: 600">Disposición</span><span style="font-size: 12px; color: {{c.tv}}">Arrastra para colocar · clic para elegir</span></span>
+          <div style="height: 200px; border-radius: 6px; background: {{c.s1}}; position: relative; border: 1px solid {{c.ov}}">
+            <sc-for list="{{monitors}}" as="m" hint-placeholder-count="2">
+              <button onClick="{{m.pick}}" style="position: absolute; left: {{m.x}}; top: {{m.y}}; width: {{m.w}}; height: {{m.h}}; border-radius: 8px; box-sizing: border-box; background: {{m.bg}}; border: {{m.ring}}; color: {{m.fg}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px">
+                <span style="font-size: 20px; font-weight: 600">{{m.n}}</span><span style="font-weight: 600">{{m.name}}</span><span class="num" style="font-size: 11.5px">{{m.res}}</span>
+              </button>
+            </sc-for>
+            <span style="position: absolute; right: 10px; bottom: 8px; display: flex; gap: 6px"><span style="height: 26px; padding: 0 10px; border-radius: 7px; border: 1px solid {{c.ov}}; display: flex; align-items: center">Identificar</span><span style="height: 26px; padding: 0 10px; border-radius: 7px; border: 1px solid {{c.ov}}; display: flex; align-items: center">Detectar</span></span>
+          </div>
+          <span class="mono" style="color: {{c.tv}}">{{monLine}}</span>
+        </section>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 15px; font-weight: 600">{{monTitle}}</span>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 110px; color: {{c.tv}}">Resolución</span><span class="num" style="flex: 1; height: 30px; border-radius: 8px; border: 1px solid {{c.o}}; display: flex; align-items: center; padding: 0 10px; justify-content: space-between">{{monRes}} <span style="color: {{c.tv}}">▾</span></span></div>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 110px; color: {{c.tv}}">Frecuencia</span><div style="flex: 1; display: flex; height: 30px; border-radius: 8px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{hz}}" as="o" hint-placeholder-count="4"><button onClick="{{o.pick}}" class="num" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+            <div style="display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 6px; background: {{c.s1}}">
+              <span style="display: flex; justify-content: space-between"><span style="font-weight: 600">Tamaño del texto</span><span class="num" style="color: {{c.tv}}">{{txtSize}} px</span></span>
+              <div style="display: flex; gap: 3px"><sc-for list="{{txtSizes}}" as="t" hint-placeholder-count="12"><button onClick="{{t.pick}}" aria-label="{{t.label}} px" style="flex: 1; height: 24px; border-radius: 4px; background: {{t.bg}}; color: {{t.fg}}; font-size: 10.5px">{{t.label}}</button></sc-for></div>
+              <span style="font-size: 11.5px; color: {{c.tv}}">Cambia a la vez la barra y paneles, las apps GTK/Qt y la terminal. <span style="font-size: {{txtPx}}; color: {{c.t}}">Aa — vista previa</span></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 110px; color: {{c.tv}}">Escala</span><div style="flex: 1; display: flex; height: 30px; border-radius: 8px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{monScale}}" as="o" hint-placeholder-count="5"><button onClick="{{o.pick}}" class="num" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+            <sc-for list="{{swMon}}" as="w" hint-placeholder-count="3">
+              <div style="height: 40px; display: flex; align-items: center; gap: 14px; border-top: 1px solid {{c.ov}}">
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 11.5px; color: {{c.tv}}">{{w.sub}}</span></span>
+                <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 6px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button>
+              </div>
+            </sc-for>
+          </section>
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 15px; font-weight: 600">Luz nocturna y tema</span>
+            <div style="display: flex; height: 30px; border-radius: 8px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{nightSched}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <span style="display: flex; justify-content: space-between"><span style="color: {{c.tv}}">Temperatura</span><span class="num" style="font-weight: 600">{{kelvin}} K</span></span>
+              <div style="display: flex; gap: 4px"><sc-for list="{{kelvins}}" as="k" hint-placeholder-count="5"><button onClick="{{k.pick}}" aria-label="{{k.label}} K" style="flex: 1; height: 22px; border-radius: 5px; background: {{k.sw}}; border: {{k.ring}}; box-sizing: border-box"></button></sc-for></div>
+            </div>
+            <sc-for list="{{swTheme}}" as="w" hint-placeholder-count="2">
+              <div style="height: 44px; display: flex; align-items: center; gap: 14px; border-top: 1px solid {{c.ov}}">
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 11.5px; color: {{c.tv}}">{{w.sub}}</span></span>
+                <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 6px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button>
+              </div>
+            </sc-for>
+          </section>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= SISTEMA Y RECUPERACIÓN ================= -->
+    <sc-if value="{{sec.sistema}}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: 1.25fr 1fr; gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+            <span style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 15px; font-weight: 600">Puntos de restauración</span>
+              <button onClick="{{snapNew}}" style="height: 28px; padding: 0 12px; border-radius: 8px; background: {{c.p}}; color: {{c.onP}}; font-weight: 600">Crear ahora</button></span>
+            <div style="display: grid; grid-template-columns: 44px 120px 1fr 56px; gap: 8px; font-size: 11.5px; color: {{c.tv}}; padding: 4px 8px 2px"><span>N.º</span><span>Fecha</span><span>Descripción</span><span>Tipo</span></div>
+            <sc-for list="{{snaps}}" as="s" hint-placeholder-count="6">
+              <button onClick="{{s.pick}}" style="display: grid; grid-template-columns: 44px 120px 1fr 56px; gap: 8px; align-items: center; height: 36px; padding: 0 8px; border-radius: 8px; text-align: left; background: {{s.bg}}">
+                <span class="num" style="font-weight: 600">{{s.n}}</span><span class="num" style="color: {{c.tv}}">{{s.date}}</span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.desc}}</span><span style="font-size: 11px; color: {{c.tv}}">{{s.type}}</span>
+              </button>
+            </sc-for>
+            <div style="display: flex; gap: 6px; padding-top: 4px">
+              <span style="height: 28px; padding: 0 12px; border-radius: 8px; border: 1px solid {{c.ov}}; display: flex; align-items: center">Ver cambios de #{{snapSel}}</span>
+              <span style="height: 28px; padding: 0 12px; border-radius: 8px; border: 1px solid {{c.ov}}; display: flex; align-items: center">Restaurar archivos…</span>
+              <span style="height: 28px; padding: 0 12px; border-radius: 8px; border: 1px solid {{c.ov}}; display: flex; align-items: center">Arrancar en este punto</span>
+            </div>
+            <span style="font-size: 11.5px; color: {{c.tv}}">Snapper + snap-pac crean un punto antes y después de cada actualización, y aparecen en el menú de arranque de Limine. Un punto de restauración no reemplaza una copia de seguridad: vive en el mismo disco.</span>
+          </section>
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 12px 14px; display: flex; align-items: center; gap: 12px">
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600">Copia de seguridad de /home</span><span style="font-size: 11.5px; color: {{c.tv}}">Destino: [disco externo o servidor] · última: [fecha]</span></span>
+            <span style="height: 28px; padding: 0 12px; border-radius: 8px; border: 1px solid {{c.ov}}; display: flex; align-items: center">Configurar</span>
+          </section>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+            <span style="display: flex; justify-content: space-between"><span style="font-size: 15px; font-weight: 600">Kernel</span><span class="mono" style="color: {{c.tv}}">{{kernel}}</span></span>
+            <div style="display: flex; height: 30px; border-radius: 8px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{kernels}}" as="o" hint-placeholder-count="2"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div>
+            <sc-for list="{{swKernel}}" as="w" hint-placeholder-count="1">
+              <div style="height: 40px; display: flex; align-items: center; gap: 14px">
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 11.5px; color: {{c.tv}}">{{w.sub}}</span></span>
+                <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 6px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button>
+              </div>
+            </sc-for>
+          </section>
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+            <span style="font-size: 15px; font-weight: 600">Actualizaciones</span>
+            <div style="display: flex; height: 30px; border-radius: 8px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{updModes}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div>
+            <sc-for list="{{swUpd}}" as="w" hint-placeholder-count="3">
+              <div style="height: 38px; display: flex; align-items: center; gap: 14px; border-top: 1px solid {{c.ov}}">
+                <span style="flex: 1; font-weight: 600">{{w.label}}</span><span class="mono" style="color: {{c.tv}}">{{w.sub}}</span>
+                <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 6px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button>
+              </div>
+            </sc-for>
+          </section>
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 15px; font-weight: 600">Permisos de apps</span>
+            <sc-for list="{{perms}}" as="g" hint-placeholder-count="4">
+              <div style="height: 30px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid {{c.ov}}"><span style="font-weight: 500">{{g.k}}</span><span style="color: {{c.tv}}">{{g.v}}  ›</span></div>
+            </sc-for>
+          </section>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= TECLADO Y ATAJOS ================= -->
+    <sc-if value="{{sec.teclado}}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+            <span style="font-size: 15px; font-weight: 600">Distribuciones</span>
+            <sc-for list="{{layouts}}" as="l" hint-placeholder-count="2">
+              <div style="height: 40px; display: flex; align-items: center; gap: 10px; border-top: 1px solid {{c.ov}}"><span style="width: 34px; height: 22px; border-radius: 5px; background: {{c.s4}}; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 11px">{{l.code}}</span><span style="flex: 1">{{l.name}}</span><span style="font-size: 11.5px; color: {{c.tv}}">{{l.tag}}</span></div>
+            </sc-for>
+            <span style="height: 30px; display: flex; align-items: center; color: {{c.p}}">+ Agregar distribución</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid {{c.ov}}; padding-top: 10px"><span>Cambiar de distribución</span><span style="padding: 3px 8px; border-radius: 5px; border: 1px solid {{c.o}}">Super + Espacio</span></div>
+          </section>
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 15px; font-weight: 600">Escritura</span>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 120px; color: {{c.tv}}">Retardo de repetición</span><div style="flex: 1; display: flex; height: 28px; border-radius: 6px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{kbDelay}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 120px; color: {{c.tv}}">Velocidad</span><div style="flex: 1; display: flex; height: 28px; border-radius: 6px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{kbRate}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+            <sc-for list="{{swKb}}" as="w" hint-placeholder-count="2">
+              <div style="height: 36px; display: flex; align-items: center; gap: 14px; border-top: 1px solid {{c.ov}}"><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 11px; color: {{c.tv}}">{{w.sub}}</span></span>
+                <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 12px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button></div>
+            </sc-for>
+          </section>
+        </div>
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; align-items: center; gap: 10px"><span style="font-size: 15px; font-weight: 600; flex: 1">Atajos</span>
+            <label style="width: 220px; height: 30px; border-radius: 6px; background: {{c.s1}}; display: flex; align-items: center; padding: 0 10px; color: {{c.tv}}"><input aria-label="Buscar atajo" value="{{scQ}}" onChange="{{onScQ}}" placeholder="Buscar acción o tecla…" style="flex: 1; background: none; border: 0; outline: none; color: {{c.t}}"></label></div>
+          <sc-for list="{{shortcuts}}" as="k" hint-placeholder-count="10">
+            <div style="height: 38px; display: flex; align-items: center; gap: 10px; border-top: 1px solid {{c.ov}}">
+              <span style="flex: 1">{{k.action}}</span>
+              <sc-if value="{{k.editing}}" hint-placeholder-val="{{ false }}"><span style="height: 26px; padding: 0 10px; border-radius: 5px; border: 1.5px dashed {{c.p}}; color: {{c.p}}; display: flex; align-items: center">Presiona la nueva combinación…</span></sc-if>
+              <sc-if value="{{k.idle}}" hint-placeholder-val="{{ true }}"><span style="display: flex; gap: 3px"><sc-for list="{{k.keys}}" as="kk" hint-placeholder-count="2"><span style="min-width: 24px; height: 24px; padding: 0 7px; box-sizing: border-box; border-radius: 5px; background: {{c.s1}}; border: 1px solid {{c.ov}}; border-bottom-width: 2px; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 500">{{kk.k}}</span></sc-for></span></sc-if>
+              <button onClick="{{k.edit}}" style="height: 26px; padding: 0 8px; border-radius: 5px; color: {{c.tv}}">{{k.btn}}</button>
+            </div>
+          </sc-for>
+          <span class="mono" style="color: {{c.tv}}; padding-top: 4px">Se guarda en hyprland.conf como bind = … · detecta conflictos automáticamente</span>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ================= RED ================= -->
+    <sc-if value="{{sec.red}}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px">
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; align-items: center; gap: 14px; padding-bottom: 6px"><span style="flex: 1; font-size: 15px; font-weight: 600">Wi‑Fi</span>
+            <button role="switch" aria-checked="{{wifiSw.on}}" aria-label="Wi-Fi" onClick="{{wifiSw.toggle}}" style="width: 40px; height: 24px; border-radius: 12px; box-sizing: border-box; background: {{wifiSw.track}}; border: {{wifiSw.border}}; display: flex; align-items: center; justify-content: {{wifiSw.justify}}; padding: 0 3px"><span style="width: {{wifiSw.knob}}; height: {{wifiSw.knob}}; border-radius: 50%; background: {{wifiSw.knobBg}}"></span></button></div>
+          <sc-for list="{{nets}}" as="n" hint-placeholder-count="5">
+            <button onClick="{{n.pick}}" style="height: 44px; border-radius: 6px; padding: 0 10px; display: flex; align-items: center; gap: 12px; text-align: left; background: {{n.bg}}; opacity: {{n.op}}">
+              <span aria-hidden="true" style="display: flex; align-items: flex-end; gap: 2px; height: 14px"><span style="width: 3px; height: 5px; border-radius: 1px; background: {{n.b1}}"></span><span style="width: 3px; height: 8px; border-radius: 1px; background: {{n.b2}}"></span><span style="width: 3px; height: 11px; border-radius: 1px; background: {{n.b3}}"></span><span style="width: 3px; height: 14px; border-radius: 1px; background: {{n.b4}}"></span></span>
+              <span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: {{n.weight}}">{{n.name}}</span><span style="font-size: 11px; color: {{c.tv}}">{{n.sub}}</span></span>
+              <span style="font-size: 11.5px; color: {{c.tv}}">{{n.lock}}</span>
+            </button>
+          </sc-for>
+          <span style="height: 30px; display: flex; align-items: center; color: {{c.p}}">+ Red oculta · Compartir con código QR</span>
+        </section>
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 4px 14px; display: flex; flex-direction: column">
+            <sc-for list="{{swNet}}" as="w" hint-placeholder-count="4">
+              <div style="height: 48px; display: flex; align-items: center; gap: 14px; border-bottom: {{w.sep}}"><span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 11px; color: {{c.tv}}">{{w.sub}}</span></span>
+                <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 12px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button></div>
+            </sc-for>
+          </section>
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+            <span style="font-size: 15px; font-weight: 600">DNS</span>
+            <div style="display: flex; height: 28px; border-radius: 6px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{dns}}" as="o" hint-placeholder-count="4"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div>
+            <span style="font-size: 11.5px; color: {{c.tv}}">{{dnsHint}}</span>
+          </section>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= SONIDO ================= -->
+    <sc-if value="{{sec.sonido}}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 15px; font-weight: 600; padding-bottom: 4px">Salida</span>
+            <sc-for list="{{outs}}" as="o" hint-placeholder-count="3">
+              <button role="radio" aria-checked="{{o.on}}" onClick="{{o.pick}}" style="height: 42px; border-radius: 6px; padding: 0 10px; display: flex; align-items: center; gap: 12px; text-align: left; background: {{o.bg}}">
+                <span aria-hidden="true" style="width: 16px; height: 16px; border-radius: 8px; box-sizing: border-box; border: {{o.radio}}"></span>
+                <span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 500">{{o.name}}</span><span style="font-size: 11px; color: {{c.tv}}">{{o.sub}}</span></span>
+              </button>
+            </sc-for>
+          </section>
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 15px; font-weight: 600">Entrada</span>
+            <span style="display: flex; justify-content: space-between"><span>[Micrófono integrado]</span><span style="color: {{c.tv}}">▾</span></span>
+            <div aria-label="Nivel del micrófono" role="img" style="display: flex; gap: 3px; height: 14px; align-items: flex-end"><sc-for list="{{micLevel}}" as="b" hint-placeholder-count="24"><span style="flex: 1; height: {{b.h}}; border-radius: 1px; background: {{b.bg}}"></span></sc-for></div>
+            <sc-for list="{{swSnd}}" as="w" hint-placeholder-count="2">
+              <div style="height: 38px; display: flex; align-items: center; gap: 14px; border-top: 1px solid {{c.ov}}"><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 11px; color: {{c.tv}}">{{w.sub}}</span></span>
+                <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 12px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button></div>
+            </sc-for>
+          </section>
+        </div>
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 15px; font-weight: 600">Volumen por app</span>
+          <sc-for list="{{appVol}}" as="a" hint-placeholder-count="5">
+            <div style="display: flex; align-items: center; gap: 12px; height: 40px">
+              <span aria-hidden="true" style="width: 26px; height: 26px; border-radius: 6px; background: {{a.tile}}; color: {{a.tileFg}}; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 11px">{{a.g}}</span>
+              <span style="width: 110px">{{a.name}}</span>
+              <button onClick="{{a.set}}" aria-label="Volumen de {{a.name}}" style="flex: 1; height: 6px; border-radius: 3px; background: {{c.s4}}; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{a.w}}; border-radius: 3px; background: {{c.p}}; pointer-events: none"></span></button>
+              <span class="num" style="width: 40px; text-align: right; color: {{c.tv}}">{{a.pct}}</span>
+            </div>
+          </sc-for>
+          <span style="font-size: 11.5px; color: {{c.tv}}; margin-top: auto">Toca una barra para ajustar · PipeWire + WirePlumber</span>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{sec.accesibilidad}}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 4px">
+            <span style="font-size: 15px; font-weight: 600; padding-bottom: 4px">Visión</span>
+            <sc-for list="{{swVis}}" as="w" hint-placeholder-count="6">
+              <div style="height: 44px; display: flex; align-items: center; gap: 14px; border-bottom: {{w.sep}}"><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 11px; color: {{c.tv}}">{{w.sub}}</span></span>
+                <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 12px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button></div>
+            </sc-for>
+            <span style="font-size: 12px; color: {{c.tv}}; padding-top: 8px">Filtro de color</span>
+            <div style="display: flex; height: 32px; border-radius: 16px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{cfOpts}}" as="o" hint-placeholder-count="5"><button onClick="{{o.pick}}" aria-pressed="{{o.on}}" style="flex: 1; font-size: 11.5px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div>
+          </section>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 4px">
+            <span style="font-size: 15px; font-weight: 600; padding-bottom: 4px">Teclado, ratón y voz</span>
+            <sc-for list="{{swInt}}" as="w" hint-placeholder-count="5">
+              <div style="height: 44px; display: flex; align-items: center; gap: 14px; border-bottom: {{w.sep}}"><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 11px; color: {{c.tv}}">{{w.sub}}</span></span>
+                <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 12px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button></div>
+            </sc-for>
+          </section>
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 4px">
+            <span style="font-size: 15px; font-weight: 600; padding-bottom: 4px">Audición</span>
+            <sc-for list="{{swAud}}" as="w" hint-placeholder-count="3">
+              <div style="height: 44px; display: flex; align-items: center; gap: 14px; border-bottom: {{w.sep}}"><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 11px; color: {{c.tv}}">{{w.sub}}</span></span>
+                <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 12px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button></div>
+            </sc-for>
+          </section>
+          <span style="font-size: 11.5px; color: {{c.tv}}">Atajo rápido: Super + Alt + A abre este menú desde cualquier lugar, también en el inicio de sesión.</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= ENERGÍA Y RENDIMIENTO ================= -->
+    <sc-if value="{{sec.energia}}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 15px; font-weight: 600">Modo de energía</span>
+            <div style="display: flex; gap: 8px"><sc-for list="{{pProfiles}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; height: 64px; border-radius: 7px; box-sizing: border-box; border: {{o.ring}}; background: {{o.bg}}; display: flex; flex-direction: column; justify-content: center; padding: 0 12px; text-align: left; gap: 2px"><span style="font-weight: 600">{{o.label}}</span><span style="font-size: 11px; color: {{c.tv}}">{{o.sub}}</span></button></sc-for></div>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 120px; color: {{c.tv}}">Suspender tras</span><div style="flex: 1; display: flex; height: 28px; border-radius: 6px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{suspend}}" as="o" hint-placeholder-count="4"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 120px; color: {{c.tv}}">Gráficos</span><div style="flex: 1; display: flex; height: 28px; border-radius: 6px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{gpuMode}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div></div>
+          </section>
+          <section style="border-radius: 6px; background: {{c.s3}}; padding: 4px 14px; display: flex; flex-direction: column">
+            <sc-for list="{{swPow}}" as="w" hint-placeholder-count="3">
+              <div style="height: 48px; display: flex; align-items: center; gap: 14px; border-bottom: {{w.sep}}"><span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 11px; color: {{c.tv}}">{{w.sub}}</span></span>
+                <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 12px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button></div>
+            </sc-for>
+          </section>
+        </div>
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 15px; font-weight: 600">Rendimiento del liquid glass</span>
+          <div style="display: flex; gap: 8px"><sc-for list="{{glassQ}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; height: 64px; border-radius: 7px; box-sizing: border-box; border: {{o.ring}}; background: {{o.bg}}; display: flex; flex-direction: column; justify-content: center; padding: 0 12px; text-align: left; gap: 2px"><span style="font-weight: 600">{{o.label}}</span><span style="font-size: 11px; color: {{c.tv}}">{{o.sub}}</span></button></sc-for></div>
+          <span class="mono" style="color: {{c.tv}}">{{glassLine}}</span>
+          <sc-for list="{{swGlass}}" as="w" hint-placeholder-count="3">
+            <div style="height: 44px; display: flex; align-items: center; gap: 14px; border-top: 1px solid {{c.ov}}"><span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">{{w.label}}</span><span style="font-size: 11px; color: {{c.tv}}">{{w.sub}}</span></span>
+              <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 12px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button></div>
+          </sc-for>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ================= ACERCA DEL SISTEMA ================= -->
+    <sc-if value="{{sec.acerca}}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 18px; display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; align-items: center; gap: 14px; padding-bottom: 10px">
+            <span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 12px; background: {{c.pc}}; display: flex; align-items: center; justify-content: center"><span style="width: 22px; height: 22px; border-radius: 50%; border: 5px solid {{c.p}}"></span></span>
+            <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 18px; font-weight: 600">[nombre-del-equipo]</span><span style="color: {{c.tv}}">Toca para renombrar</span></span>
+          </div>
+          <sc-for list="{{about}}" as="r" hint-placeholder-count="8">
+            <div style="height: 34px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid {{c.ov}}"><span style="color: {{c.tv}}">{{r.k}}</span><span style="font-weight: 500">{{r.v}}</span></div>
+          </sc-for>
+          <div style="display: flex; gap: 6px; padding-top: 8px"><span style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid {{c.ov}}; display: flex; align-items: center">Copiar información</span><span style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid {{c.ov}}; display: flex; align-items: center">Informe para soporte</span></div>
+        </section>
+        <section style="border-radius: 6px; background: {{c.s3}}; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 15px; font-weight: 600">Sincronizar tu escritorio</span>
+          <span style="font-size: 12px; color: {{c.tv}}">Guarda estilo, colores, fondos, atajos, barra y lista de apps para llevarlos a otro equipo o restaurarlos.</span>
+          <div style="display: flex; height: 30px; border-radius: 6px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{syncDest}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="flex: 1; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div>
+          <span style="font-size: 11.5px; color: {{c.tv}}">{{syncHint}}</span>
+          <sc-for list="{{swSync}}" as="w" hint-placeholder-count="3">
+            <div style="height: 38px; display: flex; align-items: center; gap: 14px; border-top: 1px solid {{c.ov}}"><span style="flex: 1; font-weight: 500">{{w.label}}</span>
+              <button role="switch" aria-checked="{{w.on}}" aria-label="{{w.label}}" onClick="{{w.toggle}}" style="width: 40px; height: 24px; border-radius: 12px; box-sizing: border-box; background: {{w.track}}; border: {{w.border}}; display: flex; align-items: center; justify-content: {{w.justify}}; padding: 0 3px"><span style="width: {{w.knob}}; height: {{w.knob}}; border-radius: 50%; background: {{w.knobBg}}"></span></button></div>
+          </sc-for>
+          <div style="display: flex; gap: 6px"><button style="flex: 1; height: 32px; border-radius: 6px; background: {{c.p}}; color: {{c.onP}}; font-weight: 600">Sincronizar ahora</button><button style="flex: 1; height: 32px; border-radius: 6px; border: 1px solid {{c.ov}}">Exportar perfil (.tar)</button></div>
+          <span class="mono" style="color: {{c.tv}}">En otro equipo: [comando de instalación de tu perfil]</span>
+          <span style="font-size: 11.5px; color: {{c.tv}}">Último respaldo: [fecha] · no incluye contraseñas ni llaves</span>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ================= PLUGINS ================= -->
+    <sc-if value="{{sec.plugins}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <div style="display: flex; height: 30px; border-radius: 6px; border: 1px solid {{c.o}}; overflow: hidden"><sc-for list="{{plTabs}}" as="o" hint-placeholder-count="3"><button onClick="{{o.pick}}" style="padding: 0 14px; font-size: 12px; font-weight: 600; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button></sc-for></div>
+          <div style="display: flex; gap: 4px; flex-wrap: wrap"><sc-for list="{{plCats}}" as="o" hint-placeholder-count="5"><button onClick="{{o.pick}}" style="height: 28px; padding: 0 10px; border-radius: 6px; background: {{o.bg}}; color: {{o.fg}}; border: {{o.border}}; box-sizing: border-box">{{o.label}}</button></sc-for></div>
+          <span style="flex: 1"></span>
+          <label style="width: 220px; height: 30px; border-radius: 6px; background: {{c.s3}}; display: flex; align-items: center; padding: 0 10px; color: {{c.tv}}"><input aria-label="Buscar plugins" value="{{plQ}}" onChange="{{onPlQ}}" placeholder="Buscar plugins…" style="flex: 1; background: none; border: 0; outline: none; color: {{c.t}}"></label>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{plugins}}" as="pl" hint-placeholder-count="12">
+            <div style="height: 104px; border-radius: 6px; background: {{c.s3}}; border: {{pl.border}}; box-sizing: border-box; padding: 11px 12px; display: flex; flex-direction: column; gap: 6px">
+              <div style="display: flex; align-items: center; gap: 10px">
+                <span aria-hidden="true" style="width: 30px; height: 30px; border-radius: 8px; background: {{pl.tile}}; color: {{pl.tileFg}}; display: flex; align-items: center; justify-content: center; font-weight: 600">{{pl.g}}</span>
+                <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600">{{pl.name}}</span><span style="font-size: 11px; color: {{c.tv}}">{{pl.where}}</span></span>
+                <button onClick="{{pl.toggle}}" style="height: 26px; padding: 0 10px; border-radius: 6px; background: {{pl.btnBg}}; color: {{pl.btnFg}}; border: {{pl.btnBorder}}; box-sizing: border-box; font-weight: 500">{{pl.btn}}</button>
+              </div>
+              <span style="color: {{c.tv}}; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical">{{pl.desc}}</span>
+              <span style="font-size: 11px; color: {{c.tv}}">{{pl.meta}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <span style="font-size: 11.5px; color: {{c.tv}}">Los plugins son módulos QML del shell: se activan sin reiniciar y piden permiso antes de usar red, archivos o comandos.</span>
+      </div>
+    </sc-if>
+
+    <!-- ================= OTRAS ================= -->
+    <sc-if value="{{sec.otra}}" hint-placeholder-val="{{ false }}">
+      <section style="border-radius: 6px; background: {{c.s3}}; padding: 24px; display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 15px; font-weight: 600">Sección pendiente de diseñar</span>
+        <span style="color: {{c.tv}}">{{otherHint}}</span>
+      </section>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"palette":{"editor":"enum","options":["grafito","pizarra","claro","lavanda","verde","ambar","azul"],"default":"grafito"},"seccion":{"editor":"enum","options":["apariencia","fondos","barra","escritorio","enfoque","ia","panel","plugins","webapps","pantallas","teclado","red","sonido","energia","sistema","acerca","accesibilidad"],"default":"apariencia"},"$preview":{"width":1280,"height":800}}'>
+const PALETTES = {
+  atardecer: {name:'Atardecer', bg:'#14151B', s1:'#1C1D24', s3:'#272832', s4:'#31323D', p:'#EDBFA5', onP:'#4A2414', pc:'#4A3A45', onPc:'#F6DCCF', sc:'#3A3D4C', onSc:'#E2E3EE', ter:'#A9B4D6', t:'#E6E5EC', tv:'#B6B5C2', o:'#8E8D9B', ov:'#3A3A46'},
+  mono:      {name:'Monocromo', bg:'#111111', s1:'#1A1A1A', s3:'#242424', s4:'#2E2E2E', p:'#E8E8E8', onP:'#111111', pc:'#3A3A3A', onPc:'#F2F2F2', sc:'#2F2F2F', onSc:'#EDEDED', ter:'#BDBDBD', t:'#ECECEC', tv:'#B0B0B0', o:'#8C8C8C', ov:'#383838'},
+  monoclaro: {name:'Monocromo claro', light:true, bg:'#ECECEC', s1:'#F7F7F7', s3:'#FFFFFF', s4:'#E6E6E6', p:'#1A1A1A', onP:'#FFFFFF', pc:'#DADADA', onPc:'#111111', sc:'#E0E0E0', onSc:'#1A1A1A', ter:'#555555', t:'#141414', tv:'#4A4A4A', o:'#707070', ov:'#D6D6D6'},
+  grafito: {name:'Grafito', bg:'#121314', s1:'#1A1C1E', s3:'#25272A', s4:'#2F3235', p:'#A9C1D9', onP:'#0E2A40', pc:'#2C3E50', onPc:'#D5E3F0', sc:'#353A40', onSc:'#E1E4E8', ter:'#C9B79C', t:'#E4E6E8', tv:'#AEB4BA', o:'#8A9097', ov:'#383C41'},
+  pizarra: {name:'Pizarra', bg:'#0F1418', s1:'#161C21', s3:'#20282E', s4:'#2A333A', p:'#8FC3C0', onP:'#00332F', pc:'#1F4744', onPc:'#C9EBE8', sc:'#2F3A43', onSc:'#DCE5EC', ter:'#D9B88F', t:'#E1E7EC', tv:'#AAB6BF', o:'#86919B', ov:'#354049'},
+  claro:   {name:'Claro', light:true, bg:'#EEF1F4', s1:'#F9FAFB', s3:'#FFFFFF', s4:'#E6EAEE', p:'#2F5E8C', onP:'#FFFFFF', pc:'#D3E1EE', onPc:'#10304F', sc:'#DCE4EC', onSc:'#1F2A35', ter:'#8A5F2A', t:'#1B1F24', tv:'#4D5762', o:'#6F7984', ov:'#DADFE4'},
+  lavanda: {name:'Lavanda', bg:'#141218', s1:'#1D1B20', s3:'#2B2930', s4:'#36343B', p:'#D0BCFF', onP:'#381E72', pc:'#4F378B', onPc:'#EADDFF', sc:'#4A4458', onSc:'#E8DEF8', ter:'#EFB8C8', t:'#E6E0E9', tv:'#CAC4D0', o:'#938F99', ov:'#49454F'},
+  verde:   {name:'Verde',   bg:'#10140F', s1:'#191D17', s3:'#272B25', s4:'#32362F', p:'#A1D39A', onP:'#0A390F', pc:'#235024', onPc:'#BCF0B4', sc:'#3A4B37', onSc:'#D5E8CF', ter:'#A0CFD4', t:'#E0E4DA', tv:'#C2C8BC', o:'#8C9388', ov:'#424940'},
+  ambar:   {name:'Ámbar',   bg:'#17130B', s1:'#1F1B13', s3:'#2F2921', s4:'#3A342B', p:'#F5BD62', onP:'#422C00', pc:'#5F4100', onPc:'#FFDDB0', sc:'#574425', onSc:'#FBDEB4', ter:'#B5CEA0', t:'#ECE1D4', tv:'#D3C4B4', o:'#9C8F80', ov:'#4F4539'},
+  azul:    {name:'Azul',    bg:'#111318', s1:'#191C20', s3:'#282A2F', s4:'#33353A', p:'#A8C8FF', onP:'#07305F', pc:'#254777', onPc:'#D5E3FF', sc:'#3E4759', onSc:'#DAE2F9', ter:'#DDBCE0', t:'#E2E2E9', tv:'#C4C6D0', o:'#8E9099', ov:'#44474E'}
+};
+const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
+const CORNER_ACTIONS = ['Nada','Vista general','Spotlight','Mostrar escritorio','Asistente de IA','Notificaciones','Bloquear pantalla','Modo sin distracciones'];
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      kbDelayV: '400', kbRateV: '25', numlock: true, capsEsc: false, dnsV: 'auto', vpn: false, ufw: true, hotspot: false, metered: false, noise: true, autoSwitch: true,
+      powV: 'eq', suspV: '20', gpuV: 'auto', chargeLimit: true, autoBright: false, lowBat: true, glassV: 'eq', glassBat: true, glassGame: true, glassAuto: true, syncV: 'git', syncAuto: false, syncApps: true, syncWall: true,
+      pipCornerV: 'sd', pipSizeV: 'minimo', pipMarginV: '6', pipOpV: '100', pipAuto: true, pipPin: true, pipTop: true, pipHover: true, pipFade: true, pipAll: true,
+      panelWV: '400', panelSideV: 'der', pApps: { ia: true, wa: true, yt: true, pin: true, gm: false, cal: false, sp: false },
+      wAuto: true, wEveryV: '1h', wOrderV: 'aleatorio', wTransV: 'fundido', wByTime: true, wSkipFull: true, wAnim: true, wEngineV: 'mpvpaper', wFpsV: '30', wSel: 0,
+      wPauseV: { 'Pantalla completa': true, 'Con batería': true, 'Ventana maximizada': false, 'Modo juego': true, 'Sin distracciones': true },
+      mon: 0, hz: '165', mscale: '1.25', vrr: true, hdr: false, mirror: false, nightSched: 'sol', kelvin: 4500, autoTheme: true, autoWall: true,
+      snapSel: 214, kern: 'linux-cachyos', ltsBackup: true, upd: 'notificar', snapUpd: true, flat: true, fw: true,
+      sec: null, palette: null, estilo: 'liquid', radius: 10, gaps: 4, scale: '1.25', wall: 'amanecer', wallSrc: 'local', wallEvery: 'nunca', colorMode: null, monoLight: false, monoBg: true,
+      anim: true, sync: true, gamefx: true,
+      barPos: 'abajo', barMode: 'pegada', barSize: '28', autohide: false, allMon: true, barTitle: true, emptyTransp: true,
+      mods: { 'Espacios': true, 'Título de ventana': true, 'Reloj': true, 'Pomodoro': true, 'Música': true, 'Asistente IA': true, 'Clima': false, 'CPU y RAM': false, 'Red': true, 'Batería': true, 'Portapapeles': false, 'Notificaciones': true },
+      corners: [1, 4, 6, 3], delay: '150 ms', layout: 'dwindle', hoverFocus: true, snap: true,
+      foco: 25, desc: 5, largo: 15, ciclos: 4,
+      fHideBar: true, fNoGaps: true, fMute: true, fAutoBreak: true, fSound: true,
+      blk: { 'YouTube': true, 'Pinterest': true, 'WhatsApp (salvo favoritos)': true, 'Juegos': true, 'Redes sociales': true, 'Correo': false },
+      provider: 'claude', iaShell: true, iaConfirm: true, iaWin: true, iaClip: true, iaShot: true, iaCmd: true, iaSpot: true, iaHist: false,
+      wa: { WhatsApp: [true, true], YouTube: [false, true], Pinterest: [false, false], Gmail: [true, false], Calendario: [true, false], Notion: [false, false] }
+    };
+  }
+  renderVals() {
+    const st = this.state;
+    const cMode = st.colorMode || (this.props.palette ? 'elegir' : 'auto');
+    const AUTOP = { amanecer: 'atardecer', lago: 'pizarra', bruma: 'claro', dyn: 'claro', pin: 'grafito' };
+    const key = cMode === 'mono' ? (st.monoLight ? 'monoclaro' : 'mono') : cMode === 'auto' ? (AUTOP[st.wall] || 'grafito') : (st.palette || this.props.palette || 'grafito');
+    const c = PALETTES[key] || PALETTES.grafito;
+    const secKey = st.sec || this.props.seccion || 'apariencia';
+    const set = (o) => () => this.setState(o);
+    const seg = (field, opts) => opts.map(([v, label]) => {
+      const on = st[field] === v;
+      return { label, on: on ? 'true' : 'false', bg: on ? c.sc : 'transparent', fg: on ? c.onSc : c.t, pick: set({ [field]: v }) };
+    });
+    const pills = (field, vals, fmt) => vals.map((v) => {
+      const on = String(st[field]) === String(v);
+      return { label: fmt ? fmt(v) : String(v), bg: on ? c.p : c.s4, fg: on ? c.onP : c.t, pick: set({ [field]: v }) };
+    });
+    const swv = (on, toggle, label, sub, last) => ({
+      label, sub: sub || '', on: on ? 'true' : 'false', toggle,
+      track: on ? c.p : c.s4, border: on ? '0 solid transparent' : '2px solid ' + c.o,
+      justify: on ? 'flex-end' : 'flex-start', knob: on ? '20px' : '12px', knobBg: on ? c.onP : c.o,
+      sep: last ? '0 solid transparent' : '1px solid ' + c.ov
+    });
+    const sw = (k, label, sub, last) => swv(!!st[k], set({ [k]: !st[k] }), label, sub, last);
+    const chipSet = (field) => Object.keys(st[field]).map((label) => {
+      const on = !!st[field][label];
+      return { label, on: on ? 'true' : 'false', mark: on ? '✓' : '+', bg: on ? c.sc : 'transparent', fg: on ? c.onSc : c.t,
+        border: on ? '1px solid transparent' : '1px solid ' + c.o,
+        toggle: () => this.setState({ [field]: Object.assign({}, st[field], { [label]: !on }) }) };
+    });
+
+    const NAV = [
+      ['apariencia','◐','Apariencia'],['fondos','▨','Fondos de pantalla'],['barra','▭','Barra'],['escritorio','⌜','Escritorio y gestos'],['enfoque','◎','Enfoque y pomodoro'],['ia','✦','Asistente de IA'],['panel','▯','Panel lateral y PiP'],['plugins','⧉','Plugins'],['webapps','◫','Web apps'],
+      ['pantallas','▢','Pantallas', true],['teclado','⌨','Teclado y atajos'],['red','⌔','Red'],['sonido','♪','Sonido'],['energia','⏻','Energía y rendimiento'],['sistema','◷','Sistema y recuperación'],['accesibilidad','♿','Accesibilidad'],['acerca','ⓘ','Acerca del sistema']
+    ];
+    const nav = NAV.map(([k, glyph, label, sep]) => {
+      const on = secKey === k;
+      return { glyph, label, sep: !!sep, bg: on ? c.sc : 'transparent', fg: on ? c.onSc : c.t, weight: on ? '600' : '400', pick: set({ sec: k }) };
+    });
+    const navItem = NAV.find((n) => n[0] === secKey) || NAV[0];
+    const SUBS = {
+      apariencia: 'matugen · swww · hyprland.conf', barra: 'quickshell · bar.qml', escritorio: 'hyprland.conf · hypridle', enfoque: 'pomodoro + modo foco',
+      ia: 'servicio local del asistente', webapps: '~/.local/share/applications', pantallas: 'hyprland.conf · monitor=', sistema: 'snapper · limine · paru', fondos: 'swww · mpvpaper · linux-wallpaperengine'
+    };
+    const main = ['apariencia','fondos','barra','escritorio','enfoque','ia','panel','webapps','pantallas','sistema'];
+    SUBS.panel = 'windowrule · pin · float';
+    Object.assign(SUBS, { teclado: 'input:kb_layout · bind', red: 'NetworkManager · iwd', sonido: 'PipeWire · WirePlumber', energia: 'power-profiles-daemon · hypridle', acerca: 'fastfetch · tu perfil de escritorio' });
+    main.push('teclado','red','sonido','energia','acerca','plugins','accesibilidad');
+    SUBS.accesibilidad = 'Orca · AT-SPI · hyprshade';
+    SUBS.plugins = '~/.config/shell/plugins · QML';
+    // Plugins
+    const PL = [
+      ['clima','☀','Clima','Barra · panel','Temperatura y pronóstico en la barra; el panel muestra 7 días','Oficial',true,'util'],
+      ['tailscale','◈','Tailscale','Ajustes rápidos','Ver y cambiar el nodo de salida y los equipos de tu red privada','Oficial',false,'red'],
+      ['sync','⇅','Syncthing / Dropbox','Barra · panel','Estado de sincronización y conflictos de tus carpetas','Comunidad',false,'red'],
+      ['monitor','▤','Monitor del sistema','Barra','CPU, GPU, RAM y temperaturas en un mini gráfico','Oficial',true,'sist'],
+      ['media','♪','Reproductor','Barra · panel lateral','Controles MPRIS, carátula y cola de reproducción','Oficial',true,'util'],
+      ['color','◉','Selector de color','Spotlight','Toma un color de la pantalla y copia HEX, RGB u OKLCH','Oficial',false,'dev'],
+      ['notes','¶','Notas rápidas','Panel lateral','Notas en Markdown que se guardan en ~/Notas','Comunidad',false,'util'],
+      ['translate','⇄','Traductor','Spotlight · panel','Traduce la selección o lo que escribas, con modelo local','Comunidad',false,'ia'],
+      ['gh','‹›','GitHub','Panel lateral','Pull requests, revisiones pendientes y estado de CI','Comunidad',false,'dev'],
+      ['kde','▯','Teléfono (KDE Connect)','Ajustes rápidos','Batería, avisos y envío de archivos con tu móvil','Oficial',true,'red'],
+      ['agent','✦','Agente de IA del sistema','Panel lateral','Explica errores y propone comandos; siempre pide confirmación','Oficial',true,'ia'],
+      ['gamemode','◈','Modo juego (Steam)','Spotlight · inicio de sesión','Cambia a la sesión de Steam a pantalla completa y vuelve','Oficial',false,'sist']
+    ];
+    const plInst = st.plInst || PL.reduce((o, x) => { o[x[0]] = x[6]; return o; }, {});
+    const plTab = st.plTab || 'todos', plCat = st.plCat || 'all', plq = (st.plQ || '').toLowerCase();
+    const plugins = PL.filter((x) => (plTab === 'todos' || (plTab === 'inst' ? plInst[x[0]] : !plInst[x[0]])) && (plCat === 'all' || x[7] === plCat) && (!plq || (x[2] + ' ' + x[4]).toLowerCase().includes(plq)))
+      .map(([id, g, name, where, desc, src, , cat]) => { const on = !!plInst[id]; const tk = cat === 'ia' ? 'p' : cat === 'red' ? 'pc' : 'sc';
+        return { g, name, where, desc, meta: src + (on ? ' · activado' : ''), tile: c[tk], tileFg: tk === 'p' ? c.onP : tk === 'pc' ? c.onPc : c.onSc,
+          border: on ? '1px solid ' + rgba(c.p, 0.45) : '1px solid transparent', btn: on ? 'Quitar' : 'Instalar',
+          btnBg: on ? 'transparent' : c.p, btnFg: on ? c.t : c.onP, btnBorder: on ? '1px solid ' + c.ov : '0 solid transparent',
+          toggle: () => this.setState({ plInst: Object.assign({}, plInst, { [id]: !on }) }) }; });
+    const TXT = [9,10,11,12,13,14,15,16,17,18,19,20];
+
+    // Teclado
+    const SC_ALL = [['Abrir Spotlight',['Super','Espacio']],['Panel lateral (IA, WhatsApp…)',['Super','A']],['Terminal',['Super','Enter']],['Cerrar ventana',['Super','Q']],['Organizar ventanas',['Super','Z']],['Vista general',['Super','Tab']],['Cambiar de ventana',['Alt','Tab']],['Historial del portapapeles',['Super','V']],['Captura de región',['Impr']],['Bloquear pantalla',['Super','L']],['Modo sin distracciones',['Super','Ctrl','Z']],['Espacio 1 – 9',['Super','1…9']]];
+    const scq = (st.scQ || '').toLowerCase();
+    const shortcuts = SC_ALL.filter(([a1, k]) => !scq || (a1 + ' ' + k.join(' ')).toLowerCase().includes(scq)).slice(0, 12).map(([action, keys]) => {
+      const ed = st.scEdit === action;
+      return { action, editing: ed, idle: !ed, keys: keys.map((k) => ({ k })), btn: ed ? 'Cancelar' : 'Cambiar', edit: set({ scEdit: ed ? null : action }) };
+    });
+    // Red
+    const NETS = [['[Red de oficina]','Conectada · 5 GHz · WPA3',4,true],['[Red de casa]','Guardada',3,true],['[Red de invitados]','Abierta',2,false],['[Red vecina 1]','',2,true],['[Red vecina 2]','',1,true]];
+    const nets = NETS.map(([name, sub, bars, lock], i) => {
+      const on = (st.netSel ?? 0) === i, b = (n) => bars >= n ? c.t : c.s4;
+      return { name, sub: on ? 'Conectada · 5 GHz · WPA3' : (sub.startsWith('Conectada') ? 'Guardada' : sub), weight: on ? '600' : '400', bg: on ? c.pc : 'transparent', op: st.wifiOn === false ? '0.4' : '1',
+        b1: b(1), b2: b(2), b3: b(3), b4: b(4), lock: lock ? 'Protegida' : '', pick: set({ netSel: i }) };
+    });
+    const DNSH = { auto: 'Usa el DNS que da tu router.', cf: 'Cloudflare 1.1.1.1 · rápido, con DNS sobre HTTPS.', q9: 'Quad9 · bloquea dominios maliciosos conocidos.', custom: 'Escribe tus propios servidores.' };
+    // Sonido
+    const OUTS = [['Altavoces del equipo','Integrados'],['[Auriculares Bluetooth]','Conectados · códec AAC'],['[Monitor HDMI]','DP-1 · 2 canales']];
+    const outs = OUTS.map(([name, sub], i) => { const on = (st.outSel ?? 1) === i; return { name, sub, on: on ? 'true' : 'false', bg: on ? c.pc : 'transparent', radio: on ? '5px solid ' + c.p : '1.5px solid ' + c.o, pick: set({ outSel: i }) }; });
+    const micLevel = Array.from({ length: 24 }, (_, i) => ({ h: (30 + ((i * 37) % 70)) + '%', bg: i < 14 ? c.p : c.s4 }));
+    const AV = [['Y','YouTube','ter',80],['W','WhatsApp','pc',60],['S','Spotify','sc',45],['N','Navegador','sc',70],['T','Notificaciones','s4',35]];
+    const appVol = AV.map(([g, name, tk, def]) => { const v = (st.appVol || {})[name] ?? def; return { g, name, tile: c[tk], tileFg: tk === 'pc' ? c.onPc : tk === 'ter' ? c.bg : tk === 'sc' ? c.onSc : c.t,
+      w: v + '%', pct: v + ' %', set: (e) => { const r = e.currentTarget.getBoundingClientRect(); const nv = Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * 100); this.setState({ appVol: Object.assign({}, st.appVol || {}, { [name]: nv }) }); } }; });
+    // Energía
+    const card = (field, opts, def) => opts.map(([k, label, sub]) => { const on = (st[field] ?? def) === k; return { label, sub, ring: on ? '2px solid ' + c.p : '1px solid ' + c.ov, bg: on ? rgba(c.p, 0.1) : 'transparent', pick: set({ [field]: k }) }; });
+    const GQ = { alta: 'blur 40 · saturación 160 % · 3 pasadas', eq: 'blur 24 · saturación 140 % · 2 pasadas', ahorro: 'sin blur · superficies sólidas (Flat)' };
+    // Acerca
+    const SYH = { git: 'Repositorio git privado · historial de cambios y vuelta atrás.', sync: 'Syncthing · entre tus equipos, sin nube.', file: 'Un archivo que guardas donde quieras.' };
+
+    // Panel lateral y PiP
+    const PA = [['ia','✦','Asistente de IA','Siempre disponible','p'],['wa','W','WhatsApp','Responde sin cambiar de ventana','pc'],['yt','Y','YouTube','Con botón PiP en cada video','ter'],['pin','P','Pinterest','Guarda ideas o úsalas como fondo','sc'],['gm','G','Gmail','Bandeja de entrada compacta','sc'],['cal','C','Calendario','Agenda del día','sc'],['sp','S','Spotify','Controles y cola de reproducción','sc']];
+    const panelApps = PA.map(([k, g, label, sub, tk]) => ({ g, label, sub, tile: c[tk], tileFg: tk === 'p' ? c.onP : tk === 'ter' ? c.bg : tk === 'pc' ? c.onPc : c.onSc,
+      sw: swv(!!st.pApps[k], () => this.setState({ pApps: Object.assign({}, st.pApps, { [k]: !st.pApps[k] }) }), label) }));
+    const PSZ = { minimo: [192, 108], pequeno: [256, 144], mediano: [320, 180], grande: [400, 225] };
+    const [pzw, pzh] = PSZ[st.pipSizeV];
+    const sx = 240 / 1440;
+    const pmw = Math.round(pzw * sx) + 'px', pmh = Math.round(pzh * sx) + 'px';
+    const pipCorners = [['si','Superior izquierda'],['sd','Superior derecha'],['ii','Inferior izquierda'],['id','Inferior derecha']].map(([k, label]) => {
+      const on = st.pipCornerV === k;
+      return { label, w: pmw, h: pmh, top: k[0] === 's' ? '5px' : 'auto', bottom: k[0] === 'i' ? '13px' : 'auto', left: k[1] === 'i' ? '5px' : 'auto', right: k[1] === 'd' ? '5px' : 'auto',
+        bg: on ? c.p : 'transparent', border: on ? '0 solid transparent' : '1px dashed ' + c.o, pick: set({ pipCornerV: k }) };
+    });
+    const CN = { si: 'superior izquierda', sd: 'superior derecha', ii: 'inferior izquierda', id: 'inferior derecha' };
+    const pipSizes = [['minimo','Mínimo'],['pequeno','Pequeño'],['mediano','Mediano'],['grande','Grande']].map(([k, label]) => {
+      const on = st.pipSizeV === k; return { label, dim: PSZ[k][0] + ' × ' + PSZ[k][1], bg: on ? c.sc : 'transparent', fg: on ? c.onSc : c.t, pick: set({ pipSizeV: k }) };
+    });
+    const mg = st.pipMarginV;
+    const mvX = st.pipCornerV[1] === 'd' ? '100%-' + (pzw + Number(mg)) : mg;
+    const mvY = st.pipCornerV[0] === 's' ? mg : '100%-' + (pzh + Number(mg));
+
+    // Fondos
+    const SCN = {
+      amanecer: { sky:'#2A3042', glow:'#E7B49B', sun:'#F5D6BE', far:'#5A627A', near:'#30364A', lake:'#272C3B' },
+      lago:     { sky:'#8FA9B2', glow:'#F1E7D0', sun:'#F7F0E0', far:'#789199', near:'#45606A', lake:'#6A8790' },
+      bruma:    { sky:'#E2E8EA', glow:'#FFFFFF', sun:'#FBF7EE', far:'#C7D2D6', near:'#95A8B0', lake:'#D0DADD' }
+    };
+    const COLL = [['amanecer','Atardecer',false],['lago','Lago',false],['bruma','Bruma',false],['amanecer','Atardecer · olas lentas',true],['lago','Lago · niebla que avanza',true],['bruma','Bruma · nubes',true],[null,'Tu imagen','[Tu imagen]'],[null,'Tablero de Pinterest','[Tablero de Pinterest]'],[null,'Video propio','[Video .mp4]']];
+    const coll = COLL.map(([k, label, x], i) => Object.assign({}, k ? SCN[k] : {}, {
+      label, isScene: !!k, isEmpty: !k, hint: typeof x === 'string' ? x : '', anim: x === true || i === 8,
+      base: k ? c.s1 : c.s1, ring: st.wSel === i ? '3px solid ' + c.p : k ? '3px solid transparent' : '1.5px dashed ' + c.o,
+      pick: set({ wSel: i })
+    }));
+    const TR = { fundido: 'fade', crecer: 'grow', barrido: 'wipe', ninguna: 'none' };
+    const ENG = { mpvpaper: 'Videos .mp4 / .webm con aceleración por GPU (mpvpaper).', swww: 'GIF y animaciones ligeras, con transiciones entre fondos (swww).', wpe: 'Escenas interactivas de Wallpaper Engine si tienes la app en Steam (linux-wallpaperengine).' };
+
+    // Pantallas
+    const MONS = [
+      { n:'1', name:'[Monitor externo]', res:'2560 × 1440', id:'DP-1', x:'34%', y:'14%', w:'30%', h:'66%' },
+      { n:'2', name:'[Pantalla del portátil]', res:'1920 × 1200', id:'eDP-1', x:'66%', y:'40%', w:'20%', h:'46%' }
+    ];
+    const monitors = MONS.map((m, i) => ({ n: m.n, name: m.name, res: m.res, x: m.x, y: m.y, w: m.w, h: m.h,
+      bg: i === st.mon ? c.pc : c.s4, fg: i === st.mon ? c.onPc : c.t, ring: i === st.mon ? '2px solid ' + c.p : '1px solid ' + c.ov,
+      pick: set({ mon: i }) }));
+    const M = MONS[st.mon];
+    const kelvinOpts = [3000, 3500, 4500, 5500, 6500];
+    const kSw = ['#E8A35A', '#EDB878', '#F2CFA0', '#F5E2C8', '#F2F2F0'];
+    const kelvins = kelvinOpts.map((k, i) => ({ label: String(k), sw: kSw[i], ring: st.kelvin === k ? '2px solid ' + c.t : '2px solid transparent', pick: set({ kelvin: k }) }));
+
+    // Sistema
+    const SNAPS = [
+      [214,'hoy 09:20','Antes de: paru -Syu (38 paquetes)','pre'],
+      [213,'hoy 09:22','Después de: paru -Syu','post'],
+      [212,'ayer 18:05','Manual · antes de cambiar el kernel','manual'],
+      [211,'mié 10:12','Antes de: pacman -S docker','pre'],
+      [210,'mié 10:13','Después de: pacman -S docker','post'],
+      [209,'lun 08:40','Antes de: paru -Syu (112 paquetes)','pre']
+    ];
+    const snaps = SNAPS.map(([n, date, desc, type]) => ({ n: '#' + n, date, desc, type, bg: st.snapSel === n ? c.pc : 'transparent', pick: set({ snapSel: n }) }));
+
+    // Apariencia
+    const SC = {
+      amanecer: { sky:'#2A3042', glow:'#E7B49B', sun:'#F5D6BE', far:'#5A627A', near:'#30364A', lake:'#272C3B' },
+      lago:     { sky:'#8FA9B2', glow:'#F1E7D0', sun:'#F7F0E0', far:'#789199', near:'#45606A', lake:'#6A8790' },
+      bruma:    { sky:'#E2E8EA', glow:'#FFFFFF', sun:'#FBF7EE', far:'#C7D2D6', near:'#95A8B0', lake:'#D0DADD' }
+    };
+    SC.dyn = SC.bruma;
+    const walls = [['amanecer','Atardecer'],['lago','Lago'],['bruma','Bruma'],['pin','Tablero Pinterest'],['dyn','Claro/oscuro auto'],['add','Elegir imagen…']].map(([k, label]) => ({
+      ...(SC[k] || {}), isScene: !!SC[k],
+      label, isNiebla: false, isLineas: k === 'lineas', isOrbes: k === 'orbes', isOndas: k === 'ondas', isDunas: k === 'dunas', isPin: k === 'pin', isAdd: k === 'add',
+      base: k === 'dunas' ? c.pc : k === 'add' ? 'transparent' : c.bg,
+      ring: k === 'add' ? '2px dashed ' + c.o : st.wall === k ? '3px solid ' + c.p : '3px solid transparent',
+      pick: k === 'add' ? () => {} : set({ wall: k })
+    }));
+    const E = st.estilo;
+    const pv = E === 'liquid'
+      ? { bg: rgba(c.s1, 0.45), border: '1px solid rgba(255,255,255,0.25)', blur: 'blur(10px) saturate(180%)' }
+      : E === 'tonal' ? { bg: c.s3, border: '1px solid ' + c.o, blur: 'none' } : { bg: c.s1, border: '0 solid transparent', blur: 'none' };
+    pv.rad = Math.round(st.radius * 0.5) + 'px';
+    pv.barRad = Math.min(6, Math.round(st.radius * 0.5)) + 'px';
+    pv.gap = Math.max(2, Math.round(st.gaps * 0.6)) + 'px';
+    const estiloHints = {
+      flat: 'Colores sólidos sin desenfoque. Es el más ligero y el que más se parece al Android reciente.',
+      tonal: 'Superficies teñidas con el acento y un borde sutil. Separa mejor las capas.',
+      liquid: 'Vidrio con blur y refracción del compositor (plugin tipo hyprglass). Consume más GPU.'
+    };
+    const swatches = Object.keys(PALETTES).filter((k) => !k.startsWith('mono')).map((k) => ({ name: PALETTES[k].name, a: PALETTES[k].p, ring: k === key ? '2px solid ' + c.t : '2px solid transparent', pick: set({ palette: k, colorMode: 'elegir' }) }));
+    const monoOpts = [['mono','Oscuro', false],['monoclaro','Claro', true]].map(([k, name, lt]) => ({ name, a: PALETTES[k].s1, ring: k === key ? '2px solid ' + c.t : '1px solid ' + c.ov, pick: set({ monoLight: lt }) }));
+    const WN = { amanecer: 'Atardecer', lago: 'Lago', bruma: 'Bruma', pin: 'Tablero Pinterest', dyn: 'Claro/oscuro auto' };
+
+    // Barra
+    const positions = [['arriba','Arriba'],['abajo','Abajo'],['izquierda','Izquierda'],['derecha','Derecha']].map(([k, label]) => {
+      const hor = k === 'arriba' || k === 'abajo';
+      return { label, ring: st.barPos === k ? '3px solid ' + c.p : '1px solid ' + c.ov, strip: st.barPos === k ? c.p : c.o,
+        t: k === 'abajo' ? '78px' : '6px', l: k === 'derecha' ? 'calc(100% - 16px)' : '6px',
+        w: hor ? 'calc(100% - 12px)' : '10px', h: hor ? '8px' : '80px',
+        at: k === 'arriba' ? '18px' : '6px', ab: k === 'abajo' ? '18px' : '6px', al: k === 'izquierda' ? '20px' : '6px', ar: k === 'derecha' ? '20px' : '6px',
+        pick: set({ barPos: k }) };
+    });
+
+    // Escritorio
+    const corners = [
+      ['Arriba izquierda', { top: '10px', left: '10px', bottom: 'auto', right: 'auto', align: 'flex-start' }],
+      ['Arriba derecha', { top: '10px', right: '10px', bottom: 'auto', left: 'auto', align: 'flex-end' }],
+      ['Abajo izquierda', { bottom: '10px', left: '10px', top: 'auto', right: 'auto', align: 'flex-start' }],
+      ['Abajo derecha', { bottom: '10px', right: '10px', top: 'auto', left: 'auto', align: 'flex-end' }]
+    ].map(([where, pos], i) => {
+      const idx = st.corners[i], none = idx === 0;
+      return Object.assign({ where, action: CORNER_ACTIONS[idx], bg: none ? c.s3 : c.pc, fg: none ? c.tv : c.onPc,
+        cycle: () => { const n = st.corners.slice(); n[i] = (n[i] + 1) % CORNER_ACTIONS.length; this.setState({ corners: n }); } }, pos);
+    });
+    const gestures = [['3 dedos ← →','Cambiar de espacio'],['3 dedos ↑','Vista general'],['3 dedos ↓','Mostrar escritorio'],['4 dedos ↑','Spotlight'],['Pellizcar','Zoom de pantalla']].map(([k, v]) => ({ k, v }));
+
+    // Enfoque
+    const step = (k, label, unit, min, max, d) => ({ label, value: st[k] + unit,
+      dec: () => this.setState({ [k]: Math.max(min, st[k] - d) }), inc: () => this.setState({ [k]: Math.min(max, st[k] + d) }) });
+    const cycle = [];
+    for (let i = 0; i < st.ciclos; i++) {
+      cycle.push({ flex: String(st.foco), bg: c.ter });
+      cycle.push({ flex: String(i === st.ciclos - 1 ? st.largo : st.desc), bg: i === st.ciclos - 1 ? c.p : c.s4 });
+    }
+    const totalMin = st.ciclos * st.foco + (st.ciclos - 1) * st.desc + st.largo;
+
+    // IA
+    const PH = { claude: 'Las preguntas rápidas se responden en el panel flotante. Para tareas largas (ordenar carpetas, modelos 3D, apps, revisar documentos) pulsa «Continuar en Claude» y la conversación pasa a Claude Desktop con su contexto.', local: 'Con un modelo local nada sale de tu equipo. Funciona sin internet.', mixto: 'Lo rápido y privado (resúmenes, comandos) va al modelo local; las tareas largas, a Claude.', off: 'El asistente y las respuestas con ? quedan desactivados.' };
+
+    // Web apps
+    const WA = [['WhatsApp','W','web.whatsapp.com','Super W','p'],['YouTube','Y','youtube.com','Super Y','ter'],['Pinterest','P','pinterest.com','Super P','ter'],['Gmail','G','mail.google.com','Super M','pc'],['Calendario','C','calendar.google.com','—','sc'],['Notion','N','notion.so','—','sc']];
+    const webapps = WA.map(([name, g, url, k, tk]) => {
+      const v = st.wa[name];
+      const flip = (j) => () => { const n = Object.assign({}, st.wa); n[name] = v.slice(); n[name][j] = !v[j]; this.setState({ wa: n }); };
+      return { name, g, url, key: k, tile: c[tk], tileFg: tk === 'p' ? c.onP : tk === 'ter' ? c.bg : tk === 'pc' ? c.onPc : c.onSc,
+        n: swv(v[0], flip(0), ''), b: swv(v[1], flip(1), '') };
+    });
+
+    return {
+      c, nav, title: navItem[2], subtitle: SUBS[secKey] || 'pendiente',
+      sec: { apariencia: secKey === 'apariencia', barra: secKey === 'barra', escritorio: secKey === 'escritorio', enfoque: secKey === 'enfoque', ia: secKey === 'ia', webapps: secKey === 'webapps', fondos: secKey === 'fondos', panel: secKey === 'panel', pantallas: secKey === 'pantallas', sistema: secKey === 'sistema', teclado: secKey === 'teclado', plugins: secKey === 'plugins', red: secKey === 'red', sonido: secKey === 'sonido', energia: secKey === 'energia', acerca: secKey === 'acerca', accesibilidad: secKey === 'accesibilidad', otra: !main.includes(secKey) },
+      otherHint: 'Aquí iría ' + navItem[2].toLowerCase() + '. Dime si quieres que la diseñe como las demás.',
+      walls, wallSrc: seg('wallSrc', [['local','Carpeta local'],['pin','Tablero de Pinterest'],['dyn','Según la hora']]),
+      wallEvery: seg('wallEvery', [['nunca','Nunca'],['1h','Cada hora'],['dia','Cada día'],['login','Al iniciar']]),
+      estilos: seg('estilo', [['liquid','Liquid glass'],['flat','Flat'],['tonal','Tonal']]), estiloHint: estiloHints[E], pv, swatches,
+      colorModes: [['auto','Automático'],['elegir','Elegir'],['mono','Monocromo']].map(([v, label]) => ({ label, on: cMode === v ? 'true' : 'false', bg: cMode === v ? c.sc : 'transparent', fg: cMode === v ? c.onSc : c.t, pick: set({ colorMode: v }) })),
+      cm: { auto: cMode === 'auto', elegir: cMode === 'elegir', mono: cMode === 'mono' },
+      monoOpts, monoBg: sw('monoBg', ''), wallName: WN[st.wall] || st.wall,
+      radius: st.radius, gaps: st.gaps,
+      radii: pills('radius', [0, 6, 10, 16, 24]), gapOpts: pills('gaps', [0, 2, 4, 8, 12]), scales: pills('scale', ['1', '1.25', '1.5', '2'], (v) => v + '×'),
+      swAparien: [sw('anim','Animaciones','animations:enabled · curvas tipo Material'), sw('sync','Aplicar el tema a GTK, Qt, terminal y navegador','matugen → gtk.css · qt6ct · kitty'), sw('gamefx','Quitar efectos en juegos a pantalla completa','gamemode → animations 0 · blur off', true)],
+      positions, barModes: seg('barMode', [['pegada','Fija al borde'],['flotante','Flotante'],['isla','Isla central']]),
+      barSizes: seg('barSize', [['28','Compacta 28'],['34','Normal 34'],['40','Grande 40']]),
+      modules: chipSet('mods'),
+      swBarra: [sw('autohide','Ocultar automáticamente','se muestra al tocar el borde'), sw('allMon','Mostrar en todas las pantallas','una barra por monitor'), sw('barTitle','Mostrar título de la ventana activa',''), sw('emptyTransp','Transparente en espacios vacíos','solo el fondo, sin superficie', true)],
+      corners, cornerDelay: st.delay, delays: seg('delay', [['0 ms','Al instante'],['150 ms','150 ms'],['300 ms','300 ms'],['500 ms','500 ms']]),
+      gestures, layout: st.layout, layouts: seg('layout', [['dwindle','Dwindle'],['master','Maestro'],['scroll','Columnas con scroll']]),
+      swEsc: [sw('hoverFocus','Enfocar la ventana al pasar el cursor'), sw('snap','Acoplar al arrastrar a los bordes', '', true)],
+      steppers: [step('foco','Foco',' min',5,90,5), step('desc','Descanso corto',' min',1,30,1), step('largo','Descanso largo',' min',5,60,5), step('ciclos','Ciclos antes del largo','',1,8,1)],
+      cycle, cycleText: st.ciclos + ' × ' + st.foco + ' min de foco · total ' + Math.floor(totalMin / 60) + ' h ' + (totalMin % 60) + ' min',
+      swFoco: [sw('fHideBar','Ocultar la barra','aparece al tocar el borde superior'), sw('fNoGaps','Sin gaps ni bordes','gaps 0 · border_size 0'), sw('fMute','Silenciar notificaciones','No molestar automático'), sw('fAutoBreak','Iniciar descansos automáticamente',''), sw('fSound','Sonido al terminar cada bloque','', true)],
+      blocks: chipSet('blk'),
+      providers: seg('provider', [['claude','Claude'],['local','Local (Ollama)'],['mixto','Ambos'],['off','Desactivado']]), providerHint: PH[st.provider],
+      endpoint: st.provider === 'local' ? 'http://localhost:11434' : st.provider === 'off' ? '—' : 'claude mcp add shell -- [servidor MCP del shell]',
+      swIA: [sw('iaWin','Leer la ventana activa','Para resumir páginas o explicar lo que ves'), sw('iaClip','Leer el portapapeles','Para trabajar con lo que copiaste'), sw('iaShot','Ver capturas que adjuntes','Nunca hace capturas por su cuenta'), sw('iaCmd','Proponer comandos de terminal','Siempre pide confirmación antes de ejecutar'), sw('iaShell','Controlar el shell','Estilo, colores, barra, fondos, espacios, escritorio y paneles'), sw('iaConfirm','Confirmar antes de aplicar cambios','Muestra los cambios con Aplicar / Deshacer'), sw('iaSpot','Responder desde Spotlight','Al escribir ? en el buscador'), sw('iaHist','Guardar historial de conversaciones','En ~/.local/share, solo en este equipo', true)],
+      webapps,
+      plugins, plQ: st.plQ || '', onPlQ: (e) => this.setState({ plQ: e.target.value }),
+      plTabs: [['todos','Todos'],['inst','Instalados'],['nuevos','Disponibles']].map(([k, label]) => ({ label, bg: plTab === k ? c.sc : 'transparent', fg: plTab === k ? c.onSc : c.t, pick: set({ plTab: k }) })),
+      plCats: [['all','Todo'],['util','Utilidades'],['red','Red y nube'],['sist','Sistema'],['dev','Desarrollo'],['ia','IA']].map(([k, label]) => ({ label, bg: plCat === k ? c.pc : 'transparent', fg: plCat === k ? c.onPc : c.t, border: plCat === k ? '1px solid transparent' : '1px solid ' + c.ov, pick: set({ plCat: k }) })),
+      txtSize: String(st.txtSize || 13), txtPx: (st.txtSize || 13) + 'px',
+      txtSizes: TXT.map((n) => ({ label: String(n), bg: (st.txtSize || 13) === n ? c.p : c.s4, fg: (st.txtSize || 13) === n ? c.onP : c.t, pick: set({ txtSize: n }) })),
+      layouts: [['ES','Español (Latinoamérica)','Principal'],['US','English (US)','Super + Espacio']].map(([code, name, tag]) => ({ code, name, tag })),
+      kbDelay: seg('kbDelayV', [['200','Corto'],['400','Medio'],['600','Largo']]), kbRate: seg('kbRateV', [['25','Normal'],['40','Rápida'],['60','Muy rápida']]),
+      swKb: [sw('numlock','Bloq Num al iniciar','input:numlock_by_default'), sw('capsEsc','Bloq Mayús como Escape','input:kb_options = caps:escape', true)],
+      shortcuts, scQ: st.scQ || '', onScQ: (e) => this.setState({ scQ: e.target.value }),
+      wifiSw: swv(st.wifiOn !== false, () => this.setState({ wifiOn: st.wifiOn === false }), 'Wi-Fi'),
+      nets, dns: seg('dnsV', [['auto','Automático'],['cf','Cloudflare'],['q9','Quad9'],['custom','Propio']]), dnsHint: DNSH[st.dnsV || 'auto'],
+      swNet: [sw('vpn','VPN · [VPN de trabajo]','WireGuard · se conecta solo en redes públicas'), sw('ufw','Cortafuegos','ufw · bloquea conexiones entrantes no permitidas'), sw('hotspot','Compartir conexión','Punto de acceso Wi‑Fi'), sw('metered','Conexión medida','Pausa actualizaciones y sincronización', true)],
+      outs, micLevel, appVol,
+      swVis: [sw('reader','Lector de pantalla','Orca · Super + Alt + S'), sw('contrast','Alto contraste','bordes y texto más marcados'), sw('noGlass','Reducir transparencia','el liquid glass pasa a superficies sólidas'),
+        sw('noMotion','Reducir movimiento','sin fondos animados ni rebotes'), sw('zoom','Lupa','Super + = y Super + − · sigue al foco'), sw('bigCursor','Cursor grande','48 px', true)],
+      cfOpts: [['none','Ninguno'],['prot','Protanopía'],['deut','Deuteranopía'],['trit','Tritanopía'],['gris','Grises']].map(([v, label]) => { const on = (st.cf || 'none') === v; return { label, on: on ? 'true' : 'false', bg: on ? c.sc : 'transparent', fg: on ? c.onSc : c.t, pick: set({ cf: v }) }; }),
+      swInt: [sw('osk','Teclado en pantalla','aparece al tocar un campo de texto'), sw('sticky','Teclas especiales','pulsa Super, Ctrl o Alt de una en una'), sw('slow','Teclas lentas','ignora pulsaciones accidentales'),
+        sw('dwell','Clic al posar','clic tras 1 s sin mover el ratón'), sw('dictado','Dictado por voz','reconocimiento local con Whisper · sin nube', true)],
+      swAud: [sw('captions','Subtítulos en vivo','para cualquier audio o videollamada · local'), sw('flash','Alertas visuales','la barra parpadea en vez de sonar'), sw('mono','Audio mono','mismo sonido en ambos oídos', true)],
+      swSnd: [sw('noise','Supresión de ruido','EasyEffects · ideal para videollamadas'), sw('autoSwitch','Cambiar a auriculares al conectarlos','', true)],
+      pProfiles: card('powV', [['ahorro','Ahorro','Más batería'],['eq','Equilibrado','Recomendado'],['rend','Rendimiento','Máxima potencia']], 'eq'),
+      suspend: seg('suspV', [['10','10 min'],['20','20 min'],['60','1 h'],['nunca','Nunca']]),
+      gpuMode: seg('gpuV', [['auto','Automático'],['int','Integrada'],['ded','Dedicada']]),
+      swPow: [sw('chargeLimit','Limitar la carga al 80 %','Alarga la vida de la batería'), sw('autoBright','Brillo automático','Usa el sensor de luz si existe'), sw('lowBat','Ahorro automático con poca batería','Por debajo del 20 %', true)],
+      glassQ: card('glassV', [['alta','Alta','Máximo detalle'],['eq','Equilibrada','Menos GPU'],['ahorro','Ahorro','Sin desenfoque']], 'eq'),
+      glassLine: 'decoration:blur → ' + GQ[st.glassV || 'eq'],
+      swGlass: [sw('glassBat','Bajar calidad con batería','Pasa a Ahorro al desconectar el cargador'), sw('glassGame','Quitar efectos en juegos','gamemode activa el modo sin desenfoque'), sw('glassAuto','Ajustar según la GPU','Detecta equipos modestos y elige solo', true)],
+      about: [['Sistema','CachyOS (rolling)'],['Kernel','linux-cachyos'],['Escritorio','Hyprland + [tu shell]'],['Procesador','[CPU]'],['Gráficos','[GPU]'],['Memoria','[RAM]'],['Almacenamiento','[disco] · Btrfs'],['Actualizado','[fecha]']].map(([k, v]) => ({ k, v })),
+      syncDest: seg('syncV', [['git','Git'],['sync','Syncthing'],['file','Archivo']]), syncHint: SYH[st.syncV || 'git'],
+      swSync: [sw('syncAuto','Sincronizar automáticamente','', false), sw('syncApps','Incluir lista de apps instaladas',''), sw('syncWall','Incluir fondos de pantalla','', true)],
+      panelApps, panelW: seg('panelWV', [['360','Estrecho 360'],['400','Normal 400'],['480','Ancho 480']]), panelSide: seg('panelSideV', [['der','Derecha'],['izq','Izquierda']]),
+      pipCorners, pipCornerName: CN[st.pipCornerV], pipSizes,
+      pipMargin: seg('pipMarginV', [['4','4 px'],['6','6 px'],['12','12 px']]),
+      pipOp: seg('pipOpV', [['100','100 %'],['85','85 %'],['70','70 %']]),
+      swPip: [sw('pipAll','Botón PiP en todos los videos','Navegador, web apps, panel lateral y reproductores'), sw('pipAuto','PiP automático','Al cambiar de pestaña, de espacio o minimizar'), sw('pipPin','Visible en todos los espacios','La ventana queda fijada'), sw('pipHover','Controles solo al pasar el cursor','Más limpio y pequeño'), sw('pipFade','Transparente si el cursor se acerca','Para no tapar lo que hay detrás', true)],
+      pipRule: 'windowrule = float, pin, size ' + pzw + ' ' + pzh + ', move ' + mvX + ' ' + mvY + ', title:^(Picture-in-Picture)$',
+      coll, wCount: 9, wAnimCount: 4,
+      wAuto: sw('wAuto', ''), wAnim: sw('wAnim', ''),
+      autoOp: st.wAuto ? '1' : '0.45', animOp: st.wAnim ? '1' : '0.45',
+      wEvery: seg('wEveryV', [['15m','15 min'],['1h','1 h'],['4h','4 h'],['dia','Diario'],['login','Al iniciar']]),
+      wOrder: seg('wOrderV', [['aleatorio','Aleatorio'],['orden','En orden'],['favoritos','Favoritos']]),
+      wTrans: seg('wTransV', [['fundido','Fundido'],['crecer','Crecer'],['barrido','Barrido'],['ninguna','Ninguna']]),
+      swAuto: [sw('wByTime','Según la hora del día','Amanecer, día, atardecer y noche'), sw('wSkipFull','No cambiar con pantalla completa','Evita distraer en reuniones o juegos', true)],
+      autoCmd: 'swww img $(siguiente) --transition-type ' + TR[st.wTransV] + ' · cada ' + ({ '15m':'15 min','1h':'1 h','4h':'4 h',dia:'día',login:'inicio' })[st.wEveryV],
+      wEngine: seg('wEngineV', [['mpvpaper','Video'],['swww','Animación'],['wpe','Escenas']]), engineHint: ENG[st.wEngineV],
+      wFps: seg('wFpsV', [['15','15'],['30','30'],['60','60']]),
+      wPause: chipSet('wPauseV'),
+      monitors, monTitle: M.name + ' · ' + M.id, monRes: M.res,
+      monLine: 'monitor = ' + M.id + ', ' + M.res.replace(' × ', 'x') + '@' + st.hz + ', auto, ' + st.mscale,
+      hz: seg('hz', [['60','60 Hz'],['120','120 Hz'],['144','144 Hz'],['165','165 Hz']]),
+      monScale: seg('mscale', [['1','100 %'],['1.25','125 %'],['1.5','150 %'],['1.75','175 %'],['2','200 %']]),
+      swMon: [sw('vrr','Frecuencia variable (VRR)','Evita cortes en juegos y video'), sw('hdr','HDR','Solo en pantallas compatibles'), sw('mirror','Duplicar en la otra pantalla','Para presentaciones', true)],
+      nightSched: seg('nightSched', [['sol','Del atardecer al amanecer'],['manual','Horario propio'],['off','Desactivada']]),
+      kelvin: st.kelvin, kelvins,
+      swTheme: [sw('autoTheme','Cambiar entre claro y oscuro automáticamente','Usa el mismo horario que la luz nocturna'), sw('autoWall','Cambiar también el fondo','Versión clara y oscura del fondo', true)],
+      snaps, snapSel: st.snapSel,
+      snapNew: () => this.setState({ snapSel: 214 }),
+      kernel: 'uname -r → ' + st.kern,
+      kernels: seg('kern', [['linux-cachyos','linux-cachyos'],['linux-cachyos-lts','linux-cachyos-lts']]),
+      swKernel: [sw('ltsBackup','Mantener un kernel LTS de respaldo','Aparece como opción en el arranque', true)],
+      updModes: seg('upd', [['auto','Automáticas'],['notificar','Avisar'],['manual','Manual']]),
+      swUpd: [sw('snapUpd','Punto de restauración antes','snap-pac'), sw('flat','Incluir Flatpak','flatpak update'), sw('fw','Firmware','fwupd', true)],
+      perms: [['Cámara','2 apps'],['Micrófono','3 apps'],['Compartir pantalla','1 app'],['Ubicación','Ninguna']].map(([k, v]) => ({ k, v }))
+    };
+  }
+}
+</script>
+</body>
+</html>

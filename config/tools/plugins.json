@@ -1,0 +1,149 @@
+{
+ "_doc": "Catálogo de Ajustes › Plugins (plugins de Hyprland con hyprpm). id = clave en settings.json «plugins»; repo = URL para «hyprpm add»; repoName = nombre del repositorio en «hyprpm list»; plugin = nombre para «hyprpm enable»; loaded = nombre en hl.get_loaded_plugins(); ns = tabla de hl.config({ plugin = { <ns> = … } }) y de hl.plugin.<ns> (Hyprland pasa «:» a «.» y «-» a «_»). install: hyprpm | manual. compat (Hyprland 0.57 con config Lua): ok = el repo documenta Lua y fija (pin) o sigue 0.57 · probable = documenta Lua pero su hyprpm.toml no tiene pin de 0.57 · sin verificar · manual = no se instala con hyprpm. options: lo que se ajusta desde la app; lua = ruta dentro de la tabla del plugin (sin lua = lo trata config/apply/70-plugins.py a mano). Revisado el 2026-11-07 leyendo los README y hyprpm.toml de cada repo.",
+ "retired": "hyprexpo, hyprtrails, hyprwinwrap, xtra-dispatchers y hyprscrolling salieron de hyprland-plugins en mayo de 2026 (sin mantenimiento). hyprexpo y hyprwinwrap siguen en forks mantenidos (abajo); el diseño «scrolling» ya viene integrado en Hyprland (Ajustes › Escritorio).",
+ "plugins": [
+  {
+   "id": "hyprbars", "name": "Hyprbars", "by": "hyprwm", "official": true, "cat": "ventanas",
+   "desc": "Barra de título con botones (cerrar, maximizar, minimizar) en las ventanas. Ideal con el modo flotante.",
+   "url": "https://github.com/hyprwm/hyprland-plugins/tree/main/hyprbars",
+   "repo": "https://github.com/hyprwm/hyprland-plugins", "repoName": "hyprland-plugins", "plugin": "hyprbars", "loaded": "hyprbars", "ns": "hyprbars",
+   "install": "hyprpm", "compat": "ok",
+   "compatNote": "Oficial. Documenta la config Lua (hl.config + hl.plugin.hyprbars.add_button); sin pin para 0.57, hyprpm compila main, que sigue a Hyprland.",
+   "options": [
+    { "key": "floatingOnly", "label": "Solo en ventanas flotantes", "type": "bool", "def": true },
+    { "key": "buttons", "label": "Botones cerrar · maximizar · minimizar", "type": "bool", "def": true },
+    { "key": "height", "label": "Altura", "type": "int", "def": 26, "min": 16, "max": 40, "step": 2, "unit": "px", "lua": "bar_height" },
+    { "key": "title", "label": "Mostrar el título", "type": "bool", "def": true, "lua": "bar_title_enabled" },
+    { "key": "align", "label": "Botones", "type": "choice", "def": "right", "choices": [["right", "A la derecha"], ["left", "A la izquierda"]], "lua": "bar_buttons_alignment" },
+    { "key": "blur", "label": "Desenfocar la barra", "type": "bool", "def": true, "lua": "bar_blur" }
+   ]
+  },
+  {
+   "id": "hyprexpo", "name": "HyprExpo", "by": "sandwichfarm", "official": false, "cat": "ventanas",
+   "desc": "Vista de todos los espacios en cuadrícula: elige uno o arrastra ventanas entre ellos. Con atajo y gesto.",
+   "url": "https://github.com/sandwichfarm/hyprexpo",
+   "repo": "https://github.com/sandwichfarm/hyprexpo", "repoName": "hyprexpo", "plugin": "hyprexpo", "loaded": "hyprexpo", "ns": "hyprexpo",
+   "install": "hyprpm", "compat": "ok",
+   "compatNote": "Continuación mantenida del hyprexpo oficial (retirado en mayo de 2026). Pin para 0.57.0 y 0.57.1; config y gestos en Lua.",
+   "options": [
+    { "key": "bind", "label": "Atajo", "type": "choice", "def": "SUPER + SHIFT + TAB", "choices": [["", "Ninguno"], ["SUPER + SHIFT + TAB", "Super + Mayús + Tab"], ["SUPER + TAB", "Super + Tab (en lugar de «Vista general»)"]] },
+    { "key": "gesture", "label": "Gesto", "type": "choice", "def": "", "choices": [["", "Ninguno"], ["4:up", "4 dedos ↑"], ["4:down", "4 dedos ↓"], ["3:up", "3 dedos ↑"]] },
+    { "key": "columns", "label": "Columnas", "type": "int", "def": 3, "min": 1, "max": 7, "step": 1, "unit": "", "lua": "columns" },
+    { "key": "gaps", "label": "Separación", "type": "int", "def": 8, "min": 0, "max": 40, "step": 2, "unit": "px", "lua": "gaps_in" },
+    { "key": "skipEmpty", "label": "Ocultar espacios vacíos", "type": "bool", "def": false, "asInt": true, "lua": "skip_empty" }
+   ]
+  },
+  {
+   "id": "Hyprspace", "name": "Hyprspace", "by": "KZDKM", "official": false, "cat": "ventanas",
+   "desc": "Vista general con un panel de espacios: arrastra y suelta ventanas entre ellos (al estilo de KDE o macOS).",
+   "url": "https://github.com/KZDKM/Hyprspace",
+   "repo": "https://github.com/KZDKM/Hyprspace", "repoName": "Hyprspace", "plugin": "Hyprspace", "loaded": "Hyprspace", "ns": "overview",
+   "install": "hyprpm", "compat": "ok",
+   "compatNote": "Arreglado para 0.57 (pin de 0.57.0, octubre de 2026); config Lua en plugin.overview y hl.plugin.overview.toggle().",
+   "options": [
+    { "key": "bind", "label": "Atajo", "type": "choice", "def": "", "choices": [["", "Ninguno"], ["SUPER + SHIFT + TAB", "Super + Mayús + Tab"], ["SUPER + TAB", "Super + Tab (en lugar de «Vista general»)"]] },
+    { "key": "onBottom", "label": "Panel abajo", "type": "bool", "def": false, "lua": "onBottom" },
+    { "key": "autoDrag", "label": "Arrastrar con un clic", "type": "bool", "def": true, "lua": "autoDrag" },
+    { "key": "newWorkspace", "label": "Mostrar un espacio nuevo vacío", "type": "bool", "def": true, "lua": "showNewWorkspace" }
+   ]
+  },
+  {
+   "id": "hyprfocus", "name": "Hyprfocus", "by": "hyprwm", "official": true, "cat": "visual",
+   "desc": "Animación breve en la ventana que recibe el foco, para no perderla de vista.",
+   "url": "https://github.com/hyprwm/hyprland-plugins/tree/main/hyprfocus",
+   "repo": "https://github.com/hyprwm/hyprland-plugins", "repoName": "hyprland-plugins", "plugin": "hyprfocus", "loaded": "hyprfocus", "ns": "hyprfocus",
+   "install": "hyprpm", "compat": "ok",
+   "compatNote": "Oficial (sustituye al antiguo pyt0xic/hyprfocus). Opciones en plugin.hyprfocus; mantenido en octubre de 2026.",
+   "options": [
+    { "key": "keyboard", "label": "Al cambiar con el teclado", "type": "choice", "def": "flash", "choices": [["flash", "Destello"], ["shrink", "Encoger"], ["slide", "Deslizar"], ["none", "Nada"]], "lua": "keyboard_focus_animation" },
+    { "key": "mouse", "label": "Al cambiar con el ratón", "type": "choice", "def": "none", "choices": [["flash", "Destello"], ["shrink", "Encoger"], ["slide", "Deslizar"], ["none", "Nada"]], "lua": "mouse_focus_animation" }
+   ]
+  },
+  {
+   "id": "borders-plus-plus", "name": "Borders++", "by": "hyprwm", "official": true, "cat": "visual",
+   "desc": "Uno o dos bordes extra alrededor de cada ventana, con el color de acento.",
+   "url": "https://github.com/hyprwm/hyprland-plugins/tree/main/borders-plus-plus",
+   "repo": "https://github.com/hyprwm/hyprland-plugins", "repoName": "hyprland-plugins", "plugin": "borders-plus-plus", "loaded": "borders-plus-plus", "ns": "borders_plus_plus",
+   "install": "hyprpm", "compat": "ok",
+   "compatNote": "Oficial. Ejemplo Lua en su README (plugin.borders_plus_plus); actualizado en octubre de 2026.",
+   "options": [
+    { "key": "count", "label": "Bordes extra", "type": "choice", "def": 1, "choices": [[1, "Uno"], [2, "Dos"]], "lua": "add_borders" },
+    { "key": "size", "label": "Grosor", "type": "int", "def": 4, "min": 1, "max": 16, "step": 1, "unit": "px", "lua": "border_size_1" }
+   ]
+  },
+  {
+   "id": "dynamic-cursors", "name": "Dynamic cursors", "by": "VirtCode", "official": false, "cat": "entrada",
+   "desc": "El cursor se inclina, gira o se estira al moverse, y crece al agitarlo para encontrarlo.",
+   "url": "https://github.com/VirtCode/hypr-dynamic-cursors",
+   "repo": "https://github.com/VirtCode/hypr-dynamic-cursors", "repoName": "dynamic-cursors", "plugin": "dynamic-cursors", "loaded": "dynamic-cursors", "ns": "dynamic_cursors",
+   "install": "hyprpm", "compat": "probable",
+   "compatNote": "Documenta la config Lua; su último pin es 0.56.2, pero main ya usa la API de render de 0.57 (octubre de 2026).",
+   "options": [
+    { "key": "mode", "label": "Efecto", "type": "choice", "def": "tilt", "choices": [["tilt", "Inclinar"], ["rotate", "Girar"], ["stretch", "Estirar"], ["none", "Ninguno"]], "lua": "mode" },
+    { "key": "shake", "label": "Agitar para encontrarlo", "type": "bool", "def": true, "lua": "shake.enabled" }
+   ]
+  },
+  {
+   "id": "hyprglass", "name": "HyprGlass", "by": "hyprnux", "official": false, "cat": "visual",
+   "desc": "Cristal líquido en las ventanas transparentes: desenfoque, refracción en los bordes y brillos.",
+   "url": "https://github.com/hyprnux/hyprglass",
+   "repo": "https://github.com/hyprnux/hyprglass", "repoName": "HyprGlass", "plugin": "hyprglass", "loaded": "hyprglass", "ns": "hyprglass",
+   "install": "hyprpm", "compat": "ok",
+   "compatNote": "Rama hyprland-0.57 y config Lua (hl.plugin.hyprglass.config). Si no coincide la versión se pausa en vez de romper Hyprland.",
+   "options": [
+    { "key": "preset", "label": "Estilo", "type": "choice", "def": "subtle", "choices": [["subtle", "Sutil"], ["clear", "Transparente"], ["glass", "Bloque de cristal"], ["pomme", "Tipo Apple"], ["high_contrast", "Alto contraste"]] }
+   ]
+  },
+  {
+   "id": "hyprgrass", "name": "Hyprgrass", "by": "horriblename", "official": false, "cat": "entrada",
+   "desc": "Gestos para pantallas táctiles y tabletas: deslizar entre espacios, pulsación larga, bordes.",
+   "url": "https://github.com/horriblename/hyprgrass",
+   "repo": "https://github.com/horriblename/hyprgrass", "repoName": "hyprgrass", "plugin": "hyprgrass", "loaded": "hyprgrass", "ns": "hyprgrass",
+   "install": "hyprpm", "compat": "ok",
+   "compatNote": "Pin para 0.57.1 y guía de migración a Lua (plugin.hyprgrass, hl.plugin.hyprgrass.bind).",
+   "options": [
+    { "key": "sensitivity", "label": "Sensibilidad", "type": "choice", "def": 1, "choices": [[1, "Normal"], [2, "Alta"], [4, "Tableta"]], "lua": "sensitivity" },
+    { "key": "swipe", "label": "Deslizar con el dedo entre espacios", "type": "bool", "def": true }
+   ]
+  },
+  {
+   "id": "Hypr-DarkWindow", "name": "DarkWindow", "by": "micha4w", "official": false, "cat": "visual",
+   "desc": "Invierte o tiñe los colores de ventanas concretas (apps sin tema oscuro) con reglas de ventana.",
+   "url": "https://github.com/micha4w/Hypr-DarkWindow",
+   "repo": "https://github.com/micha4w/Hypr-DarkWindow", "repoName": "Hypr-DarkWindow", "plugin": "Hypr-DarkWindow", "loaded": "Hypr-DarkWindow", "ns": "darkwindow",
+   "install": "hyprpm", "compat": "ok",
+   "compatNote": "Pin para 0.57.0 y config Lua (hl.plugin.darkwindow). Las reglas por app van en ~/.config/hyprfrijol/local.lua.",
+   "options": []
+  },
+  {
+   "id": "hyprwinwrap", "name": "Hyprwinwrap", "by": "gen3vra", "official": false, "cat": "visual",
+   "desc": "Usa una ventana (cava, un vídeo, una terminal) como fondo de escritorio.",
+   "url": "https://github.com/gen3vra/hyprwinwrap",
+   "repo": "https://github.com/gen3vra/hyprwinwrap", "repoName": "hyprwinwrap", "plugin": "hyprwinwrap", "loaded": "hyprwinwrap", "ns": "hyprwinwrap",
+   "install": "hyprpm", "compat": "probable",
+   "compatNote": "Fork mantenido del oficial (retirado). Documenta Lua (hl.plugin.hyprwinwrap.window) pero su último pin es 0.56.2. La ventana de fondo se declara en local.lua.",
+   "options": []
+  },
+  {
+   "id": "csgo-vulkan-fix", "name": "CS2 Vulkan fix", "by": "hyprwm", "official": true, "cat": "juegos",
+   "desc": "Obliga a CS2 (o cualquier juego) a una resolución propia sin que lo note, con el ratón bien alineado.",
+   "url": "https://github.com/hyprwm/hyprland-plugins/tree/main/csgo-vulkan-fix",
+   "repo": "https://github.com/hyprwm/hyprland-plugins", "repoName": "hyprland-plugins", "plugin": "csgo-vulkan-fix", "loaded": "csgo-vulkan-fix", "ns": "csgo_vulkan_fix",
+   "install": "hyprpm", "compat": "ok",
+   "compatNote": "Oficial. Config Lua documentada (fix_mouse y hl.plugin.csgo_vulkan_fix.vkfix_app).",
+   "options": [
+    { "key": "cs2", "label": "Resolución de CS2", "type": "choice", "def": "", "choices": [["", "Sin cambiar"], ["1280x960", "1280 × 960 (4:3)"], ["1440x1080", "1440 × 1080 (4:3)"], ["1650x1050", "1650 × 1050 (16:10)"], ["1920x1080", "1920 × 1080"]] },
+    { "key": "fixMouse", "label": "Corregir el ratón", "type": "bool", "def": true, "lua": "fix_mouse" }
+   ]
+  },
+  {
+   "id": "hyprsplit", "name": "hyprsplit", "by": "shezdy", "official": false, "cat": "ventanas",
+   "desc": "Espacios de trabajo propios en cada monitor (como awesome o dwm).",
+   "url": "https://github.com/shezdy/hyprsplit",
+   "repo": "", "repoName": "", "plugin": "", "loaded": "", "ns": "",
+   "install": "manual", "compat": "manual",
+   "compatNote": "Ya no es un plugin de hyprpm: ahora es una biblioteca Lua (require(\"hyprsplit\"), Hyprland ≥ 0.55). Se instala clonándola y cambia los atajos de espacios: hazlo a mano en local.lua.",
+   "options": []
+  }
+ ]
+}

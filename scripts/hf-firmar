@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# hf-firmar [archivo] — abre «Firmar documentos» (con un PDF o una imagen, si se da). Lo usa hf-firmar.desktop.
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+f="${1:-}"; [ -n "$f" ] && f="$(readlink -f -- "$f")"
+exec qs -p "$ROOT/config/quickshell" ipc call firmar open "$f"

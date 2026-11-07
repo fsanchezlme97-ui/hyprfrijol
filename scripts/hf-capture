@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+# hf-capture — capturas y grabaciones de hyprfrijol (lo usa la vista "captura"; también vale suelto)
+#   hf-capture shot "X,Y WxH" [--cursor]   captura esa zona (coordenadas globales) → imprime la ruta (temporal)
+#   hf-capture shot-output DP-1 [--cursor] captura una pantalla entera → ruta temporal
+#   hf-capture screen [DP-1]               pantalla entera directa: guarda en Capturas, copia y avisa
+#   hf-capture region                      región con slurp directa (sin la interfaz): guarda, copia y avisa
+#   hf-capture region-ocr|region-translate|region-ai
+#                                          zona → texto copiado / traducción copiada / pregunta al panel de IA
+#   hf-capture freeze DP-1 [--cursor]      congela la pantalla (captura entera, temporal) → ruta; la vista selecciona sobre ella
+#   hf-capture crop ARCHIVO "X,Y WxH"      recorta (píxeles reales de la imagen) → ruta temporal
+#   hf-capture ocr-tsv ARCHIVO             OCR con cajas: «scale N» y la tabla TSV de tesseract (coordenadas /N = imagen)
+#   hf-capture edit ARCHIVO                abre el editor (satty o swappy)
+#   hf-capture lens ARCHIVO                sube la imagen (uguu.se, se borra en 3 h) y la busca en Google Lens
+#   hf-capture save ARCHIVO                lo copia a ~/Imágenes/Capturas → imprime la ruta final
+#   hf-capture copy ARCHIVO                imagen al portapapeles
+#   hf-capture ocr ARCHIVO                 texto de la imagen (tesseract spa+eng) → portapapeles e imprime
+#   hf-capture record "X,Y WxH"|DP-1 [--mic] [--system]
+#                                          empieza a grabar (wf-recorder) en ~/Vídeos/Grabaciones
+#   hf-capture stop                        termina la grabación → imprime la ruta
+#   hf-capture status                      "recording RUTA INICIO" o "idle"
+set -uo pipefail
+
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+RUN="${XDG_RUNTIME_DIR:-/tmp}/hyprfrijol"
+TMPD="$RUN/capturas"
+mkdir -p "$TMPD"
+PICS="$(xdg-user-dir PICTURES 2>/dev/null)"; { [ -z "$PICS" ] || [ "$PICS" = "$HOME" ]; } && PICS="$HOME/Pictures"
+PICS="$PICS/Capturas"
+VIDS="$(xdg-user-dir VIDEOS 2>/dev/null || echo "$HOME/Videos")/Grabaciones"
+stamp() { date +%Y-%m-%d_%H-%M-%S; }
+notify() { command -v notify-send >/dev/null && notify-send -a "Captura" "$@" || true; }
+has_cursor() { for a in "$@"; do [ "$a" = --cursor ] && return 0; done; return 1; }
+
+# Limpia temporales de más de un día
+find "$TMPD" -type f -mtime +1 -delete 2>/dev/null || true
+
+case "${1:-}" in
+  shot)
+    out="$TMPD/captura-$(stamp)-$$.png"
+    if has_cursor "${@:3}"; then grim -c -g "$2" "$out"; else grim -g "$2" "$out"; fi && echo "$out" ;;
+  freeze)
+    out="$TMPD/pantalla-$2-$(date +%s%N).png"
+    if has_cursor "${@:3}"; then grim -c -l 0 -o "$2" "$out"; else grim -l 0 -o "$2" "$out"; fi && echo "$out" ;;
+  crop)
+    g="$3"; xy="${g%% *}"; wh="${g##* }"
+    out="$TMPD/captura-$(stamp)-$$-$RANDOM.png"
+    magick "$2" -crop "${wh}+${xy%%,*}+${xy##*,}" +repage "$out" && echo "$out" ;;
+  ocr-tsv)
+    langs=eng
+    tesseract --list-langs 2>/dev/null | grep -qx spa && langs=spa+eng
+    # Texto de pantalla: a 2× (y en grises) tesseract lee mucho mejor las letras pequeñas
+    w="$(magick identify -format %w "$2" 2>/dev/null || echo 0)"
+    n=1; [ "${w:-0}" -lt 2400 ] && n=2
+    big="$TMPD/ocr-$$.png"
+    magick "$2" -resize "$((n * 100))%" -colorspace Gray "$big" 2>/dev/null || { cp -- "$2" "$big"; n=1; }
+    echo "scale $n"
+    tesseract "$big" - -l "$langs" --psm 3 tsv 2>/dev/null
+    rm -f "$big" ;;
+  edit)
+    if command -v satty >/dev/null; then
+      mkdir -p "$PICS"
+      exec satty --filename "$2" --output-filename "$PICS/Captura_$(stamp)-editada.png" --copy-command wl-copy
+    elif command -v swappy >/dev/null; then
+      mkdir -p "$PICS"
+      exec swappy -f "$2" -o "$PICS/Captura_$(stamp)-editada.png"
+    else notify "Falta un editor" "Instala satty o swappy"; exit 1; fi ;;
+  lens)
+    notify -i "$2" "Buscando con Google Lens…" "Subiendo la imagen a uguu.se (se borra en 3 horas)"
+    url="$(curl -sf --max-time 30 -F "files[]=@$2" https://uguu.se/upload | sed -n 's/.*"url" *: *"\([^"]*\)".*/\1/p' | head -n1 | sed 's#\\/#/#g')"
+    [ -n "$url" ] || { notify "No se pudo subir la imagen" "¿Hay conexión a internet?"; exit 1; }
+    xdg-open "https://lens.google.com/uploadbyurl?url=$(printf '%s' "$url" | jq -sRr @uri 2>/dev/null || printf '%s' "$url")" ;;
+  shot-output)
+    out="$TMPD/captura-$(stamp)-$$.png"
+    if has_cursor "${@:3}"; then grim -c -o "$2" "$out"; else grim -o "$2" "$out"; fi && echo "$out" ;;
+  screen|region)
+    mkdir -p "$PICS"
+    out="$PICS/Captura_$(stamp).png"
+    if [ "$1" = region ]; then g="$(slurp -d)" || exit 1; grim -g "$g" "$out"
+    elif [ -n "${2:-}" ]; then grim -o "$2" "$out"
+    else grim "$out"; fi || exit 1
+    wl-copy --type image/png < "$out"
+    notify -i "$out" "Captura guardada" "Copiada al portapapeles · $(basename "$out")"
+    echo "$out" ;;
+  region-ocr|region-translate|region-ai)
+    # Zona con slurp → texto (OCR), traducción o pregunta a la IA. Nada se guarda en Capturas.
+    g="$(slurp -d)" || exit 1
+    img="$TMPD/zona-$(stamp)-$$.png"
+    grim -g "$g" "$img" || exit 1
+    case "$1" in
+      region-ocr) exec "$0" ocr "$img" ;;
+      region-ai)
+        exec qs -p "${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}/config/quickshell" \
+          ipc call sidepanel askImage "¿Qué hay en esta captura?" "$img" ;;
+      region-translate)
+        txt="$("$0" ocr "$img" 2>/dev/null)" || exit 1
+        command -v trans >/dev/null || { notify "Falta translate-shell" "Instálalo para traducir (paquete translate-shell)"; exit 1; }
+        dest="${HF_TRANSLATE_TO:-es}"
+        out="$(printf '%s' "$txt" | trans -brief -no-autocorrect ":$dest" 2>/dev/null)"
+        # Si el texto ya estaba en el idioma de destino, traduce al inglés
+        [ "$(printf '%s' "$out" | tr -d '[:space:]')" = "$(printf '%s' "$txt" | tr -d '[:space:]')" ] && \
+          out="$(printf '%s' "$txt" | trans -brief -no-autocorrect ":en" 2>/dev/null)"
+        [ -n "$out" ] || { notify "No se pudo traducir" "¿Hay conexión a internet?"; exit 1; }
+        printf '%s' "$out" | wl-copy
+        notify "Traducción copiada" "$(printf '%s' "$out" | head -c 300)"
+        printf '%s\n' "$out" ;;
+    esac ;;
+  save)
+    mkdir -p "$PICS"
+    out="$PICS/Captura_$(stamp).png"
+    cp -- "$2" "$out" && echo "$out" ;;
+  copy)
+    wl-copy --type image/png < "$2" ;;
+  ocr)
+    langs=eng
+    tesseract --list-langs 2>/dev/null | grep -qx spa && langs=spa+eng
+    txt="$(tesseract "$2" - -l "$langs" 2>/dev/null | sed -e 's/[[:space:]]*$//' | cat -s)"
+    txt="$(printf '%s' "$txt" | sed -e '/./,$!d')"   # sin líneas vacías al principio
+    if [ -n "$txt" ]; then
+      printf '%s' "$txt" | wl-copy
+      notify "Texto copiado" "$(printf '%s' "$txt" | head -c 160)"
+      printf '%s\n' "$txt"
+    else
+      notify "No se encontró texto" "Prueba con una zona más grande o más nítida"
+      exit 1
+    fi ;;
+  record)
+    [ -f "$RUN/record.pid" ] && kill -0 "$(cat "$RUN/record.pid")" 2>/dev/null && { echo "Ya se está grabando" >&2; exit 1; }
+    mkdir -p "$VIDS"
+    out="$VIDS/Grabacion_$(stamp).mp4"
+    target="$2"; shift 2
+    args=()
+    case "$target" in *,*\ *x*) args+=(-g "$target") ;; *) args+=(-o "$target") ;; esac
+    mic=0; sys=0
+    for a in "$@"; do case $a in --mic) mic=1;; --system) sys=1;; esac; done
+    # wf-recorder graba una sola fuente: con las dos, se usa el audio del sistema
+    if [ "$sys" = 1 ]; then args+=("--audio=$(pactl get-default-sink 2>/dev/null).monitor")
+    elif [ "$mic" = 1 ]; then args+=("--audio=$(pactl get-default-source 2>/dev/null)"); fi
+    setsid wf-recorder "${args[@]}" -f "$out" >"$RUN/record.log" 2>&1 < /dev/null &
+    echo $! > "$RUN/record.pid"
+    printf '%s\n%s\n' "$out" "$(date +%s)" > "$RUN/record.info"
+    sleep 0.4
+    kill -0 "$(cat "$RUN/record.pid")" 2>/dev/null || { rm -f "$RUN/record.pid" "$RUN/record.info"; cat "$RUN/record.log" >&2; exit 1; }
+    echo "$out" ;;
+  stop)
+    [ -f "$RUN/record.pid" ] || { echo "No se está grabando" >&2; exit 1; }
+    pid="$(cat "$RUN/record.pid")"
+    out="$(head -n1 "$RUN/record.info" 2>/dev/null)"
+    kill -INT "$pid" 2>/dev/null
+    for _ in $(seq 50); do kill -0 "$pid" 2>/dev/null || break; sleep 0.1; done
+    rm -f "$RUN/record.pid" "$RUN/record.info"
+    if [ -s "$out" ]; then
+      thumb="$TMPD/rec-thumb.png"
+      ffmpeg -y -loglevel error -sseof -0.5 -i "$out" -frames:v 1 "$thumb" 2>/dev/null || thumb=""
+      notify ${thumb:+-i "$thumb"} "Grabación guardada" "$(basename "$out") · en $VIDS"
+      echo "$out"
+    else
+      notify "La grabación falló" "Mira $RUN/record.log"; exit 1
+    fi ;;
+  status)
+    if [ -f "$RUN/record.pid" ] && kill -0 "$(cat "$RUN/record.pid")" 2>/dev/null; then
+      echo "recording $(head -n1 "$RUN/record.info") $(sed -n 2p "$RUN/record.info")"
+    else rm -f "$RUN/record.pid" "$RUN/record.info"; echo idle; fi ;;
+  -h|--help|"") sed -n '2,20p' "$0" ;;
+  *) echo "Orden desconocida: $1 (mira hf-capture --help)" >&2; exit 1 ;;
+esac

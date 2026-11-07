@@ -1,0 +1,39 @@
+{
+  "name": "Automático",
+  "dark": {
+      "bg": "{{colors.surface_dim.dark.hex}}",
+      "s1": "{{colors.surface_container_low.dark.hex}}",
+      "s3": "{{colors.surface_container_high.dark.hex}}",
+      "s4": "{{colors.surface_container_highest.dark.hex}}",
+      "p": "{{colors.primary.dark.hex}}",
+      "onP": "{{colors.on_primary.dark.hex}}",
+      "pc": "{{colors.primary_container.dark.hex}}",
+      "onPc": "{{colors.on_primary_container.dark.hex}}",
+      "sc": "{{colors.secondary_container.dark.hex}}",
+      "onSc": "{{colors.on_secondary_container.dark.hex}}",
+      "ter": "{{colors.tertiary.dark.hex}}",
+      "t": "{{colors.on_surface.dark.hex}}",
+      "tv": "{{colors.on_surface_variant.dark.hex}}",
+      "o": "{{colors.outline.dark.hex}}",
+      "ov": "{{colors.outline_variant.dark.hex}}",
+      "light": false
+  },
+  "light": {
+      "bg": "{{colors.surface_dim.light.hex}}",
+      "s1": "{{colors.surface_container_low.light.hex}}",
+      "s3": "{{colors.surface_container_high.light.hex}}",
+      "s4": "{{colors.surface_container_highest.light.hex}}",
+      "p": "{{colors.primary.light.hex}}",
+      "onP": "{{colors.on_primary.light.hex}}",
+      "pc": "{{colors.primary_container.light.hex}}",
+      "onPc": "{{colors.on_primary_container.light.hex}}",
+      "sc": "{{colors.secondary_container.light.hex}}",
+      "onSc": "{{colors.on_secondary_container.light.hex}}",
+      "ter": "{{colors.tertiary.light.hex}}",
+      "t": "{{colors.on_surface.light.hex}}",
+      "tv": "{{colors.on_surface_variant.light.hex}}",
+      "o": "{{colors.outline.light.hex}}",
+      "ov": "{{colors.outline_variant.light.hex}}",
+      "light": true
+  }
+}

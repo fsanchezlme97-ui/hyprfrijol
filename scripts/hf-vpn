@@ -1,0 +1,308 @@
+#!/usr/bin/env bash
+# hf-vpn — VPN de NetworkManager (cualquier plugin), WireGuard y VPN en malla (Tailscale, ZeroTier).
+# Lo usan Ajustes › Red, la IA y la terminal. Salida en líneas JSON (una por elemento).
+#
+#   hf-vpn list                         conexiones VPN/WireGuard: {name,uuid,type,service,kind,active,device}
+#   hf-vpn up|down|delete <uuid|nombre>
+#   hf-vpn edit <uuid>                  editor de NetworkManager (nm-connection-editor) o nmtui
+#   hf-vpn import [archivo] [tipo]      importa .ovpn/.conf/.pcf/… (sin archivo: abre un selector)
+#   hf-vpn plugins                      tipos de VPN: {key,label,desc,plugin,service,pkg,installed,aur}
+#   hf-vpn add <tipo> <nombre> <servidor> [usuario]   crea la conexión básica (luego «edit» para el resto)
+#   hf-vpn create <tipo>                abre el editor de NetworkManager para un tipo nuevo
+#   hf-vpn install <tipo|editor|tailscale|zerotier>   instala (pide sudo: pensado para una terminal)
+#   hf-vpn pkgs <tipo>                  paquetes que instalaría en esta distro
+#   hf-vpn mesh                         {key:"tailscale"|"zerotier",installed,service,state,detail,…}
+#   hf-vpn tailscale up|down|login|admin · tailscale exit <ip|nombre|none>   (nodo de salida)
+#   hf-vpn zerotier join|leave <red> · zerotier list
+set -uo pipefail
+
+# ---------- distro ----------
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+family() {
+  local like=""
+  [ -r /etc/os-release ] && like="$(. /etc/os-release; echo "$ID $ID_LIKE" | tr A-Z a-z)"
+  case "$like" in *arch*) echo arch;; *debian*|*ubuntu*) echo debian;; *fedora*|*rhel*) echo fedora;; *suse*) echo suse;; *) echo arch;; esac
+}
+FAM="$(family)"
+installed_pkg() {   # installed_pkg <paquete…>
+  local p
+  for p in "$@"; do
+    case "$FAM" in
+      arch) pacman -Qq "$p" >/dev/null 2>&1 || return 1;;
+      debian) dpkg -s "$p" >/dev/null 2>&1 || return 1;;
+      *) rpm -q "$p" >/dev/null 2>&1 || return 1;;
+    esac
+  done
+}
+pm_install() {   # pm_install <paquetes…>  (para la terminal)
+  case "$FAM" in
+    arch)
+      local repo=() aur=() p
+      for p in "$@"; do if in_repo "$p"; then repo+=("$p"); else aur+=("$p"); fi; done
+      if [ ${#aur[@]} -gt 0 ]; then
+        local h; h="$(command -v paru || command -v yay || true)"
+        [ -n "$h" ] || { echo "Necesitas paru o yay para: ${aur[*]} (AUR)" >&2; return 1; }
+        "$h" -S --needed "$@"
+      else sudo pacman -S --needed "${repo[@]}"; fi;;
+    debian) sudo apt install -y "$@";;
+    fedora) sudo dnf install -y "$@";;
+    suse) sudo zypper install -y "$@";;
+  esac
+}
+
+# ---------- tipos de VPN ----------
+# clave|etiqueta|descripción|plugin (nombre del .name)|servicio NM|protocolo/extra
+TYPES='wireguard|WireGuard|Moderna y rápida · archivo .conf|wireguard|wireguard|
+openvpn|OpenVPN|La más común · archivo .ovpn|openvpn|org.freedesktop.NetworkManager.openvpn|
+anyconnect|Cisco AnyConnect|OpenConnect · empresas y universidades|openconnect|org.freedesktop.NetworkManager.openconnect|anyconnect
+gp|GlobalProtect|Palo Alto · OpenConnect|openconnect|org.freedesktop.NetworkManager.openconnect|gp
+fortinet|Fortinet SSL|FortiGate · openfortivpn u OpenConnect|fortisslvpn|org.freedesktop.NetworkManager.fortisslvpn|fortinet
+pulse|Juniper / Pulse|Ivanti Connect Secure · OpenConnect|openconnect|org.freedesktop.NetworkManager.openconnect|pulse
+l2tp|L2TP/IPsec|Routers y VPN antiguas · clave compartida|l2tp|org.freedesktop.NetworkManager.l2tp|
+ikev2|IPsec IKEv2|strongSwan · certificados o EAP|strongswan|org.freedesktop.NetworkManager.strongswan|
+pptp|PPTP|Obsoleta e insegura · solo si no queda otra|pptp|org.freedesktop.NetworkManager.pptp|
+sstp|SSTP|Microsoft · sobre HTTPS|sstp|org.freedesktop.NetworkManager.sstp|
+vpnc|Cisco VPNC|Cisco IPsec clásico · archivo .pcf|vpnc|org.freedesktop.NetworkManager.vpnc|'
+
+type_field() {   # type_field <clave> <n.º de campo>
+  awk -F'|' -v k="$1" -v n="$2" '$1==k{print $n; exit}' <<<"$TYPES"
+}
+pkgs_for() {   # paquetes por distro
+  local k="$1" pl
+  [ "$k" = wireguard ] && { case "$FAM" in debian) echo wireguard-tools;; *) echo wireguard-tools;; esac; return; }
+  [ "$k" = editor ] && { case "$FAM" in arch) echo nm-connection-editor;; debian) echo network-manager-gnome;; suse) echo NetworkManager-connection-editor;; *) echo nm-connection-editor;; esac; return; }
+  [ "$k" = tailscale ] && { echo tailscale; return; }
+  [ "$k" = zerotier ] && { echo zerotier-one; return; }
+  pl="$(type_field "$k" 4)"; [ -n "$pl" ] || return 1
+  [ "$k" = fortinet ] && pl="$(eff_plugin fortinet)"
+  case "$FAM" in
+    arch) echo "networkmanager-$pl";;
+    debian) echo "network-manager-$pl-gnome";;
+    fedora) echo "NetworkManager-$pl-gnome";;
+    suse) echo "NetworkManager-$pl";;
+  esac
+}
+plugin_ok() {   # ¿está el plugin de NetworkManager?
+  local pl="$1"
+  [ "$pl" = wireguard ] && return 0   # WireGuard va dentro de NetworkManager
+  grep -lqs "^name=$pl\$" /usr/lib/NetworkManager/VPN/*.name /etc/NetworkManager/VPN/*.name /usr/lib64/NetworkManager/VPN/*.name 2>/dev/null
+}
+# Plugin efectivo de un tipo (Fortinet cae en OpenConnect si falta fortisslvpn)
+# Fortinet: plugin propio si está (o en los repos); si no, OpenConnect (≥ 9) también lo habla
+eff_plugin() {
+  local k="$1" pl; pl="$(type_field "$k" 4)"
+  if [ "$k" = fortinet ] && ! plugin_ok fortisslvpn && { plugin_ok openconnect || ! in_repo networkmanager-fortisslvpn; }; then echo openconnect; else echo "$pl"; fi
+}
+REPO_CACHE=""
+in_repo() {   # ¿el paquete está en los repos oficiales? (Arch; en otras familias se supone que sí)
+  [ "$FAM" = arch ] || return 0
+  [ -n "$REPO_CACHE" ] || REPO_CACHE=" $(pacman -Slq 2>/dev/null | tr '\n' ' ') "
+  [[ "$REPO_CACHE" == *" $1 "* ]]
+}
+eff_service() {
+  local pl; pl="$(eff_plugin "$1")"
+  [ "$pl" = wireguard ] && { echo wireguard; return; }
+  echo "org.freedesktop.NetworkManager.$pl"
+}
+
+# ---------- conexiones ----------
+# nmcli -t escapa «:» como «\:»; lo cambiamos por \x01 para partir bien
+nm_lines() { nmcli -t -f "$1" connection show 2>/dev/null | sed 's/\\:/\x01/g'; }
+resolve() {   # uuid o nombre → uuid
+  local x="$1"
+  nmcli -t -f UUID connection show 2>/dev/null | grep -qx "$x" && { echo "$x"; return; }
+  nmcli -g connection.uuid connection show id "$x" 2>/dev/null | head -1
+}
+
+list() {
+  nm_lines NAME,UUID,TYPE,DEVICE,ACTIVE | while IFS=: read -r name uuid type dev act; do
+    case "$type" in vpn|wireguard) ;; *) continue;; esac
+    name="${name//$'\x01'/:}"
+    local svc="" kind="$type" proto=""
+    if [ "$type" = vpn ]; then
+      svc="$(nmcli -g vpn.service-type connection show "$uuid" 2>/dev/null)"
+      kind="${svc##*.}"
+      [ "$kind" = openconnect ] && proto="$(nmcli -g vpn.data connection show "$uuid" 2>/dev/null | tr ',' '\n' | sed -n 's/^ *protocol *= *//p' | head -1)"
+    fi
+    jq -cn --arg name "$name" --arg uuid "$uuid" --arg type "$type" --arg service "$svc" --arg kind "$kind" \
+      --arg proto "$proto" --arg device "$dev" --argjson active "$([ "$act" = yes ] && echo true || echo false)" \
+      '{name:$name,uuid:$uuid,type:$type,service:$service,kind:$kind,proto:$proto,device:$device,active:$active}'
+  done
+}
+
+plugins() {
+  in_repo _warm || true   # carga la lista de los repos una vez (los $(…) heredan la caché)
+  local k label desc pl svc extra
+  while IFS='|' read -r k label desc pl svc extra; do
+    [ -n "$k" ] || continue
+    local epl ok=false aur=false pk
+    epl="$(eff_plugin "$k")"
+    plugin_ok "$epl" && ok=true
+    pk="$(pkgs_for "$k")"
+    in_repo "$pk" || aur=true
+    jq -cn --arg key "$k" --arg label "$label" --arg desc "$desc" --arg plugin "$epl" --arg service "$(eff_service "$k")" \
+      --arg proto "$extra" --arg pkg "$pk" --arg installed "$ok" --argjson aur "$aur" \
+      '{key:$key,label:$label,desc:$desc,plugin:$plugin,service:$service,proto:$proto,pkg:$pkg,installed:($installed=="true"),aur:$aur}'
+  done <<<"$TYPES"
+  jq -cn --argjson e "$(command -v nm-connection-editor >/dev/null && echo true || echo false)" --arg pkg "$(pkgs_for editor)" \
+    '{key:"editor",label:"Editor de conexiones",installed:$e,pkg:$pkg}'
+}
+
+guess_type() {   # tipo de importación de nmcli según el archivo
+  local f="$1"
+  case "${f,,}" in
+    *.ovpn) echo openvpn;;
+    *.pcf) echo vpnc;;
+    *.conf) if grep -qi '^\[Interface\]' "$f" 2>/dev/null; then echo wireguard; elif grep -qiE '^(remote|client|dev tun)' "$f"; then echo openvpn; else echo wireguard; fi;;
+    *.sstp) echo sstp;;
+    *.l2tp) echo l2tp;;
+    *) if grep -qi '^\[Interface\]' "$f" 2>/dev/null; then echo wireguard; else echo openvpn; fi;;
+  esac
+}
+pick_file() {
+  if command -v zenity >/dev/null; then
+    zenity --file-selection --title="Importar VPN" --file-filter="VPN | *.ovpn *.conf *.pcf *.nmconnection *.sstp" --file-filter="Todos | *" 2>/dev/null
+  elif command -v kdialog >/dev/null; then
+    kdialog --title "Importar VPN" --getopenfilename "$HOME" "*.ovpn *.conf *.pcf *.nmconnection|VPN" 2>/dev/null
+  else
+    echo "Falta zenity o kdialog para elegir el archivo" >&2; return 1
+  fi
+}
+notify() { command -v notify-send >/dev/null && notify-send -a Red -i network-vpn "$@"; }
+
+import() {
+  local f="${1:-}" t="${2:-}" out rc
+  [ -n "$f" ] || f="$(pick_file)" || exit 1
+  [ -f "$f" ] || { echo "No existe: $f" >&2; exit 1; }
+  if [[ "$f" == *.nmconnection ]]; then
+    echo "Los .nmconnection se copian a /etc/NetworkManager/system-connections (necesita sudo)." >&2; exit 2
+  fi
+  [ -n "$t" ] || t="$(guess_type "$f")"
+  # nmcli usa el nombre del archivo como nombre de la interfaz WireGuard (≤ 15 caracteres)
+  if [ "$t" = wireguard ]; then
+    local base; base="$(basename "${f%.*}" | tr -cd 'A-Za-z0-9_-' | cut -c1-15)"; [ -n "$base" ] || base=wg0
+    if [ "$(basename "${f%.*}")" != "$base" ]; then local tmp; tmp="$(mktemp -d)"; cp "$f" "$tmp/$base.conf"; f="$tmp/$base.conf"; fi
+  fi
+  out="$(nmcli connection import type "$t" file "$f" 2>&1)"; rc=$?
+  echo "$out"
+  if [ $rc -eq 0 ]; then notify "VPN importada" "$out"
+  else notify -u critical "No se pudo importar la VPN" "$out"; fi
+  return $rc
+}
+
+add() {
+  local k="${1:?tipo}" name="${2:?nombre}" gw="${3:?servidor}" user="${4:-}" svc proto data
+  svc="$(eff_service "$k")"; proto="$(type_field "$k" 6)"
+  [ "$k" = wireguard ] && { echo "WireGuard: importa su .conf (hf-vpn import) o usa hf-vpn create wireguard" >&2; return 1; }
+  case "$(eff_plugin "$k")" in
+    openvpn)     data="remote=$gw, connection-type=password${user:+, username=$user}";;
+    openconnect) data="gateway=$gw, protocol=${proto:-anyconnect}, cookie-flags=2, gateway-flags=2";;
+    fortisslvpn) data="gateway=$gw${user:+, user=$user}";;
+    l2tp)        data="gateway=$gw, ipsec-enabled=yes${user:+, user=$user}";;
+    strongswan)  data="address=$gw, method=eap, virtual=yes, encap=no, ipcomp=no${user:+, user=$user}";;
+    pptp)        data="gateway=$gw, require-mppe=yes${user:+, user=$user}";;
+    sstp)        data="gateway=$gw${user:+, user=$user}";;
+    vpnc)        data="IPSec gateway=$gw${user:+, Xauth username=$user}";;
+    *) echo "Tipo desconocido: $k" >&2; return 1;;
+  esac
+  nmcli connection add type vpn con-name "$name" vpn-type "$svc" vpn.data "$data" autoconnect no ${user:+vpn.user-name "$user"}
+}
+
+edit() {
+  local u; u="$(resolve "${1:?uuid}")"
+  if command -v nm-connection-editor >/dev/null; then setsid -f nm-connection-editor --edit "$u" >/dev/null 2>&1
+  else term nmtui-edit "$(nmcli -g connection.id connection show "$u")"; fi
+}
+create() {
+  local k="${1:-}"
+  command -v nm-connection-editor >/dev/null || { term nmtui-connect; return; }
+  if [ -z "$k" ]; then setsid -f nm-connection-editor --create >/dev/null 2>&1
+  elif [ "$k" = wireguard ]; then setsid -f nm-connection-editor --create --type=wireguard >/dev/null 2>&1
+  else setsid -f nm-connection-editor --create --type="vpn:$(eff_service "$k")" >/dev/null 2>&1; fi
+}
+term() {   # abre una terminal con un comando
+  local t="${TERMINAL:-}"
+  for c in "$t" kitty ghostty foot alacritty wezterm konsole; do [ -n "$c" ] && command -v "$c" >/dev/null && { t=$c; break; }; done
+  case "$t" in wezterm) setsid -f wezterm start -- "$@";; *) setsid -f "$t" -e "$@";; esac >/dev/null 2>&1
+}
+
+# ---------- VPN en malla ----------
+mesh() {
+  # Tailscale
+  local inst=false svc=inactive state="" detail="" ip="" name="" exits="[]"
+  if command -v tailscale >/dev/null; then
+    inst=true
+    systemctl is-active -q tailscaled 2>/dev/null && svc=active
+    if [ "$svc" = active ]; then
+      local j; j="$(timeout 3 tailscale status --json 2>/dev/null)"
+      state="$(jq -r '.BackendState // ""' <<<"$j" 2>/dev/null)"
+      ip="$(jq -r '(.Self.TailscaleIPs // [])[0] // ""' <<<"$j" 2>/dev/null)"
+      name="$(jq -r '.CurrentTailnet.Name // ""' <<<"$j" 2>/dev/null)"
+      detail="$(jq -r '[(.Peer // {})[] | select(.Online)] | length' <<<"$j" 2>/dev/null)"
+      # nodo de salida en uso y equipos que lo ofrecen
+      exits="$(jq -c '[(.Peer // {})[] | select(.ExitNodeOption) | {name:((.DNSName // "") | split(".")[0] | if . == "" then null else . end) // .HostName, ip:((.TailscaleIPs // [])[0] // ""), online:(.Online // false), active:(.ExitNode // false)}]' <<<"$j" 2>/dev/null)"
+    fi
+  fi
+  jq -cn --argjson i $inst --arg s "$svc" --arg st "$state" --arg ip "$ip" --arg net "$name" --arg peers "$detail" --arg ex "${exits:-[]}" \
+    '{key:"tailscale",installed:$i,service:$s,state:$st,ip:$ip,network:$net,peers:$peers,exitNodes:($ex|fromjson? // []),exitNode:((($ex|fromjson? // [])|map(select(.active))|.[0].name) // "")}'
+  # ZeroTier
+  inst=false; svc=inactive; state=""; detail=""
+  if command -v zerotier-cli >/dev/null; then
+    inst=true
+    systemctl is-active -q zerotier-one 2>/dev/null && svc=active
+    if [ "$svc" = active ]; then
+      state="$(timeout 3 zerotier-cli -j info 2>/dev/null | jq -r 'if .online then "ONLINE" else "OFFLINE" end' 2>/dev/null)"
+      detail="$(timeout 3 zerotier-cli -j listnetworks 2>/dev/null | jq -c '[.[] | {id:.nwid, name:.name, status:.status, ip:((.assignedAddresses // [])[0] // "")}]' 2>/dev/null)"
+      [ -n "$state" ] || state="NOAUTH"   # el usuario no puede leer el token (authtoken.secret)
+    fi
+  fi
+  jq -cn --argjson i $inst --arg s "$svc" --arg st "$state" --arg nets "${detail:-[]}" \
+    '{key:"zerotier",installed:$i,service:$s,state:$st,networks:($nets|fromjson? // [])}'
+}
+
+install() {
+  local k="${1:?tipo}" pk
+  case "$k" in
+    tailscale) pm_install tailscale && sudo systemctl enable --now tailscaled && sudo tailscale set --operator="$USER" 2>/dev/null; return;;
+    zerotier) pm_install zerotier-one && sudo systemctl enable --now zerotier-one \
+      && echo "Para usar zerotier-cli sin sudo: sudo cp /var/lib/zerotier-one/authtoken.secret ~/.zeroTierOneAuthToken && sudo chown $USER ~/.zeroTierOneAuthToken"; return;;
+  esac
+  pk="$(pkgs_for "$k")" || { echo "Tipo desconocido: $k" >&2; exit 1; }
+  # El editor gráfico hace falta para configurar casi todos los plugins
+  [ "$k" != editor ] && ! command -v nm-connection-editor >/dev/null && pk="$pk $(pkgs_for editor)"
+  # shellcheck disable=SC2086
+  pm_install $pk && { [ "$k" = editor ] || [ "$k" = wireguard ] || { echo "Reiniciando NetworkManager para cargar el plugin…"; sudo systemctl restart NetworkManager; }; }
+}
+
+case "${1:-}" in
+  list) list;;
+  up|down) u="$(resolve "${2:?uuid}")"; out="$(nmcli connection "$1" uuid "$u" 2>&1)"; rc=$?; echo "$out"
+           [ $rc -ne 0 ] && notify -u critical "VPN" "$out"; exit $rc;;
+  delete) u="$(resolve "${2:?uuid}")"; nmcli connection delete uuid "$u";;
+  edit) edit "${2:-}";;
+  import) import "${2:-}" "${3:-}";;
+  plugins) plugins;;
+  add) shift; add "$@";;
+  create) create "${2:-}";;
+  install) install "${2:-}";;
+  pkgs) pkgs_for "${2:?tipo}";;
+  mesh) mesh;;
+  tailscale)
+    case "${2:-}" in
+      up) tailscale up 2>&1 || { echo "Si pide permisos: sudo tailscale set --operator=$USER"; exit 1; };;
+      down) tailscale down;;
+      exit) # exit <ip|nombre|none>: usar ese equipo como nodo de salida (none = salir directo)
+        t="${3:-none}"; [ "$t" = none ] && t=""
+        tailscale set --exit-node="$t" ${t:+--exit-node-allow-lan-access} 2>&1 \
+          || { echo "Si pide permisos: sudo tailscale set --operator=$USER"; exit 1; };;
+      login) tailscale login;;
+      admin) xdg-open https://login.tailscale.com/admin/machines;;
+      *) tailscale status;;
+    esac;;
+  zerotier)
+    case "${2:-}" in
+      join|leave) zerotier-cli "$2" "${3:?id de red}" 2>/dev/null || sudo zerotier-cli "$2" "$3";;
+      list|*) zerotier-cli listnetworks 2>/dev/null || sudo zerotier-cli listnetworks;;
+    esac;;
+  *) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 1;;
+esac

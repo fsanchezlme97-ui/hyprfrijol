@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# hf-zoom in|out|reset — lupa de accesibilidad (cursor:zoom_factor), pasos de 0.5 entre 1 y 6
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+cur=$(hyprctl getoption cursor:zoom_factor -j 2>/dev/null | sed -n 's/.*"float": *\([0-9.]*\).*/\1/p')
+cur=${cur:-1}
+case "${1:-in}" in
+  in)    new=$(awk -v z="$cur" 'BEGIN{z+=0.5; if(z>6)z=6; print z}') ;;
+  out)   new=$(awk -v z="$cur" 'BEGIN{z-=0.5; if(z<1)z=1; print z}') ;;
+  reset) new=1 ;;
+esac
+hyprctl eval "hl.config({ cursor = { zoom_factor = $new } })" >/dev/null

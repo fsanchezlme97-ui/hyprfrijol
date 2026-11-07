@@ -1,0 +1,184 @@
+# IA en hyprfrijol
+
+El asistente vive en el **panel lateral** (`SUPER + A`, vista `ia`), pestaña **IA**. Junto a ella están
+WhatsApp, YouTube y Pinterest como apps web. Todo lo que la IA hace en el escritorio pasa por un
+esquema fijo de acciones que **tú apruebas** antes de aplicarlas, y que se pueden deshacer.
+
+## Piezas
+
+| Pieza | Qué hace |
+|---|---|
+| `config/quickshell/modules/sidepanel/SidePanel.qml` | Panel de 400 px a la derecha: pestañas, apps web acopladas, PiP de YouTube |
+| `config/quickshell/modules/sidepanel/AiChat.qml` | Conversación, contexto, tarjetas Aplicar / Descartar / Deshacer, «Continuar en Claude ↗» |
+| `config/quickshell/modules/sidepanel/webapp/host.qml` + `scripts/hf-webapp` | Apps web en QtWebEngine (proceso `qml6` aparte) |
+| `config/quickshell/modules/pip/Pip.qml` | Coloca y controla las ventanas de imagen en imagen |
+| `scripts/hf-ai` | Habla con el modelo, valida acciones, las aplica y las deshace |
+| `scripts/hf-mcp` | Servidor MCP: la misma API del shell para Claude Code u otros clientes |
+
+## Proveedor del modelo
+
+En `~/.config/hyprfrijol/settings.json` (o Ajustes › IA):
+
+| Clave | Valores | Por defecto |
+|---|---|---|
+| `aiProvider` | `claude-code` · `gemini` · `ollama` · `openai-compatible` · `off` | `claude-code` |
+| `aiModel` | p. ej. `haiku`, `sonnet` · `gemini-2.5-flash` · `llama3.2` · `gpt-4o-mini` | (el del proveedor) |
+| `aiEndpoint` | `http://localhost:11434` · `https://…/v1` | (el del proveedor) |
+| `aiKeyEnv` | variable de entorno con la clave (openai-compatible) | `HF_AI_KEY` |
+| `aiContextWindow` | enviar el título de la ventana activa | `true` |
+| `aiContextClipboard` | enviar el portapapeles (máx. 4000 caracteres) | `true` |
+
+- **claude-code** usa tu sesión de Claude Code: `claude -p --output-format json`, sin herramientas, sin MCP
+  y sin guardar sesión (`--tools "" --strict-mcp-config --no-session-persistence`).
+- Si el proveedor no responde, la conversación muestra el error con **Reintentar** y **Ajustes de IA**.
+- Al cambiar de proveedor en Ajustes, `aiModel` vuelve a `""` (el predeterminado de ese proveedor).
+
+### Google Gemini (clave gratuita)
+
+1. Consigue una clave en <https://aistudio.google.com/apikey> (cuenta de Google, plan gratuito con cuota diaria).
+2. Ajustes › Asistente de IA › **Gemini** → pega la clave (campo oculto) → **Guardar** → **Probar conexión**.
+3. Elige el modelo: la lista sale de `GET /v1beta/models` (solo los que admiten `generateContent`; sin clave se
+   ofrecen `gemini-2.5-flash`, `gemini-2.5-flash-lite` y `gemini-2.5-pro`). Por defecto `gemini-2.5-flash`;
+   si `aiModel` no es un modelo de Gemini (`gemini*`, `gemma*`) se usa el predeterminado.
+
+Petición: `POST https://generativelanguage.googleapis.com/v1beta/models/<modelo>:generateContent` con la
+cabecera `x-goog-api-key`, `system_instruction` (el mismo prompt y esquema de acciones `hf-actions` que el resto
+de proveedores, más el contexto del escritorio) y `contents` con los papeles `user`/`model`. Si adjuntas una
+imagen (o usas «+ Captura») y «Ver capturas que adjuntes» está activado, va como `inline_data` en base64 en
+lugar de pasar por OCR. Como el resto de proveedores, la respuesta llega entera (sin streaming).
+
+**La clave nunca se guarda en settings.json.** Se busca en este orden:
+
+1. variables de entorno `GEMINI_API_KEY` o `GOOGLE_API_KEY`;
+2. el llavero del sistema (libsecret, `secret-tool` con `service=hyprfrijol provider=gemini`);
+3. `~/.config/hyprfrijol/secrets/gemini.key` (carpeta 700, archivo 600) si no hay llavero.
+
+Errores en español: falta la clave, clave no válida, modelo inexistente, límite del plan gratuito (429),
+servidores caídos y sin conexión.
+
+```sh
+scripts/hf-ai key status gemini                    # {"stored": true, "where": "llavero|archivo|env:…", "hint": "AIza…1234"}
+printf %s "$CLAVE" | scripts/hf-ai key set gemini  # o HF_AI_KEY_IN=… (nunca como argumento)
+scripts/hf-ai key clear gemini
+scripts/hf-ai models gemini                        # {"models": [[id, nombre]…], "error": null}
+scripts/hf-ai test                                 # {"ok": true, "text": "Conectado · gemini-2.5-flash respondió «listo»"}
+scripts/hf-ai chat --print-request '{"messages":[{"role":"user","text":"Pon la barra arriba"}]}'
+                                                   # imprime la petición sin enviarla (la clave sale oculta)
+```
+
+`HF_AI_NO_KEYRING=1` fuerza el archivo en lugar del llavero y `HF_GEMINI_API=<url>` cambia el servidor (pruebas).
+
+Probar desde la terminal:
+
+```sh
+scripts/hf-ai status
+scripts/hf-ai ask "¿qué hace hyprctl reload?"
+scripts/hf-ai chat '{"messages":[{"role":"user","text":"Pon la barra arriba"}],"context":{"window":false,"clipboard":false}}'
+```
+
+## Contexto
+
+Los chips de la cabecera eligen qué se envía con cada pregunta:
+**Documento activo** (clase y título de la ventana con foco), **Portapapeles** y **+ Captura**
+(el panel se aparta, se hace una captura con `grim` y se pasa por OCR con `tesseract spa+eng`; opcional).
+Además siempre va un resumen del estado del shell (estilo, color, barra, perfil).
+
+## Acciones del shell
+
+El modelo termina su respuesta con un bloque ` ```hf-actions [ … ] ``` `. `hf-ai` lo valida
+contra este esquema (todo lo demás se descarta) y genera las etiquetas en español de la tarjeta:
+
+| Acción | Ejemplo | Etiqueta |
+|---|---|---|
+| `set` | `{"type":"set","key":"estilo","value":"flat"}` | Estilo: Flat |
+| `wallpaper` | `{"type":"wallpaper","value":"next"}` (`prev`, `random`, ruta) | Siguiente fondo |
+| `workspace` | `{"type":"workspace","value":5}` | Ir al espacio 5 |
+| `profile` | `{"type":"profile","value":"trabajo"}` | Perfil: Trabajo |
+| `dnd` | `{"type":"dnd","value":true}` | Activar No molestar |
+| `pomodoro` | `{"type":"pomodoro","value":"start","minutes":25}` | Iniciar pomodoro de 25 min |
+| `focus` | `{"type":"focus","value":true}` | Entrar en modo sin distracciones |
+| `open` | `{"type":"open","value":"fondos"}` | Abrir selector de fondos |
+| `run` | `{"type":"run","command":"journalctl -b -p 3"}` | bloque de código: **Ejecutar (pide confirmación)** / Copiar |
+
+Claves de `set`: `estilo`, `colorMode`, `palette`, `themeMode`, `barPos`, `barMode`, `animado`,
+`reduceTransparency`, `reduceMotion`, `gapsIn`, `gapsOut`, `pipSize`, `pipCorner`, `deskSort`.
+
+- **Aplicar** → `hf-ai apply` (`hf-apply set`, `hf-wallpaper`, `hf-profile`, `hyprctl dispatch`, `qs ipc`).
+  Antes guarda el estado en `~/.cache/hyprfrijol/undo/<id>.json` (se guardan los 30 últimos).
+- **Deshacer** → `hf-ai undo <id>`: restaura los ajustes tocados, el fondo, el perfil, «no molestar» y el espacio.
+- Los comandos `run` nunca se ejecutan solos: hay que confirmar y se abren en la terminal (`kitty`).
+
+## «Continuar en Claude ↗»
+
+`hf-ai handoff` copia la conversación y el contexto elegido al portapapeles (Markdown) y:
+
+1. abre **Claude Desktop** si está instalado (`claude-desktop`) → pega con `Ctrl+V`;
+2. si no, abre `kitty -e claude "<conversación>"` (Claude Code con la conversación como primer mensaje);
+3. si no hay ninguno, solo la copia.
+
+El panel muestra el aviso «Abierta en Claude Desktop / Se envió la conversación y el contexto que elegiste».
+
+## Apps web (WhatsApp, YouTube, Pinterest)
+
+QtWebEngine no puede cargarse dentro de Quickshell (0.3.x), así que cada app es una ventana `qml6`
+(clase `hf-webapp.qml6`, título `WhatsApp`/`YouTube`/`Pinterest`, con `(n)` si hay sin leer) que el panel
+acopla debajo de sus pestañas: flotante, fijada, 400 px. Al cerrar el panel se guardan en el espacio
+especial `hfweb` y siguen vivas (las notificaciones web llegan como avisos del sistema).
+
+- Sesiones guardadas en `~/.local/share/hyprfrijol/webapps/<wa|yt|pin>` (la primera vez hay que iniciar sesión).
+- **Desacoplar** (icono ↗ de la cabecera) la deja como ventana normal; vuelve con «Acoplar al panel».
+- **PiP** (YouTube): deja solo el vídeo en una ventana pequeña en la esquina de `pipCorner`, con cerrar,
+  pausa y «Volver al panel». `hf-webapp cmd yt toggle|pause|back|reload|home|zoom <f>|external|url <dirección>` la controla.
+- `hf-webapp stop` las cierra todas.
+
+### Ajustes por web app (Ajustes › Web apps)
+
+- **Modo**: `panel` (pestaña del panel lateral) · `ventana` (ventana propia integrada, clase `hf-webwin-<clave>.qml6`) ·
+  `navegador` (navegador predeterminado en modo app). Catálogo de populares con iconos Papirus en
+  `config/quickshell/services/webapps-catalog.json` (lo leen `services/WebApps.qml` y `hf-webapp`).
+- **Se adapta al ancho**: `layout: "movil"` pide la web de móvil (agente de usuario de Android y `mobileHost`, p. ej.
+  m.youtube.com) cuando es estrecha; `minWidth` reduce el zoom para que quepa la de escritorio (WhatsApp, 600 px).
+  `zoom` del usuario (y Ctrl + / Ctrl − / Ctrl 0 en la ventana).
+- **Tema**: `tema` = `sistema` (prefers-color-scheme según el tema claro/oscuro del escritorio) | `oscuro` | `claro` | `web`;
+  fondo con el color del tema, barras de desplazamiento finas con los colores del tema y `css` propio (en vivo).
+- **Enlaces** de otros dominios → navegador predeterminado; ventanas de inicio de sesión (Google, Apple, Microsoft…)
+  en una ventanita propia. Descargas → carpeta de descargas. Avisos (`notify`) → notify-send con el icono de la app.
+- El reproductor MPRIS de cada web app se llama como ella (la música lo muestra con su nombre e icono).
+- `hf-webapp config <clave>` imprime los ajustes efectivos; `hf-webapp desktop` regenera los `.desktop`.
+
+## PiP de los navegadores
+
+`Pip.qml` reconoce las ventanas «Picture-in-Picture» / «Imagen en imagen» de Firefox y Chromium, las
+coloca con `pipSize` (`minimo` 192×108, `pequeno` 256×144, `mediano` 320×180) y `pipCorner`
+(`sup-der`, `sup-izq`, `inf-der`, `inf-izq`), se aparta si el panel lateral está abierto y les pone encima
+cerrar, pausa (MPRIS) y volver. `pip: false` lo desactiva.
+
+## IPC
+
+```sh
+qs -p "$HF_ROOT/config/quickshell" ipc call shell openWith ia wa      # pestaña
+qs -p "$HF_ROOT/config/quickshell" ipc call sidepanel ask "Resume el portapapeles"
+qs -p "$HF_ROOT/config/quickshell" ipc call sidepanel pip              # YouTube a PiP
+qs -p "$HF_ROOT/config/quickshell" ipc call sidepanel pipBack
+```
+
+`Shell.open("ia", { ask: "…" })` (o el texto `{"ask":"…"}` por IPC) abre la pestaña IA y pregunta directamente.
+
+## Servidor MCP (`scripts/hf-mcp`)
+
+Para que Claude Code (u otro cliente MCP) maneje el escritorio con la misma API validada:
+
+```sh
+claude mcp add hyprfrijol -- /ruta/a/hyprfrijol/scripts/hf-mcp
+```
+
+Herramientas: `get_state`, `set_settings`, `apply_actions`, `undo`, `wallpaper`, `profile`, `open_view`,
+`workspace`, `notify`. Stdio JSON-RPC 2.0, solo biblioteca estándar de Python. Las acciones `run` no se
+ejecutan por MCP (el cliente tiene su propia terminal). Cada cambio devuelve un `undo` id.
+
+Prueba rápida:
+
+```sh
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
+              '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | scripts/hf-mcp
+```

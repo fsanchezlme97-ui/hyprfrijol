@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# hf-sunset — luz nocturna (hyprsunset) de ESTA sesión de Hyprland, sin tocar la de otras (p. ej. la sesión de
+# prueba anidada de dev/try.sh no apaga la tuya). Lo usan Daemons.qml, Ajustes › Pantallas y los ajustes rápidos.
+#
+#   hf-sunset set <K>     enciende o cambia la temperatura (IPC de hyprsunset; si no responde, lo reinicia)
+#   hf-sunset off         apaga
+#   hf-sunset status      imprime on/off (sale 1 si está apagada)
+set -uo pipefail
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+SIG="${HYPRLAND_INSTANCE_SIGNATURE:-}"
+
+mine() {   # PIDs de hyprsunset que pertenecen a esta instancia de Hyprland
+  local p
+  for p in $(pgrep -x hyprsunset); do
+    tr '\0' '\n' <"/proc/$p/environ" 2>/dev/null | grep -qxF "HYPRLAND_INSTANCE_SIGNATURE=$SIG" && echo "$p"
+  done
+}
+
+case "${1:-}" in
+  set)
+    t="${2:-}"; [[ "$t" =~ ^[0-9]+$ ]] || { echo "uso: hf-sunset set <kelvin>" >&2; exit 1; }
+    pids="$(mine)"
+    if [ -n "$pids" ]; then
+      hyprctl hyprsunset temperature "$t" >/dev/null 2>&1 && exit 0
+      # shellcheck disable=SC2086
+      kill $pids 2>/dev/null; sleep 0.2
+    fi
+    setsid -f hyprsunset -t "$t" >/dev/null 2>&1;;
+  off)
+    pids="$(mine)"
+    # shellcheck disable=SC2086
+    [ -z "$pids" ] || kill $pids 2>/dev/null; true;;
+  status)
+    if [ -n "$(mine)" ]; then echo on; else echo off; exit 1; fi;;
+  *) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 1;;
+esac

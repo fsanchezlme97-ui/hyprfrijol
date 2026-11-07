@@ -1,0 +1,21 @@
+# Todo lo generado (colores, perfil, fondo) vive fuera del repo:
+#   ~/.local/state/hyprfrijol/   y los ajustes personales en ~/.config/hyprfrijol/
+*.qslog
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Cachés y restos locales
+.cache/
+*.log
+*.tmp
+*.swp
+*~
+.DS_Store
+# Nix (nix-build)
+result
+result-*

@@ -1,0 +1,229 @@
+// Ajustes › Asistente de IA — proveedor/modelo/servidor (los usa scripts/hf-ai: aiProvider, aiModel, aiEndpoint,
+// aiKeyEnv) y permisos del asistente (aiContextWindow, aiContextClipboard…).
+// Gemini: la clave se guarda con `hf-ai key set gemini` (llavero con secret-tool o ~/.config/hyprfrijol/secrets,
+// nunca en settings.json); la lista de modelos sale de `hf-ai models gemini` y «Probar conexión» de `hf-ai test`.
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Io
+import "../../.."
+import "../../../components"
+import "../ui"
+
+ColumnLayout {
+    id: root
+    spacing: 12
+    readonly property string prov: Settings.get("aiProvider", "claude-code")
+    property var ollamaModels: []
+    property var geminiModels: []
+    property string geminiModelsErr: ""
+    property string status: ""
+    property var key: ({ stored: false, where: "", hint: "" })
+    property string keyMsg: ""
+    property bool keyErr: false
+    property string testMsg: ""
+    property bool testOk: false
+    property bool testing: false
+
+    Process {
+        running: true
+        command: ["sh", "-c", "command -v ollama >/dev/null && ollama list 2>/dev/null | awk 'NR>1{print $1}'"]
+        stdout: StdioCollector { onStreamFinished: root.ollamaModels = text.split("\n").filter(Boolean) }
+    }
+    Process {
+        id: stat
+        running: true
+        command: [Paths.script("hf-ai"), "status"]
+        stdout: StdioCollector { onStreamFinished: { try { const j = JSON.parse(text); root.status = j.available ? "Disponible" : (j.hint || j.error || "No disponible"); } catch (e) { root.status = ""; } } }
+    }
+    Timer { id: statTimer; interval: 900; onTriggered: { stat.running = false; stat.running = true; } }
+
+    // ---- Gemini: clave, modelos y prueba ----
+    function refreshGemini(): void {
+        keyStat.running = false; keyStat.running = true;
+        gmodels.running = false; gmodels.running = true;
+    }
+    Process {
+        id: keyStat
+        running: root.prov === "gemini"
+        command: [Paths.script("hf-ai"), "key", "status", "gemini"]
+        stdout: StdioCollector { onStreamFinished: { try { root.key = JSON.parse(text); } catch (e) {} } }
+    }
+    Process {
+        id: gmodels
+        running: root.prov === "gemini"
+        command: [Paths.script("hf-ai"), "models", "gemini"]
+        stdout: StdioCollector { onStreamFinished: { try { const j = JSON.parse(text); root.geminiModels = j.models ?? []; root.geminiModelsErr = j.error ?? ""; } catch (e) {} } }
+    }
+    Process {
+        id: keySet
+        property string value: ""
+        command: [Paths.script("hf-ai"), "key", "set", "gemini"]
+        environment: ({ HF_AI_KEY_IN: keySet.value })
+        stdout: StdioCollector {
+            onStreamFinished: {
+                keySet.value = "";
+                try {
+                    const j = JSON.parse(text);
+                    root.keyErr = !j.ok;
+                    root.keyMsg = j.ok ? (j.where === "llavero" ? "Guardada en el llavero" : "Guardada en un archivo privado") : j.error;
+                    if (j.ok) { keyField.text = ""; root.testMsg = ""; }
+                } catch (e) { root.keyErr = true; root.keyMsg = "No se pudo guardar la clave"; }
+                root.refreshGemini(); statTimer.restart();
+            }
+        }
+    }
+    Process {
+        id: keyClear
+        command: [Paths.script("hf-ai"), "key", "clear", "gemini"]
+        onExited: { root.keyErr = false; root.keyMsg = "Clave borrada"; root.testMsg = ""; root.refreshGemini(); statTimer.restart(); }
+    }
+    Process {
+        id: tester
+        command: [Paths.script("hf-ai"), "test"]
+        onRunningChanged: root.testing = running
+        stdout: StdioCollector { onStreamFinished: { try { const j = JSON.parse(text); root.testOk = !!j.ok; root.testMsg = j.text; } catch (e) { root.testOk = false; root.testMsg = "No se pudo probar"; } } }
+    }
+    function saveKey(): void {
+        const k = keyField.text.trim();
+        if (!k) return;
+        keySet.value = k;
+        keySet.running = true;
+    }
+
+    readonly property var models: prov === "claude-code" ? [["", "Predeterminado de Claude Code"], ["haiku", "Haiku (rápido)"], ["sonnet", "Sonnet (equilibrado)"], ["opus", "Opus (el más capaz)"]]
+        : prov === "ollama" ? (ollamaModels.length ? ollamaModels.map(m => [m, m]) : [["llama3.2", "llama3.2"]])
+        : prov === "gemini" ? (geminiModels.length ? geminiModels : [["gemini-2.5-flash", "Gemini 2.5 Flash (recomendado)"]])
+        : [["gpt-4o-mini", "gpt-4o-mini"], ["claude-sonnet-5-5", "claude-sonnet-5-5"]]
+    readonly property string curModel: {
+        const m = Settings.get("aiModel", "");
+        return prov === "gemini" && !/^(gemini|gemma|learnlm)/.test(m) ? "gemini-2.5-flash" : m;
+    }
+
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: 12
+        Section {
+            Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            Layout.alignment: Qt.AlignTop
+            title: "Proveedor"
+            headerRight: Txt { text: root.status; size: 11.5; color: root.status === "Disponible" ? Theme.p : Theme.tv }
+            Seg {
+                Layout.fillWidth: true
+                textSize: 11.5
+                model: [["claude-code", "Claude"], ["gemini", "Gemini"], ["ollama", "Ollama"], ["openai-compatible", "API OpenAI"], ["off", "Apagado"]]
+                current: root.prov
+                // el modelo de un proveedor no sirve en otro: vuelve al predeterminado
+                onPicked: k => { if (k !== root.prov) Settings.setMany({ aiProvider: k, aiModel: "" }); root.testMsg = ""; root.keyMsg = ""; statTimer.restart(); }
+            }
+            Txt {
+                Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                text: root.prov === "claude-code" ? "Usa la CLI de Claude Code (`claude -p`) con tu cuenta. Nada se envía si no escribes al asistente."
+                    : root.prov === "gemini" ? "Google Gemini con una clave gratuita de Google AI Studio. Ve las imágenes que adjuntes. En el plan gratuito Google puede usar lo que envías para mejorar sus modelos."
+                    : root.prov === "ollama" ? "Todo se queda en tu equipo. Necesita Ollama en marcha y un modelo descargado (ollama pull llama3.2)."
+                    : root.prov === "openai-compatible" ? "Cualquier servidor con la API /v1/chat/completions (LM Studio, vLLM, OpenRouter…). La clave se lee de una variable de entorno."
+                    : "El asistente queda apagado: el panel lateral y «?» en Spotlight no responden."
+            }
+
+            // ---- clave de Gemini ----
+            LabeledRow {
+                visible: root.prov === "gemini"
+                label: "Clave de la API"; labelWidth: 120
+                hint: root.key.stored ? root.key.hint : ""
+                RowLayout {
+                    spacing: 8
+                    Field {
+                        id: keyField
+                        Layout.fillWidth: true
+                        icon: ""
+                        input.echoMode: TextInput.Password
+                        placeholder: root.key.stored ? (root.key.where.startsWith("env:") ? "Se usa $" + root.key.where.slice(4) : "Guardada · pega otra") : "Pega aquí tu clave (AIza…)"
+                        onAccepted: root.saveKey()
+                    }
+                    Button { kind: "primary"; text: "Guardar"; enabled: keyField.text.trim() !== "" && !keySet.running; onClicked: root.saveKey() }
+                    Button { visible: root.key.stored && !root.key.where.startsWith("env:"); text: "Borrar"; onClicked: keyClear.running = true }
+                }
+            }
+            RowLayout {
+                visible: root.prov === "gemini"
+                Layout.fillWidth: true
+                Layout.leftMargin: 130
+                spacing: 14
+                Button { kind: "link"; text: "Obtener una clave gratis ↗"; onClicked: Qt.openUrlExternally("https://aistudio.google.com/apikey") }
+                Txt {
+                    Layout.fillWidth: true
+                    size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                    color: root.keyErr ? Theme.ter : Theme.tv
+                    text: root.keyMsg !== "" ? root.keyMsg : root.key.stored ? (root.key.where === "llavero" ? "En el llavero del sistema" : root.key.where === "archivo" ? "En un archivo privado" : "De la variable de entorno") : "Sin clave"
+                }
+            }
+
+            LabeledRow {
+                visible: root.prov !== "off"
+                label: "Modelo"; labelWidth: 120
+                Dropdown { model: root.models; current: root.curModel; onPicked: k => Settings.set("aiModel", k) }
+            }
+            Txt {
+                visible: root.prov === "gemini" && root.geminiModelsErr !== "" && root.key.stored
+                Layout.fillWidth: true; Layout.leftMargin: 130
+                size: 11; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                text: "No pude leer la lista de modelos: " + root.geminiModelsErr
+            }
+            LabeledRow {
+                visible: root.prov !== "off"
+                label: "Modelo (texto)"; labelWidth: 120
+                Field { icon: ""; text: root.prov === "gemini" && root.curModel !== Settings.get("aiModel", "") ? "" : Settings.get("aiModel", ""); placeholder: "o escribe el nombre exacto…"; onAccepted: Settings.set("aiModel", text.trim()) }
+            }
+            LabeledRow {
+                visible: root.prov === "ollama" || root.prov === "openai-compatible"
+                label: "Dirección del servidor"; labelWidth: 120
+                Field {
+                    icon: ""
+                    text: Settings.get("aiEndpoint", "")
+                    placeholder: root.prov === "ollama" ? "http://localhost:11434" : "https://api.openai.com/v1"
+                    onAccepted: { Settings.set("aiEndpoint", text.trim()); statTimer.restart(); }
+                }
+            }
+            LabeledRow {
+                visible: root.prov === "openai-compatible"
+                label: "Variable de la clave"; labelWidth: 120
+                Field { icon: ""; text: Settings.get("aiKeyEnv", "HF_AI_KEY"); placeholder: "HF_AI_KEY"; onAccepted: Settings.set("aiKeyEnv", text.trim()) }
+            }
+            RowLayout {
+                visible: root.prov !== "off"
+                Layout.fillWidth: true
+                spacing: 10
+                Button {
+                    text: root.testing ? "Probando…" : "Probar conexión"
+                    enabled: !root.testing && (root.prov !== "gemini" || root.key.stored)
+                    onClicked: { root.testMsg = ""; tester.running = true; }
+                }
+                Txt {
+                    Layout.fillWidth: true
+                    size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone; maximumLineCount: 3
+                    color: root.testOk ? Theme.p : Theme.ter
+                    text: root.testMsg
+                }
+            }
+            Item { implicitHeight: 2 }
+            Kv { k: "Atajo para abrir"; v: "Super + A" }
+            Kv { k: "Preguntar desde Spotlight"; v: "Empieza con ?" }
+        }
+        Section {
+            Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            Layout.alignment: Qt.AlignTop
+            title: "Permisos"
+            SwRow { separator: false; label: "Leer la ventana activa"; sub: "título y clase, para entender de qué hablas"; key: "aiContextWindow"; def: true }
+            SwRow { label: "Leer el portapapeles"; sub: "solo cuando le escribes"; key: "aiContextClipboard"; def: true }
+            SwRow { label: "Ver capturas que adjuntes"; sub: root.prov === "gemini" ? "Gemini recibe la imagen tal cual" : "captura + OCR local (tesseract)"; key: "aiContextCapture"; def: true }
+            SwRow { label: "Proponer comandos de terminal"; sub: "nunca los ejecuta sin que pulses"; key: "aiTerminal"; def: true }
+            SwRow { label: "Controlar el escritorio"; sub: "ajustes, ventanas, apps, música, volumen, temporizadores… (con Deshacer)"; key: "aiControlShell"; def: true }
+            SwRow { label: "Consultar el escritorio"; sub: "ventanas abiertas, avisos, archivos y estado, solo cuando lo necesite"; key: "aiReadDesktop"; def: true }
+            SwRow { label: "Confirmar antes de aplicar cambios"; sub: "y siempre se pueden deshacer"; key: "aiConfirm"; def: true }
+            SwRow { label: "Responder desde Spotlight"; sub: "escribe ? y tu pregunta"; key: "aiSpotlight"; def: true }
+            SwRow { label: "Guardar historial de conversaciones"; sub: "~/.local/share/hyprfrijol/ai"; key: "aiHistory"; def: true }
+        }
+    }
+}

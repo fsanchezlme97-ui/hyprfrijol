@@ -1,0 +1,302 @@
+#!/usr/bin/env python3
+"""hf-defaults — apps predeterminadas (xdg-mime / xdg-settings) y apps al iniciar sesión (XDG autostart).
+Lo usan Ajustes › Apps predeterminadas e inicio, la Bienvenida y autostart.lua.
+
+  hf-defaults list                      roles → {"navegador": {"label","current","name","options":[[id,nombre]…]}, …}
+  hf-defaults set <rol> <app.desktop>   la hace predeterminada para todos los tipos del rol
+  hf-defaults recommended [--force]     apps de GNOME recomendadas para los roles sin app (o todos con --force),
+                                        solo si están instaladas (las de KDE quedan como alternativa)
+  hf-defaults autostart                 [{"id","name","icon","exec","user","system","enabled"}…]
+  hf-defaults autostart-add <app.desktop>
+  hf-defaults autostart-set <id> true|false   (las del sistema se desactivan con una copia Hidden=true en ~/.config/autostart)
+  hf-defaults autostart-remove <id>     borra la entrada del usuario
+  hf-defaults autostart-run             lanza las activas (Hyprland no lo hace solo); evita las que chocan con el shell
+"""
+import configparser, glob, json, os, pathlib, re, shlex, shutil, subprocess, sys
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+HOME = pathlib.Path.home()
+XDG_CONFIG = pathlib.Path(os.environ.get("XDG_CONFIG_HOME") or HOME / ".config")
+XDG_DATA = pathlib.Path(os.environ.get("XDG_DATA_HOME") or HOME / ".local/share")
+USER_AUTOSTART = XDG_CONFIG / "autostart"
+SYS_AUTOSTART = [pathlib.Path(d) / "autostart" for d in (os.environ.get("XDG_CONFIG_DIRS") or "/etc/xdg").split(":") if d]
+APP_DIRS = [XDG_DATA / "applications"] + [pathlib.Path(d) / "applications" for d in
+            (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":") if d] + \
+           [HOME / ".local/share/flatpak/exports/share/applications", pathlib.Path("/var/lib/flatpak/exports/share/applications")]
+
+# rol → (etiqueta, tipo para consultar, tipos que se asignan, preferidas en orden: GNOME primero)
+ROLES = {
+    "navegador": ("Navegador web", "x-scheme-handler/https", ["x-scheme-handler/http", "x-scheme-handler/https", "text/html", "application/xhtml+xml"],
+                  ["firefox.desktop", "google-chrome.desktop", "chromium.desktop", "org.gnome.Epiphany.desktop"]),
+    "correo": ("Correo", "x-scheme-handler/mailto", ["x-scheme-handler/mailto", "message/rfc822"],
+               ["org.gnome.Geary.desktop", "org.mozilla.Thunderbird.desktop", "thunderbird.desktop", "org.gnome.Evolution.desktop"]),
+    "calendario": ("Calendario", "text/calendar", ["text/calendar", "x-scheme-handler/webcal"],
+                   ["org.gnome.Calendar.desktop", "org.gnome.Evolution.desktop", "org.mozilla.Thunderbird.desktop"]),
+    "musica": ("Música", "audio/mpeg", ["audio/mpeg", "audio/flac", "audio/x-flac", "audio/ogg", "audio/x-vorbis+ogg", "audio/opus",
+                                         "audio/x-wav", "audio/wav", "audio/mp4", "audio/aac", "audio/x-m4a"],
+               ["org.gnome.Decibels.desktop", "io.bassi.Amberol.desktop", "org.gnome.Showtime.desktop", "io.github.celluloid_player.Celluloid.desktop"]),
+    "video": ("Vídeo", "video/mp4", ["video/mp4", "video/x-matroska", "video/webm", "video/quicktime", "video/x-msvideo", "video/mpeg", "video/ogg"],
+              ["org.gnome.Showtime.desktop", "io.github.celluloid_player.Celluloid.desktop", "org.gnome.Totem.desktop", "mpv.desktop", "vlc.desktop"]),
+    "fotos": ("Fotos e imágenes", "image/png", ["image/png", "image/jpeg", "image/webp", "image/gif", "image/bmp", "image/tiff", "image/svg+xml",
+                                                "image/heic", "image/avif", "image/jxl"],
+              ["org.gnome.Loupe.desktop", "org.gnome.eog.desktop", "org.kde.gwenview.desktop"]),
+    "pdf": ("Documentos PDF", "application/pdf", ["application/pdf"],
+            ["org.gnome.Papers.desktop", "org.gnome.Evince.desktop", "org.kde.okular.desktop"]),
+    "texto": ("Texto", "text/plain", ["text/plain", "text/markdown", "application/x-shellscript", "text/x-log"],
+              ["org.gnome.TextEditor.desktop", "org.kde.kate.desktop", "mousepad.desktop"]),
+    "archivos": ("Archivos", "inode/directory", ["inode/directory"],
+                 ["org.gnome.Nautilus.desktop", "org.kde.dolphin.desktop", "nemo.desktop", "thunar.desktop"]),
+    "comprimidos": ("Archivos comprimidos", "application/zip", ["application/zip", "application/x-7z-compressed", "application/x-tar",
+                                                               "application/x-compressed-tar", "application/x-xz-compressed-tar", "application/vnd.rar",
+                                                               "application/x-zstd-compressed-tar"],
+                    ["org.gnome.FileRoller.desktop", "org.kde.ark.desktop"]),
+}
+
+# Entradas de inicio que el shell ya hace (o que chocan con él): no se lanzan ni se listan como «apps»
+SKIP = re.compile(r"polkit|xembedsniproxy|gmenudbusmenuproxy|gnome-keyring|at-spi|org\.kde\.(plasma|kded|kaccess|kglobalaccel|baloo|"
+                  r"powerdevil|discover\.notifier|xwaylandvideobridge)|baloo|kaccess|powerdevil|pam_kwallet|geoclue-demo|"
+                  r"xdg-user-dirs|org\.gnome\.Settings|gnome-shell|mako|dunst|swaync|waybar|hyprpaper|hypridle|nm-applet|blueman|"
+                  r"snap-userd|spice-vdagent|ibus|fcitx|im-launch|print-applet|orca-autostart|tracker|localsearch|evolution-alarm", re.I)
+
+
+def read_desktop(path):
+    c = configparser.ConfigParser(interpolation=None, strict=False)
+    c.optionxform = str
+    try:
+        c.read(path, encoding="utf-8")
+        return c["Desktop Entry"]
+    except Exception:
+        return None
+
+
+def loc(e, k, d=""):
+    return e.get(f"{k}[es]") or e.get(f"{k}[es_ES]") or e.get(k, d)
+
+
+def apps():
+    """id → (nombre, MimeType, entrada) de las apps visibles; la primera carpeta gana (como XDG)."""
+    out, seen = {}, set()
+    for d in APP_DIRS:
+        for f in sorted(glob.glob(str(d / "**/*.desktop"), recursive=True)):
+            rel = os.path.relpath(f, d).replace("/", "-")
+            if rel in seen:
+                continue
+            seen.add(rel)
+            e = read_desktop(f)
+            if e is None or e.get("Type", "Application") != "Application":
+                continue
+            if e.get("Hidden", "false").lower() == "true":
+                continue
+            out[rel] = (loc(e, "Name", rel), e.get("MimeType", ""), e, f, e.get("NoDisplay", "false").lower() == "true")
+    return out
+
+
+def run(cmd, timeout=10):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).stdout.strip()
+    except Exception:
+        return ""
+
+
+def query(mime):
+    return run(["xdg-mime", "query", "default", mime])
+
+
+GNOME = re.compile(r"^(org\.gnome\.|io\.bassi\.Amberol|io\.github\.celluloid_player|firefox\.desktop)")
+
+
+def recommended(pref, a):
+    """La primera instalada de las preferidas de GNOME (las de KDE y otras son alternativas, no se recomiendan)."""
+    return next((p for p in pref if p in a and GNOME.match(p)), "")
+
+
+def cmd_list():
+    a = apps()
+    out = {}
+    for k, (label, q, mimes, pref) in ROLES.items():
+        cur = query(q)
+        if k == "navegador":
+            cur = run(["xdg-settings", "get", "default-web-browser"]) or cur
+        opts = sorted([[i, n] for i, (n, mt, e, f, nd) in a.items() if not nd and set(mimes) & set(mt.split(";"))], key=lambda x: x[1].lower())
+        if cur and cur in a and not any(o[0] == cur for o in opts):
+            opts.insert(0, [cur, a[cur][0]])
+        rec = recommended(pref, a)
+        out[k] = {"label": label, "current": cur, "name": a[cur][0] if cur in a else "", "options": opts, "recommended": rec}
+    return out
+
+
+def set_default(role, desktop):
+    if role not in ROLES:
+        return {"ok": False, "error": f"Rol desconocido: {role}"}
+    mimes = ROLES[role][2]
+    r = subprocess.run(["xdg-mime", "default", desktop, *mimes], capture_output=True, text=True)
+    if role == "navegador":
+        subprocess.run(["xdg-settings", "set", "default-web-browser", desktop], capture_output=True, text=True)
+    return {"ok": r.returncode == 0, "error": (r.stderr.strip() or None) if r.returncode else None}
+
+
+def cmd_recommended(force=False):
+    a = apps()
+    done = {}
+    for k, (label, q, mimes, pref) in ROLES.items():
+        if k == "navegador":
+            continue   # el navegador lo elige cada uno
+        rec = recommended(pref, a)
+        cur = query(q)
+        if rec and (force or not cur or cur not in a):
+            set_default(k, rec)
+            done[k] = rec
+    return {"ok": True, "set": done}
+
+
+# ---------------------------------------------------------------- autostart
+def autostart_entries():
+    """id → {…}: las del usuario tapan a las del sistema con el mismo nombre de archivo."""
+    ents = {}
+    for d in reversed(SYS_AUTOSTART):
+        for f in glob.glob(str(d / "*.desktop")):
+            ents[os.path.basename(f)] = {"system": f, "user": None}
+    for f in glob.glob(str(USER_AUTOSTART / "*.desktop")):
+        ents.setdefault(os.path.basename(f), {"system": None, "user": None})["user"] = f
+    return ents
+
+
+def shown_here(e):
+    desk = set(filter(None, (os.environ.get("XDG_CURRENT_DESKTOP") or "Hyprland").split(":")))
+    only = set(filter(None, e.get("OnlyShowIn", "").split(";")))
+    nots = set(filter(None, e.get("NotShowIn", "").split(";")))
+    if only and not (only & desk):
+        return False
+    return not (nots & desk)
+
+
+def enabled(e):
+    return e.get("Hidden", "false").lower() != "true" and e.get("X-GNOME-Autostart-enabled", "true").lower() != "false"
+
+
+def cmd_autostart():
+    out = []
+    for i, w in sorted(autostart_entries().items()):
+        f = w["user"] or w["system"]
+        e = read_desktop(f)
+        if e is None or SKIP.search(i):
+            continue
+        if not shown_here(e) and not w["user"]:
+            continue
+        if e.get("X-GNOME-HiddenUnderSystemd", "").lower() == "true" or e.get("X-systemd-skip", "").lower() == "true":
+            continue
+        try_exec = e.get("TryExec", "")
+        if try_exec and not shutil.which(try_exec) and not os.path.exists(try_exec):
+            continue
+        out.append({"id": i, "name": loc(e, "Name", i), "comment": loc(e, "Comment", ""), "icon": e.get("Icon", ""),
+                    "exec": e.get("Exec", ""), "user": bool(w["user"]), "system": bool(w["system"]), "enabled": enabled(e)})
+    return out
+
+
+def write_desktop(path, e):
+    path = pathlib.Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = ["[Desktop Entry]"] + [f"{k}={v}" for k, v in e.items()]
+    path.write_text("\n".join(lines) + "\n")
+
+
+def find_app(desktop):
+    for d in APP_DIRS:
+        f = d / desktop
+        if f.is_file():
+            return f
+    return None
+
+
+def autostart_add(desktop):
+    src = find_app(desktop)
+    if not src:
+        return {"ok": False, "error": f"No encuentro {desktop}"}
+    e = dict(read_desktop(src) or {})
+    e.pop("Hidden", None)
+    e["X-GNOME-Autostart-enabled"] = "true"
+    e["X-HF-Added"] = "true"
+    write_desktop(USER_AUTOSTART / desktop, e)
+    return {"ok": True}
+
+
+def autostart_set(i, on):
+    w = autostart_entries().get(i)
+    if not w:
+        return {"ok": False, "error": f"No existe {i}"}
+    dst = USER_AUTOSTART / i
+    if w["user"]:
+        e = dict(read_desktop(w["user"]) or {})
+        # una copia que solo servía para ocultar la del sistema: al activarla, se borra
+        if on and w["system"] and "true" in (e.get("X-HF-Override"), e.get("X-HL-Override")):   # X-HL-: nombre anterior (hypr-liquid)
+            dst.unlink(missing_ok=True)
+            return {"ok": True}
+    else:
+        e = dict(read_desktop(w["system"]) or {})
+        e["X-HF-Override"] = "true"
+    e["Hidden"] = "false" if on else "true"
+    e["X-GNOME-Autostart-enabled"] = "true" if on else "false"
+    write_desktop(dst, e)
+    return {"ok": True}
+
+
+def autostart_remove(i):
+    f = USER_AUTOSTART / i
+    if not f.exists():
+        return {"ok": False, "error": "Solo se pueden quitar las que añadiste tú"}
+    f.unlink()
+    return {"ok": True}
+
+
+def autostart_run():
+    started = []
+    for a in cmd_autostart():
+        if not a["enabled"] or not a["exec"]:
+            continue
+        e = read_desktop((USER_AUTOSTART / a["id"]) if a["user"] else next(d / a["id"] for d in SYS_AUTOSTART if (d / a["id"]).exists()))
+        if e is None or not shown_here(e):
+            continue
+        # quitar los códigos de campo (%u %f %U…) del Exec
+        cmd = re.sub(r"%[a-zA-Z]", "", a["exec"]).replace("%%", "%").strip()
+        try:
+            args = shlex.split(cmd)
+            if not args:
+                continue
+            subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+                             start_new_session=True, cwd=str(HOME))
+            started.append(a["id"])
+        except Exception:
+            pass
+    return {"started": started}
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__)
+        return
+    c, rest = argv[0], argv[1:]
+    if c == "list":
+        out = cmd_list()
+    elif c == "set" and len(rest) == 2:
+        out = set_default(*rest)
+    elif c == "recommended":
+        out = cmd_recommended("--force" in rest)
+    elif c == "autostart":
+        out = cmd_autostart()
+    elif c == "autostart-add" and rest:
+        out = autostart_add(rest[0])
+    elif c == "autostart-set" and len(rest) == 2:
+        out = autostart_set(rest[0], rest[1] == "true")
+    elif c == "autostart-remove" and rest:
+        out = autostart_remove(rest[0])
+    elif c == "autostart-run":
+        out = autostart_run()
+    else:
+        print(f"Orden desconocida: {' '.join(argv)}", file=sys.stderr)
+        sys.exit(1)
+    print(json.dumps(out, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

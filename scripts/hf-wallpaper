@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+# hf-wallpaper — cambia el fondo (fundido en Quickshell) y regenera los colores con matugen
+#   hf-wallpaper <archivo>        usa ese archivo (imagen o vídeo) en todas las pantallas
+#   hf-wallpaper -o DP-1 <arch>   solo en esa pantalla (no cambia los colores); -o DP-1 reset la quita
+#   hf-wallpaper next|prev        siguiente / anterior de la carpeta de fondos
+#   hf-wallpaper random           uno al azar
+#   hf-wallpaper hora             el de la hora del día (06 amanecer · 10 bruma · 17:30 lago · 20 noche)
+#   hf-wallpaper restore          vuelve a poner el último (al iniciar sesión)
+#   hf-wallpaper list             lista los fondos disponibles (tuyos + los de hyprfrijol)
+#   hf-wallpaper thumbs           genera las miniaturas (~/.cache/hyprfrijol/thumbs) y las lista "fondo<TAB>miniatura"
+#   hf-wallpaper vthumbs          lo mismo, solo de los fondos animados (vídeos y GIF): primer cuadro con
+#                                 ffmpegthumbnailer o ffmpeg
+#   hf-wallpaper add <archivo…>   copia imágenes/vídeos a tu carpeta de fondos (imprime la ruta de cada copia)
+#   hf-wallpaper pick-animated    elige un vídeo/GIF (zenity o kdialog), lo copia a la carpeta y lo pone de fondo
+#   hf-wallpaper deps             qué hay instalado para los fondos animados: "mpvpaper 1", "ffmpeg 0"…
+# Fondos animados: .mp4 .webm .mkv .mov .gif en bucle con mpvpaper (sin sonido, a wallpaperFps). El color sale del
+#   primer cuadro. Shell (Wallpaper.qml) los pausa según wallpaperPauseOn (batería, pantalla completa…) con
+#   SIGSTOP al pid guardado en ~/.local/state/hyprfrijol/motion.pid (solo el de esta sesión).
+# Carpeta: $HF_WALL_DIR, o ~/Imágenes/Fondos, o ~/Imágenes/Wallpapers; si está vacía, los de assets/wallpapers.
+# Esquema de color: $HF_SCHEME (p. ej. scheme-monochrome, scheme-neutral). Por defecto scheme-tonal-spot.
+# Ajustes › Fondos: wallpaperMotion (false → los vídeos/escenas se quedan quietos en su primer cuadro),
+#   wallpaperMotionKind ("video" → mpvpaper · "escena" → carpetas de Wallpaper Engine con linux-wallpaperengine),
+#   wallpaperFps (límite de cuadros), wallpaperTransition ("ninguna" → sin fundido).
+set -euo pipefail
+
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
+STATE="$HOME/.local/state/hyprfrijol"
+THUMBS="$HOME/.cache/hyprfrijol/thumbs"
+ASSETS="$ROOT/assets/wallpapers"
+mkdir -p "$STATE"
+
+PICS="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
+if [ -n "${HF_WALL_DIR:-}" ]; then DIR="$HF_WALL_DIR"
+elif [ -d "$PICS/Fondos" ]; then DIR="$PICS/Fondos"
+elif [ -d "$PICS/Wallpapers" ]; then DIR="$PICS/Wallpapers"
+else DIR="$PICS/Fondos"; fi
+
+findw() { find "$1" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \
+  -o -iname '*.mp4' -o -iname '*.webm' -o -iname '*.mkv' -o -iname '*.mov' -o -iname '*.gif' \) 2>/dev/null | sort; }
+# Fondo animado (vídeo o GIF)
+is_motion() { case "${1,,}" in *.mp4|*.webm|*.mkv|*.mov|*.gif) return 0 ;; esac; return 1; }
+# Primer cuadro de un vídeo/GIF a un PNG/JPG
+first_frame() {   # first_frame <vídeo> <salida> [alto]
+  if [ -n "${3:-}" ] && command -v ffmpegthumbnailer >/dev/null && [[ "${1,,}" != *.gif ]]; then
+    ffmpegthumbnailer -i "$1" -o "$2" -s 854 -q 8 -t 10% 2>/dev/null && [ -s "$2" ] && return 0
+  fi
+  ffmpeg -y -loglevel error -i "$1" -frames:v 1 ${3:+-vf "scale=-2:$3"} "$2" 2>/dev/null && return 0
+  command -v magick >/dev/null && magick "$1[0]" ${3:+-thumbnail "x$3"} "$2" 2>/dev/null
+}
+# Para el reproductor del fondo animado de ESTA sesión (no los de otras sesiones gráficas ni de otros usuarios)
+stop_motion() {
+  local p w
+  for p in $(cat "$STATE/motion.pid" 2>/dev/null); do kill "$p" 2>/dev/null || true; done
+  rm -f "$STATE/motion.pid"
+  # Los lanzados por versiones anteriores (sin pid guardado): solo los de nuestra pantalla Wayland
+  for p in $(pgrep -u "$(id -u)" -x mpvpaper 2>/dev/null; pgrep -u "$(id -u)" -f '^linux-wallpaperengine ' 2>/dev/null); do
+    # Misma instancia de Hyprland (la firma es única; WAYLAND_DISPLAY se repite en sesiones anidadas/de prueba)
+    w="$(tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null | sed -n 's/^HYPRLAND_INSTANCE_SIGNATURE=//p')"
+    [ -n "$w" ] && [ "$w" = "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && kill "$p" 2>/dev/null || true
+  done
+}
+# Los tuyos; si no hay ninguno, los de hyprfrijol. "list all" = los dos.
+list() {
+  local u; u="$(findw "$DIR")"
+  if [ -n "$u" ]; then printf '%s\n' "$u"; [ "${1:-}" = all ] && findw "$ASSETS"; else findw "$ASSETS"; fi
+  return 0
+}
+current() { cat "$STATE/wallpaper-path" 2>/dev/null || true; }
+# Ajuste de settings.json (el del usuario manda sobre config/defaults); setting <clave> <por defecto>
+setting() {
+  local v f files=()
+  for f in "$ROOT/config/defaults/settings.json" "$HOME/.config/hyprfrijol/settings.json"; do [ -s "$f" ] && files+=("$f"); done
+  v="$(jq -nr --arg k "$1" '[inputs] | (.[0] // {}) + (.[1] // {}) | if has($k) and .[$k] != null then .[$k] | tostring else empty end' \
+        "${files[@]}" 2>/dev/null)"
+  printf '%s' "${v:-$2}"
+}
+# Escena de Wallpaper Engine: carpeta con project.json
+is_scene() { [ -d "$1" ] && [ -f "$1/project.json" ]; }
+scene_preview() {
+  local p; p="$(jq -r '.preview // empty' "$1/project.json" 2>/dev/null)"
+  [ -n "$p" ] && [ -f "$1/$p" ] && { printf '%s' "$1/$p"; return; }
+  find "$1" -maxdepth 1 -type f -iname 'preview.*' | head -n1
+}
+step() {   # $1 = +1 / -1
+  mapfile -t L < <(list); [ "${#L[@]}" -eq 0 ] && { echo "No hay fondos en $DIR" >&2; exit 1; }
+  local cur i=-1 k; cur="$(current)"
+  for k in "${!L[@]}"; do [ "${L[$k]}" = "$cur" ] && i=$k; done
+  if [ "$i" -lt 0 ]; then i=0; else i=$(( (i + $1 + ${#L[@]}) % ${#L[@]} )); fi
+  printf '%s' "${L[$i]}"
+}
+# Fondo según la hora (como en el diseño: 06:00 atardecer, 10:00 bruma, 17:30 lago, 20:00 noche)
+by_hour() {
+  local m=$(( 10#$(date +%H) * 60 + 10#$(date +%M) )) k
+  if   [ $m -ge 1200 ] || [ $m -lt 360 ]; then k=noche
+  elif [ $m -ge 1050 ]; then k=lago
+  elif [ $m -ge 600 ];  then k=bruma
+  else k=amanecer; fi
+  # Si tienes un fondo propio que se llame igual (noche.jpg…), se usa ese
+  local f; f="$(findw "$DIR" | grep -i "/$k\.[a-z0-9]*$" | head -n1 || true)"
+  printf '%s' "${f:-$(findw "$ASSETS" | grep "/$k\." | head -n1)}"
+}
+thumb_of() {   # ruta de la miniatura (se genera si falta o está desactualizada)
+  local f="$1" t; t="$THUMBS/$(printf '%s' "$f" | md5sum | cut -c1-16).jpg"
+  if [ ! -s "$t" ] || [ "$f" -nt "$t" ]; then
+    if is_motion "$f"; then first_frame "$f" "$t" 480 || true
+    else magick "$f[0]" -auto-orient -thumbnail 'x480^' -quality 85 "$t" 2>/dev/null || true; fi
+  fi
+  printf '%s' "$t"
+}
+write_json() {   # actualiza wallpaper.json con un filtro de jq (atómico)
+  local cur='{}'; [ -s "$STATE/wallpaper.json" ] && cur="$(cat "$STATE/wallpaper.json")"
+  jq "$@" <<<"$cur" > "$STATE/wallpaper.json.tmp" && mv "$STATE/wallpaper.json.tmp" "$STATE/wallpaper.json"
+}
+FADE=1200; [ -f "$STATE/reduce-motion" ] && FADE=0
+[ "$(setting wallpaperTransition fundido)" = ninguna ] && FADE=0
+
+OUTPUT=""
+if [ "${1:-}" = -o ]; then OUTPUT="${2:?falta la pantalla}"; shift 2; fi
+
+case "${1:-next}" in
+  next)    FILE="$(step 1)" ;;
+  prev)    FILE="$(step -1)" ;;
+  random)  FILE="$(list | grep -vxF "$(current)" | shuf -n1 || true)"; [ -n "$FILE" ] || FILE="$(list | head -n1)" ;;
+  hora)    FILE="$(by_hour)"; [ -z "$OUTPUT" ] && [ "$FILE" = "$(current)" ] && exit 0 ;;
+  restore) FILE="$(current)"; [ -f "$FILE" ] || is_scene "$FILE" || FILE="$(list | head -n1)" ;;
+  list)    list all; exit 0 ;;
+  thumbs)  mkdir -p "$THUMBS"; while IFS= read -r f; do printf '%s\t%s\n' "$f" "$(thumb_of "$f")"; done < <(list all); exit 0 ;;
+  vthumbs) mkdir -p "$THUMBS"; while IFS= read -r f; do is_motion "$f" && printf '%s\t%s\n' "$f" "$(thumb_of "$f")"; done < <(list all); exit 0 ;;
+  thumb)   mkdir -p "$THUMBS"; thumb_of "$(readlink -f "$2")"; echo; exit 0 ;;
+  add)     shift; mkdir -p "$DIR"; for f in "$@"; do cp -n -- "$f" "$DIR/"; printf '%s\n' "$DIR/$(basename -- "$f")"; done; exit 0 ;;
+  deps)    for b in mpvpaper ffmpeg ffmpegthumbnailer linux-wallpaperengine; do printf '%s %s\n' "$b" "$(command -v "$b" >/dev/null && echo 1 || echo 0)"; done; exit 0 ;;
+  pick-animated)
+    F=""
+    if command -v zenity >/dev/null; then
+      F="$(zenity --file-selection --title='Añadir fondo animado' --file-filter='Vídeos y GIF | *.mp4 *.webm *.mkv *.mov *.gif *.MP4 *.WEBM *.MKV *.MOV *.GIF' 2>/dev/null)" || exit 1
+    elif command -v kdialog >/dev/null; then
+      F="$(kdialog --title 'Añadir fondo animado' --getopenfilename "$HOME" 'video/mp4 video/webm video/x-matroska video/quicktime image/gif' 2>/dev/null)" || exit 1
+    else echo "Instala zenity para elegir el archivo (o copia el vídeo a $DIR)" >&2; exit 1; fi
+    [ -f "$F" ] && is_motion "$F" || { echo "Elige un vídeo (.mp4, .webm, .mkv, .mov) o un GIF" >&2; exit 1; }
+    mkdir -p "$DIR"; cp -n -- "$F" "$DIR/"
+    exec "$0" "$DIR/$(basename -- "$F")" ;;
+  reset)   [ -n "$OUTPUT" ] && write_json --arg o "$OUTPUT" '.monitors = ((.monitors // {}) | del(.[$o]))'; exit 0 ;;
+  -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
+  *)       FILE="$(readlink -f "$1")" ;;
+esac
+[ -n "$FILE" ] && { [ -f "$FILE" ] || is_scene "$FILE"; } || { echo "No hay fondo que poner (${FILE:-vacío}). Pon imágenes en $DIR" >&2; exit 1; }
+
+# Solo una pantalla: no toca los colores ni el fondo global
+if [ -n "$OUTPUT" ]; then
+  IMG="$FILE"
+  is_motion "$FILE" && { IMG="$STATE/video-frame-$OUTPUT.png"; first_frame "$FILE" "$IMG"; }
+  is_scene "$FILE" && IMG="$(scene_preview "$FILE")"
+  write_json --arg o "$OUTPUT" --arg i "$IMG" --argjson f "$FADE" '.monitors = ((.monitors // {}) + {($o): $i}) | .fadeMs = $f | .changed = now'
+  exit 0
+fi
+
+# "Reducir movimiento" (accesibilidad) desactiva el fundido y los fondos de vídeo
+# y también el ajuste «Fondos en movimiento» (wallpaperMotion = false)
+NO_MOTION=0; [ -f "$STATE/reduce-motion" ] && NO_MOTION=1
+[ "$(setting wallpaperMotion true)" = false ] && NO_MOTION=1
+FPS="$(setting wallpaperFps 30)"; case "$FPS" in ''|*[!0-9]*) FPS=30 ;; esac
+
+stop_motion
+IMG="$FILE"; VIDEO=false
+if is_scene "$FILE"; then
+  IMG="$(scene_preview "$FILE")"
+  [ -n "$IMG" ] || { echo "La escena $FILE no tiene imagen de vista previa" >&2; exit 1; }
+  case "${IMG,,}" in *.gif|*.mp4|*.webm) ffmpeg -y -loglevel error -i "$IMG" -frames:v 1 "$STATE/video-frame.png" && IMG="$STATE/video-frame.png" ;; esac
+  if [ "$NO_MOTION" = 0 ] && [ "$(setting wallpaperMotionKind video)" = escena ] && command -v linux-wallpaperengine >/dev/null; then
+    ARGS=(--silent --fps "$FPS")
+    while read -r MON; do ARGS+=(--screen-root "$MON"); done < <(hyprctl monitors -j 2>/dev/null | jq -r '.[].name')
+    setsid linux-wallpaperengine "${ARGS[@]}" --bg "$FILE" >/dev/null 2>&1 &
+    echo $! > "$STATE/motion.pid"
+    VIDEO=true
+  fi
+else
+  if is_motion "$FILE"; then
+    IMG="$STATE/video-frame.png"
+    first_frame "$FILE" "$IMG"
+    if [ "$NO_MOTION" = 0 ] && command -v mpvpaper >/dev/null; then
+      # sin sonido, en bucle, recortado a la pantalla; hwdec si hay; el shell lo pausa (SIGSTOP) según wallpaperPauseOn
+      setsid mpvpaper -o "no-audio loop panscan=1.0 hwdec=auto-safe vf=fps=$FPS" '*' "$FILE" >/dev/null 2>&1 &
+      echo $! > "$STATE/motion.pid"
+      VIDEO=true
+    elif [ "$NO_MOTION" = 0 ]; then
+      echo "Para que se mueva instala mpvpaper (Ajustes › Fondos de pantalla); de momento queda quieto." >&2
+    fi
+  fi
+fi
+
+printf '%s\n' "$FILE" > "$STATE/wallpaper-path"
+ln -sf "$IMG" "$STATE/current-wallpaper"      # lo usan hyprlock y el login
+# Quickshell vigila este archivo y hace el fundido ("monitors" = fondos por pantalla, se conservan)
+write_json --arg image "$IMG" --argjson video "$VIDEO" --argjson fade "$FADE" \
+  '.image = $image | .video = $video | .fadeMs = $fade | .changed = now'
+
+# Colores
+if command -v matugen >/dev/null; then
+  sed -e "s#@ROOT@#$ROOT#g" -e "s#@STATE@#$STATE#g" "$ROOT/config/matugen/config.toml" > "$STATE/matugen.toml"
+  if matugen image "$IMG" -c "$STATE/matugen.toml" -m dark -t "${HF_SCHEME:-scheme-tonal-spot}" --source-color-index 0 >"$STATE/matugen.log" 2>&1; then
+    :
+  else
+    echo "matugen falló, mira $STATE/matugen.log" >&2
+  fi
+fi
+"$ROOT/scripts/hf-apply" || true   # tema → Quickshell, Hyprland, hyprlock, kitty, GTK
+
+case "${1:-}" in restore|hora) ;; *) [ -n "${HF_QUIET:-}" ] || { command -v notify-send >/dev/null && notify-send -a "Fondos" -i "$IMG" "Fondo cambiado" "$(basename "$FILE")" || true; } ;; esac

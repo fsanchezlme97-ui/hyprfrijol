@@ -1,0 +1,317 @@
+// Agenda del centro de control (QuickSettings.qml; reloj de la barra = Shell.open("agenda") / Super + C):
+// calendario del mes (es_ES, lunes primero) · eventos del día elegido con «Unirse» · relojes del mundo (WorldClock).
+// Eventos: services/Events.qml (locales + .ics del ajuste calendarIcs). «+» añade un evento local.
+// Teclas (cuando tiene el foco): ← → ↑ ↓ días · RePág/AvPág mes · Inicio = hoy · N nuevo evento · Esc cerrar.
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import "../.."
+import "../../components"
+import "../../services"
+
+Glass {
+    id: win
+    kind: "panel"
+    implicitHeight: body.implicitHeight + 26
+
+    property date month: new Date()      // día 1 del mes visible
+    property date day: new Date()        // día elegido
+    property bool adding: false
+    readonly property var es: Qt.locale("es_ES")
+    readonly property date today: Time.now
+
+    function sameDay(a, b): bool { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+    function cap(s: string): string { return s.charAt(0).toUpperCase() + s.slice(1); }
+    function goMonth(d: int): void { const m = new Date(month); m.setMonth(m.getMonth() + d, 1); month = m; }
+    function pick(d): void { day = d; if (d.getMonth() !== month.getMonth() || d.getFullYear() !== month.getFullYear()) month = new Date(d.getFullYear(), d.getMonth(), 1); }
+    function moveDays(n: int): void { const d = new Date(day); d.setDate(d.getDate() + n); pick(d); }
+    // Al abrir el centro: vuelve a hoy; focusKeys = dar el teclado al calendario (teclas del calendario)
+    function reset(focusKeys: bool): void {
+        const now = new Date();
+        month = new Date(now.getFullYear(), now.getMonth(), 1); day = now; adding = false;
+        if (focusKeys) Qt.callLater(() => keys.forceActiveFocus());
+    }
+
+    // 6×7 celdas (weekStart: 1 = lunes primero, 0 = domingo, 6 = sábado); null = hueco
+    readonly property int weekStart: Number(Settings.get("weekStart", 1)) || 0
+    readonly property var dayLetters: { const d = ["D", "L", "M", "X", "J", "V", "S"]; return d.slice(weekStart).concat(d.slice(0, weekStart)); }
+    readonly property var cells: {
+        const first = new Date(month.getFullYear(), month.getMonth(), 1);
+        const lead = (first.getDay() + 7 - weekStart) % 7;
+        const n = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+        const out = [];
+        for (let i = 0; i < lead; i++) out.push(null);
+        for (let i = 1; i <= n; i++) out.push(new Date(month.getFullYear(), month.getMonth(), i));
+        while (out.length % 7) out.push(null);
+        return out;
+    }
+    readonly property string dayTitle: {
+        if (sameDay(day, today)) return "Hoy";
+        const t = new Date(today); t.setDate(t.getDate() + 1);
+        if (sameDay(day, t)) return "Mañana";
+        const y = new Date(today); y.setDate(y.getDate() - 1);
+        if (sameDay(day, y)) return "Ayer";
+        return cap(es.toString(day, "dddd d 'de' MMMM"));
+    }
+    readonly property var dayEvents: { Events.all; return Events.forDay(day); }
+
+    ColumnLayout {
+        id: body
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 13 }
+        spacing: 4
+
+        // Cabecera: fecha de hoy grande (clic = volver a hoy) · mes · ‹ ›
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: 3
+            spacing: 2
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: -1
+                Txt { text: win.cap(win.es.toString(win.today, "dddd")); size: 11.5; weight: Font.DemiBold; color: Theme.p }
+                Txt {
+                    Layout.fillWidth: true
+                    text: win.cap(win.es.toString(win.month, "MMMM yyyy"))
+                    size: 15; weight: Font.DemiBold
+                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: win.pick(new Date()) }
+                }
+            }
+            IconBtn { implicitWidth: 26; implicitHeight: 26; radius: Theme.r(6); icon: "chevron_left"; iconSize: 13; fg: Theme.tv; tooltip: "Mes anterior"; onClicked: win.goMonth(-1) }
+            IconBtn { implicitWidth: 26; implicitHeight: 26; radius: Theme.r(6); icon: "chevron_right"; iconSize: 13; fg: Theme.tv; tooltip: "Mes siguiente"; onClicked: win.goMonth(1) }
+        }
+
+        GridLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: 2
+            columns: 7
+            rowSpacing: 0
+            columnSpacing: 0
+            Repeater {
+                model: win.dayLetters
+                Txt { required property string modelData; text: modelData; size: 10.5; muted: true; weight: Font.DemiBold; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.preferredHeight: 20; horizontalAlignment: Text.AlignHCenter }
+            }
+            Repeater {
+                model: win.cells
+                delegate: Item {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    Layout.preferredHeight: 29
+                    readonly property bool isToday: !!modelData && win.sameDay(modelData, win.today)
+                    readonly property bool isSel: !!modelData && win.sameDay(modelData, win.day)
+                    readonly property bool busy: { Events.all; return !!modelData && Events.hasDay(modelData); }
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 27; height: 27; radius: 13.5
+                        visible: !!parent.modelData
+                        color: parent.isToday ? Theme.p : dayMa.containsMouse ? Theme.fill2 : "transparent"
+                        border.width: parent.isSel && !parent.isToday ? 1.5 : 0
+                        border.color: Theme.p
+                        Txt {
+                            anchors.centerIn: parent
+                            text: parent.parent.modelData ? parent.parent.modelData.getDate() : ""
+                            color: parent.parent.isToday ? Theme.pText : Theme.t
+                            weight: parent.parent.isToday ? Font.Bold : Font.Normal
+                            size: 12
+                            tabular: true
+                        }
+                    }
+                    // punto: hay eventos ese día
+                    Rectangle {
+                        visible: parent.busy
+                        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 2 }
+                        width: 4; height: 4; radius: 2
+                        color: parent.isToday ? Theme.pText : Theme.p
+                        z: 1
+                    }
+                    MouseArea { id: dayMa; anchors.fill: parent; enabled: !!parent.modelData; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { win.pick(parent.modelData); keys.forceActiveFocus(); } }
+                }
+            }
+        }
+
+        Rectangle { Layout.fillWidth: true; Layout.topMargin: 4; Layout.bottomMargin: 2; implicitHeight: 1; color: Theme.ov; opacity: 0.6 }
+
+        // ── Eventos del día elegido ──────────────────────────────────
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: 3
+            spacing: 4
+            Txt { Layout.fillWidth: true; text: win.dayTitle + (win.dayEvents.length ? " · " + win.dayEvents.length + (win.dayEvents.length === 1 ? " evento" : " eventos") : ""); weight: Font.DemiBold }
+            IconBtn {
+                implicitWidth: 26; implicitHeight: 26; radius: Theme.r(6)
+                icon: win.adding ? "x" : "plus"; iconSize: 13
+                tooltip: win.adding ? "Cancelar" : "Nuevo evento (N)"
+                onClicked: { win.adding = !win.adding; if (win.adding) Qt.callLater(() => fTitle.focusInput()); else keys.forceActiveFocus(); }
+            }
+        }
+
+        // Nuevo evento
+        ColumnLayout {
+            visible: win.adding
+            Layout.fillWidth: true
+            spacing: 6
+            Field { id: fTitle; Layout.fillWidth: true; h: 30; icon: "calendar"; placeholder: "Título del evento"; onAccepted: addBtn.clicked()
+                    onKeyPressed: e => { if (e.key === Qt.Key_Escape) { win.adding = false; keys.forceActiveFocus(); e.accepted = true; } } }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+                Field { id: fFrom; Layout.preferredWidth: 78; h: 30; icon: "clock"; placeholder: "10:00"; onAccepted: addBtn.clicked() }
+                Txt { text: "–"; muted: true }
+                Field { id: fTo; Layout.preferredWidth: 62; h: 30; icon: ""; placeholder: "11:00"; onAccepted: addBtn.clicked() }
+                Field { id: fWhere; Layout.fillWidth: true; h: 30; icon: ""; placeholder: "Lugar o enlace"; onAccepted: addBtn.clicked() }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Txt { Layout.fillWidth: true; text: "Sin hora = todo el día"; size: 11; muted: true }
+                Btn {
+                    id: addBtn
+                    kind: "primary"; h: 26; text: "Guardar"
+                    enabled: fTitle.text.trim() !== ""
+                    onClicked: {
+                        if (!enabled) return;
+                        const t = s => { const m = s.trim().match(/^(\d{1,2})(?:[:.h](\d{2}))?$/); return m ? [+m[1], +(m[2] || 0)] : null; };
+                        const a = t(fFrom.text), b = t(fTo.text);
+                        const s = new Date(win.day), e = new Date(win.day);
+                        if (a) { s.setHours(a[0], a[1], 0, 0); if (b) e.setHours(b[0], b[1], 0, 0); else e.setTime(s.getTime() + 3600000); }
+                        else { s.setHours(0, 0, 0, 0); e.setTime(s.getTime() + 86400000); }
+                        const w = fWhere.text.trim();
+                        Events.add({ title: fTitle.text.trim(), start: s, end: e, allDay: !a, where: w, link: Events.linkIn(w) || (/^https?:\/\//.test(w) ? w : "") });
+                        fTitle.text = fFrom.text = fTo.text = fWhere.text = "";
+                        win.adding = false;
+                        keys.forceActiveFocus();
+                    }
+                }
+            }
+        }
+
+        ListView {
+            visible: win.dayEvents.length > 0
+            Layout.fillWidth: true
+            // hasta 3 eventos a la vista; el resto, desplazando
+            Layout.preferredHeight: Math.min(contentHeight, 3 * 50 + 8)
+            clip: true
+            spacing: 5
+            model: win.dayEvents
+            boundsBehavior: Flickable.StopAtBounds
+            delegate: Rectangle {
+                id: ev
+                required property var modelData
+                readonly property var e: modelData
+                readonly property bool soon: !e.allDay && e.start - win.today < 60 * 60000 && e.end > win.today
+                readonly property bool past: e.end < win.today
+                width: ListView.view.width
+                height: evCol.implicitHeight + 14
+                radius: Theme.r(6)
+                color: Theme.fill2
+                opacity: past ? 0.6 : 1
+                Rectangle {
+                    x: 9; y: 7; width: 3; height: parent.height - 14; radius: 2
+                    color: Events.tint(ev.e.color)
+                }
+                RowLayout {
+                    anchors { fill: parent; leftMargin: 20; rightMargin: 8; topMargin: 7; bottomMargin: 7 }
+                    spacing: 8
+                    ColumnLayout {
+                        id: evCol
+                        Layout.fillWidth: true
+                        spacing: 1
+                        Txt { Layout.fillWidth: true; text: ev.e.title; weight: Font.DemiBold }
+                        Txt {
+                            Layout.fillWidth: true
+                            text: (ev.e.allDay ? "Todo el día" : Events.hhmm(ev.e.start) + " – " + Events.hhmm(ev.e.end))
+                                  + (ev.e.where && ev.e.where !== ev.e.link ? " · " + ev.e.where : ev.e.link ? " · videollamada" : "")
+                                  + (ev.soon ? " · " + Events.relative(ev.e.start) : "")
+                            muted: true; size: 11.5; elide: Text.ElideRight
+                        }
+                    }
+                    Btn {
+                        visible: !!ev.e.link
+                        kind: ev.soon ? "primary" : "tonal"; h: 24; padX: 10; text: "Unirse"
+                        onClicked: { Qt.openUrlExternally(ev.e.link); Shell.close(); }
+                    }
+                    IconBtn {
+                        visible: ev.e.source === "local" && evMa.containsMouse
+                        implicitWidth: 24; implicitHeight: 24
+                        icon: "trash"; iconSize: 12
+                        tooltip: "Borrar evento"
+                        onClicked: Events.remove(ev.e)
+                    }
+                }
+                MouseArea { id: evMa; anchors.fill: parent; z: -1; hoverEnabled: true }
+            }
+        }
+        RowLayout {
+            visible: win.dayEvents.length === 0 && !win.adding
+            Layout.fillWidth: true
+            Layout.leftMargin: 3
+            spacing: 6
+            Txt {
+                Layout.fillWidth: true
+                text: Events.loading ? "Cargando calendarios…" : "Nada en la agenda"
+                muted: true; size: 11.5
+            }
+            Txt {
+                visible: !Events.loading && Events.sources.length === 0
+                text: "Añadir calendarios"; size: 11.5
+                color: icsMa.containsMouse ? Theme.t : Theme.p
+                MouseArea { id: icsMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Shell.open("ajustesapp", "fecha") }
+            }
+        }
+
+        // ── Relojes del mundo: «Madrid 18:25 +6 h» (clic: Ajustes › Fecha para añadir o quitar) ──
+        Flow {
+            Layout.fillWidth: true
+            Layout.topMargin: 4
+            spacing: 4
+            Repeater {
+                model: WorldClock.clocks
+                Rectangle {
+                    id: wcl
+                    required property var modelData
+                    width: wclRow.implicitWidth + 16
+                    height: 22
+                    radius: Theme.ctl(22)
+                    color: wclMa.containsMouse ? Theme.fill2 : Qt.alpha(Theme.fill2, 0.55)
+                    Row {
+                        id: wclRow
+                        anchors.centerIn: parent
+                        spacing: 5
+                        Icon { name: "globe"; size: 11; color: Theme.tv; anchors.verticalCenter: parent.verticalCenter }
+                        Txt { text: wcl.modelData.name; size: 11; muted: true }
+                        Txt { text: wcl.modelData.time; size: 11; weight: Font.DemiBold; tabular: true }
+                        Txt { text: wcl.modelData.day ? wcl.modelData.day : wcl.modelData.diff === "misma hora" ? "" : wcl.modelData.diff; visible: text !== ""; size: 10.5; muted: true; tabular: true }
+                    }
+                    MouseArea { id: wclMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Shell.open("ajustesapp", "fecha") }
+                }
+            }
+            Rectangle {
+                visible: WorldClock.clocks.length === 0
+                width: addRow.implicitWidth + 16; height: 22; radius: Theme.ctl(22)
+                color: addMa.containsMouse ? Theme.fill2 : "transparent"
+                Row { id: addRow; anchors.centerIn: parent; spacing: 5
+                    Icon { name: "globe"; size: 11; color: Theme.tv; anchors.verticalCenter: parent.verticalCenter }
+                    Txt { text: "Añadir relojes del mundo"; size: 11; muted: true } }
+                MouseArea { id: addMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Shell.open("ajustesapp", "fecha") }
+            }
+        }
+    }
+
+    Item {
+        id: keys
+        Keys.onPressed: e => {
+            switch (e.key) {
+            case Qt.Key_Left: win.moveDays(-1); break;
+            case Qt.Key_Right: win.moveDays(1); break;
+            case Qt.Key_Up: win.moveDays(-7); break;
+            case Qt.Key_Down: win.moveDays(7); break;
+            case Qt.Key_PageUp: win.goMonth(-1); break;
+            case Qt.Key_PageDown: win.goMonth(1); break;
+            case Qt.Key_Home: win.pick(new Date()); break;
+            case Qt.Key_N: case Qt.Key_Plus: win.adding = true; Qt.callLater(() => fTitle.focusInput()); break;
+            default: return;
+            }
+            e.accepted = true;
+        }
+        Keys.onEscapePressed: Shell.close()
+    }
+}

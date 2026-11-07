@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# hf-session — arranca Hyprland con la configuración de hyprfrijol.
+# Lo usa la entrada «Hyprland (HyprFrijol)» del gestor de inicio de sesión; también sirve desde una TTY.
+# No toca ~/.config/hypr: tu configuración normal de Hyprland sigue intacta.
+#   hf-session            sesión normal (desde el gestor de inicio o una TTY)
+#   hf-session --nested   lo abre en una ventana dentro de tu sesión actual, para probarlo
+set -euo pipefail
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+NESTED=0; [ "${1:-}" = --nested ] && NESTED=1
+
+# Desde el gestor de inicio no hay terminal: todo lo que pase queda en ~/.cache/hf-session.log
+# (si la sesión vuelve al login al instante, ahí está el motivo).
+: "${HOME:=$(getent passwd "$(id -un)" | cut -d: -f6)}"; export HOME
+if [ "$NESTED" = 0 ] && ! [ -t 1 ]; then
+  LOG="$HOME/.cache/hf-session.log"; mkdir -p "$HOME/.cache"
+  [ -f "$LOG" ] && [ "$(stat -c %s "$LOG")" -gt 2000000 ] && mv -f "$LOG" "$LOG.1"
+  exec >>"$LOG" 2>&1
+  echo "=== $(date '+%F %T') hf-session · tty=$(tty 2>/dev/null) XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-} XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-} PATH=$PATH"
+  trap 'echo "hf-session: falló «$BASH_COMMAND» (línea $LINENO, código $?)"' ERR
+fi
+
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+
+# Sistema mínimo sin escritorio (desde una TTY):
+#  · ~/.local/bin en el PATH (enlaces de ./install.sh y matugen instalado con cargo)
+case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac
+#  · sin logind/elogind no hay XDG_RUNTIME_DIR: se crea uno privado (Hyprland lo necesita)
+if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
+  if [ -d "/run/user/$(id -u)" ]; then export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+  else export XDG_RUNTIME_DIR="${TMPDIR:-/tmp}/hf-runtime-$(id -u)"; mkdir -p -m 0700 "$XDG_RUNTIME_DIR"; fi
+fi
+#  · sin systemd no hay bus de sesión de D-Bus: se abre uno para toda la sesión
+if [ "$NESTED" = 0 ] && [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && ! [ -S "$XDG_RUNTIME_DIR/bus" ] \
+   && [ -z "${HF_DBUS_WRAPPED:-}" ] && command -v dbus-run-session >/dev/null; then
+  export HF_DBUS_WRAPPED=1
+  exec dbus-run-session -- "$ROOT/scripts/hf-session" "$@"
+fi
+# Primera vez tras el cambio de nombre: mueve ~/.config|.local/state|.local/share|.cache/hypr-liquid a …/hyprfrijol (deja enlaces)
+for d in "$HOME/.config/hypr-liquid" "$HOME/.local/state/hypr-liquid" "$HOME/.local/share/hypr-liquid" "$HOME/.cache/hypr-liquid"; do
+  if [ -d "$d" ] && [ ! -L "$d" ]; then "$ROOT/scripts/hf-migrate" --dirs-only --quiet || true; break; fi
+done
+STATE="$HOME/.local/state/hyprfrijol"
+USERCFG="$HOME/.config/hyprfrijol"
+
+mkdir -p "$STATE" "$USERCFG"
+
+# Valores por defecto la primera vez (matugen los reemplaza al elegir fondo)
+[ -e "$STATE/colors.json" ] || cp "$ROOT/config/defaults/colors.json" "$STATE/colors.json"
+
+[ -e "$USERCFG/local.lua" ] || cp "$ROOT/config/defaults/local.lua" "$USERCFG/local.lua"
+
+export HF_ROOT="$ROOT"
+"$ROOT/scripts/hf-apply" --no-reload || true   # tema y ajustes de Hyprland antes de arrancar
+if [ "$NESTED" = 1 ]; then
+  [ -n "${WAYLAND_DISPLAY:-}" ] || { echo "--nested necesita una sesión Wayland abierta" >&2; exit 1; }
+  export HF_NESTED=1
+  unset HYPRLAND_INSTANCE_SIGNATURE
+  exec start-hyprland -- --config "$ROOT/config/hypr/hyprland.lua"
+fi
+exec start-hyprland -- --config "$ROOT/config/hypr/hyprland.lua"

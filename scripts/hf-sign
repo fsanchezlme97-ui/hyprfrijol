@@ -1,0 +1,484 @@
+#!/usr/bin/env python3
+"""hf-sign — firmar documentos (lo usa la app «Firmar documentos», modules/firmar, y sirve en la terminal).
+
+  hf-sign status                        {backend: pymupdf|poppler|"", magick, rembg, cairo, dir, pkg}
+  hf-sign list                          firmas de la biblioteca (~/.local/share/hyprfrijol/firmas), JSON
+  hf-sign clean <foto> <salida.png> [--ink #1a2b6d|original] [--strength 0..1] [--rembg]
+                                        quita el fondo de la foto de una firma en papel → PNG transparente recortado
+  hf-sign draw <trazos.json|-> <salida.png> [--ink #hex]
+                                        {"w":…,"h":…,"width":3,"strokes":[[x,y,x,y,…],…]} → PNG transparente
+  hf-sign save <png> [nombre]           la guarda en la biblioteca → {"path": …}
+  hf-sign delete <png>                  la borra de la biblioteca
+  hf-sign info <pdf|imagen>             {"kind":"pdf|image","pages":n,"sizes":[[ancho,alto] en puntos,…]}
+  hf-sign render <doc> <página> <salida.png> [--width 1400]   vista previa de una página (desde 0)
+  hf-sign apply '<json>' | -            {"input":…, "output"?:…, "items":[{"page":0,"kind":"img","src":…,
+                                        "x":…,"y":…,"w":…,"h":…} | {"page":0,"kind":"text","text":…,"x":…,"y":…,"h":…,
+                                        "color":"#…"}]} (x,y,w,h en fracciones de la página) → {"output": "<nombre>-firmado.pdf"}
+  hf-sign sample <dir>                  genera un PDF de ejemplo y una «foto» de firma (pruebas)
+
+Motores: PyMuPDF (python-pymupdf, conserva el PDF tal cual: texto, enlaces, formularios) o, si no está,
+Poppler + cairo (python-gobject + python-cairo; vuelve a dibujar cada página: el texto sigue siendo texto,
+pero se pierden enlaces y formularios). El fondo se quita con ImageMagick (normaliza la iluminación de la
+foto, umbral suave → canal alfa); rembg es opcional.
+"""
+import json, os, pathlib, re, shutil, subprocess, sys, tempfile, time
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+HOME = pathlib.Path.home()
+LIB = HOME / ".local/share/hyprfrijol/firmas"
+IMG_EXT = (".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp", ".heic")
+
+def out(o):
+    print(json.dumps(o, ensure_ascii=False))
+
+def die(msg, code=1):
+    out({"error": msg}); sys.exit(code)
+
+def opt(args, name, default=None):
+    if name in args:
+        i = args.index(name)
+        v = args[i + 1] if i + 1 < len(args) else default
+        del args[i:i + 2]
+        return v
+    return default
+
+def flag(args, name):
+    if name in args:
+        args.remove(name); return True
+    return False
+
+# ---------------------------------------------------------------- motores
+def F():
+    """PyMuPDF (pymupdf; «fitz» en versiones antiguas)."""
+    try:
+        import pymupdf
+        return pymupdf
+    except Exception:
+        fitz = F()
+        return fitz
+
+def have_fitz():
+    try:
+        F()
+        return True
+    except Exception:
+        return False
+
+def have_poppler():
+    try:
+        import gi
+        gi.require_version("Poppler", "0.18")
+        from gi.repository import Poppler  # noqa: F401
+        import cairo  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+def have_cairo():
+    try:
+        import cairo  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+def magick():
+    return shutil.which("magick") or (shutil.which("convert") and "convert-legacy") or ""
+
+def mk(*args):
+    """ImageMagick 7 (magick) o 6 (convert)."""
+    m = shutil.which("magick")
+    cmd = [m] + list(args) if m else ["convert"] + list(args)
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError("ImageMagick: " + (r.stderr.strip().splitlines() or ["error"])[-1][:200])
+    return r.stdout
+
+def backend():
+    if have_fitz():
+        return "pymupdf"
+    if have_poppler():
+        return "poppler"
+    return ""
+
+def family():
+    try:
+        s = pathlib.Path("/etc/os-release").read_text().lower()
+    except Exception:
+        return "arch"
+    return "arch" if "arch" in s else "debian" if ("debian" in s or "ubuntu" in s) else "fedora" if "fedora" in s else "suse" if "suse" in s else "arch"
+
+def status():
+    fam = family()
+    pkg = {"arch": "python-pymupdf", "debian": "python3-fitz", "fedora": "python3-pymupdf", "suse": "python3-PyMuPDF"}[fam]
+    return {"backend": backend(), "magick": bool(shutil.which("magick") or shutil.which("convert")),
+            "rembg": bool(shutil.which("rembg")), "cairo": have_cairo(), "dir": str(LIB), "pkg": pkg,
+            "magickPkg": "imagemagick" if fam in ("arch", "suse") else "imagemagick" if fam == "debian" else "ImageMagick"}
+
+# ---------------------------------------------------------------- biblioteca
+def img_size(p):
+    try:
+        w, h = mk(str(p) + "[0]", "-format", "%w %h", "info:").split()
+        return int(w), int(h)
+    except Exception:
+        return 0, 0
+
+def lib_list():
+    LIB.mkdir(parents=True, exist_ok=True)
+    items = []
+    for p in sorted(LIB.glob("*.png"), key=lambda x: x.stat().st_mtime, reverse=True):
+        items.append({"path": str(p), "name": p.stem, "mtime": int(p.stat().st_mtime)})
+    return items
+
+def lib_save(src, name=""):
+    LIB.mkdir(parents=True, exist_ok=True)
+    base = re.sub(r"[^\w\- ]+", "", name).strip().replace(" ", "-") or time.strftime("firma-%Y%m%d-%H%M%S")
+    dst = LIB / f"{base}.png"
+    i = 2
+    while dst.exists():
+        dst = LIB / f"{base}-{i}.png"; i += 1
+    shutil.copyfile(src, dst)
+    return str(dst)
+
+# ---------------------------------------------------------------- limpiar foto
+def clean(src, dst, ink="#1a2b6d", strength=0.5, use_rembg=False):
+    """Foto de una firma en papel → PNG con fondo transparente.
+    1) se estima el papel (cierre morfológico a 1/4 de tamaño + desenfoque) y se divide: quita sombras y
+       viñeteo de la foto; 2) umbral suave (nivel) → alfa con bordes suaves; 3) tinta de un color (o la
+       original algo oscurecida); 4) recorte al trazo ignorando motas sueltas."""
+    strength = max(0.0, min(1.0, float(strength)))
+    hi = 0.80 + 0.16 * strength          # por encima de esto: papel
+    lo = max(0.05, hi - 0.38)            # por debajo: tinta plena
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="hf-sign-"))
+    try:
+        base = tmp / "base.png"
+        if use_rembg and shutil.which("rembg"):
+            subprocess.run(["rembg", "i", src, str(tmp / "rb.png")], check=True, capture_output=True)
+            mk(str(tmp / "rb.png"), "-background", "white", "-alpha", "remove", "-alpha", "off", str(base))
+            src_img = str(tmp / "rb.png")
+        else:
+            src_img = src
+        mk(src_img + "[0]", "-auto-orient", "-resize", "2000x2000>", "-alpha", "remove", "-alpha", "off", str(base))
+        w, h = img_size(base)
+        if not w:
+            raise RuntimeError("No pude leer la imagen")
+        mask = tmp / "mask.png"
+        k = max(1, round(max(w, h) / 1000))      # radio del filtro de ruido según el tamaño
+        # papel estimado: el gris «sin tinta» (cierre = dilatar lo claro sobre los trazos oscuros)
+        mk(str(base), "-colorspace", "Gray", "-statistic", "Median", f"{2 * k + 1}x{2 * k + 1}",
+           "(", "+clone", "-resize", "25%", "-morphology", "Close", "Disk:5", "-blur", "0x4", "-resize", f"{w}x{h}!", ")",
+           "-compose", "Divide_Src", "-composite",
+           "-level", f"{lo * 100:.1f}%,{hi * 100:.1f}%", "-negate",
+           "-level", "6%,100%",              # sin velo: lo casi transparente pasa a 0
+           "-blur", "0x0.5", str(mask))
+        # quitar motas: componentes del trazo más pequeñas que el 0,4 % de la mayor (o que unos píxeles)
+        listing = mk(str(mask), "-threshold", "25%", "-define", "connected-components:verbose=true",
+                     "-define", "connected-components:exclude-header=true", "-connected-components", "8", "null:")
+        areas = [float(m.group(1)) for m in re.finditer(r"^\s*\d+: \S+ \S+ ([\d.e+]+) (?:gray|srgb)a?\((?:255|100%|1\b)", listing, re.M)]
+        if not areas:
+            raise RuntimeError("No encontré la firma: prueba con más sensibilidad o una foto con más contraste")
+        area = max(12, int(w * h / 40000), int(max(areas) * 0.004))
+        keep = tmp / "keep.png"
+        mk(str(mask), "-threshold", "25%", "-define", f"connected-components:area-threshold={area}",
+           "-define", "connected-components:mean-color=true", "-connected-components", "8", str(keep))
+        bb = mk(str(keep), "-format", "%@", "info:").strip()
+        m = re.match(r"(\d+)x(\d+)\+(-?\d+)\+(-?\d+)", bb)
+        if not m or int(m.group(1)) < 4 or int(m.group(2)) < 4:
+            raise RuntimeError("No encontré la firma: prueba con más sensibilidad o una foto con más contraste")
+        cw, ch, cx, cy = map(int, m.groups())
+        pad = max(8, int(max(cw, ch) * 0.03))
+        crop = f"{cw + 2 * pad}x{ch + 2 * pad}+{max(0, cx - pad)}+{max(0, cy - pad)}"
+        mk(str(keep), "-morphology", "Dilate", "Disk:3", "-blur", "0x1", str(keep))
+        mk(str(mask), str(keep), "-compose", "Multiply", "-composite", str(mask))
+        if ink == "original":
+            color = ["(", str(base), "-modulate", "75,130", ")"]
+        else:
+            color = ["(", "-size", f"{w}x{h}", f"xc:{ink}", ")"]
+        mk(*color, str(mask), "-alpha", "off", "-compose", "CopyOpacity", "-composite",
+           "-crop", crop, "+repage", "PNG32:" + dst)
+        w2, h2 = img_size(dst)
+        return {"path": dst, "w": w2, "h": h2}
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+# ---------------------------------------------------------------- dibujar
+def hex_rgb(h):
+    h = h.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    try:
+        return tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    except Exception:
+        return (0.1, 0.17, 0.43)
+
+def draw(spec, dst, ink="#1a2b6d"):
+    strokes = [s for s in spec.get("strokes", []) if len(s) >= 2]
+    if not strokes:
+        raise RuntimeError("La firma está vacía")
+    pts = [(s[i], s[i + 1]) for s in strokes for i in range(0, len(s) - 1, 2)]
+    lw = float(spec.get("width") or 3)
+    x0, y0 = min(p[0] for p in pts) - lw * 2, min(p[1] for p in pts) - lw * 2
+    x1, y1 = max(p[0] for p in pts) + lw * 2, max(p[1] for p in pts) + lw * 2
+    k = 3.0                                   # se dibuja al triple de resolución
+    W, H = max(8, int((x1 - x0) * k)), max(8, int((y1 - y0) * k))
+    if have_cairo():
+        import cairo
+        surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, W, H)
+        c = cairo.Context(surf)
+        c.scale(k, k); c.translate(-x0, -y0)
+        c.set_source_rgb(*hex_rgb(ink))
+        c.set_line_cap(cairo.LINE_CAP_ROUND); c.set_line_join(cairo.LINE_JOIN_ROUND)
+        c.set_line_width(lw)
+        for s in strokes:
+            p = [(s[i], s[i + 1]) for i in range(0, len(s) - 1, 2)]
+            c.move_to(*p[0])
+            if len(p) == 1:
+                c.line_to(p[0][0] + 0.01, p[0][1])
+            # curvas por los puntos medios: trazo suave aunque el ratón dé saltos
+            for i in range(1, len(p) - 1):
+                mx, my = (p[i][0] + p[i + 1][0]) / 2, (p[i][1] + p[i + 1][1]) / 2
+                cx, cy = c.get_current_point()
+                c.curve_to(cx + (p[i][0] - cx) * 2 / 3, cy + (p[i][1] - cy) * 2 / 3,
+                           mx + (p[i][0] - mx) * 2 / 3, my + (p[i][1] - my) * 2 / 3, mx, my)
+            c.line_to(*p[-1])
+            c.stroke()
+        surf.write_to_png(dst)
+    else:
+        paths = []
+        for s in strokes:
+            p = [((s[i] - x0) * k, (s[i + 1] - y0) * k) for i in range(0, len(s) - 1, 2)]
+            paths.append("M " + " L ".join(f"{a:.1f},{b:.1f}" for a, b in p))
+        mk("-size", f"{W}x{H}", "xc:none", "-fill", "none", "-stroke", ink, "-strokewidth", str(lw * k),
+           "-draw", "stroke-linecap round stroke-linejoin round path '" + " ".join(paths) + "'", "PNG32:" + dst)
+    return {"path": dst, "w": W, "h": H}
+
+# ---------------------------------------------------------------- documentos
+def is_image(p):
+    return pathlib.Path(p).suffix.lower() in IMG_EXT
+
+def info(doc):
+    if is_image(doc):
+        w, h = img_size(doc)
+        if not w:
+            raise RuntimeError("No pude abrir la imagen")
+        return {"kind": "image", "pages": 1, "sizes": [[w * 0.75, h * 0.75]]}     # 96 ppp → puntos
+    if have_fitz():
+        fitz = F()
+        d = fitz.open(doc)
+        if d.needs_pass:
+            raise RuntimeError("El PDF tiene contraseña")
+        return {"kind": "pdf", "pages": d.page_count, "sizes": [[p.rect.width, p.rect.height] for p in d]}
+    if have_poppler():
+        from gi.repository import Poppler, Gio
+        d = Poppler.Document.new_from_gfile(Gio.File.new_for_path(doc), None, None)
+        return {"kind": "pdf", "pages": d.get_n_pages(), "sizes": [list(d.get_page(i).get_size()) for i in range(d.get_n_pages())]}
+    if shutil.which("pdfinfo"):
+        r = subprocess.run(["pdfinfo", "-f", "1", "-l", "9999", doc], capture_output=True, text=True)
+        sizes = [[float(a), float(b)] for a, b in re.findall(r"Page\s+\d+ size:\s+([\d.]+) x ([\d.]+)", r.stdout)]
+        if sizes:
+            return {"kind": "pdf", "pages": len(sizes), "sizes": sizes}
+    raise RuntimeError("Instala PyMuPDF (python-pymupdf) para abrir PDF")
+
+def render(doc, page, dst, width=1400):
+    page, width = int(page), int(width)
+    if is_image(doc):
+        mk(doc + "[0]", "-auto-orient", "-resize", f"{width}x", dst)
+        return {"path": dst}
+    if have_fitz():
+        fitz = F()
+        d = fitz.open(doc)
+        p = d[page]
+        z = width / p.rect.width
+        p.get_pixmap(matrix=fitz.Matrix(z, z), alpha=False).save(dst)
+        return {"path": dst}
+    if have_poppler():
+        import cairo
+        from gi.repository import Poppler, Gio
+        d = Poppler.Document.new_from_gfile(Gio.File.new_for_path(doc), None, None)
+        p = d.get_page(page)
+        pw, ph = p.get_size()
+        z = width / pw
+        surf = cairo.ImageSurface(cairo.FORMAT_RGB24, width, int(ph * z))
+        c = cairo.Context(surf)
+        c.set_source_rgb(1, 1, 1); c.paint()
+        c.scale(z, z)
+        p.render(c)
+        surf.write_to_png(dst)
+        return {"path": dst}
+    if shutil.which("pdftoppm"):
+        base = dst[:-4] if dst.endswith(".png") else dst
+        subprocess.run(["pdftoppm", "-png", "-f", str(page + 1), "-l", str(page + 1), "-scale-to-x", str(width),
+                        "-scale-to-y", "-1", "-singlefile", doc, base], check=True, capture_output=True)
+        return {"path": base + ".png"}
+    raise RuntimeError("No hay con qué mostrar el PDF (instala PyMuPDF o poppler)")
+
+def default_output(src):
+    p = pathlib.Path(src)
+    o = p.with_name(p.stem + "-firmado.pdf")
+    i = 2
+    while o.exists():
+        o = p.with_name(f"{p.stem}-firmado-{i}.pdf"); i += 1
+    return str(o)
+
+def font_pt(it, ph):
+    return it.get("h", 0.03) * ph * 0.78
+
+def apply(spec):
+    src = spec["input"]
+    dst = spec.get("output") or default_output(src)
+    items = spec.get("items") or []
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="hf-sign-"))
+    try:
+        # imágenes de las firmas siempre en PNG (cairo solo lee PNG)
+        for it in items:
+            if it.get("kind") == "img" and not it["src"].lower().endswith(".png"):
+                png = tmp / f"s{len(list(tmp.iterdir()))}.png"
+                mk(it["src"], "PNG32:" + str(png)); it["src"] = str(png)
+        if have_fitz():
+            fitz = F()
+            if is_image(src):
+                d = fitz.open()
+                w, h = img_size(src)
+                pg = d.new_page(width=w * 0.75, height=h * 0.75)
+                pg.insert_image(pg.rect, filename=src)
+            else:
+                d = fitz.open(src)
+            for it in items:
+                pg = d[int(it.get("page", 0))]
+                pw, ph = pg.rect.width, pg.rect.height
+                x, y = it["x"] * pw, it["y"] * ph
+                if it.get("kind") == "text":
+                    fs = font_pt(it, ph)
+                    pt = fitz.Point(x, y + it.get("h", 0.03) * ph * 0.8) * pg.derotation_matrix
+                    pg.insert_text(pt, it.get("text", ""), fontsize=fs, fontname="helv", color=hex_rgb(it.get("color") or "#1a1a1a"),
+                                   rotate=pg.rotation)
+                else:
+                    r = fitz.Rect(x, y, x + it["w"] * pw, y + it["h"] * ph) * pg.derotation_matrix
+                    pg.insert_image(r, filename=it["src"], keep_proportion=False, rotate=pg.rotation)
+            d.save(dst, garbage=3, deflate=True)
+            return {"output": dst, "backend": "pymupdf"}
+        if not have_cairo():
+            raise RuntimeError("Instala PyMuPDF (python-pymupdf) para exportar el PDF firmado")
+        import cairo
+        def draw_items(c, page, pw, ph):
+            for it in [i for i in items if int(i.get("page", 0)) == page]:
+                x, y = it["x"] * pw, it["y"] * ph
+                c.save()
+                if it.get("kind") == "text":
+                    c.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+                    c.set_font_size(font_pt(it, ph))
+                    c.set_source_rgb(*hex_rgb(it.get("color") or "#1a1a1a"))
+                    c.move_to(x, y + it.get("h", 0.03) * ph * 0.8)
+                    c.show_text(it.get("text", ""))
+                else:
+                    im = cairo.ImageSurface.create_from_png(it["src"])
+                    c.translate(x, y)
+                    c.scale(it["w"] * pw / im.get_width(), it["h"] * ph / im.get_height())
+                    c.set_source_surface(im, 0, 0)
+                    c.get_source().set_filter(cairo.FILTER_BEST)
+                    c.paint()
+                c.restore()
+        if is_image(src):
+            png = tmp / "doc.png"
+            mk(src + "[0]", "-auto-orient", "PNG24:" + str(png))
+            im = cairo.ImageSurface.create_from_png(str(png))
+            pw, ph = im.get_width() * 0.75, im.get_height() * 0.75
+            surf = cairo.PDFSurface(dst, pw, ph)
+            c = cairo.Context(surf)
+            c.save(); c.scale(0.75, 0.75); c.set_source_surface(im, 0, 0); c.paint(); c.restore()
+            draw_items(c, 0, pw, ph)
+            c.show_page(); surf.finish()
+            return {"output": dst, "backend": "cairo"}
+        if not have_poppler():
+            raise RuntimeError("Instala PyMuPDF (python-pymupdf) para exportar el PDF firmado")
+        from gi.repository import Poppler, Gio
+        d = Poppler.Document.new_from_gfile(Gio.File.new_for_path(src), None, None)
+        p0 = d.get_page(0).get_size()
+        surf = cairo.PDFSurface(dst, *p0)
+        c = cairo.Context(surf)
+        for i in range(d.get_n_pages()):
+            p = d.get_page(i)
+            pw, ph = p.get_size()
+            surf.set_size(pw, ph)
+            c.save(); p.render_for_printing(c); c.restore()
+            draw_items(c, i, pw, ph)
+            c.show_page()
+        surf.finish()
+        return {"output": dst, "backend": "poppler"}
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+# ---------------------------------------------------------------- ejemplo (pruebas)
+def sample(d):
+    d = pathlib.Path(d); d.mkdir(parents=True, exist_ok=True)
+    pdf = d / "contrato.pdf"
+    import cairo
+    surf = cairo.PDFSurface(str(pdf), 595, 842)
+    c = cairo.Context(surf)
+    for n in range(2):
+        c.set_source_rgb(0.1, 0.1, 0.1)
+        c.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD); c.set_font_size(20)
+        c.move_to(60, 90); c.show_text("Contrato de prestación de servicios" if n == 0 else "Anexo I · Condiciones")
+        c.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL); c.set_font_size(11)
+        for i in range(28):
+            c.move_to(60, 130 + i * 19)
+            c.show_text(("Cláusula %d. " % (i + 1)) + "Las partes acuerdan las condiciones descritas en este documento, " [: 60 + (i * 7) % 20])
+        c.move_to(60, 720); c.show_text("Firma del cliente:")
+        c.move_to(330, 720); c.show_text("Fecha:")
+        c.set_line_width(0.6); c.move_to(60, 780); c.line_to(260, 780); c.stroke()
+        c.show_page()
+    surf.finish()
+    photo = d / "firma-foto.jpg"
+    # «foto» de una firma: papel crema con sombra lateral, trazo azul, ruido y algo de desenfoque
+    mk("-size", "1600x900", "gradient:#efe9dc-#c9c1b0", "-rotate", "90", "-resize", "1600x900!",
+       "-fill", "none", "-stroke", "#1d2c66", "-strokewidth", "9",
+       "-draw", "path 'M 220,560 C 300,250 380,250 420,520 S 520,700 600,420 C 640,300 700,320 690,480 "
+                "C 680,600 760,560 820,430 C 860,350 900,380 905,470 C 910,560 980,520 1040,440 "
+                "C 1080,390 1150,400 1240,470 L 1380,500'",
+       "-strokewidth", "6", "-draw", "path 'M 300,640 C 600,610 900,600 1300,620'",
+       "-attenuate", "0.6", "+noise", "Gaussian", "-blur", "0x1.2", "-rotate", "-3", "-gravity", "center",
+       "-crop", "1500x820+0+0", "+repage", "-quality", "82", str(photo))
+    return {"pdf": str(pdf), "photo": str(photo)}
+
+# ---------------------------------------------------------------- órdenes
+def main(argv):
+    args = list(argv)
+    cmd = args.pop(0) if args else ""
+    try:
+        if cmd == "status":
+            out(status())
+        elif cmd == "list":
+            out(lib_list())
+        elif cmd == "clean":
+            ink = opt(args, "--ink", "#1a2b6d"); st = opt(args, "--strength", "0.5"); rb = flag(args, "--rembg")
+            out(clean(args[0], args[1], ink, float(st), rb))
+        elif cmd == "draw":
+            ink = opt(args, "--ink", "#1a2b6d")
+            raw = sys.stdin.read() if args[0] == "-" else pathlib.Path(args[0]).read_text()
+            out(draw(json.loads(raw), args[1], ink))
+        elif cmd == "save":
+            out({"path": lib_save(args[0], args[1] if len(args) > 1 else "")})
+        elif cmd == "delete":
+            p = pathlib.Path(args[0]).resolve()
+            if p.parent == LIB.resolve() and p.suffix == ".png":
+                p.unlink(missing_ok=True)
+            out({"ok": True})
+        elif cmd == "info":
+            out(info(args[0]))
+        elif cmd == "render":
+            w = opt(args, "--width", "1400")
+            out(render(args[0], args[1], args[2], w))
+        elif cmd == "apply":
+            raw = sys.stdin.read() if not args or args[0] == "-" else args[0]
+            out(apply(json.loads(raw)))
+        elif cmd == "sample":
+            out(sample(args[0] if args else "."))
+        else:
+            print(__doc__); sys.exit(0 if cmd in ("-h", "--help") else 1)
+    except (IndexError, KeyError) as e:
+        die(f"Faltan argumentos ({e}) · hf-sign --help")
+    except Exception as e:
+        die(str(e))
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

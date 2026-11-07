@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+# hf-vm — máquinas virtuales (KVM/libvirt, Cockpit, virt-manager, GNOME Boxes) y contenedores (Podman, Distrobox).
+# Lo usan Ajustes › Máquinas virtuales, la IA y la terminal. Salida JSON.
+#
+#   hf-vm status                         KVM, paquetes, servicios y grupo libvirt (un objeto JSON)
+#   hf-vm list                           máquinas: {name,uri,state} por línea (qemu:///system y qemu:///session)
+#   hf-vm start|shutdown|destroy|console <nombre> [uri]
+#   hf-vm cockpit                        abre https://localhost:9090
+#   hf-vm install <cockpit|virtmanager|boxes|viewer|containers|boxbuddy>   instala (pide sudo: para una terminal)
+#   hf-vm enable <cockpit|libvirt|group|network>                           activa servicios / grupo (sudo)
+#   hf-vm containers                     contenedores: {name,image,state,status,distrobox} por línea
+#   hf-vm box create <nombre> <imagen> · box enter|stop|rm <nombre>
+set -uo pipefail
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+have() { command -v "$1" >/dev/null 2>&1; }
+family() {
+  local like=""; [ -r /etc/os-release ] && like="$(. /etc/os-release; echo "$ID $ID_LIKE" | tr A-Z a-z)"
+  case "$like" in *arch*) echo arch;; *debian*|*ubuntu*) echo debian;; *fedora*|*rhel*) echo fedora;; *suse*) echo suse;; *) echo arch;; esac
+}
+FAM="$(family)"
+REPO_CACHE=""
+in_repo() { [ "$FAM" = arch ] || return 0; [ -n "$REPO_CACHE" ] || REPO_CACHE=" $(pacman -Slq 2>/dev/null | tr '\n' ' ') "; [[ "$REPO_CACHE" == *" $1 "* ]]; }
+flat_has() { have flatpak && flatpak info "$1" >/dev/null 2>&1; }
+term() {
+  local t="${TERMINAL:-}" c
+  for c in "$t" kitty ghostty foot alacritty wezterm konsole; do [ -n "$c" ] && have "$c" && { t=$c; break; }; done
+  case "$t" in wezterm) setsid -f wezterm start -- "$@";; *) setsid -f "$t" -e "$@";; esac >/dev/null 2>&1
+}
+unit() {   # unit <nombre> → "enabled/active", "disabled/inactive", "" si no existe
+  systemctl list-unit-files "$1" --no-legend 2>/dev/null | grep -q . || { echo ""; return; }
+  echo "$(systemctl is-enabled "$1" 2>/dev/null)/$(systemctl is-active "$1" 2>/dev/null)"
+}
+in_libvirt_db() { getent group libvirt 2>/dev/null | cut -d: -f4 | tr ',' '\n' | grep -qx "$USER"; }
+in_libvirt_now() { id -nG 2>/dev/null | tr ' ' '\n' | grep -qx libvirt; }
+
+status() {
+  local cpu=none nested="" b
+  grep -qm1 -w vmx /proc/cpuinfo && cpu=vmx
+  grep -qm1 -w svm /proc/cpuinfo && cpu=svm
+  for f in /sys/module/kvm_intel/parameters/nested /sys/module/kvm_amd/parameters/nested; do [ -r "$f" ] && nested="$(cat "$f")"; done
+  b() { "$@" && echo true || echo false; }
+  local cpuname; cpuname="$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ *//')"
+  jq -cn \
+    --arg cpu "$cpu" --arg cpuname "$cpuname" --arg nested "$nested" \
+    --argjson kvm "$(b test -e /dev/kvm)" --argjson kvmAccess "$(b test -r /dev/kvm -a -w /dev/kvm)" \
+    --argjson libvirt "$(b have virsh)" --argjson qemu "$(b have qemu-system-x86_64)" \
+    --argjson cockpit "$(b test -x /usr/lib/cockpit/cockpit-ws -o -x /usr/libexec/cockpit-ws -o -x /usr/lib/cockpit-ws)" \
+    --argjson machines "$(b test -d /usr/share/cockpit/machines)" --argjson cpodman "$(b test -d /usr/share/cockpit/podman)" \
+    --argjson virtmanager "$(b have virt-manager)" \
+    --argjson boxes "$( { have gnome-boxes || flat_has org.gnome.Boxes; } && echo true || echo false)" \
+    --argjson viewer "$( { have virt-viewer || have remote-viewer; } && echo true || echo false)" \
+    --argjson podman "$(b have podman)" --argjson distrobox "$(b have distrobox)" \
+    --argjson boxbuddy "$( { have boxbuddy-rs || have boxbuddy || flat_has io.github.dvlv.boxbuddyrs; } && echo true || echo false)" \
+    --arg cockpitSocket "$(unit cockpit.socket)" --arg libvirtd "$(unit libvirtd.socket)" --arg virtqemud "$(unit virtqemud.socket)" \
+    --argjson groupDb "$(b in_libvirt_db)" --argjson groupNow "$(b in_libvirt_now)" --arg family "$FAM" \
+    '{cpu:$cpu,cpuName:$cpuname,nested:$nested,kvm:$kvm,kvmAccess:$kvmAccess,libvirt:$libvirt,qemu:$qemu,cockpit:$cockpit,
+      cockpitMachines:$machines,cockpitPodman:$cpodman,virtManager:$virtmanager,boxes:$boxes,viewer:$viewer,podman:$podman,
+      distrobox:$distrobox,boxbuddy:$boxbuddy,cockpitSocket:$cockpitSocket,libvirtd:$libvirtd,virtqemud:$virtqemud,
+      groupDb:$groupDb,groupNow:$groupNow,family:$family}'
+}
+
+list() {
+  have virsh || return 0
+  local uris=(qemu:///session) u n
+  # qemu:///system solo si tenemos permiso (grupo libvirt); si no, libvirt pediría la contraseña con polkit
+  in_libvirt_now && uris=(qemu:///system qemu:///session)
+  for u in "${uris[@]}"; do
+    timeout 5 virsh -q -c "$u" list --all --name 2>/dev/null | while read -r n; do
+      [ -n "$n" ] || continue
+      jq -cn --arg name "$n" --arg uri "$u" --arg state "$(timeout 3 virsh -q -c "$u" domstate "$n" 2>/dev/null | head -1)" '{name:$name,uri:$uri,state:$state}'
+    done
+  done
+}
+
+pm_install() {
+  case "$FAM" in
+    arch)
+      local aur=() p; for p in "$@"; do in_repo "$p" || aur+=("$p"); done
+      if [ ${#aur[@]} -gt 0 ]; then local h; h="$(command -v paru || command -v yay || true)"
+        [ -n "$h" ] || { echo "Necesitas paru o yay para: ${aur[*]} (AUR)" >&2; return 1; }; "$h" -S --needed "$@"
+      else sudo pacman -S --needed "$@"; fi;;
+    debian) sudo apt install -y "$@";;
+    fedora) sudo dnf install -y "$@";;
+    suse) sudo zypper install -y "$@";;
+  esac
+}
+virt_stack() {   # libvirt + QEMU + UEFI + TPM por distro
+  case "$FAM" in
+    arch) echo libvirt qemu-desktop dnsmasq virt-install edk2-ovmf swtpm;;
+    debian) echo libvirt-daemon-system qemu-system-x86 virtinst ovmf swtpm-tools dnsmasq-base;;
+    fedora) echo libvirt-daemon-kvm qemu-kvm virt-install edk2-ovmf swtpm;;
+    suse) echo libvirt qemu-kvm virt-install qemu-ovmf-x86_64 swtpm;;
+  esac
+}
+enable() {
+  case "${1:-}" in
+    cockpit) sudo systemctl enable --now cockpit.socket;;
+    libvirt) if systemctl list-unit-files virtqemud.socket --no-legend 2>/dev/null | grep -q . && [ "$FAM" = fedora ]; then
+               sudo systemctl enable --now virtqemud.socket virtnetworkd.socket virtstoraged.socket
+             else sudo systemctl enable --now libvirtd.socket; fi;;
+    group) sudo usermod -aG libvirt "$USER" && echo "Cierra la sesión y vuelve a entrar para que el grupo libvirt surta efecto.";;
+    network) sudo virsh -c qemu:///system net-autostart default && sudo virsh -c qemu:///system net-start default 2>/dev/null; true;;
+    *) echo "enable cockpit|libvirt|group|network" >&2; return 1;;
+  esac
+}
+install() {
+  # shellcheck disable=SC2046
+  case "${1:-}" in
+    cockpit)
+      pm_install cockpit cockpit-machines cockpit-podman $(virt_stack) || return
+      enable cockpit; enable libvirt; enable group; enable network
+      echo; echo "Cockpit: https://localhost:9090 (entra con tu usuario y contraseña)";;
+    virtmanager) pm_install virt-manager $(virt_stack) || return; enable libvirt; enable group; enable network;;
+    boxes) if [ "$FAM" = arch ] && in_repo gnome-boxes; then pm_install gnome-boxes; else flatpak install -y flathub org.gnome.Boxes; fi;;
+    viewer) pm_install virt-viewer;;
+    containers) pm_install podman distrobox;;
+    boxbuddy) if [ "$FAM" = arch ] && in_repo boxbuddy; then pm_install boxbuddy; else flatpak install -y flathub io.github.dvlv.boxbuddyrs; fi;;
+    *) echo "install cockpit|virtmanager|boxes|viewer|containers|boxbuddy" >&2; return 1;;
+  esac
+}
+
+console() {
+  local n="${1:?nombre}" u="${2:-qemu:///system}"
+  if have virt-viewer; then setsid -f virt-viewer -c "$u" --attach --wait "$n" >/dev/null 2>&1
+  elif have virt-manager; then setsid -f virt-manager --connect "$u" --show-domain-console "$n" >/dev/null 2>&1
+  else xdg-open "https://localhost:9090/machines#vm?name=$n&connection=${u##*:///}" >/dev/null 2>&1; fi
+}
+
+containers() {
+  have podman || return 0
+  timeout 6 podman ps -a --format json 2>/dev/null | jq -c '.[]? | {name:(.Names[0] // .Id[0:12]), image:.Image, state:.State, status:.Status,
+    distrobox:((.Labels.manager // "") == "distrobox")}'
+}
+box() {
+  local op="${1:-}" n="${2:-}"
+  case "$op" in
+    create) [ -n "$n" ] || { echo "box create <nombre> <imagen>" >&2; return 1; }; distrobox create -Y -n "$n" -i "${3:-registry.fedoraproject.org/fedora-toolbox:latest}";;
+    enter) term distrobox enter "${n:?nombre}";;
+    stop) distrobox stop -Y "${n:?nombre}" 2>/dev/null || podman stop "$n";;
+    rm) distrobox rm -f "${n:?nombre}" 2>/dev/null || podman rm -f "$n";;
+    *) echo "box create|enter|stop|rm" >&2; return 1;;
+  esac
+}
+
+case "${1:-}" in
+  status) status;;
+  list) list;;
+  start) virsh -c "${3:-qemu:///system}" start "${2:?nombre}";;
+  shutdown) virsh -c "${3:-qemu:///system}" shutdown "${2:?nombre}";;
+  destroy) virsh -c "${3:-qemu:///system}" destroy "${2:?nombre}";;
+  console) console "${2:-}" "${3:-}";;
+  cockpit) xdg-open https://localhost:9090 >/dev/null 2>&1 &;;
+  install) install "${2:-}";;
+  enable) enable "${2:-}";;
+  containers) containers;;
+  box) shift; box "$@";;
+  *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 1;;
+esac

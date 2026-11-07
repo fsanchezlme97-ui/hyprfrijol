@@ -1,0 +1,3733 @@
+{
+ "_doc": "Catálogo del Centro de aplicaciones. flags: s=recomendada n=nueva a=alfa p=preview x=XWayland t=terminal w=web app g=app principal de GNOME (sección «Apps de GNOME») k=alternativa de KDE. pkgs: fuentes posibles; la tienda elige la mejor para esta distro (Arch: pacman → aur → flatpak → appimage → script → web → url; Fedora: dnf → flatpak…; Debian/Ubuntu: apt → flatpak…; openSUSE: zypper → flatpak…). pacman = repos oficiales de Arch (si un paquete de «aur» está en los repos de la distro, p. ej. CachyOS, se instala de ahí); dnf/apt/zypper: si faltan se usa el nombre de pacman; \"\" = no está en esa distro. dnfRepo: rpmfusion-free|rpmfusion-nonfree|copr:usuario/proyecto. appimage/url: página de descarga · web: URL de la web app · script: comando de instalación. bin: ejecutable para saber si ya está (script). post: comandos que se ejecutan tras instalar el paquete (activar un servicio…). hint: aviso que muestra la ficha de la app. icon: nombres de icono del tema a probar en orden (si ninguno existe, se ve la inicial)",
+ "categories": [
+  {
+   "key": "top",
+   "label": "Recomendadas",
+   "glyph": "★"
+  },
+  {
+   "key": "gnome",
+   "label": "Apps de GNOME",
+   "glyph": "◉"
+  },
+  {
+   "key": "nuevo",
+   "label": "Nuevas y modernas",
+   "glyph": "✧"
+  },
+  {
+   "key": "base",
+   "label": "Apps básicas",
+   "glyph": "◎"
+  },
+  {
+   "key": "crea",
+   "label": "Creatividad y diseño",
+   "glyph": "◐"
+  },
+  {
+   "key": "ofi",
+   "label": "Oficina y notas",
+   "glyph": "¶"
+  },
+  {
+   "key": "dev",
+   "label": "Desarrollo",
+   "glyph": "‹›"
+  },
+  {
+   "key": "files",
+   "label": "Gestores de archivos",
+   "glyph": "▣"
+  },
+  {
+   "key": "print",
+   "label": "Impresión 3D",
+   "glyph": "◇"
+  },
+  {
+   "key": "ia",
+   "label": "IA",
+   "glyph": "✦"
+  },
+  {
+   "key": "game",
+   "label": "Juegos",
+   "glyph": "◈"
+  },
+  {
+   "key": "sys",
+   "label": "Sistema y seguridad",
+   "glyph": "⚙"
+  },
+  {
+   "key": "com",
+   "label": "Navegadores y chat",
+   "glyph": "◫"
+  },
+  {
+   "key": "media",
+   "label": "Multimedia y fondos",
+   "glyph": "▶"
+  },
+  {
+   "key": "sel",
+   "label": "Seleccionadas",
+   "glyph": "✓"
+  }
+ ],
+ "profiles": [
+  {
+   "label": "Creativo",
+   "ids": [
+    "artcraft",
+    "graphite",
+    "krita",
+    "blender",
+    "darktable",
+    "kdenlive",
+    "obs",
+    "upscayl"
+   ]
+  },
+  {
+   "label": "Oficina",
+   "ids": [
+    "libre",
+    "obsidian",
+    "thunder",
+    "okular",
+    "localsend",
+    "keepass",
+    "zen"
+   ]
+  },
+  {
+   "label": "Desarrollador",
+   "ids": [
+    "ghostty",
+    "tmux",
+    "starship",
+    "nav",
+    "coreutils",
+    "nvim",
+    "zed",
+    "mise",
+    "docker",
+    "lazydocker",
+    "lazygit",
+    "ghcli",
+    "agents"
+   ]
+  },
+  {
+   "label": "Gamer",
+   "ids": [
+    "steam",
+    "epic",
+    "heroic",
+    "faugus",
+    "protonplus",
+    "mangohud",
+    "lact"
+   ]
+  },
+  {
+   "label": "IA",
+   "ids": [
+    "claudecode",
+    "ollama",
+    "alpaca",
+    "newelle",
+    "upscayl"
+   ]
+  },
+  {
+   "label": "Impresión 3D",
+   "ids": [
+    "orca",
+    "openscad",
+    "freecad",
+    "claudecode"
+   ]
+  },
+  {
+   "label": "Esenciales",
+   "ids": [
+    "nautilus",
+    "gtexteditor",
+    "gcalc",
+    "loupe",
+    "papers",
+    "showtime",
+    "decibels",
+    "fileroller",
+    "baobab",
+    "gsysmon",
+    "gdisks",
+    "gcalendar",
+    "gclocks",
+    "gweather",
+    "gchars",
+    "bazaar",
+    "btrfsa",
+    "pika",
+    "localsend",
+    "gearlever",
+    "flatseal"
+   ]
+  }
+ ],
+ "tools": [
+  {
+   "id": "artcraft",
+   "name": "ArtCraft (suite Craft)",
+   "cat": "crea",
+   "desc": "Apps en Rust para fotos, video, vectores, PDF, slides, CAD y audio",
+   "alt": "Adobe CC",
+   "flags": "sna",
+   "pkgs": {
+    "appimage": "https://github.com/storytold/artcraft/releases"
+   }
+  },
+  {
+   "id": "artstudio",
+   "name": "ArtCraft Studio",
+   "cat": "crea",
+   "desc": "Imágenes y video con IA desde una escena 3D (tu API o créditos)",
+   "alt": "Runway",
+   "flags": "na",
+   "pkgs": {
+    "url": "https://github.com/storytold/artcraft"
+   }
+  },
+  {
+   "id": "graphite",
+   "name": "Graphite",
+   "cat": "crea",
+   "desc": "Editor 2D vectorial y procedural con nodos, «el Blender del 2D»",
+   "alt": "Illustrator",
+   "flags": "sna",
+   "icon": [
+    "graphite"
+   ],
+   "pkgs": {
+    "appimage": "https://graphite.rs"
+   }
+  },
+  {
+   "id": "krita",
+   "name": "Krita",
+   "cat": "crea",
+   "desc": "Pintura digital e ilustración con soporte de tabletas",
+   "alt": "Clip Studio",
+   "flags": "sx",
+   "icon": [
+    "krita"
+   ],
+   "pkgs": {
+    "pacman": "krita",
+    "flatpak": "org.kde.krita"
+   }
+  },
+  {
+   "id": "gimp",
+   "name": "GIMP 3",
+   "cat": "crea",
+   "desc": "Retoque fotográfico, capas no destructivas",
+   "alt": "Photoshop",
+   "flags": "",
+   "icon": [
+    "gimp"
+   ],
+   "pkgs": {
+    "pacman": "gimp",
+    "flatpak": "org.gimp.GIMP"
+   }
+  },
+  {
+   "id": "inkscape",
+   "name": "Inkscape",
+   "cat": "crea",
+   "desc": "Diseño vectorial, logos y SVG",
+   "alt": "Illustrator",
+   "flags": "",
+   "icon": [
+    "org.inkscape.Inkscape",
+    "inkscape"
+   ],
+   "pkgs": {
+    "pacman": "inkscape",
+    "flatpak": "org.inkscape.Inkscape"
+   }
+  },
+  {
+   "id": "blender",
+   "name": "Blender",
+   "cat": "crea",
+   "desc": "Modelado 3D, animación, render y video",
+   "alt": "Maya / C4D",
+   "flags": "s",
+   "icon": [
+    "blender"
+   ],
+   "pkgs": {
+    "pacman": "blender",
+    "flatpak": "org.blender.Blender"
+   }
+  },
+  {
+   "id": "darktable",
+   "name": "Darktable",
+   "cat": "crea",
+   "desc": "Revelado RAW y catálogo de fotos",
+   "alt": "Lightroom",
+   "flags": "",
+   "icon": [
+    "darktable"
+   ],
+   "pkgs": {
+    "pacman": "darktable",
+    "flatpak": "org.darktable.Darktable"
+   }
+  },
+  {
+   "id": "kdenlive",
+   "name": "Kdenlive",
+   "cat": "crea",
+   "desc": "Edición de video por pistas",
+   "alt": "Premiere",
+   "flags": "",
+   "icon": [
+    "org.kde.kdenlive",
+    "kdenlive"
+   ],
+   "pkgs": {
+    "pacman": "kdenlive",
+    "flatpak": "org.kde.kdenlive"
+   }
+  },
+  {
+   "id": "resolve",
+   "name": "DaVinci Resolve",
+   "cat": "crea",
+   "desc": "Edición y color profesional (mejor con GPU)",
+   "alt": "Premiere / FCP",
+   "flags": "x",
+   "icon": [
+    "DaVinci-Resolve",
+    "resolve"
+   ],
+   "pkgs": {
+    "aur": "davinci-resolve",
+    "dnf": "",
+    "apt": ""
+   }
+  },
+  {
+   "id": "obs",
+   "name": "OBS Studio",
+   "cat": "crea",
+   "desc": "Grabar pantalla y transmitir en vivo",
+   "alt": "Streamlabs",
+   "flags": "s",
+   "icon": [
+    "com.obsproject.Studio",
+    "obs"
+   ],
+   "pkgs": {
+    "pacman": "obs-studio",
+    "flatpak": "com.obsproject.Studio"
+   }
+  },
+  {
+   "id": "upscayl",
+   "name": "Upscayl",
+   "cat": "crea",
+   "desc": "Ampliar imágenes con IA, sin conexión",
+   "alt": "Topaz",
+   "flags": "",
+   "icon": [
+    "org.upscayl.Upscayl",
+    "upscayl"
+   ],
+   "pkgs": {
+    "aur": "upscayl-bin",
+    "flatpak": "org.upscayl.Upscayl"
+   }
+  },
+  {
+   "id": "penpot",
+   "name": "Penpot",
+   "cat": "crea",
+   "desc": "Diseño de interfaces colaborativo (como web app)",
+   "alt": "Figma",
+   "flags": "w",
+   "icon": [
+    "penpot"
+   ],
+   "pkgs": {
+    "web": "https://design.penpot.app"
+   }
+  },
+  {
+   "id": "shotcut",
+   "name": "Shotcut",
+   "cat": "crea",
+   "desc": "Editor de vídeo libre y multiplataforma",
+   "alt": "Premiere",
+   "flags": "",
+   "icon": [
+    "org.shotcut.Shotcut",
+    "shotcut"
+   ],
+   "pkgs": {
+    "pacman": "shotcut",
+    "flatpak": "org.shotcut.Shotcut"
+   }
+  },
+  {
+   "id": "ardour",
+   "name": "Ardour",
+   "cat": "crea",
+   "desc": "Estación de audio digital (DAW) profesional",
+   "alt": "Pro Tools",
+   "flags": "",
+   "icon": [
+    "ardour",
+    "org.ardour.Ardour"
+   ],
+   "pkgs": {
+    "pacman": "ardour",
+    "flatpak": "org.ardour.Ardour"
+   }
+  },
+  {
+   "id": "pinta",
+   "name": "Pinta",
+   "cat": "crea",
+   "desc": "Dibujo y edición de imágenes sencilla",
+   "alt": "Paint.NET",
+   "flags": "",
+   "icon": [
+    "com.github.PintaProject.Pinta",
+    "pinta"
+   ],
+   "pkgs": {
+    "pacman": "pinta",
+    "flatpak": "com.github.PintaProject.Pinta"
+   }
+  },
+  {
+   "id": "rawtherapee",
+   "name": "RawTherapee",
+   "cat": "crea",
+   "desc": "Revelado de fotos RAW",
+   "alt": "Lightroom",
+   "flags": "",
+   "icon": [
+    "rawtherapee",
+    "com.rawtherapee.RawTherapee"
+   ],
+   "pkgs": {
+    "pacman": "rawtherapee",
+    "flatpak": "com.rawtherapee.RawTherapee"
+   }
+  },
+  {
+   "id": "digikam",
+   "name": "digiKam",
+   "cat": "crea",
+   "desc": "Gestor de fotos profesional con etiquetas, caras y revelado RAW",
+   "alt": "Lightroom",
+   "flags": "",
+   "icon": [
+    "digikam",
+    "org.kde.digikam"
+   ],
+   "pkgs": {
+    "pacman": "digikam",
+    "flatpak": "org.kde.digikam"
+   }
+  },
+  {
+   "id": "libre",
+   "name": "LibreOffice",
+   "cat": "ofi",
+   "desc": "Documentos, hojas de cálculo y presentaciones",
+   "alt": "Microsoft Office",
+   "flags": "s",
+   "icon": [
+    "libreoffice-startcenter",
+    "libreoffice"
+   ],
+   "pkgs": {
+    "pacman": "libreoffice-fresh",
+    "dnf": "libreoffice",
+    "apt": "libreoffice",
+    "zypper": "libreoffice",
+    "flatpak": "org.libreoffice.LibreOffice"
+   }
+  },
+  {
+   "id": "onlyoffice",
+   "name": "ONLYOFFICE",
+   "cat": "ofi",
+   "desc": "Máxima compatibilidad con .docx, .xlsx y .pptx",
+   "alt": "Microsoft Office",
+   "flags": "x",
+   "icon": [
+    "org.onlyoffice.desktopeditors",
+    "onlyoffice-desktopeditors"
+   ],
+   "pkgs": {
+    "aur": "onlyoffice-bin",
+    "flatpak": "org.onlyoffice.desktopeditors"
+   }
+  },
+  {
+   "id": "obsidian",
+   "name": "Obsidian",
+   "cat": "ofi",
+   "desc": "Notas en Markdown enlazadas, con plugins",
+   "alt": "Notion",
+   "flags": "s",
+   "icon": [
+    "md.obsidian.Obsidian",
+    "obsidian"
+   ],
+   "pkgs": {
+    "pacman": "obsidian",
+    "flatpak": "md.obsidian.Obsidian"
+   }
+  },
+  {
+   "id": "affine",
+   "name": "AFFiNE",
+   "cat": "ofi",
+   "desc": "Documentos, pizarras y bases de datos en un solo espacio",
+   "alt": "Notion / Miro",
+   "flags": "n",
+   "icon": [
+    "affine"
+   ],
+   "pkgs": {
+    "aur": "affine-bin",
+    "appimage": "https://affine.pro/download"
+   }
+  },
+  {
+   "id": "joplin",
+   "name": "Joplin",
+   "cat": "ofi",
+   "desc": "Notas de código abierto con sincronización cifrada",
+   "alt": "Evernote",
+   "flags": "",
+   "icon": [
+    "net.cozic.joplin_desktop",
+    "joplin"
+   ],
+   "pkgs": {
+    "aur": "joplin-desktop",
+    "flatpak": "net.cozic.joplin_desktop"
+   }
+  },
+  {
+   "id": "thunder",
+   "name": "Thunderbird",
+   "cat": "ofi",
+   "desc": "Correo, calendario y contactos de escritorio",
+   "alt": "Outlook",
+   "flags": "",
+   "icon": [
+    "org.mozilla.Thunderbird",
+    "thunderbird"
+   ],
+   "pkgs": {
+    "pacman": "thunderbird",
+    "flatpak": "org.mozilla.Thunderbird"
+   }
+  },
+  {
+   "id": "okular",
+   "name": "Okular",
+   "cat": "ofi",
+   "desc": "Leer, firmar y anotar PDF (KDE)",
+   "alt": "Papers",
+   "flags": "k",
+   "icon": [
+    "org.kde.okular",
+    "okular"
+   ],
+   "pkgs": {
+    "pacman": "okular",
+    "flatpak": "org.kde.okular"
+   }
+  },
+  {
+   "id": "logseq",
+   "name": "Logseq",
+   "cat": "ofi",
+   "desc": "Notas en esquema y grafo de conocimiento, local",
+   "alt": "Roam",
+   "flags": "",
+   "icon": [
+    "com.logseq.Logseq",
+    "logseq"
+   ],
+   "pkgs": {
+    "aur": "logseq-desktop-bin",
+    "flatpak": "com.logseq.Logseq"
+   }
+  },
+  {
+   "id": "anytype",
+   "name": "Anytype",
+   "cat": "ofi",
+   "desc": "Notas, tareas y bases de datos locales y cifradas",
+   "alt": "Notion",
+   "flags": "",
+   "icon": [
+    "io.anytype.anytype",
+    "anytype"
+   ],
+   "pkgs": {
+    "aur": "anytype-bin",
+    "flatpak": "io.anytype.anytype"
+   }
+  },
+  {
+   "id": "notion",
+   "name": "Notion",
+   "cat": "ofi",
+   "desc": "Notion como app de escritorio (no oficial)",
+   "alt": "—",
+   "flags": "x",
+   "icon": [
+    "notion-app",
+    "notion"
+   ],
+   "pkgs": {
+    "aur": "notion-app-electron",
+    "web": "https://www.notion.so"
+   }
+  },
+  {
+   "id": "wps",
+   "name": "WPS Office",
+   "cat": "ofi",
+   "desc": "Suite ofimática muy compatible con Microsoft Office",
+   "alt": "Microsoft Office",
+   "flags": "x",
+   "icon": [
+    "wps-office2019-kprometheus",
+    "com.wps.Office",
+    "wps-office"
+   ],
+   "pkgs": {
+    "aur": "wps-office",
+    "flatpak": "com.wps.Office"
+   }
+  },
+  {
+   "id": "zotero",
+   "name": "Zotero",
+   "cat": "ofi",
+   "desc": "Gestor de referencias y bibliografía",
+   "alt": "Mendeley",
+   "flags": "",
+   "icon": [
+    "zotero",
+    "org.zotero.Zotero"
+   ],
+   "pkgs": {
+    "aur": "zotero-bin",
+    "flatpak": "org.zotero.Zotero"
+   }
+  },
+  {
+   "id": "calibre",
+   "name": "Calibre",
+   "cat": "ofi",
+   "desc": "Biblioteca de libros electrónicos: convierte, edita y envía al lector",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "calibre-gui",
+    "com.calibre_ebook.calibre",
+    "calibre"
+   ],
+   "pkgs": {
+    "pacman": "calibre",
+    "flatpak": "com.calibre_ebook.calibre"
+   }
+  },
+  {
+   "id": "foliate",
+   "name": "Foliate",
+   "cat": "ofi",
+   "desc": "Lector de libros electrónicos bonito y cómodo",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "com.github.johnfactotum.Foliate"
+   ],
+   "pkgs": {
+    "pacman": "foliate",
+    "flatpak": "com.github.johnfactotum.Foliate"
+   }
+  },
+  {
+   "id": "xournal",
+   "name": "Xournal++",
+   "cat": "ofi",
+   "desc": "Notas a mano y anotaciones sobre PDF con tableta",
+   "alt": "OneNote",
+   "flags": "",
+   "icon": [
+    "com.github.xournalpp.xournalpp",
+    "xournalpp"
+   ],
+   "pkgs": {
+    "pacman": "xournalpp",
+    "flatpak": "com.github.xournalpp.xournalpp"
+   }
+  },
+  {
+   "id": "planify",
+   "name": "Planify",
+   "cat": "ofi",
+   "desc": "Tareas y proyectos, con sincronización con Todoist y Nextcloud",
+   "alt": "Todoist",
+   "flags": "",
+   "icon": [
+    "io.github.alainm23.planify"
+   ],
+   "pkgs": {
+    "pacman": "planify",
+    "flatpak": "io.github.alainm23.planify"
+   }
+  },
+  {
+   "id": "nextcloud",
+   "name": "Nextcloud",
+   "cat": "ofi",
+   "desc": "Sincroniza archivos con tu nube Nextcloud",
+   "alt": "Dropbox",
+   "flags": "",
+   "icon": [
+    "com.nextcloud.desktopclient.nextcloud",
+    "Nextcloud"
+   ],
+   "pkgs": {
+    "pacman": "nextcloud-client",
+    "flatpak": "com.nextcloud.desktopclient.nextcloud"
+   }
+  },
+  {
+   "id": "ghostty",
+   "name": "Ghostty",
+   "cat": "dev",
+   "desc": "Terminal nativa y acelerada por GPU",
+   "alt": "iTerm / Windows Terminal",
+   "flags": "sn",
+   "icon": [
+    "com.mitchellh.ghostty"
+   ],
+   "pkgs": {
+    "pacman": "ghostty",
+    "dnf": "ghostty",
+    "dnfRepo": "copr:scottames/ghostty",
+    "apt": "",
+    "zypper": "ghostty"
+   }
+  },
+  {
+   "id": "zed",
+   "name": "Zed",
+   "cat": "dev",
+   "desc": "Editor de código muy rápido, con IA y colaboración",
+   "alt": "VS Code",
+   "flags": "sn",
+   "icon": [
+    "dev.zed.Zed",
+    "zed"
+   ],
+   "pkgs": {
+    "pacman": "zed",
+    "dnf": "",
+    "apt": "",
+    "flatpak": "dev.zed.Zed"
+   }
+  },
+  {
+   "id": "vscode",
+   "name": "VS Code",
+   "cat": "dev",
+   "desc": "El editor más usado, con extensiones",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "visual-studio-code",
+    "code",
+    "vscode"
+   ],
+   "pkgs": {
+    "aur": "visual-studio-code-bin",
+    "flatpak": "com.visualstudio.code"
+   }
+  },
+  {
+   "id": "helix",
+   "name": "Helix",
+   "cat": "dev",
+   "desc": "Editor modal moderno, listo sin configurar",
+   "alt": "Vim",
+   "flags": "t",
+   "icon": [
+    "helix",
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "helix",
+    "apt": "",
+    "flatpak": "com.helix_editor.Helix"
+   }
+  },
+  {
+   "id": "nvim",
+   "name": "Neovim + LazyVim",
+   "cat": "dev",
+   "desc": "Editor modal con una configuración moderna lista para usar",
+   "alt": "Vim",
+   "flags": "t",
+   "icon": [
+    "nvim",
+    "neovim",
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "neovim",
+    "flatpak": "io.neovim.nvim"
+   }
+  },
+  {
+   "id": "mise",
+   "name": "mise + uv",
+   "cat": "dev",
+   "desc": "Versiones de lenguajes y entornos de Python al instante",
+   "alt": "nvm / pyenv",
+   "flags": "tn",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "mise uv",
+    "dnf": "",
+    "apt": "",
+    "zypper": ""
+   }
+  },
+  {
+   "id": "distrobox",
+   "name": "Distrobox",
+   "cat": "dev",
+   "desc": "Otras distros en contenedores, integradas al escritorio",
+   "alt": "WSL",
+   "flags": "t",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "distrobox"
+   }
+  },
+  {
+   "id": "boxbuddy",
+   "name": "BoxBuddy",
+   "cat": "dev",
+   "desc": "Gestiona contenedores de Distrobox con interfaz",
+   "alt": "WSL",
+   "flags": "",
+   "icon": [
+    "io.github.dvlv.boxbuddyrs"
+   ],
+   "pkgs": {
+    "pacman": "boxbuddy",
+    "flatpak": "io.github.dvlv.boxbuddyrs"
+   }
+  },
+  {
+   "id": "podman",
+   "name": "Podman Desktop",
+   "cat": "dev",
+   "desc": "Contenedores y Kubernetes con interfaz",
+   "alt": "Docker Desktop",
+   "flags": "",
+   "icon": [
+    "io.podman_desktop.PodmanDesktop",
+    "podman-desktop"
+   ],
+   "pkgs": {
+    "pacman": "podman-desktop",
+    "flatpak": "io.podman_desktop.PodmanDesktop"
+   }
+  },
+  {
+   "id": "yaak",
+   "name": "Yaak",
+   "cat": "dev",
+   "desc": "Cliente de APIs REST, GraphQL y gRPC, ligero",
+   "alt": "Postman",
+   "flags": "n",
+   "icon": [
+    "yaak"
+   ],
+   "pkgs": {
+    "pacman": "yaak",
+    "appimage": "https://yaak.app"
+   }
+  },
+  {
+   "id": "lazygit",
+   "name": "lazygit",
+   "cat": "dev",
+   "desc": "Git en la terminal, rápido y visual",
+   "alt": "GitKraken",
+   "flags": "t",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "lazygit",
+    "dnf": "lazygit",
+    "dnfRepo": "copr:atim/lazygit"
+   }
+  },
+  {
+   "id": "tmux",
+   "name": "tmux + Zellij",
+   "cat": "dev",
+   "desc": "Multiplexores: sesiones y paneles que sobreviven al cerrar la terminal",
+   "alt": "—",
+   "flags": "t",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "tmux zellij",
+    "apt": "tmux"
+   }
+  },
+  {
+   "id": "starship",
+   "name": "Starship",
+   "cat": "dev",
+   "desc": "Prompt rápido que muestra git, lenguaje y entorno",
+   "alt": "Oh My Zsh",
+   "flags": "tn",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "starship",
+    "dnf": "starship",
+    "dnfRepo": "copr:atim/starship"
+   }
+  },
+  {
+   "id": "nav",
+   "name": "zoxide + fzf + atuin",
+   "cat": "dev",
+   "desc": "Saltar a carpetas, búsqueda difusa e historial de comandos con búsqueda",
+   "alt": "—",
+   "flags": "tn",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "zoxide fzf atuin"
+   }
+  },
+  {
+   "id": "coreutils",
+   "name": "ripgrep, fd, bat, eza, jq",
+   "cat": "dev",
+   "desc": "Reemplazos modernos de grep, find, cat, ls y un procesador de JSON",
+   "alt": "—",
+   "flags": "t",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "ripgrep fd bat eza jq",
+    "dnf": "ripgrep fd-find bat eza jq",
+    "apt": "ripgrep fd-find bat eza jq"
+   }
+  },
+  {
+   "id": "just",
+   "name": "just",
+   "cat": "dev",
+   "desc": "Ejecuta las tareas del proyecto con un archivo simple",
+   "alt": "make",
+   "flags": "t",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "just"
+   }
+  },
+  {
+   "id": "docker",
+   "name": "Docker + Compose",
+   "cat": "dev",
+   "desc": "Contenedores clásicos, compatibles con la mayoría de proyectos",
+   "alt": "Docker Desktop",
+   "flags": "t",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "docker docker-compose",
+    "dnf": "moby-engine docker-compose",
+    "apt": "docker.io docker-compose"
+   }
+  },
+  {
+   "id": "lazydocker",
+   "name": "lazydocker",
+   "cat": "dev",
+   "desc": "Contenedores, logs e imágenes en una interfaz de terminal",
+   "alt": "Portainer",
+   "flags": "t",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "lazydocker",
+    "dnf": "",
+    "apt": ""
+   }
+  },
+  {
+   "id": "ghcli",
+   "name": "GitHub CLI + delta",
+   "cat": "dev",
+   "desc": "Pull requests desde la terminal y diffs legibles",
+   "alt": "—",
+   "flags": "t",
+   "icon": [
+    "github",
+    "github-desktop",
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "github-cli git-delta",
+    "dnf": "gh git-delta",
+    "apt": "gh git-delta",
+    "zypper": "gh git-delta"
+   }
+  },
+  {
+   "id": "dbeaver",
+   "name": "DBeaver",
+   "cat": "dev",
+   "desc": "Cliente universal de bases de datos SQL",
+   "alt": "DataGrip",
+   "flags": "",
+   "icon": [
+    "dbeaver"
+   ],
+   "pkgs": {
+    "pacman": "dbeaver",
+    "dnf": "",
+    "apt": "",
+    "flatpak": "io.dbeaver.DBeaverCommunity"
+   }
+  },
+  {
+   "id": "bruno",
+   "name": "Bruno",
+   "cat": "dev",
+   "desc": "Cliente de APIs que guarda colecciones como archivos en git",
+   "alt": "Postman",
+   "flags": "",
+   "icon": [
+    "bruno"
+   ],
+   "pkgs": {
+    "aur": "bruno-bin",
+    "flatpak": "com.usebruno.Bruno"
+   }
+  },
+  {
+   "id": "agents",
+   "name": "Agentes de IA en terminal",
+   "cat": "dev",
+   "desc": "Claude Code, Codex y Gemini CLI para programar con IA",
+   "alt": "Copilot",
+   "flags": "stn",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "script": "curl -fsSL https://claude.ai/install.sh | bash; npm i -g @openai/codex @google/gemini-cli"
+   },
+   "bin": "claude"
+  },
+  {
+   "id": "vscodium",
+   "name": "VSCodium",
+   "cat": "dev",
+   "desc": "VS Code libre, sin telemetría de Microsoft",
+   "alt": "VS Code",
+   "flags": "",
+   "icon": [
+    "vscodium",
+    "com.vscodium.codium"
+   ],
+   "pkgs": {
+    "aur": "vscodium-bin",
+    "flatpak": "com.vscodium.codium"
+   }
+  },
+  {
+   "id": "jetbrains",
+   "name": "JetBrains Toolbox",
+   "cat": "dev",
+   "desc": "Instala y actualiza IntelliJ, PyCharm, WebStorm y demás IDE de JetBrains",
+   "alt": "—",
+   "flags": "x",
+   "icon": [
+    "jetbrains-toolbox"
+   ],
+   "pkgs": {
+    "aur": "jetbrains-toolbox",
+    "appimage": "https://www.jetbrains.com/toolbox-app/"
+   }
+  },
+  {
+   "id": "androidstudio",
+   "name": "Android Studio",
+   "cat": "dev",
+   "desc": "El IDE oficial para apps de Android",
+   "alt": "—",
+   "flags": "x",
+   "icon": [
+    "android-studio",
+    "com.google.AndroidStudio"
+   ],
+   "pkgs": {
+    "aur": "android-studio",
+    "flatpak": "com.google.AndroidStudio"
+   }
+  },
+  {
+   "id": "postman",
+   "name": "Postman",
+   "cat": "dev",
+   "desc": "Diseña y prueba APIs REST y GraphQL",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "postman",
+    "com.getpostman.Postman"
+   ],
+   "pkgs": {
+    "aur": "postman-bin",
+    "flatpak": "com.getpostman.Postman"
+   }
+  },
+  {
+   "id": "insomnia",
+   "name": "Insomnia",
+   "cat": "dev",
+   "desc": "Cliente de APIs (REST, GraphQL, gRPC)",
+   "alt": "Postman",
+   "flags": "",
+   "icon": [
+    "insomnia",
+    "rest.insomnia.Insomnia"
+   ],
+   "pkgs": {
+    "aur": "insomnia-bin",
+    "flatpak": "rest.insomnia.Insomnia"
+   }
+  },
+  {
+   "id": "ghdesktop",
+   "name": "GitHub Desktop",
+   "cat": "dev",
+   "desc": "Git con interfaz gráfica para GitHub",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "github-desktop",
+    "io.github.shiftey.Desktop"
+   ],
+   "pkgs": {
+    "aur": "github-desktop-bin",
+    "flatpak": "io.github.shiftey.Desktop"
+   }
+  },
+  {
+   "id": "cursor",
+   "name": "Cursor",
+   "cat": "dev",
+   "desc": "Editor de código con IA basado en VS Code",
+   "alt": "VS Code",
+   "flags": "n",
+   "icon": [
+    "cursor",
+    "co.anysphere.cursor"
+   ],
+   "pkgs": {
+    "aur": "cursor-bin",
+    "appimage": "https://cursor.com/downloads"
+   }
+  },
+  {
+   "id": "sublime",
+   "name": "Sublime Text",
+   "cat": "dev",
+   "desc": "Editor de texto ligero y muy rápido",
+   "alt": "—",
+   "flags": "x",
+   "icon": [
+    "sublime-text",
+    "com.sublimetext.three"
+   ],
+   "pkgs": {
+    "aur": "sublime-text-4",
+    "flatpak": "com.sublimetext.three"
+   }
+  },
+  {
+   "id": "meld",
+   "name": "Meld",
+   "cat": "dev",
+   "desc": "Compara y fusiona archivos y carpetas",
+   "alt": "Beyond Compare",
+   "flags": "",
+   "icon": [
+    "org.gnome.Meld",
+    "meld"
+   ],
+   "pkgs": {
+    "pacman": "meld",
+    "flatpak": "org.gnome.meld"
+   }
+  },
+  {
+   "id": "wezterm",
+   "name": "WezTerm",
+   "cat": "dev",
+   "desc": "Terminal acelerada por GPU con multiplexor y config en Lua",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "org.wezfurlong.wezterm",
+    "wezterm"
+   ],
+   "pkgs": {
+    "pacman": "wezterm",
+    "flatpak": "org.wezfurlong.wezterm"
+   }
+  },
+  {
+   "id": "ptyxis",
+   "name": "Consola (Ptyxis)",
+   "cat": "dev",
+   "desc": "Terminal de GNOME pensada para contenedores (Toolbox, Distrobox)",
+   "alt": "—",
+   "flags": "g",
+   "icon": [
+    "org.gnome.Ptyxis",
+    "app.devsuite.Ptyxis"
+   ],
+   "pkgs": {
+    "pacman": "ptyxis",
+    "flatpak": "app.devsuite.Ptyxis"
+   }
+  },
+  {
+   "id": "claudecode",
+   "name": "Claude Code",
+   "cat": "ia",
+   "desc": "Claude en la terminal: tareas sobre tus carpetas, código, MCP. Funciona en CachyOS",
+   "alt": "—",
+   "flags": "sn",
+   "pkgs": {
+    "aur": "claude-code",
+    "script": "curl -fsSL https://claude.ai/install.sh | bash"
+   },
+   "bin": "claude"
+  },
+  {
+   "id": "claudedesk",
+   "name": "Claude (app de escritorio)",
+   "cat": "ia",
+   "desc": "Chat, tareas largas y código con vista previa. Beta oficial solo para Ubuntu/Debian",
+   "alt": "—",
+   "flags": "np",
+   "icon": [
+    "claude-desktop",
+    "claude"
+   ],
+   "pkgs": {
+    "url": "https://claude.ai/download"
+   }
+  },
+  {
+   "id": "ollama",
+   "name": "Ollama",
+   "cat": "ia",
+   "desc": "Ejecuta modelos de lenguaje en tu equipo",
+   "alt": "ChatGPT local",
+   "flags": "st",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "ollama",
+    "dnf": "",
+    "apt": "",
+    "zypper": "",
+    "script": "curl -fsSL https://ollama.com/install.sh | sh"
+   }
+  },
+  {
+   "id": "alpaca",
+   "name": "Alpaca",
+   "cat": "ia",
+   "desc": "Chat de escritorio para tus modelos locales",
+   "alt": "—",
+   "flags": "n",
+   "icon": [
+    "com.jeffser.Alpaca"
+   ],
+   "pkgs": {
+    "aur": "alpaca-ai",
+    "flatpak": "com.jeffser.Alpaca"
+   }
+  },
+  {
+   "id": "newelle",
+   "name": "Newelle",
+   "cat": "ia",
+   "desc": "Asistente con voz, comandos y extensiones",
+   "alt": "Copilot",
+   "flags": "n",
+   "icon": [
+    "io.github.qwersyk.Newelle"
+   ],
+   "pkgs": {
+    "aur": "newelle",
+    "flatpak": "io.github.qwersyk.Newelle"
+   }
+  },
+  {
+   "id": "lmstudio",
+   "name": "LM Studio",
+   "cat": "ia",
+   "desc": "Descarga y prueba modelos con interfaz",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "lm-studio",
+    "lmstudio"
+   ],
+   "pkgs": {
+    "aur": "lmstudio-bin",
+    "appimage": "https://lmstudio.ai"
+   }
+  },
+  {
+   "id": "jan",
+   "name": "Jan",
+   "cat": "ia",
+   "desc": "Asistente local y de código abierto, sin cuenta",
+   "alt": "ChatGPT",
+   "flags": "n",
+   "icon": [
+    "jan"
+   ],
+   "pkgs": {
+    "aur": "jan-bin",
+    "appimage": "https://jan.ai"
+   }
+  },
+  {
+   "id": "comfy",
+   "name": "ComfyUI",
+   "cat": "ia",
+   "desc": "Generación de imágenes y video con nodos (GPU)",
+   "alt": "Midjourney",
+   "flags": "",
+   "pkgs": {
+    "url": "https://github.com/comfyanonymous/ComfyUI"
+   }
+  },
+  {
+   "id": "steam",
+   "name": "Steam",
+   "cat": "game",
+   "desc": "Tienda y Proton para juegos de Windows",
+   "alt": "—",
+   "flags": "sx",
+   "icon": [
+    "steam"
+   ],
+   "pkgs": {
+    "pacman": "steam",
+    "dnf": "steam",
+    "dnfRepo": "rpmfusion-nonfree",
+    "apt": "steam-installer",
+    "flatpak": "com.valvesoftware.Steam"
+   }
+  },
+  {
+   "id": "epic",
+   "name": "Epic Games Launcher",
+   "cat": "game",
+   "desc": "Launcher oficial reconstruido, nativo en Linux: tienda, biblioteca y Epic Parties",
+   "alt": "—",
+   "flags": "snp",
+   "icon": [
+    "epic-games",
+    "com.heroicgameslauncher.hgl"
+   ],
+   "pkgs": {
+    "url": "https://store.epicgames.com"
+   }
+  },
+  {
+   "id": "heroic",
+   "name": "Heroic",
+   "cat": "game",
+   "desc": "Juegos de Epic, GOG y Amazon",
+   "alt": "Epic Launcher",
+   "flags": "",
+   "icon": [
+    "com.heroicgameslauncher.hgl",
+    "heroic"
+   ],
+   "pkgs": {
+    "aur": "heroic-games-launcher-bin",
+    "flatpak": "com.heroicgameslauncher.hgl"
+   }
+  },
+  {
+   "id": "faugus",
+   "name": "Faugus Launcher",
+   "cat": "game",
+   "desc": "Juegos y launchers de Windows (Battle.net, Rockstar) con umu",
+   "alt": "Playnite",
+   "flags": "sn",
+   "icon": [
+    "io.github.Faugus.faugus-launcher",
+    "faugus-launcher"
+   ],
+   "pkgs": {
+    "aur": "faugus-launcher",
+    "flatpak": "io.github.Faugus.faugus-launcher"
+   }
+  },
+  {
+   "id": "protonplus",
+   "name": "ProtonPlus",
+   "cat": "game",
+   "desc": "Instala Proton-GE, Proton-CachyOS, DXVK y edita MangoHud",
+   "alt": "—",
+   "flags": "n",
+   "icon": [
+    "com.vysp3r.ProtonPlus",
+    "protonplus"
+   ],
+   "pkgs": {
+    "aur": "protonplus",
+    "flatpak": "com.vysp3r.ProtonPlus"
+   }
+  },
+  {
+   "id": "lutris",
+   "name": "Lutris",
+   "cat": "game",
+   "desc": "Un lanzador para todas tus bibliotecas",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "net.lutris.Lutris",
+    "lutris"
+   ],
+   "pkgs": {
+    "pacman": "lutris",
+    "flatpak": "net.lutris.Lutris"
+   }
+  },
+  {
+   "id": "bottles",
+   "name": "Bottles",
+   "cat": "game",
+   "desc": "Apps de Windows en entornos aislados",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "com.usebottles.bottles"
+   ],
+   "pkgs": {
+    "aur": "bottles",
+    "flatpak": "com.usebottles.bottles"
+   }
+  },
+  {
+   "id": "mangohud",
+   "name": "MangoHud",
+   "cat": "game",
+   "desc": "FPS, temperaturas y uso en pantalla",
+   "alt": "MSI Afterburner",
+   "flags": "t",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "mangohud"
+   }
+  },
+  {
+   "id": "lact",
+   "name": "LACT",
+   "cat": "game",
+   "desc": "Reloj, voltaje, límites y ventiladores de GPU AMD/NVIDIA",
+   "alt": "Afterburner",
+   "flags": "",
+   "icon": [
+    "io.github.ilya_zlobintsev.LACT",
+    "lact"
+   ],
+   "pkgs": {
+    "pacman": "lact",
+    "dnf": "",
+    "apt": ""
+   }
+  },
+  {
+   "id": "cooler",
+   "name": "CoolerControl",
+   "cat": "game",
+   "desc": "Curvas de ventiladores y bombas AIO",
+   "alt": "FanControl",
+   "flags": "",
+   "icon": [
+    "org.coolercontrol.CoolerControl"
+   ],
+   "pkgs": {
+    "pacman": "coolercontrol"
+   }
+  },
+  {
+   "id": "prism",
+   "name": "Prism Launcher",
+   "cat": "game",
+   "desc": "Minecraft con mods de Modrinth y CurseForge",
+   "alt": "CurseForge",
+   "flags": "",
+   "icon": [
+    "org.prismlauncher.PrismLauncher"
+   ],
+   "pkgs": {
+    "pacman": "prismlauncher",
+    "dnf": "",
+    "apt": "",
+    "flatpak": "org.prismlauncher.PrismLauncher"
+   }
+  },
+  {
+   "id": "sunshine",
+   "name": "Sunshine",
+   "cat": "game",
+   "desc": "Transmite tus juegos a otro equipo o al TV (Moonlight)",
+   "alt": "GeForce Experience",
+   "flags": "",
+   "icon": [
+    "sunshine"
+   ],
+   "pkgs": {
+    "aur": "sunshine",
+    "flatpak": "dev.lizardbyte.app.Sunshine"
+   }
+  },
+  {
+   "id": "protonupqt",
+   "name": "ProtonUp-Qt",
+   "cat": "game",
+   "desc": "Instala Proton-GE y Wine-GE para Steam, Lutris y Heroic",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "net.davidotek.pupgui2"
+   ],
+   "pkgs": {
+    "aur": "protonup-qt",
+    "flatpak": "net.davidotek.pupgui2"
+   }
+  },
+  {
+   "id": "goverlay",
+   "name": "GOverlay",
+   "cat": "game",
+   "desc": "Configura MangoHud, vkBasalt y ReplaySorcery con interfaz",
+   "alt": "—",
+   "flags": "x",
+   "icon": [
+    "io.github.benjamimgois.goverlay",
+    "goverlay"
+   ],
+   "pkgs": {
+    "pacman": "goverlay",
+    "flatpak": "io.github.benjamimgois.goverlay"
+   }
+  },
+  {
+   "id": "gamemode",
+   "name": "GameMode",
+   "cat": "game",
+   "desc": "Optimiza CPU y prioridad mientras juegas (gamemoderun)",
+   "alt": "—",
+   "flags": "t",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "gamemode lib32-gamemode"
+   }
+  },
+  {
+   "id": "retroarch",
+   "name": "RetroArch",
+   "cat": "game",
+   "desc": "Emulador de consolas clásicas con núcleos libretro",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "org.libretro.RetroArch",
+    "retroarch"
+   ],
+   "pkgs": {
+    "pacman": "retroarch",
+    "flatpak": "org.libretro.RetroArch"
+   }
+  },
+  {
+   "id": "moonlight",
+   "name": "Moonlight",
+   "cat": "game",
+   "desc": "Juega en streaming desde tu PC con Sunshine o NVIDIA",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "com.moonlight_stream.Moonlight",
+    "moonlight"
+   ],
+   "pkgs": {
+    "pacman": "moonlight-qt",
+    "flatpak": "com.moonlight_stream.Moonlight"
+   }
+  },
+  {
+   "id": "itch",
+   "name": "itch",
+   "cat": "game",
+   "desc": "Tienda y lanzador de juegos indie de itch.io",
+   "alt": "—",
+   "flags": "x",
+   "icon": [
+    "io.itch.itch",
+    "itch"
+   ],
+   "pkgs": {
+    "aur": "itch-setup-bin",
+    "flatpak": "io.itch.itch"
+   }
+  },
+  {
+   "id": "nautilus",
+   "name": "Archivos (Nautilus)",
+   "cat": "files",
+   "desc": "Gestor de archivos de GNOME: limpio, simple y con vista previa",
+   "alt": "Explorador / Finder",
+   "flags": "sg",
+   "icon": [
+    "org.gnome.Nautilus",
+    "nautilus"
+   ],
+   "pkgs": {
+    "pacman": "nautilus sushi",
+    "apt": "nautilus gnome-sushi"
+   }
+  },
+  {
+   "id": "dolphin",
+   "name": "Dolphin",
+   "cat": "files",
+   "desc": "El más completo: doble panel, terminal integrada, renombrado masivo (KDE)",
+   "alt": "Nautilus",
+   "flags": "k",
+   "icon": [
+    "org.kde.dolphin"
+   ],
+   "pkgs": {
+    "pacman": "dolphin"
+   }
+  },
+  {
+   "id": "yazi",
+   "name": "Yazi",
+   "cat": "files",
+   "desc": "Gestor de archivos en terminal, muy rápido, con vista previa",
+   "alt": "ranger",
+   "flags": "tn",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "yazi",
+    "dnf": "",
+    "apt": ""
+   }
+  },
+  {
+   "id": "cosmicfiles",
+   "name": "COSMIC Files",
+   "cat": "files",
+   "desc": "Gestor en Rust con pestañas y doble panel",
+   "alt": "—",
+   "flags": "n",
+   "icon": [
+    "com.system76.CosmicFiles"
+   ],
+   "pkgs": {
+    "pacman": "cosmic-files",
+    "dnf": "",
+    "apt": ""
+   }
+  },
+  {
+   "id": "thunar",
+   "name": "Thunar",
+   "cat": "files",
+   "desc": "Ligero y rápido, con renombrado masivo",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "org.xfce.thunar",
+    "thunar"
+   ],
+   "pkgs": {
+    "pacman": "thunar"
+   }
+  },
+  {
+   "id": "gtexteditor",
+   "name": "Editor de texto",
+   "cat": "base",
+   "desc": "Editor de GNOME: pestañas, autoguardado y vista previa de Markdown",
+   "alt": "Bloc de notas",
+   "flags": "sg",
+   "icon": [
+    "org.gnome.TextEditor",
+    "gnome-text-editor"
+   ],
+   "pkgs": {
+    "pacman": "gnome-text-editor",
+    "flatpak": "org.gnome.TextEditor"
+   }
+  },
+  {
+   "id": "gcalc",
+   "name": "Calculadora",
+   "cat": "base",
+   "desc": "Calculadora de GNOME: básica, científica, financiera y conversión de unidades",
+   "alt": "Calculadora de Windows",
+   "flags": "sg",
+   "icon": [
+    "org.gnome.Calculator",
+    "gnome-calculator"
+   ],
+   "pkgs": {
+    "pacman": "gnome-calculator",
+    "flatpak": "org.gnome.Calculator"
+   }
+  },
+  {
+   "id": "loupe",
+   "name": "Visor de imágenes (Loupe)",
+   "cat": "base",
+   "desc": "Visor de imágenes de GNOME: rápido, con gestos y zoom fluido",
+   "alt": "Fotos de Windows",
+   "flags": "sg",
+   "icon": [
+    "org.gnome.Loupe",
+    "loupe"
+   ],
+   "pkgs": {
+    "pacman": "loupe",
+    "flatpak": "org.gnome.Loupe"
+   }
+  },
+  {
+   "id": "papers",
+   "name": "Visor de documentos (Papers)",
+   "cat": "base",
+   "desc": "Visor de PDF de GNOME: anotar, firmar y buscar",
+   "alt": "Acrobat Reader",
+   "flags": "sg",
+   "icon": [
+    "org.gnome.Papers",
+    "papers"
+   ],
+   "pkgs": {
+    "pacman": "papers",
+    "flatpak": "org.gnome.Papers"
+   }
+  },
+  {
+   "id": "showtime",
+   "name": "Vídeos (Showtime)",
+   "cat": "base",
+   "desc": "Reproductor de vídeo de GNOME, minimalista y con subtítulos",
+   "alt": "Reproductor multimedia",
+   "flags": "sg",
+   "icon": [
+    "org.gnome.Showtime",
+    "showtime"
+   ],
+   "pkgs": {
+    "pacman": "showtime",
+    "flatpak": "org.gnome.Showtime"
+   }
+  },
+  {
+   "id": "decibels",
+   "name": "Audio (Decibels)",
+   "cat": "base",
+   "desc": "Reproductor de audio de GNOME para abrir un archivo y escucharlo",
+   "alt": "Groove",
+   "flags": "sg",
+   "icon": [
+    "org.gnome.Decibels",
+    "decibels"
+   ],
+   "pkgs": {
+    "pacman": "decibels",
+    "flatpak": "org.gnome.Decibels"
+   }
+  },
+  {
+   "id": "amberol",
+   "name": "Amberol",
+   "cat": "base",
+   "desc": "Reproductor de música sencillo: arrastra canciones o carpetas",
+   "alt": "Winamp",
+   "flags": "",
+   "icon": [
+    "io.bassi.Amberol",
+    "amberol"
+   ],
+   "pkgs": {
+    "pacman": "amberol",
+    "flatpak": "io.bassi.Amberol"
+   }
+  },
+  {
+   "id": "fileroller",
+   "name": "Compresor (File Roller)",
+   "cat": "base",
+   "desc": "Abrir y crear .zip, .7z, .tar y .rar desde Archivos",
+   "alt": "WinRAR / 7-Zip",
+   "flags": "sg",
+   "icon": [
+    "org.gnome.FileRoller",
+    "file-roller"
+   ],
+   "pkgs": {
+    "pacman": "file-roller",
+    "flatpak": "org.gnome.FileRoller"
+   }
+  },
+  {
+   "id": "baobab",
+   "name": "Uso del disco (Baobab)",
+   "cat": "base",
+   "desc": "Mapa de qué ocupa espacio en cada carpeta (Baobab)",
+   "alt": "WinDirStat",
+   "flags": "sg",
+   "icon": [
+    "org.gnome.baobab",
+    "baobab"
+   ],
+   "pkgs": {
+    "pacman": "baobab",
+    "flatpak": "org.gnome.baobab"
+   }
+  },
+  {
+   "id": "gsysmon",
+   "name": "Monitor del sistema",
+   "cat": "base",
+   "desc": "Procesos, recursos y discos (GNOME)",
+   "alt": "Admin. de tareas",
+   "flags": "sg",
+   "icon": [
+    "org.gnome.SystemMonitor",
+    "gnome-system-monitor"
+   ],
+   "pkgs": {
+    "pacman": "gnome-system-monitor"
+   }
+  },
+  {
+   "id": "boxes",
+   "name": "Boxes (Máquinas virtuales)",
+   "cat": "base",
+   "desc": "Máquinas virtuales en dos clics: descarga el sistema y lo instala",
+   "alt": "VirtualBox",
+   "flags": "g",
+   "icon": [
+    "org.gnome.Boxes",
+    "gnome-boxes"
+   ],
+   "pkgs": {
+    "pacman": "gnome-boxes",
+    "flatpak": "org.gnome.Boxes"
+   }
+  },
+  {
+   "id": "connections",
+   "name": "Conexiones (Escritorio remoto)",
+   "cat": "base",
+   "desc": "Cliente RDP y VNC de GNOME",
+   "alt": "Escritorio remoto de Windows",
+   "flags": "g",
+   "icon": [
+    "org.gnome.Connections",
+    "gnome-connections"
+   ],
+   "pkgs": {
+    "pacman": "gnome-connections",
+    "flatpak": "org.gnome.Connections"
+   }
+  },
+  {
+   "id": "gcalendar",
+   "name": "Calendario",
+   "cat": "base",
+   "desc": "Calendario de GNOME, con cuentas en línea y CalDAV",
+   "alt": "Outlook",
+   "flags": "g",
+   "icon": [
+    "org.gnome.Calendar",
+    "gnome-calendar"
+   ],
+   "pkgs": {
+    "pacman": "gnome-calendar",
+    "flatpak": "org.gnome.Calendar"
+   }
+  },
+  {
+   "id": "gcontacts",
+   "name": "Contactos",
+   "cat": "base",
+   "desc": "Libreta de direcciones de GNOME",
+   "alt": "—",
+   "flags": "g",
+   "icon": [
+    "org.gnome.Contacts",
+    "gnome-contacts"
+   ],
+   "pkgs": {
+    "pacman": "gnome-contacts",
+    "flatpak": "org.gnome.Contacts"
+   }
+  },
+  {
+   "id": "gweather",
+   "name": "Tiempo",
+   "cat": "base",
+   "desc": "El tiempo de tus ciudades, por horas y días",
+   "alt": "—",
+   "flags": "g",
+   "icon": [
+    "org.gnome.Weather",
+    "gnome-weather"
+   ],
+   "pkgs": {
+    "pacman": "gnome-weather",
+    "flatpak": "org.gnome.Weather"
+   }
+  },
+  {
+   "id": "gclocks",
+   "name": "Relojes",
+   "cat": "base",
+   "desc": "Alarmas, cronómetro, temporizador y relojes del mundo",
+   "alt": "—",
+   "flags": "g",
+   "icon": [
+    "org.gnome.clocks",
+    "gnome-clocks"
+   ],
+   "pkgs": {
+    "pacman": "gnome-clocks",
+    "flatpak": "org.gnome.clocks"
+   }
+  },
+  {
+   "id": "gmaps",
+   "name": "Mapas",
+   "cat": "base",
+   "desc": "Mapas de OpenStreetMap con rutas y transporte público",
+   "alt": "Google Maps",
+   "flags": "g",
+   "icon": [
+    "org.gnome.Maps",
+    "gnome-maps"
+   ],
+   "pkgs": {
+    "pacman": "gnome-maps",
+    "flatpak": "org.gnome.Maps"
+   }
+  },
+  {
+   "id": "gdisks",
+   "name": "Discos",
+   "cat": "base",
+   "desc": "Formatea, monta y revisa discos y USB; crea y graba imágenes",
+   "alt": "—",
+   "flags": "g",
+   "icon": [
+    "org.gnome.DiskUtility",
+    "gnome-disks"
+   ],
+   "pkgs": {
+    "pacman": "gnome-disk-utility"
+   }
+  },
+  {
+   "id": "snapshot",
+   "name": "Cámara (Snapshot)",
+   "cat": "base",
+   "desc": "Fotos y vídeos con la webcam",
+   "alt": "—",
+   "flags": "g",
+   "icon": [
+    "org.gnome.Snapshot",
+    "snapshot"
+   ],
+   "pkgs": {
+    "pacman": "snapshot",
+    "flatpak": "org.gnome.Snapshot"
+   }
+  },
+  {
+   "id": "gfonts",
+   "name": "Fuentes",
+   "cat": "base",
+   "desc": "Mira e instala tipografías",
+   "alt": "—",
+   "flags": "g",
+   "icon": [
+    "org.gnome.font-viewer",
+    "gnome-font-viewer"
+   ],
+   "pkgs": {
+    "pacman": "gnome-font-viewer",
+    "flatpak": "org.gnome.font-viewer"
+   }
+  },
+  {
+   "id": "gchars",
+   "name": "Caracteres",
+   "cat": "base",
+   "desc": "Busca y copia emojis y símbolos",
+   "alt": "—",
+   "flags": "g",
+   "icon": [
+    "org.gnome.Characters",
+    "gnome-characters"
+   ],
+   "pkgs": {
+    "pacman": "gnome-characters",
+    "flatpak": "org.gnome.Characters"
+   }
+  },
+  {
+   "id": "simplescan",
+   "name": "Escáner de documentos",
+   "cat": "base",
+   "desc": "Escanea documentos y fotos a PDF o imagen",
+   "alt": "—",
+   "flags": "g",
+   "icon": [
+    "org.gnome.SimpleScan",
+    "simple-scan"
+   ],
+   "pkgs": {
+    "pacman": "simple-scan",
+    "flatpak": "org.gnome.SimpleScan"
+   }
+  },
+  {
+   "id": "glogs",
+   "name": "Registros",
+   "cat": "base",
+   "desc": "Lee los registros del sistema (journal) con búsqueda",
+   "alt": "—",
+   "flags": "g",
+   "icon": [
+    "org.gnome.Logs",
+    "gnome-logs"
+   ],
+   "pkgs": {
+    "pacman": "gnome-logs",
+    "flatpak": "org.gnome.Logs"
+   }
+  },
+  {
+   "id": "gmusic",
+   "name": "Música",
+   "cat": "base",
+   "desc": "Reproductor y biblioteca de música de GNOME",
+   "alt": "iTunes",
+   "flags": "g",
+   "icon": [
+    "org.gnome.Music",
+    "gnome-music"
+   ],
+   "pkgs": {
+    "pacman": "gnome-music",
+    "flatpak": "org.gnome.Music"
+   }
+  },
+  {
+   "id": "kate",
+   "name": "Kate",
+   "cat": "base",
+   "desc": "Editor avanzado de KDE: sesiones, terminal y LSP",
+   "alt": "Editor de texto",
+   "flags": "k",
+   "icon": [
+    "org.kde.kate",
+    "kate"
+   ],
+   "pkgs": {
+    "pacman": "kate",
+    "flatpak": "org.kde.kate"
+   }
+  },
+  {
+   "id": "kcalc",
+   "name": "KCalc",
+   "cat": "base",
+   "desc": "Calculadora científica de KDE",
+   "alt": "Calculadora",
+   "flags": "k",
+   "icon": [
+    "org.kde.kcalc",
+    "kcalc"
+   ],
+   "pkgs": {
+    "pacman": "kcalc",
+    "flatpak": "org.kde.kcalc"
+   }
+  },
+  {
+   "id": "gwenview",
+   "name": "Gwenview",
+   "cat": "base",
+   "desc": "Visor de imágenes de KDE con edición básica",
+   "alt": "Loupe",
+   "flags": "k",
+   "icon": [
+    "org.kde.gwenview",
+    "gwenview"
+   ],
+   "pkgs": {
+    "pacman": "gwenview",
+    "flatpak": "org.kde.gwenview"
+   }
+  },
+  {
+   "id": "haruna",
+   "name": "Haruna",
+   "cat": "base",
+   "desc": "Reproductor de vídeo de KDE (mpv) con listas y YouTube",
+   "alt": "Showtime",
+   "flags": "k",
+   "icon": [
+    "org.kde.haruna",
+    "haruna"
+   ],
+   "pkgs": {
+    "pacman": "haruna",
+    "flatpak": "org.kde.haruna"
+   }
+  },
+  {
+   "id": "ark",
+   "name": "Ark",
+   "cat": "base",
+   "desc": "Compresor de KDE",
+   "alt": "File Roller",
+   "flags": "k",
+   "icon": [
+    "org.kde.ark",
+    "ark"
+   ],
+   "pkgs": {
+    "pacman": "ark",
+    "flatpak": "org.kde.ark"
+   }
+  },
+  {
+   "id": "filelight",
+   "name": "Filelight",
+   "cat": "base",
+   "desc": "Uso del disco en anillos (KDE)",
+   "alt": "Uso del disco",
+   "flags": "k",
+   "icon": [
+    "org.kde.filelight",
+    "filelight"
+   ],
+   "pkgs": {
+    "pacman": "filelight",
+    "flatpak": "org.kde.filelight"
+   }
+  },
+  {
+   "id": "elisa",
+   "name": "Elisa",
+   "cat": "base",
+   "desc": "Reproductor de música de KDE",
+   "alt": "—",
+   "flags": "k",
+   "icon": [
+    "org.kde.elisa",
+    "elisa"
+   ],
+   "pkgs": {
+    "pacman": "elisa",
+    "flatpak": "org.kde.elisa"
+   }
+  },
+  {
+   "id": "spectacle",
+   "name": "Spectacle",
+   "cat": "base",
+   "desc": "Capturas y grabaciones de pantalla de KDE",
+   "alt": "—",
+   "flags": "k",
+   "icon": [
+    "org.kde.spectacle",
+    "spectacle"
+   ],
+   "pkgs": {
+    "pacman": "spectacle"
+   }
+  },
+  {
+   "id": "merkuro",
+   "name": "Merkuro",
+   "cat": "base",
+   "desc": "Calendario y contactos de KDE",
+   "alt": "Outlook",
+   "flags": "k",
+   "icon": [
+    "org.kde.merkuro.calendar",
+    "merkuro"
+   ],
+   "pkgs": {
+    "pacman": "merkuro",
+    "flatpak": "org.kde.merkuro"
+   }
+  },
+  {
+   "id": "kweather",
+   "name": "KWeather",
+   "cat": "base",
+   "desc": "El tiempo, de KDE",
+   "alt": "—",
+   "flags": "k",
+   "icon": [
+    "org.kde.kweather",
+    "kweather"
+   ],
+   "pkgs": {
+    "pacman": "kweather",
+    "flatpak": "org.kde.kweather"
+   }
+  },
+  {
+   "id": "kclock",
+   "name": "KClock",
+   "cat": "base",
+   "desc": "Alarmas, temporizador y relojes del mundo de KDE",
+   "alt": "—",
+   "flags": "k",
+   "icon": [
+    "org.kde.kclock",
+    "kclock"
+   ],
+   "pkgs": {
+    "pacman": "kclock",
+    "flatpak": "org.kde.kclock"
+   }
+  },
+  {
+   "id": "partitionmgr",
+   "name": "Gestor de particiones de KDE",
+   "cat": "base",
+   "desc": "Crea, mueve y redimensiona particiones",
+   "alt": "—",
+   "flags": "k",
+   "icon": [
+    "org.kde.partitionmanager",
+    "partitionmanager"
+   ],
+   "pkgs": {
+    "pacman": "partitionmanager"
+   }
+  },
+  {
+   "id": "kcharselect",
+   "name": "KCharSelect",
+   "cat": "base",
+   "desc": "Selector de caracteres y símbolos de KDE",
+   "alt": "—",
+   "flags": "k",
+   "icon": [
+    "org.kde.kcharselect",
+    "kcharselect"
+   ],
+   "pkgs": {
+    "pacman": "kcharselect",
+    "flatpak": "org.kde.kcharselect"
+   }
+  },
+  {
+   "id": "skanpage",
+   "name": "Skanpage",
+   "cat": "base",
+   "desc": "Escáner de documentos de KDE",
+   "alt": "—",
+   "flags": "k",
+   "icon": [
+    "org.kde.skanpage",
+    "skanpage"
+   ],
+   "pkgs": {
+    "pacman": "skanpage",
+    "flatpak": "org.kde.skanpage"
+   }
+  },
+  {
+   "id": "marble",
+   "name": "Marble",
+   "cat": "base",
+   "desc": "Globo terráqueo y mapas de KDE",
+   "alt": "Google Earth",
+   "flags": "k",
+   "icon": [
+    "org.kde.marble",
+    "marble"
+   ],
+   "pkgs": {
+    "pacman": "marble",
+    "flatpak": "org.kde.marble"
+   }
+  },
+  {
+   "id": "orca",
+   "name": "OrcaSlicer",
+   "cat": "print",
+   "desc": "Laminador moderno para impresoras FDM, con perfiles de muchas marcas",
+   "alt": "Bambu Studio",
+   "flags": "sn",
+   "icon": [
+    "io.github.softfever.OrcaSlicer",
+    "OrcaSlicer"
+   ],
+   "pkgs": {
+    "aur": "orca-slicer-bin",
+    "flatpak": "io.github.softfever.OrcaSlicer"
+   }
+  },
+  {
+   "id": "prusa",
+   "name": "PrusaSlicer",
+   "cat": "print",
+   "desc": "Laminador probado, con soportes orgánicos",
+   "alt": "Cura",
+   "flags": "",
+   "icon": [
+    "PrusaSlicer",
+    "prusa-slicer"
+   ],
+   "pkgs": {
+    "pacman": "prusa-slicer",
+    "flatpak": "com.prusa3d.PrusaSlicer"
+   }
+  },
+  {
+   "id": "openscad",
+   "name": "OpenSCAD",
+   "cat": "print",
+   "desc": "Modelos 3D a partir de código: ideal para que Claude los genere",
+   "alt": "—",
+   "flags": "s",
+   "icon": [
+    "openscad"
+   ],
+   "pkgs": {
+    "pacman": "openscad",
+    "flatpak": "org.openscad.OpenSCAD"
+   }
+  },
+  {
+   "id": "freecad",
+   "name": "FreeCAD",
+   "cat": "print",
+   "desc": "CAD paramétrico completo para piezas y ensamblajes",
+   "alt": "Fusion 360",
+   "flags": "",
+   "icon": [
+    "org.freecad.FreeCAD",
+    "freecad"
+   ],
+   "pkgs": {
+    "pacman": "freecad",
+    "flatpak": "org.freecad.FreeCAD"
+   }
+  },
+  {
+   "id": "bambu",
+   "name": "Bambu Studio",
+   "cat": "print",
+   "desc": "Laminador para impresoras Bambu Lab",
+   "alt": "—",
+   "flags": "x",
+   "icon": [
+    "com.bambulab.BambuStudio",
+    "BambuStudio"
+   ],
+   "pkgs": {
+    "aur": "bambustudio-bin",
+    "flatpak": "com.bambulab.BambuStudio"
+   }
+  },
+  {
+   "id": "cura",
+   "name": "UltiMaker Cura",
+   "cat": "print",
+   "desc": "Laminador clásico para casi cualquier impresora",
+   "alt": "—",
+   "flags": "x",
+   "icon": [
+    "com.ultimaker.cura",
+    "cura"
+   ],
+   "pkgs": {
+    "aur": "cura-bin",
+    "flatpak": "com.ultimaker.cura"
+   }
+  },
+  {
+   "id": "kicad",
+   "name": "KiCad",
+   "cat": "print",
+   "desc": "Diseño de circuitos y placas electrónicas (PCB)",
+   "alt": "Altium",
+   "flags": "",
+   "icon": [
+    "org.kicad.KiCad",
+    "kicad"
+   ],
+   "pkgs": {
+    "pacman": "kicad",
+    "flatpak": "org.kicad.KiCad"
+   }
+  },
+  {
+   "id": "arduino",
+   "name": "Arduino IDE",
+   "cat": "print",
+   "desc": "Programa placas Arduino, ESP32 y similares",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "cc.arduino.IDE2",
+    "arduino-ide"
+   ],
+   "pkgs": {
+    "aur": "arduino-ide-bin",
+    "flatpak": "cc.arduino.IDE2"
+   }
+  },
+  {
+   "id": "bazaar",
+   "name": "Bazaar",
+   "cat": "sys",
+   "desc": "Tienda de apps Flathub moderna y rápida",
+   "alt": "Microsoft Store",
+   "flags": "sn",
+   "icon": [
+    "io.github.kolunmi.Bazaar"
+   ],
+   "pkgs": {
+    "pacman": "bazaar",
+    "flatpak": "io.github.kolunmi.Bazaar"
+   }
+  },
+  {
+   "id": "btrfsa",
+   "name": "Btrfs Assistant",
+   "cat": "sys",
+   "desc": "Ver y restaurar los puntos de Snapper con interfaz",
+   "alt": "Restaurar sistema",
+   "flags": "s",
+   "icon": [
+    "btrfs-assistant"
+   ],
+   "pkgs": {
+    "pacman": "btrfs-assistant",
+    "dnf": "",
+    "apt": ""
+   }
+  },
+  {
+   "id": "mission",
+   "name": "Mission Center",
+   "cat": "sys",
+   "desc": "Monitor de CPU, GPU, RAM y procesos",
+   "alt": "Admin. de tareas",
+   "flags": "",
+   "icon": [
+    "io.missioncenter.MissionCenter"
+   ],
+   "pkgs": {
+    "pacman": "mission-center",
+    "flatpak": "io.missioncenter.MissionCenter"
+   }
+  },
+  {
+   "id": "resources",
+   "name": "Resources",
+   "cat": "sys",
+   "desc": "Monitor de recursos minimalista",
+   "alt": "Admin. de tareas",
+   "flags": "g",
+   "icon": [
+    "net.nokyan.Resources"
+   ],
+   "pkgs": {
+    "pacman": "resources",
+    "flatpak": "net.nokyan.Resources"
+   }
+  },
+  {
+   "id": "btop",
+   "name": "btop",
+   "cat": "sys",
+   "desc": "Monitor de recursos en la terminal",
+   "alt": "—",
+   "flags": "t",
+   "icon": [
+    "btop",
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "btop"
+   }
+  },
+  {
+   "id": "flatseal",
+   "name": "Flatseal",
+   "cat": "sys",
+   "desc": "Permisos de las apps Flatpak",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "com.github.tchx84.Flatseal"
+   ],
+   "pkgs": {
+    "pacman": "flatseal",
+    "flatpak": "com.github.tchx84.Flatseal"
+   }
+  },
+  {
+   "id": "warehouse",
+   "name": "Warehouse",
+   "cat": "sys",
+   "desc": "Gestiona apps y datos de Flatpak",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "io.github.flattool.Warehouse"
+   ],
+   "pkgs": {
+    "pacman": "warehouse",
+    "flatpak": "io.github.flattool.Warehouse"
+   }
+  },
+  {
+   "id": "gearlever",
+   "name": "Gear Lever",
+   "cat": "sys",
+   "desc": "Integra y actualiza AppImages",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "it.mijorus.gearlever"
+   ],
+   "pkgs": {
+    "aur": "gearlever",
+    "flatpak": "it.mijorus.gearlever"
+   }
+  },
+  {
+   "id": "impression",
+   "name": "Impression",
+   "cat": "sys",
+   "desc": "Graba imágenes de sistema en USB",
+   "alt": "Rufus",
+   "flags": "",
+   "icon": [
+    "io.gitlab.adhami3310.Impression"
+   ],
+   "pkgs": {
+    "pacman": "impression",
+    "flatpak": "io.gitlab.adhami3310.Impression"
+   }
+  },
+  {
+   "id": "pika",
+   "name": "Pika Backup",
+   "cat": "sys",
+   "desc": "Copias de /home cifradas y programadas",
+   "alt": "Time Machine",
+   "flags": "s",
+   "icon": [
+    "org.gnome.World.PikaBackup"
+   ],
+   "pkgs": {
+    "pacman": "pika-backup",
+    "flatpak": "org.gnome.World.PikaBackup"
+   }
+  },
+  {
+   "id": "keepass",
+   "name": "KeePassXC",
+   "cat": "sys",
+   "desc": "Contraseñas locales y cifradas",
+   "alt": "1Password",
+   "flags": "",
+   "icon": [
+    "org.keepassxc.KeePassXC",
+    "keepassxc",
+    "keepass"
+   ],
+   "pkgs": {
+    "pacman": "keepassxc",
+    "flatpak": "org.keepassxc.KeePassXC"
+   }
+  },
+  {
+   "id": "bitwarden",
+   "name": "Bitwarden",
+   "cat": "sys",
+   "desc": "Contraseñas sincronizadas en la nube",
+   "alt": "1Password",
+   "flags": "",
+   "icon": [
+    "bitwarden"
+   ],
+   "pkgs": {
+    "pacman": "bitwarden",
+    "dnf": "",
+    "apt": "",
+    "zypper": "",
+    "flatpak": "com.bitwarden.desktop"
+   }
+  },
+  {
+   "id": "syncthing",
+   "name": "Syncthing",
+   "cat": "sys",
+   "desc": "Sincroniza carpetas entre tus equipos",
+   "alt": "Dropbox",
+   "flags": "t",
+   "icon": [
+    "syncthing",
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "syncthing"
+   }
+  },
+  {
+   "id": "localsend",
+   "name": "LocalSend",
+   "cat": "sys",
+   "desc": "Envía archivos a cualquier dispositivo en tu red",
+   "alt": "AirDrop",
+   "flags": "s",
+   "icon": [
+    "org.localsend.localsend_app",
+    "localsend"
+   ],
+   "pkgs": {
+    "aur": "localsend-bin",
+    "flatpak": "org.localsend.localsend_app"
+   }
+  },
+  {
+   "id": "kdeconnect",
+   "name": "KDE Connect",
+   "cat": "sys",
+   "desc": "Teléfono integrado: avisos, archivos, portapapeles",
+   "alt": "Enlace móvil",
+   "flags": "",
+   "icon": [
+    "org.kde.kdeconnect.app",
+    "kdeconnect"
+   ],
+   "pkgs": {
+    "pacman": "kdeconnect",
+    "dnf": "kde-connect"
+   }
+  },
+  {
+   "id": "scrcpy",
+   "name": "scrcpy",
+   "cat": "sys",
+   "desc": "Muestra y controla tu móvil Android desde el PC (por USB o Wi‑Fi)",
+   "alt": "Enlace móvil / Vysor",
+   "flags": "s",
+   "icon": [
+    "scrcpy",
+    "com.genymobile.scrcpy",
+    "android-file-transfer",
+    "smartphone"
+   ],
+   "pkgs": {
+    "pacman": "scrcpy android-tools",
+    "dnf": "scrcpy android-tools",
+    "apt": "scrcpy adb",
+    "zypper": "scrcpy android-tools"
+   },
+   "hint": "En el móvil: Ajustes › Información del teléfono › toca 7 veces «Número de compilación» para activar las Opciones de desarrollador; ahí activa «Depuración USB». Conecta el cable y acepta el aviso de huella RSA. Luego: ajustes rápidos › tarjeta del teléfono › «Duplicar pantalla»."
+  },
+  {
+   "id": "cockpit",
+   "name": "Cockpit + Máquinas",
+   "cat": "sys",
+   "desc": "Panel web para crear y probar máquinas virtuales y contenedores",
+   "alt": "Hyper-V",
+   "flags": "n",
+   "icon": [
+    "cockpit",
+    "computer"
+   ],
+   "pkgs": {
+    "pacman": "cockpit cockpit-machines cockpit-podman libvirt qemu-desktop dnsmasq virt-install edk2-ovmf swtpm",
+    "dnf": "cockpit cockpit-machines cockpit-podman",
+    "apt": "cockpit cockpit-machines cockpit-podman",
+    "zypper": "cockpit cockpit-machines cockpit-podman"
+   }
+  },
+  {
+   "id": "virtmanager",
+   "name": "virt-manager",
+   "cat": "sys",
+   "desc": "Máquinas virtuales KVM con todas las opciones",
+   "alt": "VMware Workstation",
+   "flags": "",
+   "icon": [
+    "virt-manager"
+   ],
+   "pkgs": {
+    "pacman": "virt-manager libvirt qemu-desktop dnsmasq edk2-ovmf swtpm",
+    "dnf": "virt-manager",
+    "apt": "virt-manager",
+    "zypper": "virt-manager"
+   }
+  },
+  {
+   "id": "remmina",
+   "name": "Remmina",
+   "cat": "sys",
+   "desc": "Escritorio remoto: RDP, VNC, SSH y SPICE",
+   "alt": "Escritorio remoto",
+   "flags": "",
+   "icon": [
+    "org.remmina.Remmina",
+    "remmina"
+   ],
+   "pkgs": {
+    "pacman": "remmina freerdp libvncserver",
+    "dnf": "remmina",
+    "apt": "remmina",
+    "zypper": "remmina",
+    "flatpak": "org.remmina.Remmina"
+   }
+  },
+  {
+   "id": "freerdp",
+   "name": "FreeRDP 3",
+   "cat": "sys",
+   "desc": "Cliente RDP rápido (xfreerdp3 / sdl-freerdp3)",
+   "alt": "mstsc",
+   "flags": "t",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "freerdp"
+   }
+  },
+  {
+   "id": "tailscale",
+   "name": "Tailscale",
+   "cat": "sys",
+   "desc": "Red privada entre tus equipos con WireGuard, sin abrir puertos: accede a tu PC, NAS o móvil desde cualquier sitio",
+   "alt": "Hamachi",
+   "flags": "st",
+   "icon": [
+    "tailscale",
+    "network-vpn"
+   ],
+   "pkgs": {
+    "pacman": "tailscale",
+    "dnf": "tailscale",
+    "apt": "",
+    "script": "curl -fsSL https://tailscale.com/install.sh | sh"
+   },
+   "bin": "tailscale",
+   "post": "sudo systemctl enable --now tailscaled && sudo tailscale set --operator=$USER",
+   "hint": "Al instalar se activa el servicio tailscaled y se te da permiso para manejarlo sin sudo. Luego inicia sesión y elige nodo de salida en Ajustes › Red › VPN en malla."
+  },
+  {
+   "id": "zerotier",
+   "name": "ZeroTier",
+   "cat": "sys",
+   "desc": "Redes virtuales entre equipos (nivel 2)",
+   "alt": "Hamachi",
+   "flags": "t",
+   "icon": [
+    "zerotier-one",
+    "network-vpn"
+   ],
+   "pkgs": {
+    "pacman": "zerotier-one",
+    "dnf": "",
+    "apt": ""
+   }
+  },
+  {
+   "id": "wireguard",
+   "name": "WireGuard",
+   "cat": "sys",
+   "desc": "Herramientas de WireGuard (wg, wg-quick)",
+   "alt": "—",
+   "flags": "t",
+   "icon": [
+    "network-vpn",
+    "utilities-terminal"
+   ],
+   "pkgs": {
+    "pacman": "wireguard-tools"
+   }
+  },
+  {
+   "id": "timeshift",
+   "name": "Timeshift",
+   "cat": "sys",
+   "desc": "Puntos de restauración del sistema con rsync o Btrfs",
+   "alt": "Restaurar sistema",
+   "flags": "x",
+   "icon": [
+    "timeshift"
+   ],
+   "pkgs": {
+    "pacman": "timeshift"
+   }
+  },
+  {
+   "id": "stacer",
+   "name": "Stacer",
+   "cat": "sys",
+   "desc": "Limpia, monitoriza y gestiona servicios del sistema",
+   "alt": "CCleaner",
+   "flags": "x",
+   "icon": [
+    "stacer"
+   ],
+   "pkgs": {
+    "aur": "stacer-bin"
+   }
+  },
+  {
+   "id": "gparted",
+   "name": "GParted",
+   "cat": "sys",
+   "desc": "Editor de particiones",
+   "alt": "—",
+   "flags": "x",
+   "icon": [
+    "gparted"
+   ],
+   "pkgs": {
+    "pacman": "gparted"
+   }
+  },
+  {
+   "id": "ventoy",
+   "name": "Ventoy",
+   "cat": "sys",
+   "desc": "USB de arranque con varias ISO a la vez: solo copia los archivos",
+   "alt": "Rufus",
+   "flags": "x",
+   "icon": [
+    "ventoy"
+   ],
+   "pkgs": {
+    "aur": "ventoy-bin"
+   }
+  },
+  {
+   "id": "etcher",
+   "name": "balenaEtcher",
+   "cat": "sys",
+   "desc": "Graba imágenes ISO en USB y tarjetas SD de forma segura",
+   "alt": "Rufus",
+   "flags": "x",
+   "icon": [
+    "balena-etcher",
+    "balena-etcher-electron"
+   ],
+   "pkgs": {
+    "aur": "balena-etcher",
+    "appimage": "https://etcher.balena.io"
+   }
+  },
+  {
+   "id": "bleachbit",
+   "name": "BleachBit",
+   "cat": "sys",
+   "desc": "Libera espacio y borra rastros (cachés, registros)",
+   "alt": "CCleaner",
+   "flags": "x",
+   "icon": [
+    "org.bleachbit.BleachBit",
+    "bleachbit"
+   ],
+   "pkgs": {
+    "pacman": "bleachbit",
+    "flatpak": "org.bleachbit.BleachBit"
+   }
+  },
+  {
+   "id": "protonvpn",
+   "name": "Proton VPN",
+   "cat": "sys",
+   "desc": "VPN de Proton con plan gratuito",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "proton-vpn-logo",
+    "protonvpn",
+    "com.protonvpn.www"
+   ],
+   "pkgs": {
+    "pacman": "proton-vpn-gtk-app",
+    "flatpak": "com.protonvpn.www"
+   }
+  },
+  {
+   "id": "mullvad",
+   "name": "Mullvad VPN",
+   "cat": "sys",
+   "desc": "VPN anónima de pago, sin cuenta con correo",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "mullvad-vpn",
+    "mullvad"
+   ],
+   "pkgs": {
+    "aur": "mullvad-vpn-bin"
+   }
+  },
+  {
+   "id": "rustdesk",
+   "name": "RustDesk",
+   "cat": "sys",
+   "desc": "Escritorio remoto libre",
+   "alt": "AnyDesk",
+   "flags": "x",
+   "icon": [
+    "rustdesk",
+    "com.rustdesk.RustDesk"
+   ],
+   "pkgs": {
+    "aur": "rustdesk-bin",
+    "flatpak": "com.rustdesk.RustDesk"
+   }
+  },
+  {
+   "id": "onepassword",
+   "name": "1Password",
+   "cat": "sys",
+   "desc": "Gestor de contraseñas",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "1password"
+   ],
+   "pkgs": {
+    "aur": "1password"
+   }
+  },
+  {
+   "id": "protonpass",
+   "name": "Proton Pass",
+   "cat": "sys",
+   "desc": "Gestor de contraseñas cifrado de Proton",
+   "alt": "1Password",
+   "flags": "",
+   "icon": [
+    "proton-pass",
+    "me.proton.Pass"
+   ],
+   "pkgs": {
+    "aur": "proton-pass-bin",
+    "flatpak": "me.proton.Pass"
+   }
+  },
+  {
+   "id": "czkawka",
+   "name": "Czkawka",
+   "cat": "sys",
+   "desc": "Encuentra archivos duplicados, fotos parecidas y carpetas vacías",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "com.github.qarmin.czkawka",
+    "czkawka"
+   ],
+   "pkgs": {
+    "aur": "czkawka-gui-bin",
+    "flatpak": "com.github.qarmin.czkawka"
+   }
+  },
+  {
+   "id": "cpux",
+   "name": "CPU-X",
+   "cat": "sys",
+   "desc": "Información detallada de CPU, placa, RAM y GPU",
+   "alt": "CPU-Z",
+   "flags": "",
+   "icon": [
+    "io.github.thetumultuousunicornofdarkness.cpu-x",
+    "cpu-x"
+   ],
+   "pkgs": {
+    "pacman": "cpu-x",
+    "flatpak": "io.github.thetumultuousunicornofdarkness.cpu-x"
+   }
+  },
+  {
+   "id": "zen",
+   "name": "Zen Browser",
+   "cat": "com",
+   "desc": "Basado en Firefox, pestañas verticales y espacios",
+   "alt": "Arc",
+   "flags": "sn",
+   "icon": [
+    "app.zen_browser.zen",
+    "zen-browser"
+   ],
+   "pkgs": {
+    "aur": "zen-browser-bin",
+    "flatpak": "app.zen_browser.zen"
+   }
+  },
+  {
+   "id": "helium",
+   "name": "Helium",
+   "cat": "com",
+   "desc": "Chromium sin Google, con uBlock Origin integrado",
+   "alt": "Chrome",
+   "flags": "n",
+   "icon": [
+    "helium-browser",
+    "helium"
+   ],
+   "pkgs": {
+    "aur": "helium-browser-bin"
+   }
+  },
+  {
+   "id": "brave",
+   "name": "Brave",
+   "cat": "com",
+   "desc": "Chromium con bloqueo de rastreadores",
+   "alt": "Chrome",
+   "flags": "",
+   "icon": [
+    "brave-browser",
+    "brave"
+   ],
+   "pkgs": {
+    "aur": "brave-bin",
+    "flatpak": "com.brave.Browser"
+   }
+  },
+  {
+   "id": "signal",
+   "name": "Signal",
+   "cat": "com",
+   "desc": "Mensajería cifrada de extremo a extremo",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "signal-desktop",
+    "org.signal.Signal"
+   ],
+   "pkgs": {
+    "pacman": "signal-desktop",
+    "dnf": "",
+    "apt": "",
+    "zypper": "",
+    "flatpak": "org.signal.Signal"
+   }
+  },
+  {
+   "id": "element",
+   "name": "Element",
+   "cat": "com",
+   "desc": "Chat de equipo sobre Matrix",
+   "alt": "Slack",
+   "flags": "",
+   "icon": [
+    "im.riot.Riot",
+    "element-desktop",
+    "element"
+   ],
+   "pkgs": {
+    "pacman": "element-desktop",
+    "flatpak": "im.riot.Riot"
+   }
+  },
+  {
+   "id": "vesktop",
+   "name": "Vesktop",
+   "cat": "com",
+   "desc": "Discord con mejor soporte para Wayland",
+   "alt": "Discord",
+   "flags": "",
+   "icon": [
+    "dev.vencord.Vesktop",
+    "vesktop"
+   ],
+   "pkgs": {
+    "aur": "vesktop-bin",
+    "flatpak": "dev.vencord.Vesktop"
+   }
+  },
+  {
+   "id": "ferdium",
+   "name": "Ferdium",
+   "cat": "com",
+   "desc": "Todas tus web apps de mensajería en una ventana",
+   "alt": "Franz",
+   "flags": "",
+   "icon": [
+    "org.ferdium.Ferdium",
+    "ferdium"
+   ],
+   "pkgs": {
+    "aur": "ferdium-bin",
+    "flatpak": "org.ferdium.Ferdium"
+   }
+  },
+  {
+   "id": "vivaldi",
+   "name": "Vivaldi",
+   "cat": "com",
+   "desc": "Navegador Chromium muy personalizable: pestañas en mosaico, correo y lector RSS",
+   "alt": "Chrome",
+   "flags": "x",
+   "icon": [
+    "vivaldi",
+    "com.vivaldi.Vivaldi"
+   ],
+   "pkgs": {
+    "pacman": "vivaldi",
+    "flatpak": "com.vivaldi.Vivaldi"
+   }
+  },
+  {
+   "id": "floorp",
+   "name": "Floorp",
+   "cat": "com",
+   "desc": "Navegador basado en Firefox con barra lateral, espacios de trabajo y mucha personalización",
+   "alt": "Opera",
+   "flags": "",
+   "icon": [
+    "floorp",
+    "one.ablaze.floorp"
+   ],
+   "pkgs": {
+    "aur": "floorp-bin",
+    "flatpak": "one.ablaze.floorp"
+   }
+  },
+  {
+   "id": "librewolf",
+   "name": "LibreWolf",
+   "cat": "com",
+   "desc": "Firefox centrado en la privacidad: sin telemetría y con uBlock Origin de serie",
+   "alt": "Chrome",
+   "flags": "",
+   "icon": [
+    "librewolf",
+    "io.gitlab.librewolf-community"
+   ],
+   "pkgs": {
+    "pacman": "librewolf",
+    "flatpak": "io.gitlab.librewolf-community"
+   }
+  },
+  {
+   "id": "chrome",
+   "name": "Google Chrome",
+   "cat": "com",
+   "desc": "El navegador de Google, con sincronización de tu cuenta",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "google-chrome",
+    "com.google.Chrome"
+   ],
+   "pkgs": {
+    "aur": "google-chrome",
+    "flatpak": "com.google.Chrome"
+   }
+  },
+  {
+   "id": "firefox",
+   "name": "Firefox",
+   "cat": "com",
+   "desc": "El navegador libre de Mozilla, con contenedores y sincronización",
+   "alt": "Chrome",
+   "flags": "",
+   "icon": [
+    "firefox",
+    "org.mozilla.firefox"
+   ],
+   "pkgs": {
+    "pacman": "firefox",
+    "flatpak": "org.mozilla.firefox"
+   }
+  },
+  {
+   "id": "chromium",
+   "name": "Chromium",
+   "cat": "com",
+   "desc": "La base libre de Chrome, sin servicios de Google",
+   "alt": "Chrome",
+   "flags": "",
+   "icon": [
+    "chromium",
+    "org.chromium.Chromium"
+   ],
+   "pkgs": {
+    "pacman": "chromium",
+    "flatpak": "org.chromium.Chromium"
+   }
+  },
+  {
+   "id": "mullvadbr",
+   "name": "Mullvad Browser",
+   "cat": "com",
+   "desc": "Navegador anti-rastreo de Mullvad y el Proyecto Tor, sin la red Tor",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "mullvad-browser",
+    "net.mullvad.MullvadBrowser"
+   ],
+   "pkgs": {
+    "aur": "mullvad-browser-bin",
+    "flatpak": "net.mullvad.MullvadBrowser"
+   }
+  },
+  {
+   "id": "epiphany",
+   "name": "Web (Epiphany)",
+   "cat": "com",
+   "desc": "El navegador sencillo de GNOME; convierte webs en apps",
+   "alt": "—",
+   "flags": "g",
+   "icon": [
+    "org.gnome.Epiphany",
+    "epiphany"
+   ],
+   "pkgs": {
+    "pacman": "epiphany",
+    "flatpak": "org.gnome.Epiphany"
+   }
+  },
+  {
+   "id": "telegram",
+   "name": "Telegram",
+   "cat": "com",
+   "desc": "Mensajería rápida con chats en la nube, canales y llamadas",
+   "alt": "WhatsApp",
+   "flags": "",
+   "icon": [
+    "org.telegram.desktop",
+    "telegram"
+   ],
+   "pkgs": {
+    "pacman": "telegram-desktop",
+    "flatpak": "org.telegram.desktop"
+   }
+  },
+  {
+   "id": "discord",
+   "name": "Discord",
+   "cat": "com",
+   "desc": "Chat de voz, vídeo y texto para comunidades y juegos",
+   "alt": "—",
+   "flags": "x",
+   "icon": [
+    "discord",
+    "com.discordapp.Discord"
+   ],
+   "pkgs": {
+    "pacman": "discord",
+    "flatpak": "com.discordapp.Discord"
+   }
+  },
+  {
+   "id": "slack",
+   "name": "Slack",
+   "cat": "com",
+   "desc": "Mensajería de equipos con canales e integraciones",
+   "alt": "Teams",
+   "flags": "x",
+   "icon": [
+    "slack",
+    "com.slack.Slack"
+   ],
+   "pkgs": {
+    "aur": "slack-desktop",
+    "flatpak": "com.slack.Slack"
+   }
+  },
+  {
+   "id": "zoom",
+   "name": "Zoom",
+   "cat": "com",
+   "desc": "Videollamadas y reuniones",
+   "alt": "—",
+   "flags": "x",
+   "icon": [
+    "Zoom",
+    "zoom",
+    "us.zoom.Zoom"
+   ],
+   "pkgs": {
+    "aur": "zoom",
+    "flatpak": "us.zoom.Zoom"
+   }
+  },
+  {
+   "id": "teams",
+   "name": "Teams for Linux",
+   "cat": "com",
+   "desc": "Cliente no oficial de Microsoft Teams, con notificaciones y bandeja",
+   "alt": "Teams",
+   "flags": "",
+   "icon": [
+    "teams-for-linux",
+    "com.github.IsmaelMartinez.teams_for_linux"
+   ],
+   "pkgs": {
+    "aur": "teams-for-linux-bin",
+    "flatpak": "com.github.IsmaelMartinez.teams_for_linux"
+   }
+  },
+  {
+   "id": "zapzap",
+   "name": "ZapZap (WhatsApp)",
+   "cat": "com",
+   "desc": "WhatsApp Web como app de escritorio con notificaciones",
+   "alt": "WhatsApp",
+   "flags": "",
+   "icon": [
+    "com.rtosta.zapzap",
+    "zapzap"
+   ],
+   "pkgs": {
+    "aur": "zapzap",
+    "flatpak": "com.rtosta.zapzap"
+   }
+  },
+  {
+   "id": "fractal",
+   "name": "Fractal",
+   "cat": "com",
+   "desc": "Cliente de Matrix para GNOME, sencillo y cifrado",
+   "alt": "Element",
+   "flags": "",
+   "icon": [
+    "org.gnome.Fractal"
+   ],
+   "pkgs": {
+    "pacman": "fractal",
+    "flatpak": "org.gnome.Fractal"
+   }
+  },
+  {
+   "id": "tuba",
+   "name": "Tuba",
+   "cat": "com",
+   "desc": "Cliente de Mastodon y el Fediverso",
+   "alt": "X / Twitter",
+   "flags": "",
+   "icon": [
+    "dev.geopjr.Tuba"
+   ],
+   "pkgs": {
+    "pacman": "tuba",
+    "flatpak": "dev.geopjr.Tuba"
+   }
+  },
+  {
+   "id": "mpv",
+   "name": "mpv",
+   "cat": "media",
+   "desc": "Reproductor ligero que abre casi todo",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "mpv"
+   ],
+   "pkgs": {
+    "pacman": "mpv",
+    "flatpak": "io.mpv.Mpv"
+   }
+  },
+  {
+   "id": "vlc",
+   "name": "VLC",
+   "cat": "media",
+   "desc": "Reproductor universal con transmisiones",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "vlc"
+   ],
+   "pkgs": {
+    "pacman": "vlc",
+    "flatpak": "org.videolan.VLC"
+   }
+  },
+  {
+   "id": "spotify",
+   "name": "Spotify",
+   "cat": "media",
+   "desc": "Música en streaming",
+   "alt": "—",
+   "flags": "x",
+   "icon": [
+    "com.spotify.Client",
+    "spotify"
+   ],
+   "pkgs": {
+    "pacman": "spotify-launcher",
+    "aur": "spotify",
+    "flatpak": "com.spotify.Client"
+   }
+  },
+  {
+   "id": "parabolic",
+   "name": "Parabolic",
+   "cat": "media",
+   "desc": "Descarga videos y audio de la web",
+   "alt": "4K Downloader",
+   "flags": "",
+   "icon": [
+    "org.nickvision.tubeconverter"
+   ],
+   "pkgs": {
+    "aur": "parabolic",
+    "flatpak": "org.nickvision.tubeconverter"
+   }
+  },
+  {
+   "id": "mpvpaper",
+   "name": "mpvpaper",
+   "cat": "media",
+   "desc": "Videos como fondo de pantalla",
+   "alt": "Wallpaper Engine",
+   "flags": "t",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "aur": "mpvpaper",
+    "dnf": "",
+    "apt": ""
+   }
+  },
+  {
+   "id": "swww",
+   "name": "swww",
+   "cat": "media",
+   "desc": "Fondos animados con transiciones",
+   "alt": "—",
+   "flags": "t",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "awww",
+    "dnf": "",
+    "apt": ""
+   }
+  },
+  {
+   "id": "lwpe",
+   "name": "linux-wallpaperengine",
+   "cat": "media",
+   "desc": "Escenas de Wallpaper Engine en Linux",
+   "alt": "Wallpaper Engine",
+   "flags": "t",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "aur": "linux-wallpaperengine-git",
+    "dnf": "",
+    "apt": ""
+   }
+  },
+  {
+   "id": "tidal",
+   "name": "TIDAL Hi-Fi",
+   "cat": "media",
+   "desc": "Cliente de TIDAL con audio sin pérdida y control MPRIS",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "tidal-hifi",
+    "com.mastermindzh.tidal-hifi"
+   ],
+   "pkgs": {
+    "aur": "tidal-hifi-bin",
+    "flatpak": "com.mastermindzh.tidal-hifi"
+   }
+  },
+  {
+   "id": "celluloid",
+   "name": "Celluloid",
+   "cat": "media",
+   "desc": "Reproductor de vídeo GTK sobre mpv, limpio y rápido",
+   "alt": "VLC",
+   "flags": "",
+   "icon": [
+    "io.github.celluloid_player.Celluloid",
+    "celluloid"
+   ],
+   "pkgs": {
+    "pacman": "celluloid",
+    "flatpak": "io.github.celluloid_player.Celluloid"
+   }
+  },
+  {
+   "id": "audacity",
+   "name": "Audacity",
+   "cat": "media",
+   "desc": "Editor y grabador de audio multipista",
+   "alt": "Audition",
+   "flags": "",
+   "icon": [
+    "audacity",
+    "org.audacityteam.Audacity"
+   ],
+   "pkgs": {
+    "pacman": "audacity",
+    "flatpak": "org.audacityteam.Audacity"
+   }
+  },
+  {
+   "id": "handbrake",
+   "name": "HandBrake",
+   "cat": "media",
+   "desc": "Convierte vídeos a casi cualquier formato",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "fr.handbrake.ghb",
+    "handbrake"
+   ],
+   "pkgs": {
+    "pacman": "handbrake",
+    "flatpak": "fr.handbrake.ghb"
+   }
+  },
+  {
+   "id": "losslesscut",
+   "name": "LosslessCut",
+   "cat": "media",
+   "desc": "Corta y une vídeos al instante, sin recodificar",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "no.mifi.losslesscut",
+    "losslesscut"
+   ],
+   "pkgs": {
+    "aur": "losslesscut-bin",
+    "flatpak": "no.mifi.losslesscut"
+   }
+  },
+  {
+   "id": "jellyfin",
+   "name": "Jellyfin Desktop",
+   "cat": "media",
+   "desc": "Cliente de escritorio para tu servidor Jellyfin",
+   "alt": "Plex",
+   "flags": "",
+   "icon": [
+    "org.jellyfin.JellyfinDesktop",
+    "jellyfin-desktop"
+   ],
+   "pkgs": {
+    "aur": "jellyfin-desktop",
+    "flatpak": "org.jellyfin.JellyfinDesktop"
+   }
+  },
+  {
+   "id": "freetube",
+   "name": "FreeTube",
+   "cat": "media",
+   "desc": "YouTube sin anuncios ni rastreo, con suscripciones locales",
+   "alt": "YouTube",
+   "flags": "",
+   "icon": [
+    "io.freetubeapp.FreeTube",
+    "freetube"
+   ],
+   "pkgs": {
+    "aur": "freetube-bin",
+    "flatpak": "io.freetubeapp.FreeTube"
+   }
+  },
+  {
+   "id": "easyeffects",
+   "name": "Easy Effects",
+   "cat": "media",
+   "desc": "Ecualizador y efectos de audio para PipeWire",
+   "alt": "—",
+   "flags": "",
+   "icon": [
+    "com.github.wwmm.easyeffects",
+    "easyeffects"
+   ],
+   "pkgs": {
+    "pacman": "easyeffects",
+    "flatpak": "com.github.wwmm.easyeffects"
+   }
+  },
+  {
+   "id": "qbittorrent",
+   "name": "qBittorrent",
+   "cat": "media",
+   "desc": "Cliente BitTorrent libre, con buscador integrado",
+   "alt": "µTorrent",
+   "flags": "",
+   "icon": [
+    "org.qbittorrent.qBittorrent",
+    "qbittorrent"
+   ],
+   "pkgs": {
+    "pacman": "qbittorrent",
+    "flatpak": "org.qbittorrent.qBittorrent"
+   }
+  },
+  {
+   "id": "fragments",
+   "name": "Fragments",
+   "cat": "media",
+   "desc": "Cliente BitTorrent sencillo de GNOME",
+   "alt": "µTorrent",
+   "flags": "",
+   "icon": [
+    "de.haeckerfelix.Fragments"
+   ],
+   "pkgs": {
+    "pacman": "fragments",
+    "flatpak": "de.haeckerfelix.Fragments"
+   }
+  },
+  {
+   "id": "stremio",
+   "name": "Stremio",
+   "cat": "media",
+   "desc": "Centro de películas y series con complementos",
+   "alt": "—",
+   "flags": "x",
+   "icon": [
+    "com.stremio.Stremio",
+    "stremio"
+   ],
+   "pkgs": {
+    "aur": "stremio",
+    "flatpak": "com.stremio.Stremio"
+   }
+  }
+ ]
+}

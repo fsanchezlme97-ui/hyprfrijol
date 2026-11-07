@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# hf-launch — abre la primera app instalada de la lista.
+#   hf-launch 'google-chrome-stable' 'firefox' 'kitty -1 btop'
+# Cada argumento es un comando completo; se usa el primero cuyo programa existe.
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+for cmd in "$@"; do
+  [ -n "$cmd" ] || continue
+  command -v "${cmd%% *}" >/dev/null 2>&1 || continue
+  setsid -f sh -c "$cmd" >/dev/null 2>&1
+  exit 0
+done
+command -v notify-send >/dev/null && notify-send -a "hyprfrijol" "No hay ninguna app instalada para esto" "Probé: $*"
+exit 1

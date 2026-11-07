@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# hf-appfile — el archivo .desktop de una app instalada y el paquete que la trae (Spotlight › Todas las apps).
+#   hf-appfile path <id>        ruta del .desktop (id sin «.desktop»; busca como el estándar XDG)
+#   hf-appfile show <id>        lo muestra en el gestor de archivos (FileManager1.ShowItems; si no, abre la carpeta)
+#   hf-appfile owner <id>       «flatpak <app-id>» · «pacman|dpkg|rpm <paquete>» · nada si no viene de un paquete
+#   hf-appfile uninstall <id>   desinstala ese paquete (pide confirmación; pensado para correr en una terminal)
+set -u
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+cmd=${1:-}; id=${2:-}; id=${id%.desktop}
+[ -n "$cmd" ] && [ -n "$id" ] || { sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+
+path() {
+  local d rel=${id//-//}
+  for d in "${XDG_DATA_HOME:-$HOME/.local/share}" $(printf %s "${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" | tr : ' '); do
+    [ -f "$d/applications/$id.desktop" ] && { echo "$d/applications/$id.desktop"; return 0; }
+    [ -f "$d/applications/$rel.desktop" ] && { echo "$d/applications/$rel.desktop"; return 0; }   # kde-foo → kde/foo
+  done
+  return 1
+}
+owner() {
+  local f p; f=$(path) || return 1
+  case "$f" in
+    */flatpak/exports/*) echo "flatpak $id"; return 0;;
+  esac
+  f=$(readlink -f "$f")
+  if command -v pacman >/dev/null && p=$(pacman -Qoq "$f" 2>/dev/null); then echo "pacman $p"
+  elif command -v dpkg >/dev/null && p=$(dpkg -S "$f" 2>/dev/null); then echo "dpkg ${p%%:*}"
+  elif command -v rpm >/dev/null && p=$(rpm -qf --qf '%{NAME}' "$f" 2>/dev/null); then echo "rpm $p"
+  else return 1; fi
+}
+
+case "$cmd" in
+  path) path ;;
+  show)
+    f=$(path) || { notify-send -a "Aplicaciones" "No encuentro $id.desktop"; exit 1; }
+    gdbus call --session --dest org.freedesktop.FileManager1 --object-path /org/freedesktop/FileManager1 \
+      --method org.freedesktop.FileManager1.ShowItems "['file://$f']" "" >/dev/null 2>&1 || exec xdg-open "$(dirname "$f")" ;;
+  owner) owner ;;
+  uninstall)
+    o=$(owner) || { f=$(path); echo "«$id» no viene de ningún paquete${f:+ ($f)}: bórralo a mano si quieres."; exit 1; }
+    set -- $o
+    case "$1" in
+      flatpak) flatpak uninstall "$2" ;;
+      pacman)  sudo pacman -Rns "$2" ;;
+      dpkg)    sudo apt remove "$2" ;;
+      rpm)     if command -v dnf >/dev/null; then sudo dnf remove "$2"; else sudo zypper remove "$2"; fi ;;
+    esac ;;
+  *) exit 2 ;;
+esac

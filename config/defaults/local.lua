@@ -1,0 +1,7 @@
+-- hyprfrijol · ajustes personales. Este archivo nunca se sobrescribe.
+-- Ejemplos:
+-- HF.terminal = "foot"
+-- HF.files    = "nautilus"
+-- hl.monitor({ output = "DP-1", mode = "2560x1440@144", position = "0x0", scale = 1 })
+-- hl.config({ input = { kb_layout = "latam" } })
+-- hl.bind("SUPER + B", hl.dsp.exec_cmd("firefox"))

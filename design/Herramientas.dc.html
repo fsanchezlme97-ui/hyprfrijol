@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Centro de herramientas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;border:0;background:none;color:inherit;padding:0;cursor:pointer}
+input{font:inherit}
+input::placeholder{color:inherit;opacity:1}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; display: flex; background: {{c.s1}}; color: {{c.t}}; font-family: 'Inter', system-ui, sans-serif; font-size: 12.5px; letter-spacing: -0.005em; border-radius: 6px; overflow: hidden; border: 1px solid {{c.ov}}; box-sizing: border-box">
+
+  <nav aria-label="Categorías" style="width: 226px; flex: none; background: {{c.bg}}; padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; box-sizing: border-box">
+    <span style="font-size: 17px; font-weight: 600; padding: 0 12px 4px">Herramientas</span>
+    <span style="font-size: 11.5px; color: {{c.tv}}; padding: 0 12px 12px">{{total}} apps actuales para CachyOS + Hyprland</span>
+    <sc-for list="{{cats}}" as="k" hint-placeholder-count="10">
+      <button onClick="{{k.pick}}" style="height: 33px; border-radius: 5px; padding: 0 12px; display: flex; align-items: center; gap: 10px; text-align: left; background: {{k.bg}}; color: {{k.fg}}; font-weight: {{k.weight}}">
+        <span aria-hidden="true" style="width: 16px; text-align: center">{{k.glyph}}</span><span style="flex: 1">{{k.label}}</span><span class="num" style="font-size: 11px; color: {{k.countFg}}">{{k.count}}</span>
+      </button>
+    </sc-for>
+    <span style="flex: 1"></span>
+    <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 6px; background: {{c.s3}}; font-size: 11.5px; color: {{c.tv}}; line-height: 1.45">
+      <span style="font-weight: 600; color: {{c.t}}">Compatibilidad</span>
+      <span><b style="color: {{c.p}}">Wayland</b> funciona nativa en Hyprland.</span>
+      <span><b style="color: {{c.ter}}">XWayland</b> funciona, vía capa de compatibilidad.</span>
+      <span><b style="color: {{c.t}}">Alfa / Preview</b> versión de prueba, puede fallar.</span>
+    </div>
+  </nav>
+
+  <main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+    <div style="padding: 14px 18px 8px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <h1 style="margin: 0; font-size: 20px; font-weight: 600; flex: 1">{{catTitle}}</h1>
+        <label style="width: 290px; height: 32px; border-radius: 5px; background: {{c.s3}}; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: {{c.tv}}">
+          <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/></svg>
+          <input aria-label="Buscar herramientas" value="{{q}}" onChange="{{onQ}}" placeholder="Buscar: ghostty, ollama, faugus…" style="flex: 1; background: none; border: 0; outline: none; color: {{c.t}}">
+        </label>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap">
+        <span style="color: {{c.tv}}; margin-right: 2px">Paquetes:</span>
+        <sc-for list="{{presets}}" as="p" hint-placeholder-count="6">
+          <button onClick="{{p.pick}}" style="height: 26px; padding: 0 10px; border-radius: 7px; border: 1px solid {{c.ov}}; font-weight: 600">+ {{p.label}}</button>
+        </sc-for>
+        <span style="flex: 1"></span>
+        <sc-for list="{{filters}}" as="f" hint-placeholder-count="3">
+          <button onClick="{{f.toggle}}" aria-pressed="{{f.on}}" style="height: 26px; padding: 0 10px; border-radius: 7px; font-weight: 600; background: {{f.bg}}; color: {{f.fg}}; border: {{f.border}}; box-sizing: border-box">{{f.mark}} {{f.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="flex: 1; min-height: 0; overflow: hidden; padding: 0 18px">
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px">
+        <sc-for list="{{tools}}" as="t" hint-placeholder-count="18">
+          <button role="checkbox" aria-checked="{{t.on}}" onClick="{{t.toggle}}" style="height: 82px; border-radius: 6px; padding: 9px 11px; box-sizing: border-box; display: flex; gap: 11px; align-items: flex-start; text-align: left; background: {{t.bg}}; border: {{t.border}}; overflow: hidden">
+            <span aria-hidden="true" style="width: 34px; height: 34px; border-radius: 6px; flex: none; background: {{t.tile}}; color: {{t.tileFg}}; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px">{{t.g}}</span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+              <span style="display: flex; align-items: center; gap: 5px; min-width: 0"><span style="font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.name}}</span>
+                <sc-if value="{{t.star}}" hint-placeholder-val="{{ false }}"><span style="font-size: 10.5px; font-weight: 600; color: {{c.p}}">★</span></sc-if>
+                <sc-if value="{{t.isNew}}" hint-placeholder-val="{{ false }}"><span style="height: 15px; padding: 0 5px; border-radius: 4px; background: {{c.pc}}; color: {{c.onPc}}; font-size: 9.5px; font-weight: 600; display: flex; align-items: center">NUEVO</span></sc-if>
+                <sc-if value="{{t.preview}}" hint-placeholder-val="{{ false }}"><span style="height: 15px; padding: 0 5px; border-radius: 4px; background: {{c.ter}}; color: {{c.bg}}; font-size: 9.5px; font-weight: 600; display: flex; align-items: center">PREVIEW</span></sc-if>
+                <sc-if value="{{t.alpha}}" hint-placeholder-val="{{ false }}"><span style="height: 15px; padding: 0 5px; border-radius: 4px; background: {{c.ter}}; color: {{c.bg}}; font-size: 9.5px; font-weight: 600; display: flex; align-items: center">ALFA</span></sc-if>
+              </span>
+              <span style="color: {{c.tv}}; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical">{{t.desc}}</span>
+              <span style="font-size: 10.5px; display: flex; gap: 6px; align-items: center; white-space: nowrap; overflow: hidden"><span style="font-weight: 600; color: {{t.compatFg}}">{{t.compat}}</span><span style="color: {{c.tv}}">· {{t.src}} · {{t.alt}}</span></span>
+            </span>
+            <span aria-hidden="true" style="width: 17px; height: 17px; border-radius: 5px; flex: none; box-sizing: border-box; border: {{t.boxBorder}}; background: {{t.boxBg}}; color: {{c.onP}}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600">{{t.mark}}</span>
+          </button>
+        </sc-for>
+      </div>
+      <sc-if value="{{more}}" hint-placeholder-val="{{ false }}"><div style="padding: 8px 2px; color: {{c.tv}}; font-size: 11.5px">{{moreText}}</div></sc-if>
+      <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}"><div style="padding: 40px; text-align: center; color: {{c.tv}}">Nada coincide. Desde Spotlight puedes buscar en AUR y Flathub con  !nombre</div></sc-if>
+    </div>
+
+    <div style="flex: none; border-top: 1px solid {{c.ov}}; padding: 11px 18px; display: flex; align-items: center; gap: 14px; background: {{c.bg}}">
+      <span style="display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0">
+        <span style="font-weight: 600">{{selText}}</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{c.tv}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{cmd1}}</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{c.tv}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{cmd2}}</span>
+      </span>
+      <button style="height: 34px; padding: 0 14px; border-radius: 5px; border: 1px solid {{c.ov}}">Ver detalles</button>
+      <button style="height: 34px; padding: 0 18px; border-radius: 5px; background: {{installBg}}; color: {{installFg}}; font-weight: 600">Instalar {{selCount}}</button>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"palette":{"editor":"enum","options":["grafito","pizarra","claro"],"default":"grafito"},"$preview":{"width":1280,"height":800}}'>
+const PALETTES = {
+  grafito: {bg:'#121314', s1:'#1A1C1E', s3:'#25272A', s4:'#2F3235', p:'#A9C1D9', onP:'#0E2A40', pc:'#2C3E50', onPc:'#D5E3F0', sc:'#353A40', onSc:'#E1E4E8', ter:'#C9B79C', t:'#E4E6E8', tv:'#AEB4BA', o:'#8A9097', ov:'#383C41'},
+  pizarra: {bg:'#0F1418', s1:'#161C21', s3:'#20282E', s4:'#2A333A', p:'#8FC3C0', onP:'#00332F', pc:'#1F4744', onPc:'#C9EBE8', sc:'#2F3A43', onSc:'#DCE5EC', ter:'#D9B88F', t:'#E1E7EC', tv:'#AAB6BF', o:'#86919B', ov:'#354049'},
+  claro:   {bg:'#EEF1F4', s1:'#F9FAFB', s3:'#FFFFFF', s4:'#E6EAEE', p:'#2F5E8C', onP:'#FFFFFF', pc:'#D3E1EE', onPc:'#10304F', sc:'#DCE4EC', onSc:'#1F2A35', ter:'#8A5F2A', t:'#1B1F24', tv:'#4D5762', o:'#6F7984', ov:'#DADFE4'}
+};
+// [id, nombre, cat, descripción, fuente, paquete, alternativa a, flags]
+// flags: s = recomendada, n = nueva/moderna, a = alfa, x = XWayland, t = terminal, w = web
+const TOOLS = [
+  ['artcraft','ArtCraft (suite Craft)','crea','Apps en Rust para fotos, video, vectores, PDF, slides, CAD y audio','AppImage','ArtCraft Launcher','Adobe CC','sna'],
+  ['artstudio','ArtCraft Studio','crea','Imágenes y video con IA desde una escena 3D (tu API o créditos)','Código','storytold/artcraft','Runway','na'],
+  ['graphite','Graphite','crea','Editor 2D vectorial y procedural con nodos, «el Blender del 2D»','AppImage','Graphite','Illustrator','sna'],
+  ['krita','Krita','crea','Pintura digital e ilustración con soporte de tabletas','Repos','krita','Clip Studio','sx'],
+  ['gimp','GIMP 3','crea','Retoque fotográfico, capas no destructivas','Repos','gimp','Photoshop',''],
+  ['inkscape','Inkscape','crea','Diseño vectorial, logos y SVG','Repos','inkscape','Illustrator',''],
+  ['blender','Blender','crea','Modelado 3D, animación, render y video','Repos','blender','Maya / C4D','s'],
+  ['darktable','Darktable','crea','Revelado RAW y catálogo de fotos','Repos','darktable','Lightroom',''],
+  ['kdenlive','Kdenlive','crea','Edición de video por pistas','Repos','kdenlive','Premiere',''],
+  ['resolve','DaVinci Resolve','crea','Edición y color profesional (mejor con GPU)','AUR','davinci-resolve','Premiere / FCP','x'],
+  ['obs','OBS Studio','crea','Grabar pantalla y transmitir en vivo','Repos','obs-studio','Streamlabs','s'],
+  ['upscayl','Upscayl','crea','Ampliar imágenes con IA, sin conexión','Flathub','org.upscayl.Upscayl','Topaz',''],
+  ['penpot','Penpot','crea','Diseño de interfaces colaborativo (como web app)','Web app','design.penpot.app','Figma','w'],
+
+  ['libre','LibreOffice','ofi','Documentos, hojas de cálculo y presentaciones','Repos','libreoffice-fresh','Microsoft Office','s'],
+  ['onlyoffice','ONLYOFFICE','ofi','Máxima compatibilidad con .docx, .xlsx y .pptx','Flathub','org.onlyoffice.desktopeditors','Microsoft Office','x'],
+  ['obsidian','Obsidian','ofi','Notas en Markdown enlazadas, con plugins','Flathub','md.obsidian.Obsidian','Notion','s'],
+  ['affine','AFFiNE','ofi','Documentos, pizarras y bases de datos en un solo espacio','AppImage','AFFiNE','Notion / Miro','n'],
+  ['joplin','Joplin','ofi','Notas de código abierto con sincronización cifrada','Flathub','net.cozic.joplin_desktop','Evernote',''],
+  ['thunder','Thunderbird','ofi','Correo, calendario y contactos de escritorio','Repos','thunderbird','Outlook',''],
+  ['okular','Okular','ofi','Leer, firmar y anotar PDF','Repos','okular','Acrobat Reader',''],
+
+  ['ghostty','Ghostty','dev','Terminal nativa y acelerada por GPU','Repos','ghostty','iTerm / Windows Terminal','sn'],
+  ['zed','Zed','dev','Editor de código muy rápido, con IA y colaboración','Repos','zed','VS Code','sn'],
+  ['vscode','VS Code','dev','El editor más usado, con extensiones','AUR','visual-studio-code-bin','—',''],
+  ['helix','Helix','dev','Editor modal moderno, listo sin configurar','Repos','helix','Vim','t'],
+  ['nvim','Neovim + LazyVim','dev','Editor modal con una configuración moderna lista para usar','Repos','neovim','Vim','t'],
+  ['mise','mise + uv','dev','Versiones de lenguajes y entornos de Python al instante','Repos','mise uv','nvm / pyenv','tn'],
+  ['distrobox','Distrobox','dev','Otras distros en contenedores, integradas al escritorio','Repos','distrobox','WSL','t'],
+  ['podman','Podman Desktop','dev','Contenedores y Kubernetes con interfaz','Flathub','io.podman_desktop.PodmanDesktop','Docker Desktop',''],
+  ['yaak','Yaak','dev','Cliente de APIs REST, GraphQL y gRPC, ligero','AppImage','Yaak','Postman','n'],
+  ['lazygit','lazygit','dev','Git en la terminal, rápido y visual','Repos','lazygit','GitKraken','t'],
+  ['tmux','tmux + Zellij','dev','Multiplexores: sesiones y paneles que sobreviven al cerrar la terminal','Repos','tmux zellij','—','t'],
+  ['starship','Starship','dev','Prompt rápido que muestra git, lenguaje y entorno','Repos','starship','Oh My Zsh','tn'],
+  ['nav','zoxide + fzf + atuin','dev','Saltar a carpetas, búsqueda difusa e historial de comandos con búsqueda','Repos','zoxide fzf atuin','—','tn'],
+  ['coreutils','ripgrep, fd, bat, eza, jq','dev','Reemplazos modernos de grep, find, cat, ls y un procesador de JSON','Repos','ripgrep fd bat eza jq','—','t'],
+  ['just','just','dev','Ejecuta las tareas del proyecto con un archivo simple','Repos','just','make','t'],
+  ['docker','Docker + Compose','dev','Contenedores clásicos, compatibles con la mayoría de proyectos','Repos','docker docker-compose','Docker Desktop','t'],
+  ['lazydocker','lazydocker','dev','Contenedores, logs e imágenes en una interfaz de terminal','AUR','lazydocker','Portainer','t'],
+  ['ghcli','GitHub CLI + delta','dev','Pull requests desde la terminal y diffs legibles','Repos','github-cli git-delta','—','t'],
+  ['dbeaver','DBeaver','dev','Cliente universal de bases de datos SQL','Repos','dbeaver','DataGrip',''],
+  ['bruno','Bruno','dev','Cliente de APIs que guarda colecciones como archivos en git','AUR','bruno-bin','Postman',''],
+  ['agents','Agentes de IA en terminal','dev','Claude Code, Codex y Gemini CLI para programar con IA','Instalador','Claude Code, Codex, Gemini CLI','Copilot','stn'],
+
+  ['claudecode','Claude Code','ia','Claude en la terminal: tareas sobre tus carpetas, código, MCP. Funciona en CachyOS','Instalador','Claude Code','—','sn'],
+  ['claudedesk','Claude (app de escritorio)','ia','Chat, tareas largas y código con vista previa. Beta oficial solo para Ubuntu/Debian','Descarga','Claude Desktop (.deb)','—','np'],
+  ['ollama','Ollama','ia','Ejecuta modelos de lenguaje en tu equipo','Repos','ollama','ChatGPT local','st'],
+  ['alpaca','Alpaca','ia','Chat de escritorio para tus modelos locales','Flathub','com.jeffser.Alpaca','—','n'],
+  ['newelle','Newelle','ia','Asistente con voz, comandos y extensiones','Flathub','io.github.qwersyk.Newelle','Copilot','n'],
+  ['lmstudio','LM Studio','ia','Descarga y prueba modelos con interfaz','AppImage','LM Studio','—',''],
+  ['jan','Jan','ia','Asistente local y de código abierto, sin cuenta','AppImage','Jan','ChatGPT','n'],
+  ['comfy','ComfyUI','ia','Generación de imágenes y video con nodos (GPU)','Código','comfyanonymous/ComfyUI','Midjourney',''],
+
+  ['steam','Steam','game','Tienda y Proton para juegos de Windows','Repos','steam','—','sx'],
+  ['epic','Epic Games Launcher','game','Launcher oficial reconstruido, nativo en Linux: tienda, biblioteca y Epic Parties','Descarga','Epic Games Launcher Preview','—','snp'],
+  ['heroic','Heroic','game','Juegos de Epic, GOG y Amazon','Flathub','com.heroicgameslauncher.hgl','Epic Launcher',''],
+  ['faugus','Faugus Launcher','game','Juegos y launchers de Windows (Battle.net, Rockstar) con umu','Flathub','io.github.Faugus.faugus-launcher','Playnite','sn'],
+  ['protonplus','ProtonPlus','game','Instala Proton-GE, Proton-CachyOS, DXVK y edita MangoHud','Flathub','com.vysp3r.ProtonPlus','—','n'],
+  ['lutris','Lutris','game','Un lanzador para todas tus bibliotecas','Repos','lutris','—',''],
+  ['bottles','Bottles','game','Apps de Windows en entornos aislados','Flathub','com.usebottles.bottles','—',''],
+  ['mangohud','MangoHud','game','FPS, temperaturas y uso en pantalla','Repos','mangohud','MSI Afterburner','t'],
+  ['lact','LACT','game','Reloj, voltaje, límites y ventiladores de GPU AMD/NVIDIA','Repos','lact','Afterburner',''],
+  ['cooler','CoolerControl','game','Curvas de ventiladores y bombas AIO','AUR','coolercontrol','FanControl',''],
+  ['prism','Prism Launcher','game','Minecraft con mods de Modrinth y CurseForge','Repos','prismlauncher','CurseForge',''],
+  ['sunshine','Sunshine','game','Transmite tus juegos a otro equipo o al TV (Moonlight)','AUR','sunshine','GeForce Experience',''],
+
+  ['nautilus','Nautilus','files','Gestor de archivos de GNOME: limpio, simple y con vista previa','Repos','nautilus sushi','Explorador / Finder','s'],
+  ['dolphin','Dolphin','files','El más completo: doble panel, terminal integrada, renombrado masivo','Repos','dolphin','Total Commander',''],
+  ['yazi','Yazi','files','Gestor de archivos en terminal, muy rápido, con vista previa','Repos','yazi','ranger','tn'],
+  ['cosmicfiles','COSMIC Files','files','Gestor en Rust con pestañas y doble panel','Repos','cosmic-files','—','n'],
+  ['thunar','Thunar','files','Ligero y rápido, con renombrado masivo','Repos','thunar','—',''],
+  ['orca','OrcaSlicer','print','Laminador moderno para impresoras FDM, con perfiles de muchas marcas','Flathub','io.github.softfever.OrcaSlicer','Bambu Studio','sn'],
+  ['prusa','PrusaSlicer','print','Laminador probado, con soportes orgánicos','Repos','prusa-slicer','Cura',''],
+  ['openscad','OpenSCAD','print','Modelos 3D a partir de código: ideal para que Claude los genere','Repos','openscad','—','s'],
+  ['freecad','FreeCAD','print','CAD paramétrico completo para piezas y ensamblajes','Repos','freecad','Fusion 360',''],
+  ['bazaar','Bazaar','sys','Tienda de apps Flathub moderna y rápida','Flathub','io.github.kolunmi.Bazaar','Microsoft Store','sn'],
+  ['btrfsa','Btrfs Assistant','sys','Ver y restaurar los puntos de Snapper con interfaz','Repos','btrfs-assistant','Restaurar sistema','s'],
+  ['mission','Mission Center','sys','Monitor de CPU, GPU, RAM y procesos','Flathub','io.missioncenter.MissionCenter','Admin. de tareas',''],
+  ['resources','Resources','sys','Monitor de recursos minimalista','Flathub','net.nokyan.Resources','Admin. de tareas',''],
+  ['btop','btop','sys','Monitor de recursos en la terminal','Repos','btop','—','t'],
+  ['flatseal','Flatseal','sys','Permisos de las apps Flatpak','Flathub','com.github.tchx84.Flatseal','—',''],
+  ['warehouse','Warehouse','sys','Gestiona apps y datos de Flatpak','Flathub','io.github.flattool.Warehouse','—',''],
+  ['gearlever','Gear Lever','sys','Integra y actualiza AppImages','Flathub','it.mijorus.gearlever','—',''],
+  ['impression','Impression','sys','Graba imágenes de sistema en USB','Flathub','io.gitlab.adhami3310.Impression','Rufus',''],
+  ['pika','Pika Backup','sys','Copias de /home cifradas y programadas','Flathub','org.gnome.World.PikaBackup','Time Machine','s'],
+  ['keepass','KeePassXC','sys','Contraseñas locales y cifradas','Repos','keepassxc','1Password',''],
+  ['bitwarden','Bitwarden','sys','Contraseñas sincronizadas en la nube','Repos','bitwarden','1Password',''],
+  ['syncthing','Syncthing','sys','Sincroniza carpetas entre tus equipos','Repos','syncthing','Dropbox','t'],
+  ['localsend','LocalSend','sys','Envía archivos a cualquier dispositivo en tu red','Flathub','org.localsend.localsend_app','AirDrop','s'],
+  ['kdeconnect','KDE Connect','sys','Teléfono integrado: avisos, archivos, portapapeles','Repos','kdeconnect','Enlace móvil',''],
+
+  ['zen','Zen Browser','com','Basado en Firefox, pestañas verticales y espacios','Flathub','app.zen_browser.zen','Arc','sn'],
+  ['helium','Helium','com','Chromium sin Google, con uBlock Origin integrado','AUR','helium-browser-bin','Chrome','n'],
+  ['brave','Brave','com','Chromium con bloqueo de rastreadores','AUR','brave-bin','Chrome',''],
+  ['signal','Signal','com','Mensajería cifrada de extremo a extremo','Repos','signal-desktop','—',''],
+  ['element','Element','com','Chat de equipo sobre Matrix','Flathub','im.riot.Riot','Slack',''],
+  ['vesktop','Vesktop','com','Discord con mejor soporte para Wayland','Flathub','dev.vencord.Vesktop','Discord',''],
+  ['ferdium','Ferdium','com','Todas tus web apps de mensajería en una ventana','Flathub','org.ferdium.Ferdium','Franz',''],
+
+  ['mpv','mpv','media','Reproductor ligero que abre casi todo','Repos','mpv','—',''],
+  ['vlc','VLC','media','Reproductor universal con transmisiones','Repos','vlc','—',''],
+  ['spotify','Spotify','media','Música en streaming','Flathub','com.spotify.Client','—','x'],
+  ['parabolic','Parabolic','media','Descarga videos y audio de la web','Flathub','org.nickvision.tubeconverter','4K Downloader',''],
+  ['mpvpaper','mpvpaper','media','Videos como fondo de pantalla','AUR','mpvpaper','Wallpaper Engine','t'],
+  ['swww','swww','media','Fondos animados con transiciones','Repos','swww','—','t'],
+  ['lwpe','linux-wallpaperengine','media','Escenas de Wallpaper Engine en Linux','AUR','linux-wallpaperengine-git','Wallpaper Engine','t']
+];
+const CATS = [['top','★','Recomendadas'],['nuevo','✧','Nuevas y modernas'],['crea','◐','Creatividad y diseño'],['ofi','¶','Oficina y notas'],['dev','‹›','Desarrollo'],['files','▣','Gestores de archivos'],['print','◇','Impresión 3D'],['ia','✦','IA'],['game','◈','Juegos'],['sys','⚙','Sistema y seguridad'],['com','◫','Navegadores y chat'],['media','▶','Multimedia y fondos'],['sel','✓','Seleccionadas']];
+const PRESETS = [
+  ['Creativo', ['artcraft','graphite','krita','blender','darktable','kdenlive','obs','upscayl']],
+  ['Oficina', ['libre','obsidian','thunder','okular','localsend','keepass','zen']],
+  ['Desarrollador', ['ghostty','tmux','starship','nav','coreutils','nvim','zed','mise','docker','lazydocker','lazygit','ghcli','agents']],
+  ['Gamer', ['steam','epic','heroic','faugus','protonplus','mangohud','lact']],
+  ['IA', ['claudecode','ollama','alpaca','newelle','upscayl']],
+  ['Impresión 3D', ['orca','openscad','freecad','claudecode']],
+  ['Esenciales', ['bazaar','btrfsa','pika','localsend','gearlever','flatseal','mission','nautilus']]
+];
+const MAXV = 18;
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { cat: 'top', q: '', sel: { btrfsa: true, pika: true, bazaar: true }, onlyW: false, hideA: false };
+  }
+  renderVals() {
+    const st = this.state;
+    const c = PALETTES[this.props.palette] || PALETTES.grafito;
+    const all = TOOLS.map(([id, name, cat, desc, src, pkg, alt, f]) => ({ id, name, cat, desc, src, pkg, alt,
+      star: f.includes('s'), isNew: f.includes('n'), alpha: f.includes('a'), preview: f.includes('p'), xw: f.includes('x'), term: f.includes('t'), web: f.includes('w') }));
+    const pass = (t) => (!st.onlyW || (!t.xw && !t.alpha && !t.preview)) && (!st.hideA || (!t.alpha && !t.preview));
+    const inCat = (t, k) => k === 'top' ? t.star : k === 'nuevo' ? t.isNew : k === 'sel' ? !!st.sel[t.id] : t.cat === k;
+    const q = st.q.trim().toLowerCase();
+    const full = (q ? all.filter((t) => (t.name + ' ' + t.desc + ' ' + t.alt + ' ' + t.pkg).toLowerCase().includes(q)) : all.filter((t) => inCat(t, st.cat))).filter(pass);
+    const list = full.slice(0, MAXV);
+    const TILE = { print: ['sc','onSc'], files: ['pc','onPc'], crea: ['pc','onPc'], ofi: ['sc','onSc'], dev: ['s4','t'], ia: ['p','onP'], game: ['sc','onSc'], sys: ['s4','t'], com: ['pc','onPc'], media: ['s4','t'] };
+    const tools = list.map((t) => {
+      const on = !!st.sel[t.id];
+      const [tb, tf] = TILE[t.cat];
+      const compat = t.preview ? 'Nativa · Arch no oficial' : t.alpha ? 'Por verificar' : t.web ? 'Navegador' : t.term ? 'Terminal' : t.xw ? 'XWayland' : 'Wayland';
+      return { name: t.name, desc: t.desc, src: t.src, alt: t.alt === '—' ? t.pkg : 'alt. a ' + t.alt, star: t.star, isNew: t.isNew, alpha: t.alpha, preview: t.preview,
+        compat, compatFg: t.xw || t.preview ? c.ter : (t.alpha ? c.tv : c.p),
+        g: t.name.charAt(0), tile: c[tb], tileFg: c[tf], on: on ? 'true' : 'false',
+        bg: on ? c.pc : c.s3, border: on ? '1px solid ' + c.p : '1px solid ' + c.ov,
+        boxBg: on ? c.p : 'transparent', boxBorder: on ? '0 solid transparent' : '1.5px solid ' + c.o, mark: on ? '✓' : '',
+        toggle: () => this.setState({ sel: Object.assign({}, st.sel, { [t.id]: !on }) }) };
+    });
+    const cats = CATS.map(([k, glyph, label]) => {
+      const on = !q && st.cat === k;
+      const n = all.filter((t) => inCat(t, k) && pass(t)).length;
+      return { glyph, label, count: String(n), bg: on ? c.sc : 'transparent', fg: on ? c.onSc : c.t, countFg: on ? c.onSc : c.tv, weight: on ? '600' : '400', pick: () => this.setState({ cat: k, q: '' }) };
+    });
+    const flt = (k, label) => { const on = !!st[k]; return { label, on: on ? 'true' : 'false', mark: on ? '✓' : '', bg: on ? c.sc : 'transparent', fg: on ? c.onSc : c.tv, border: '1px solid ' + (on ? 'transparent' : c.ov), toggle: () => this.setState({ [k]: !on }) }; };
+    const chosen = all.filter((t) => st.sel[t.id]);
+    const by = (src) => chosen.filter((t) => t.src === src).map((t) => t.pkg);
+    const pac = by('Repos').concat(by('AUR')), fl = by('Flathub'), ai = by('AppImage'), cd = by('Código'), wa = chosen.filter((t) => t.src === 'Web app').map((t) => t.name);
+    const parts2 = [];
+    if (fl.length) parts2.push('flatpak install flathub ' + fl.join(' '));
+    if (ai.length) parts2.push('Gear Lever ← ' + ai.join(', '));
+    if (cd.length) parts2.push('git clone ' + cd.join(' '));
+    const ins = by('Instalador');
+    if (ins.length) parts2.push('Instalador oficial ← ' + ins.join(', '));
+    const dl = by('Descarga');
+    if (dl.length) parts2.push('Descarga oficial ← ' + dl.join(', '));
+    if (wa.length) parts2.push('Web app → ' + wa.join(', '));
+    const presets = PRESETS.map(([label, ids]) => ({ label, pick: () => { const n = Object.assign({}, st.sel); ids.forEach((i) => { n[i] = true; }); this.setState({ sel: n, cat: 'sel', q: '' }); } }));
+    const catTitle = q ? 'Resultados para «' + st.q.trim() + '»' : (CATS.find((x) => x[0] === st.cat) || CATS[0])[2];
+    return {
+      c, cats, tools, presets, catTitle, q: st.q, total: String(all.length),
+      filters: [flt('onlyW', 'Solo Wayland nativo'), flt('hideA', 'Ocultar alfa')],
+      empty: list.length === 0, more: full.length > MAXV, moreText: '+ ' + (full.length - MAXV) + ' más · usa la búsqueda para verlas',
+      onQ: (e) => this.setState({ q: e.target.value }),
+      selCount: chosen.length ? '(' + chosen.length + ')' : '',
+      selText: chosen.length ? chosen.length + ' seleccionadas · ' + chosen.map((t) => t.name).slice(0, 6).join(', ') + (chosen.length > 6 ? '…' : '') + ' · se crea un punto de restauración antes' : 'Nada seleccionado',
+      cmd1: pac.length ? 'paru -S --needed ' + pac.join(' ') : (parts2.length ? '' : 'Elige herramientas para ver los comandos'),
+      cmd2: parts2.join('  ·  '),
+      installBg: chosen.length ? c.p : c.s4, installFg: chosen.length ? c.onP : c.tv
+    };
+  }
+}
+</script>
+</body>
+</html>

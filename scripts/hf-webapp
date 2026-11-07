@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+# hf-webapp — web apps (WhatsApp, YouTube…) del ajuste "webapps" (Ajustes › Web apps).
+#   hf-webapp open <clave>         la abre con su modo (campo "mode" de la web app):
+#                                    panel     en su pestaña del panel lateral (QtWebEngine acoplado)
+#                                    ventana   en una ventana propia integrada (QtWebEngine, clase "hf-webwin-<clave>.qml6")
+#                                    navegador con el navegador predeterminado en modo app (--app: Chrome/Chromium/Brave/
+#                                              Vivaldi/Edge, con tus sesiones); si es Firefox o derivado, ventana normal
+#                                  Sin "mode" guardado: como antes (webappEngine "navegador" → navegador; si tiene pestaña
+#                                  en el panel → panel; si no → navegador).
+#   hf-webapp start <clave> [panel|ventana]   arranca la ventana integrada si no está ya (panel: clase "hf-webapp.qml6",
+#                                  título "WhatsApp"… que el panel lateral acopla; ventana: ventana normal)
+#   hf-webapp cmd <clave> <orden> [arg]   toggle | pause | pipon | pipoff | back | reload | home | zoom <factor> (se guarda por web) |
+#                                  external (abre la página actual en el navegador) | url <dirección>
+#   hf-webapp stop [clave]         cierra una o todas
+#   hf-webapp config <clave>       ajustes efectivos de la web app (JSON: los del usuario sobre los del catálogo)
+#   hf-webapp desktop              (re)escribe ~/.local/share/applications/hf-webapp-<clave>.desktop (Spotlight)
+#   hf-webapp browser              navegador predeterminado: "<tipo>\t<orden>\t<nombre>" (tipo chromium|firefox|otro)
+# Catálogo de populares (icono, diseño móvil/escritorio, ancho mínimo, dominios propios):
+#   config/quickshell/services/webapps-catalog.json
+# Sesiones guardadas en ~/.local/share/hyprfrijol/webapps/<clave> (no se pierden al cerrar).
+# Las notificaciones de la web se reenvían a notify-send (si «Avisos» está activado).
+set -uo pipefail
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
+HOST="$ROOT/config/quickshell/modules/sidepanel/webapp/host.qml"
+CATALOG="$ROOT/config/quickshell/services/webapps-catalog.json"
+RUN="${XDG_RUNTIME_DIR:-/tmp}/hf-webapp"
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/hyprfrijol"
+mkdir -p "$RUN"
+SETTINGS="$HOME/.config/hyprfrijol/settings.json"
+DEFAULTS="$ROOT/config/defaults/settings.json"
+
+json_or_empty() { [ -f "$1" ] && jq -c . "$1" 2>/dev/null || echo '{}'; }
+# Ajustes efectivos de una web app: entrada del catálogo (por dominio; por clave si no hay url) + la del usuario
+config() {   # config <clave>
+  jq -cn --arg k "$1" --argjson u "$(json_or_empty "$SETTINGS")" --argjson d "$(json_or_empty "$DEFAULTS")" \
+         --argjson c "$(json_or_empty "$CATALOG")" '
+    def host: (. // "") | ascii_downcase | sub("^[a-z]+://"; "") | sub("[/?#].*$"; "") | sub("^www\\."; "");
+    ([($u.webapps // [])[], ($d.webapps // [])[]] | map(select(type == "object" and .key == $k)) | .[0]) as $a
+    | ($c.apps // []) as $cat
+    | (if $a and (($a.url // "") != "")
+         then ([$cat[] | select((.url | host) == ($a.url | host))][0])
+         else ([$cat[] | select(.key == $k)][0]) end) as $p
+    | if ($a // $p) == null then empty
+      else (($p // {}) | del(.mode, .note, .cat, ._doc)) + ($a // {}) + {key: $k} end'
+}
+field() { jq -r --arg f "$2" '.[$f] // empty | tostring' <<<"$1"; }   # field <json> <campo>
+running() { [ -f "$RUN/$1.pid" ] && kill -0 "$(cat "$RUN/$1.pid")" 2>/dev/null; }
+setting() {   # setting <clave> <por defecto>
+  local v="" f
+  for f in "$SETTINGS" "$DEFAULTS"; do
+    [ -f "$f" ] || continue
+    v="$(jq -r --arg k "$1" 'if has($k) and .[$k] != null then .[$k] | tostring else empty end' "$f" 2>/dev/null)" && [ -n "$v" ] && break
+  done
+  printf '%s' "${v:-$2}"
+}
+in_panel() {   # ¿la clave tiene pestaña en el panel lateral?
+  local a; a="$(jq -c '.sidePanelApps // empty' "$SETTINGS" 2>/dev/null)"
+  [ -n "$a" ] || a='["ia","wa","yt","pin"]'
+  jq -e --arg k "$1" 'index($k) != null' <<<"$a" >/dev/null 2>&1
+}
+mode_of() {   # mode_of <json>
+  local m; m="$(field "$1" mode)"
+  case "$m" in panel|ventana|navegador) echo "$m"; return ;; esac
+  if [ "$(setting webappEngine integrado)" = navegador ]; then echo navegador
+  elif in_panel "$(field "$1" key)"; then echo panel
+  else echo navegador; fi
+}
+# Navegador predeterminado (xdg-settings) → tipo, orden y nombre
+browser() {
+  local id f exe name kind
+  id="$(xdg-settings get default-web-browser 2>/dev/null || true)"
+  for f in "${XDG_DATA_HOME:-$HOME/.local/share}/applications/$id" /usr/local/share/applications/"$id" /usr/share/applications/"$id" \
+           /var/lib/flatpak/exports/share/applications/"$id" "$HOME/.local/share/flatpak/exports/share/applications/$id"; do
+    [ -n "$id" ] && [ -f "$f" ] || continue
+    exe="$(sed -n 's/^Exec=//p' "$f" | head -n1 | sed 's/ *%[uUfF]//g')"
+    name="$(sed -n 's/^Name=//p' "$f" | head -n1)"
+    break
+  done
+  [ -n "${exe:-}" ] || { printf 'otro\t\t\n'; return; }
+  case "${id,,} ${exe,,}" in
+    *firefox*|*librewolf*|*zen*|*floorp*|*waterfox*|*mullvad*|*icecat*|*palemoon*) kind=firefox ;;
+    *chrom*|*brave*|*vivaldi*|*edge*|*thorium*|*helium*|*opera*|*yandex*|*cromite*|*supermium*) kind=chromium ;;
+    *) kind=otro ;;
+  esac
+  printf '%s\t%s\t%s\n' "$kind" "$exe" "${name:-$id}"
+}
+# Ventana ya abierta de esa web en el navegador (Chrome en Wayland: app_id "chrome-<host>__-Default")
+focus_existing() {   # focus_existing <url>
+  local host addr
+  host="$(printf '%s' "$1" | sed -E 's#^[a-z]+://##; s#/.*##')"
+  addr="$(hyprctl clients -j 2>/dev/null | jq -r --arg h "$host" \
+    '[.[] | select((.class | ascii_downcase | test("^(chrome|chromium|brave|vivaldi|msedge|thorium|helium|opera)-")) and (.class | contains($h)))][0].address // empty')"
+  [ -n "$addr" ] || return 1
+  hyprctl dispatch "hl.dsp.focus({ window = \"address:$addr\" })" >/dev/null 2>&1
+}
+open_browser() {   # open_browser <url>
+  local KIND EXE b
+  IFS=$'\t' read -r KIND EXE _ < <(browser)
+  # shellcheck disable=SC2086
+  case "$KIND" in
+    chromium) focus_existing "$1" || setsid $EXE --app="$1" >/dev/null 2>&1 & return 0 ;;
+    firefox)  setsid $EXE --new-window "$1" >/dev/null 2>&1 & return 0 ;;   # Firefox no tiene modo app
+  esac
+  # Navegador desconocido: un Chromium instalado en modo app, o xdg-open
+  for b in chromium brave helium-browser google-chrome-stable vivaldi-stable microsoft-edge-stable; do
+    command -v "$b" >/dev/null && { focus_existing "$1" || setsid "$b" --app="$1" >/dev/null 2>&1 & return 0; }
+  done
+  setsid xdg-open "$1" >/dev/null 2>&1 &
+}
+# Ventana integrada ya abierta (por pid) → enfocarla
+focus_pid() { hyprctl dispatch "hl.dsp.focus({ window = \"pid:$1\" })" >/dev/null 2>&1; }
+
+start() {   # start <clave> <panel|ventana>
+  local K="$1" MODE="${2:-panel}" CFG QML STORE APP URL ICON DARK TEMA LIGHT FLAGS NOTIFY
+  if running "$K"; then
+    [ "$(cat "$RUN/$K.mode" 2>/dev/null || echo panel)" = "$MODE" ] && return 0
+    kill "$(cat "$RUN/$K.pid")" 2>/dev/null; sleep 0.4      # mismo perfil: se reabre en el otro modo
+  fi
+  CFG="$(config "$K")"
+  [ -n "$CFG" ] || { echo "No hay web app «$K» en el ajuste webapps" >&2; return 1; }
+  QML="$(command -v qml6 || command -v qml || true)"
+  [ -n "$QML" ] || { echo "Falta qml6 (qt6-declarative)" >&2; return 1; }
+  STORE="$HOME/.local/share/hyprfrijol/webapps/$K"; mkdir -p "$STORE"
+  [ -f "$RUN/$K.cmd" ] || echo "0 none" > "$RUN/$K.cmd"
+  rm -f "$RUN/$K.audible"
+  APP="$(field "$CFG" name)"; APP="${APP:-$K}"
+  URL="$(field "$CFG" url)"
+  ICON="$(field "$CFG" icon)"
+  NOTIFY="$(jq -r 'if .notify == false then 0 else 1 end' <<<"$CFG")"
+  # CSS propio de la web app (Ajustes › Web apps › Avanzado)
+  jq -r '.css // ""' <<<"$CFG" > "$RUN/$K.css"
+  # Tema: "sistema" sigue al tema del escritorio (claro/oscuro); "oscuro" / "claro" lo fuerzan; "web" no toca nada.
+  # Se pasa a Chromium como prefers-color-scheme (las webs que lo respetan cambian solas a su modo oscuro).
+  TEMA="$(field "$CFG" tema)"; TEMA="${TEMA:-sistema}"
+  LIGHT="$(jq -r '.light // false' "$STATE/theme.json" 2>/dev/null || echo false)"
+  case "$TEMA" in oscuro) DARK=0 ;; claro) DARK=1 ;; web) DARK="" ;; *) [ "$LIGHT" = true ] && DARK=1 || DARK=0 ;; esac
+  FLAGS="${QTWEBENGINE_CHROMIUM_FLAGS:-}"
+  [ -n "$DARK" ] && FLAGS="$FLAGS --blink-settings=preferredColorScheme=$DARK"
+  echo "$MODE" > "$RUN/$K.mode"
+  (
+    # QT_FORCE_STDERR_LOGGING: sin él Qt manda console.warn al journal (stderr no es una terminal) y no llegan
+    # ni los avisos ni el estado del sonido
+    export QML_XHR_ALLOW_FILE_READ=1 QML_XHR_ALLOW_FILE_WRITE=1 QT_QPA_PLATFORM=wayland QT_FORCE_STDERR_LOGGING=1 QTWEBENGINE_CHROMIUM_FLAGS="$FLAGS"
+    "$QML" "$HOST" -- "--key=$K" "--runtime=$RUN" "--store=$STORE" "--state=$STATE" "--mode=$MODE" "--config=$CFG" 2>&1 >/dev/null |
+      while IFS=$'\t' read -r tag title body; do
+        case "$tag" in
+          *HLNOTIFY)  [ "$NOTIFY" = 1 ] && notify-send -a "$APP" ${ICON:+-i "$ICON"} "$title" "$body" ;;
+          *HLAUDIBLE) printf '%s' "$title" > "$RUN/$K.audible" ;;
+        esac
+      done
+  ) &
+  disown
+  # pid del proceso qml6
+  local P=""
+  for _ in $(seq 40); do P=$(pgrep -f -n -- "--key=$K --runtime=$RUN") && break; sleep 0.1; done
+  echo "${P:-}" > "$RUN/$K.pid"
+}
+
+desktop() {
+  local d="${XDG_DATA_HOME:-$HOME/.local/share}/applications" k cfg name url icon
+  mkdir -p "$d"
+  rm -f "$d"/hf-webapp-*.desktop "$d"/hl-webapp-*.desktop   # hl-: nombre anterior (hypr-liquid)
+  for k in $(jq -r '(.webapps // [])[] | .key' "$SETTINGS" 2>/dev/null || jq -r '(.webapps // [])[] | .key' "$DEFAULTS"); do
+    cfg="$(config "$k")"; [ -n "$cfg" ] || continue
+    name="$(field "$cfg" name)"; url="$(field "$cfg" url)"; icon="$(field "$cfg" icon)"
+    printf '[Desktop Entry]\nType=Application\nName=%s\nComment=Web app · %s\nExec=%s open %s\nIcon=%s\nStartupWMClass=hf-webwin-%s.qml6\nCategories=Network;\n' \
+      "$name" "$url" "$ROOT/scripts/hf-webapp" "$k" "${icon:-web-browser}" "$k" > "$d/hf-webapp-$k.desktop"
+  done
+}
+
+case "${1:-}" in
+  start) start "${2:?clave}" "${3:-panel}" ;;
+  config) config "${2:?clave}" ;;
+  browser) browser ;;
+  desktop) desktop ;;
+  open)
+    K="${2:?clave}"; CFG="$(config "$K")"
+    [ -n "$CFG" ] || { echo "No hay web app «$K» en el ajuste webapps" >&2; exit 1; }
+    URL="$(field "$CFG" url)"
+    case "$(mode_of "$CFG")" in
+      navegador) open_browser "$URL" ;;
+      ventana)
+        command -v qml6 >/dev/null || { open_browser "$URL"; exit 0; }
+        if running "$K" && [ "$(cat "$RUN/$K.mode" 2>/dev/null)" = ventana ]; then focus_pid "$(cat "$RUN/$K.pid")"
+        else start "$K" ventana; fi ;;
+      *) exec qs -p "$ROOT/config/quickshell" ipc call shell openWith ia "$K" ;;
+    esac ;;
+  cmd)
+    K="${2:?clave}"; shift 2
+    # El zoom se guarda por web (también con la app cerrada): lo lee host.qml al abrirla
+    if [ "${1:-}" = zoom ] && [[ "${2:-}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+      mkdir -p "$HOME/.local/share/hyprfrijol/webapps/$K" && printf '%s' "$2" > "$HOME/.local/share/hyprfrijol/webapps/$K/zoom"
+    fi
+    N=$(( $(cut -d' ' -f1 "$RUN/$K.cmd" 2>/dev/null || echo 0) + 1 ))
+    printf '%s %s\n' "$N" "$*" > "$RUN/$K.cmd" ;;
+  stop)
+    for K in ${2:-$(ls "$RUN" 2>/dev/null | sed -n 's/\.pid$//p')}; do running "$K" && kill "$(cat "$RUN/$K.pid")"; rm -f "$RUN/$K.pid" "$RUN/$K.audible" "$RUN/$K.mode"; done ;;
+  *) sed -n '2,23p' "$0" ;;
+esac

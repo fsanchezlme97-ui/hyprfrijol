@@ -1,0 +1,10 @@
+[terminal]
+vt = 1
+
+[default_session]
+# Fase 1: tuigreet (texto, muy fiable)
+# Muestra las sesiones de /usr/share/wayland-sessions, incluida «Hyprland (HyprFrijol)»
+command = "tuigreet --time --remember --remember-session --asterisks --sessions /usr/share/wayland-sessions"
+# Fase 2: login visual con Quickshell dentro de un Hyprland mínimo
+# command = "start-hyprland -- --config /etc/greetd/hyprland-greeter.lua"
+user = "greeter"

@@ -1,0 +1,699 @@
+#!/usr/bin/env python3
+"""hf-apply — aplica los ajustes de hyprfrijol a todo el sistema.
+
+Lee  ~/.config/hyprfrijol/settings.json  (lo escriben la app de Ajustes, los ajustes rápidos y la IA)
+y genera en ~/.local/state/hyprfrijol/:
+  theme.json            tema resuelto (paleta + estilo). Lo lee Quickshell (Theme.qml)
+  settings.lua          lo que Hyprland necesita (bordes, huecos, redondeo, blur, animaciones…)
+  hyprlock-colors.conf  colores del bloqueo
+  kitty-colors.conf     colores de kitty  (include ~/.local/state/hyprfrijol/kitty-colors.conf)
+  gtk-colors.css        colores para GTK  (@import en ~/.config/gtk-4.0/gtk.css)
+y, si estamos en la sesión de hyprfrijol y algo cambió, recarga Hyprland y kitty.
+
+Uso:  hf-apply [--no-reload] [--print]
+      hf-apply set clave=valor [clave=valor…]     (atajo para cambiar ajustes desde la terminal)
+"""
+import json, os, sys, subprocess, datetime, pathlib
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+HOME = pathlib.Path.home()
+ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
+STATE = HOME / ".local/state/hyprfrijol"
+USER = HOME / ".config/hyprfrijol"
+SETTINGS = USER / "settings.json"
+# Primera vez tras el cambio de nombre (hypr-liquid → hyprfrijol): mueve las carpetas antiguas y deja enlaces
+if any((HOME / d / "hypr-liquid").is_dir() and not (HOME / d / "hypr-liquid").is_symlink() for d in (".config", ".local/state", ".local/share", ".cache")):
+    subprocess.run([str(ROOT / "scripts/hf-migrate"), "--dirs-only", "--quiet"], check=False)
+
+def load(p, default=None):
+    try:
+        return json.loads(pathlib.Path(p).read_text())
+    except Exception:
+        return default
+
+def write_if_changed(path, text):
+    path = pathlib.Path(path)
+    if path.exists() and path.read_text() == text:
+        return False
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(text)
+    tmp.replace(path)
+    return True
+
+def settings():
+    s = dict(load(ROOT / "config/defaults/settings.json", {}))
+    s.update(load(SETTINGS, {}) or {})
+    return s
+
+# ---------- colores ----------
+def hex_rgb(h):
+    h = h.lstrip("#")
+    if len(h) == 8:
+        h = h[2:]
+    return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+
+def argb(h, a):
+    """#AARRGGBB para QML"""
+    r, g, b = hex_rgb(h)
+    return "#%02X%02X%02X%02X" % (round(max(0, min(1, a)) * 255), r, g, b)
+
+def rgba_hypr(h, a=1.0):
+    r, g, b = hex_rgb(h)
+    return "rgba(%02x%02x%02x%02x)" % (r, g, b, round(a * 255))
+
+def _hm(v, default):
+    for x in (v, default):
+        try:
+            h, _, m = str(x).partition(":")
+            return int(h) * 60 + int(m or 0)
+        except Exception:
+            pass
+    return 0
+
+def sun_location(s):
+    """Ubicación para el amanecer/atardecer: la ciudad fija del clima o la última por IP (caché de Weather.qml)."""
+    try:
+        if s.get("weatherLat", "") not in ("", None) and s.get("weatherLon", "") not in ("", None):
+            return float(s["weatherLat"]), float(s["weatherLon"])
+    except Exception:
+        pass
+    loc = (load(HOME / ".cache/hyprfrijol/weather.json", {}) or {}).get("loc") or {}
+    try:
+        return float(loc["lat"]), float(loc["lon"])
+    except Exception:
+        return None
+
+def sun_times(day, lat, lon):
+    """Amanecer y atardecer (minutos locales) con la ecuación de NOAA; igual que services/Sun.qml.
+    Devuelve (amanecer, atardecer, polar) con polar "" · "dia" (sol de medianoche) · "noche"."""
+    import math
+    n = day.timetuple().tm_yday
+    g = 2 * math.pi / 365 * (n - 1)
+    eq = 229.18 * (0.000075 + 0.001868 * math.cos(g) - 0.032077 * math.sin(g) - 0.014615 * math.cos(2 * g) - 0.040849 * math.sin(2 * g))
+    decl = (0.006918 - 0.399912 * math.cos(g) + 0.070257 * math.sin(g) - 0.006758 * math.cos(2 * g)
+            + 0.000907 * math.sin(2 * g) - 0.002697 * math.cos(3 * g) + 0.00148 * math.sin(3 * g))
+    phi = math.radians(lat)
+    cos_h = math.cos(math.radians(90.833)) / (math.cos(phi) * math.cos(decl)) - math.tan(phi) * math.tan(decl)
+    if cos_h > 1:
+        return 720, 720, "noche"
+    if cos_h < -1:
+        return 0, 1440, "dia"
+    ha = math.degrees(math.acos(cos_h))
+    tz = datetime.datetime(day.year, day.month, day.day, 12).astimezone().utcoffset().total_seconds() / 60
+    rise = round(720 - 4 * (lon + ha) - eq + tz) % 1440
+    sset = round(720 - 4 * (lon - ha) - eq + tz) % 1440
+    return rise, sset, ""
+
+def sun_today(s):
+    """(amanecer, atardecer, polar) de hoy: calculados si sunAuto y hay ubicación; si no, sunrise/sunset a mano."""
+    loc = sun_location(s) if s.get("sunAuto", True) is not False else None
+    if loc:
+        return sun_times(datetime.date.today(), *loc)
+    return _hm(s.get("sunrise"), "07:00"), _hm(s.get("sunset"), "19:00"), ""
+
+def is_light_now(s):
+    mode = s.get("themeMode", "oscuro")
+    if mode == "claro":
+        return True
+    if mode == "auto":
+        now = datetime.datetime.now()
+        if s.get("themeSchedule", "horas") == "sol":
+            rise, sset, polar = sun_today(s)
+            if polar:
+                return polar == "dia"
+            m = now.hour * 60 + now.minute
+            return rise <= m < sset if rise <= sset else (m >= rise or m < sset)
+        return int(s.get("lightFrom", 7)) <= now.hour < int(s.get("lightTo", 19))
+    return False
+
+def resolve_palette(s):
+    pals = load(ROOT / "config/themes/palettes.json", {})
+    mode = s.get("colorMode", "auto")
+    light = is_light_now(s)
+    if mode == "mono":
+        key = "monoclaro" if light else "mono"
+        return key, dict(pals[key])
+    if mode == "elegir":
+        key = s.get("palette", "grafito")
+        c = dict(pals.get(key) or pals["grafito"])
+        # Las paletas del diseño son de un solo modo: si el modo pedido (Claro / Oscuro / Según la hora) es el
+        # otro, se usa su pareja si la tiene (las pastel: «rosa» ⇄ «rosa-claro») o se deriva la variante con el
+        # mismo acento sobre las superficies de «claro» o «grafito».
+        if bool(c.get("light")) != light:
+            pair = pals.get(c.get("pair", ""))
+            c = dict(pair) if pair and bool(pair.get("light")) == light else flip_palette(c, light, pals)
+        for k in ("pair", "group", "variant"):
+            c.pop(k, None)
+        return key, c
+    auto = load(STATE / "colors.json") or load(ROOT / "config/defaults/colors.json")
+    c = dict(auto["light" if light else "dark"])
+    c["name"] = "Automático"
+    return "auto", c
+
+def valid_hex(h):
+    h = str(h or "").strip()
+    return len(h) == 7 and h[0] == "#" and all(ch in "0123456789abcdefABCDEF" for ch in h[1:])
+
+def apply_accent(c, s):
+    """Ajustes › Apariencia › Acento: un color elegido (accent = "#RRGGBB") sustituye al principal de la paleta
+    (p, onP, pc, onPc y el tinte de sc). El contraste lo corrige luego fix_contrast; onP elige negro o blanco."""
+    acc = s.get("accent") or ""
+    if not valid_hex(acc):
+        return c
+    c = dict(c)
+    acc = acc.upper()
+    light = bool(c.get("light"))
+    W, K = "#FFFFFF", "#000000"
+    # El acento se usa también como texto (enlaces, iconos activos): se oscurece o aclara sin perder saturación
+    # hasta 4.5:1 sobre las superficies
+    p = fit_lightness(acc, [c["s1"], c["s3"], c["s4"]], 4.5)
+    if light:
+        c.update(p=p, pc=mix(c["s1"], acc, .22), onPc=fit_lightness(mix(acc, K, .6), [mix(c["s1"], acc, .22)], 7.0),
+                 sc=mix(c["sc"], acc, .18))
+    else:
+        c.update(p=p, pc=mix(c["s3"], acc, .34), onPc=mix(acc, W, .72), sc=mix(c["sc"], acc, .14))
+    # Texto sobre el acento: negro (teñido) o blanco, el que más contraste dé
+    dark_on = mix(c["p"], K, .8)
+    c["onP"] = dark_on if contrast(dark_on, c["p"]) >= contrast(W, c["p"]) else W
+    c["accent"] = acc
+    return c
+
+def fit_lightness(col, bgs, target):
+    """Cambia solo la luminosidad (HLS) de col, hacia el lado que más contraste dé, hasta target sobre bgs."""
+    import colorsys
+    if min(contrast(col, b) for b in bgs) >= target:
+        return col
+    r, g, b = (v / 255 for v in hex_rgb(col))
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    down = luminance(bgs[0]) > 0.18
+    out = col
+    for i in range(1, 41):
+        nl = max(0.0, l - i * 0.02) if down else min(1.0, l + i * 0.02)
+        rr, gg, bb = colorsys.hls_to_rgb(h, nl, s)
+        out = "#%02X%02X%02X" % (round(rr * 255), round(gg * 255), round(bb * 255))
+        if min(contrast(out, x) for x in bgs) >= target:
+            break
+    return out
+
+def best_on(bg, target, hint=None):
+    """Texto sobre bg: el tono propuesto si llega a target; si no, casi negro o casi blanco teñidos de bg
+    (el lado que más contraste dé); si tampoco llegan, negro o blanco puros."""
+    if hint and contrast(hint, bg) >= target:
+        return hint
+    dark, light = mix(bg, "#000000", .82), mix(bg, "#FFFFFF", .9)
+    pick = dark if contrast(dark, bg) >= contrast(light, bg) else light
+    if contrast(pick, bg) >= target:
+        return pick
+    return "#000000" if contrast("#000000", bg) >= contrast("#FFFFFF", bg) else "#FFFFFF"
+
+def mix(a, b, t):
+    """Mezcla dos colores #RRGGBB (t = peso de b)."""
+    ra, ga, ba = hex_rgb(a); rb, gb, bb = hex_rgb(b)
+    return "#%02X%02X%02X" % (round(ra + (rb - ra) * t), round(ga + (gb - ga) * t), round(ba + (bb - ba) * t))
+
+def flip_palette(c, light, pals):
+    """Variante clara (u oscura) de una paleta fija: superficies de «claro»/«grafito» con un toque del acento,
+    y el acento/terciario oscurecidos (o aclarados) para que mantengan el contraste."""
+    base = pals.get("claro" if light else "grafito") or c
+    acc, ter = c["p"], c.get("ter", c["p"])
+    ink, paper = ("#000000", "#FFFFFF") if light else ("#FFFFFF", "#000000")
+    out = {k: mix(base[k], acc, 0.06) for k in ("bg", "s1", "s3", "s4", "sc", "ov")}
+    out.update({
+        "p": mix(acc, ink, 0.5 if light else 0.4), "onP": paper if light else mix(acc, paper, 0.75),
+        "pc": mix(acc, paper, 0.62 if light else 0.6), "onPc": mix(acc, ink, 0.72),
+        "onSc": base["onSc"], "ter": mix(ter, ink, 0.45 if light else 0.35),
+        "t": base["t"], "tv": base["tv"], "o": base["o"],
+        "name": c.get("name", "") + (" · claro" if light else " · oscuro"), "light": light,
+    })
+    return out
+
+# ---------- contraste (WCAG) ----------
+def luminance(h):
+    def ch(v):
+        v /= 255
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    r, g, b = hex_rgb(h)
+    return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b)
+
+def contrast(a, b):
+    la, lb = sorted((luminance(a), luminance(b)), reverse=True)
+    return (la + 0.05) / (lb + 0.05)
+
+def push_contrast(fg, bgs, target):
+    """Acerca fg al negro o al blanco (lo que más contraste dé) hasta llegar a target sobre todos los bgs."""
+    ink = "#000000" if luminance(bgs[0]) > 0.18 else "#FFFFFF"
+    out = fg
+    for i in range(1, 21):
+        if min(contrast(out, b) for b in bgs) >= target:
+            break
+        out = mix(fg, ink, i * 0.05)
+    return out
+
+def fix_contrast(c, high=False):
+    """Texto sobre superficies ≥ 4.5:1 (AA); con alto contraste, ≥ 7:1 (AAA) y bordes más marcados.
+    Corrige las paletas de matugen (dependen del fondo) y las variantes derivadas por flip_palette."""
+    c = dict(c)
+    surf = [c["s1"], c["s3"], c["s4"]]
+    t_min = 7.0 if high else 4.5
+    for k in ("t", "tv"):
+        c[k] = push_contrast(c[k], surf, t_min)
+    for k in ("p", "ter"):   # solo la luminosidad: el acento no pierde saturación (no se agrisa)
+        c[k] = fit_lightness(c[k], surf, 4.5 if not high else 5.5)
+    for on, bg in (("onP", "p"), ("onPc", "pc"), ("onSc", "sc")):
+        fixed = push_contrast(c[on], [c[bg]], t_min)
+        # Si para llegar hubo que gastar el tono (p. ej. negro → gris sobre un acento oscurecido), mejor el otro lado
+        c[on] = fixed if fixed == c[on] or contrast(fixed, c[bg]) >= t_min and abs(luminance(fixed) - luminance(c[on])) < .3 \
+            else best_on(c[bg], t_min)
+    c["tv"] = push_contrast(c["tv"], [c["sc"]], 4.5)
+    if high:
+        # Bordes y separadores con contraste de componente (≥ 3:1) y el texto secundario casi como el principal
+        c["o"] = push_contrast(c["o"], surf, 4.5)
+        c["ov"] = push_contrast(c["ov"], surf, 3.0)
+        c["tv"] = mix(c["tv"], c["t"], 0.35)
+    return c
+
+# Forma de las esquinas de las ventanas (decoration:rounding_power): 2 = circular, 3–4 = continua tipo «squircle»
+ROUNDING_POWER = {"circular": 2.0, "continua": 3.0, "squircle": 4.0}
+
+# Redondeo del shell (Ajustes › Apariencia › Redondeo): multiplica los radios del estilo.
+# La base es sobria (esquinas poco redondeadas); «Redondo»/«Máximo» las suavizan.
+ROUNDNESS = {"recto": 0.35, "sobrio": 0.7, "auto": 1.0, "suave": 1.0, "redondo": 1.5, "maximo": 2.2}
+
+# Estilos visuales (Ajustes › Apariencia › Estilo). «tonal» es interno (Aurora/Mica con menos transparencia).
+STYLES = ("flat", "aurora", "mica", "suave")
+
+# Sombras (Ajustes › Apariencia › Ventanas › Sombras): opacidad, radio y desplazamiento relativos al estilo
+SHADOWS = {
+    "ninguna":  {"alpha": 0.0, "blur": 1.0, "y": 1.0},
+    "suaves":   {"alpha": 0.8, "blur": 1.35, "y": 1.1},
+    "marcadas": {"alpha": 1.5, "blur": 0.85, "y": 0.9},
+}
+
+# ---------- movimiento ----------
+# Ajustes › Apariencia › Movimiento (animPreset + animSpeed). Lo mismo para Hyprland (curvas y animaciones,
+# speed en décimas de segundo) y para el shell (Theme.dur/durIn/durOut y curvas, en theme.json → motion).
+#   curva = (x1, y1, x2, y2) de una bézier cúbica; y > 1 → se pasa un poco y vuelve (rebote suave)
+MOTION = {
+    "fluido": {   # como iOS/macOS: algo más largo, desaceleración muy suave y un leve rebote al abrir y mover
+        "curves": {"hlFluida": (0.22, 1, 0.36, 1), "hlMuelle": (0.32, 1.22, 0.42, 1), "hlMuelleSuave": (0.25, 1.08, 0.4, 1),
+                   "hlSalida": (0.4, 0, 0.9, 0.3)},
+        "anims": [("windowsIn", 5.0, "hlMuelle", "popin 82%"), ("windowsOut", 3.2, "hlSalida", "popin 90%"),
+                  ("windowsMove", 5.2, "hlMuelleSuave", None), ("fadeIn", 4.2, "hlFluida", None),
+                  ("fadeOut", 3.0, "hlSalida", None), ("fadeSwitch", 5.0, "hlFluida", None),
+                  ("fadeShadow", 5.0, "hlFluida", None), ("fadeDim", 5.0, "hlFluida", None),
+                  ("border", 7.0, "hlFluida", None),
+                  ("workspaces", 5.6, "hlFluida", "slide"), ("specialWorkspace", 5.0, "hlFluida", "slidevert"),
+                  ("layersIn", 4.0, "hlFluida", "fade"), ("layersOut", 2.8, "hlSalida", "fade")],
+        "shell": {"dur": 300, "durIn": 480, "durOut": 220, "ease": [0.22, 1, 0.36, 1, 1, 1],
+                  "easeIn": [0.32, 1.22, 0.42, 1, 1, 1], "easeOut": [0.4, 0, 0.9, 0.3, 1, 1]},
+    },
+    "equilibrado": {   # el de siempre: entrada «emphasized» (Material 3) y un rebote elástico corto
+        "curves": {"hlEntrada": (0.05, 0.7, 0.1, 1), "hlSalida": (0.3, 0, 0.8, 0.15), "hlRebote": (0.34, 1.3, 0.64, 1)},
+        "anims": [("windowsIn", 4.2, "hlRebote", "popin 90%"), ("windowsOut", 2.6, "hlSalida", "popin 92%"),
+                  ("windowsMove", 4.5, "hlRebote", None), ("fadeIn", 3.5, "hlEntrada", None),
+                  ("fadeOut", 2.4, "hlSalida", None), ("fadeSwitch", 4.0, "hlEntrada", None),
+                  ("border", 6.0, "hlEntrada", None), ("workspaces", 4.8, "hlEntrada", "slidefade 14%"),
+                  ("specialWorkspace", 4.2, "hlEntrada", "slidefadevert 18%"),
+                  ("layersIn", 3.2, "hlEntrada", "fade"), ("layersOut", 2.2, "hlSalida", "fade")],
+        "shell": {"dur": 260, "durIn": 420, "durOut": 180, "ease": [0.05, 0.7, 0.1, 1, 1, 1],
+                  "easeIn": None, "easeOut": [0.3, 0, 0.8, 0.15, 1, 1]},
+    },
+    "rapido": {   # ágil: curvas estándar de Material, sin rebote y casi la mitad de largo
+        "curves": {"hlRapida": (0.2, 0, 0, 1), "hlSalida": (0.3, 0, 1, 1)},
+        "anims": [("windowsIn", 2.4, "hlRapida", "popin 94%"), ("windowsOut", 1.6, "hlSalida", "popin 96%"),
+                  ("windowsMove", 2.6, "hlRapida", None), ("fadeIn", 2.0, "hlRapida", None),
+                  ("fadeOut", 1.5, "hlSalida", None), ("fadeSwitch", 2.4, "hlRapida", None),
+                  ("border", 3.0, "hlRapida", None), ("workspaces", 2.8, "hlRapida", "slidefade 10%"),
+                  ("specialWorkspace", 2.6, "hlRapida", "slidefadevert 12%"),
+                  ("layersIn", 2.0, "hlRapida", "fade"), ("layersOut", 1.4, "hlSalida", "fade")],
+        "shell": {"dur": 160, "durIn": 230, "durOut": 120, "ease": [0.2, 0, 0, 1, 1, 1],
+                  "easeIn": [0.2, 0, 0, 1, 1, 1], "easeOut": [0.3, 0, 1, 1, 1, 1]},
+    },
+    "minimo": {   # solo fundidos: nada se desplaza ni cambia de tamaño
+        "curves": {"hlSuave": (0.25, 0.1, 0.25, 1)},
+        "anims": [("windowsIn", 3.0, "hlSuave", None, False), ("windowsOut", 3.0, "hlSuave", None, False),
+                  ("windowsMove", 3.0, "hlSuave", None, False), ("fadeIn", 2.6, "hlSuave", None),
+                  ("fadeOut", 2.0, "hlSuave", None), ("fadeSwitch", 2.6, "hlSuave", None),
+                  ("border", 3.0, "hlSuave", None), ("workspaces", 2.6, "hlSuave", "fade"),
+                  ("specialWorkspace", 2.6, "hlSuave", "fade"),
+                  ("layersIn", 2.4, "hlSuave", "fade"), ("layersOut", 1.8, "hlSuave", "fade")],
+        "shell": {"dur": 200, "durIn": 240, "durOut": 160, "ease": [0.25, 0.1, 0.25, 1, 1, 1],
+                  "easeIn": [0.25, 0.1, 0.25, 1, 1, 1], "easeOut": [0.25, 0.1, 0.25, 1, 1, 1]},
+    },
+}
+
+def motion_preset(s):
+    """(preset, multiplicador de velocidad). «ninguno» si las animaciones están apagadas o se reduce el movimiento."""
+    p = s.get("animPreset", "fluido")
+    if p not in MOTION:
+        p = "fluido" if p != "ninguno" else "ninguno"
+    if s.get("animado", True) is False or s.get("reduceMotion"):
+        p = "ninguno"
+    try:
+        k = max(0.4, min(2.5, float(s.get("animSpeed", 1.0))))
+    except Exception:
+        k = 1.0
+    return p, k
+
+def motion_shell(s, estilo):
+    p, k = motion_preset(s)
+    if p == "ninguno":
+        return {"preset": p, "speed": k, "dur": 0, "durIn": 0, "durOut": 0}
+    m = dict(MOTION[p]["shell"])
+    for key in ("dur", "durIn", "durOut"):
+        m[key] = round(m[key] / k)
+    if m.get("easeIn") is None:   # «equilibrado»: Aurora con rebote, el resto «emphasized»
+        m["easeIn"] = [0.34, 1.36, 0.64, 1, 1, 1] if estilo == "aurora" else m["ease"]
+    m.update(preset=p, speed=k)
+    return m
+
+def motion_lua(s):
+    p, k = motion_preset(s)
+    if p == "ninguno":
+        return []
+    d = MOTION[p]
+    out = ["-- movimiento: " + p + (" ×%g" % k if k != 1 else "")]
+    for name, (x1, y1, x2, y2) in d["curves"].items():
+        out.append('hl.curve("%s", { type = "bezier", points = { {%g, %g}, {%g, %g} } })' % (name, x1, y1, x2, y2))
+    for a in d["anims"]:
+        leaf, speed, curve, style = a[:4]
+        on = a[4] if len(a) > 4 else True
+        sp = max(0.5, round(speed / k, 2))
+        st = (', style = "%s"' % style) if style else ""
+        out.append('hl.animation({ leaf = "%s", enabled = %s, speed = %g, bezier = "%s"%s })'
+                   % (leaf, "true" if on else "false", sp, curve, st))
+    return out
+
+def style_tokens(c, s):
+    """Tokens de estilo (los del diseño, objeto S):
+      flat    «Material»: superficies tonales sólidas teñidas por el color de acento (Material 3 / Android),
+              sin bordes, elevación por tono, controles rectos con esquinas pequeñas
+      aurora  vidrio esmerilado teñido con un resplandor de color (primario → terciario) y borde luminoso
+      mica    Windows 11: material casi opaco sobre el fondo muy desenfocado, tarjetas translúcidas en capas,
+              bordes de 1 px y sombras suaves; controles casi rectos
+      suave   superficies mates de poco contraste con tintes pastel, sin bordes, muy redondeadas, controles en
+              píldora, sombra amplia y difusa y el estado activo en el contenedor primario
+      tonal   (solo con «Reducir transparencia» o «Alto contraste») superficies tonales con borde fino
+    card/cardBorder: tarjetas de la app de Ajustes · shBlur/shY/shBigBlur/shBigY/shSpread: sombra de los paneles.
+    winSolid: fondo de las ventanas grandes (Ajustes, Centro de aplicaciones): en Aurora más opaco que «win»
+    para que lo de detrás (widgets, ventanas) no se transparente; en los demás estilos es sólido.
+    Radios: barRad/panelRad/winRad/ctlRad en px; roundK multiplica los radios fijos de los módulos (Theme.r)."""
+    LT = bool(c.get("light"))
+    estilo = s.get("estilo", "aurora")
+    if estilo not in STYLES:
+        estilo = "aurora"            # «liquid» y «tonal» ya no se ofrecen: pasan a Aurora
+    high = bool(s.get("highContrast"))
+    if estilo in ("aurora", "mica") and (s.get("reduceTransparency") or high):
+        estilo = "tonal"
+    W, K = "#FFFFFF", "#000000"
+    none = argb(W, 0)
+    if estilo == "aurora":
+        # Vidrio con aurora: resplandores de color (primario arriba-izquierda, terciario abajo-derecha y un velo
+        # del contenedor primario en medio, Glass.qml), borde especular teñido y brillo interior
+        S = dict(
+            estilo="aurora", blur=True, pill=False,
+            # barra y paneles con el mismo vidrio (antes la barra era más transparente y se veía de otro color)
+            bg=argb(mix(c["s1"], c["p"], .14), .68 if LT else .58), bgPanel=argb(mix(c["s1"], c["p"], .14), .68 if LT else .58),
+            bgPopup=argb(mix(c["s1"], c["p"], .16), .78 if LT else .68), bg2=argb(mix(c["s3"], c["p"], .20), .62 if LT else .55),
+            border=argb(c["p"], .28 if LT else .20), borderWidth=1,
+            highlight=argb(W, .55 if LT else .16), glow=argb(c["p"], .16),
+            rimTop=argb(c["p"], .70 if LT else .60), rimBottom=argb(c["ter"], .40 if LT else .32),
+            sheen=argb(W, .22 if LT else .07), tint=argb(c["p"], .34 if LT else .30), tint2=argb(c["ter"], .30 if LT else .26),
+            tint3=argb(mix(c["p"], c["ter"], .5), .14 if LT else .12),
+            shadow=argb(K, .10 if LT else .26), shadowBig=argb(mix(K, c["p"], .25), .20 if LT else .42),
+            win=argb(mix(c["s1"], c["p"], .08), .82 if LT else .76), winBorder=argb(c["p"], .45),
+            winSolid=argb(mix(c["s1"], c["p"], .08), .95 if LT else .90),
+            barRad=7, panelRad=10, winRad=8, ctlRad=6, roundK=1.0)
+    elif estilo == "tonal":
+        S = dict(
+            estilo="tonal", blur=False, pill=False,
+            bg=argb(c["s3"], 1), bgPanel=argb(c["s3"], 1), bgPopup=argb(c["s3"], 1), bg2=argb(c["s4"], 1),
+            border=argb(c["ov"], 1), borderWidth=1, highlight=none, glow=none,
+            rimTop=none, rimBottom=none, sheen=none, tint=none, tint2=none,
+            shadow=argb(K, .2), shadowBig=argb(K, .35),
+            win=argb(c["s1"], 1), winSolid=argb(c["s1"], 1), winBorder=argb(c["ov"], 1), barRad=6, panelRad=9, winRad=6, ctlRad=6, roundK=1.0)
+    elif estilo == "mica":
+        # Mica (Windows 11): material translúcido que toma el color del fondo de pantalla muy desenfocado (Hyprland
+        # desenfoca detrás; aquí una capa neutra apenas teñida del acento), capas «sutiles» blancas al 4–6 % con
+        # trazo de 1 px más claro arriba que abajo (elevación), sombras suaves, esquinas de 8 px y controles de 4 px.
+        # La selección lleva la pastilla del acento a la izquierda (Theme.selPill).
+        base = mix(c["s1"], c["p"], .025)
+        S = dict(
+            estilo="mica", blur=True, pill=False,
+            # barra, paneles y menús del mismo material (solo cambia la opacidad de los menús)
+            bg=argb(base, .82 if LT else .76), bgPanel=argb(base, .82 if LT else .76),
+            bgPopup=argb(base, .90 if LT else .86),
+            bg2=argb(W, .66) if LT else argb(W, .06),
+            border=argb(K, .08) if LT else argb(W, .08), borderWidth=1,
+            highlight=none, glow=none, sheen=none, tint=none, tint2=none, tint3=none,
+            rimTop=argb(W, .95) if LT else argb(W, .14), rimBottom=argb(K, .12) if LT else argb(W, .04),
+            shadow=argb(K, .14 if LT else .34), shadowBig=argb(K, .20 if LT else .48),
+            win=argb(base, .88 if LT else .84), winSolid=argb(base, .97 if LT else .95),
+            winBorder=argb(K, .10) if LT else argb(W, .10),
+            card=argb(W, .70) if LT else argb(W, .045), cardBorder=1,
+            barRad=6, panelRad=8, winRad=8, ctlRad=4, roundK=0.85,
+            shBlur=24, shY=8, shBigBlur=48, shBigY=16, shSpread=0)
+    elif estilo == "suave":
+        # Suave: superficies sólidas, mates y de poco contraste, teñidas de pastel del acento; sin bordes, esquinas
+        # muy redondeadas, controles en píldora, sombras amplias y difusas del color del acento, un degradado
+        # vertical muy leve (más claro arriba, como arcilla) y el estado activo en el contenedor primario (pastel)
+        # Una sola superficie para la barra, los paneles, los menús y las ventanas (antes la barra iba en s1 y los
+        # paneles en s3: el centro de control se veía de otro color que la barra)
+        sur = mix(mix(c["s1"], c["s3"], .5), c["p"], .13 if LT else .09)
+        pan = sur
+        S = dict(
+            estilo="suave", blur=False, pill=True,
+            bg=argb(sur, 1), bgPanel=argb(pan, 1),
+            bgPopup=argb(pan, 1),
+            bg2=argb(mix(pan, c["p"], .14 if LT else .10), 1) if LT else argb(mix(mix(c["s3"], c["s4"], .5), c["p"], .14), 1),
+            border=argb(c["ov"], .3), borderWidth=0, highlight=none, glow=none,
+            rimTop=none, rimBottom=none, tint=none, tint2=none, tint3=none,
+            sheen=argb(W, .35 if LT else .045),
+            shadow=argb(mix(K, c["p"], .4), .12 if LT else .30), shadowBig=argb(mix(K, c["p"], .4), .18 if LT else .42),
+            win=argb(sur, 1), winSolid=argb(sur, 1), winBorder=argb(mix(c["ov"], c["p"], .3), .6),
+            card=argb(mix(c["s3"], c["p"], .14 if LT else .09), 1), cardBorder=0,
+            barRad=14, panelRad=18, winRad=14, ctlRad=12, roundK=1.6,
+            shBlur=40, shY=12, shBigBlur=64, shBigY=20, shSpread=-2)
+    else:
+        # Material 3: superficies con un ligero tinte del color primario y niveles de contenedor por tono
+        # La barra, los paneles (centro de control, notificaciones, OSD, Spotlight…) y las ventanas del shell usan
+        # la misma superficie: antes los paneles iban en s3 y se veían de otro color que la barra. Lo que va
+        # dentro (mosaicos, campos, tarjetas) se separa con bg2/s3.
+        sur = mix(c["s1"], c["p"], .05 if LT else .04)
+        S = dict(
+            estilo="flat", blur=False, pill=False,
+            bg=argb(sur, 1), bgPanel=argb(sur, 1), bgPopup=argb(sur, 1),
+            bg2=argb(mix(mix(c["s3"], c["s4"], .5), c["p"], .08), 1),
+            border=argb(c["ov"], .5), borderWidth=0, highlight=none, glow=none,
+            rimTop=none, rimBottom=none, sheen=none, tint=none, tint2=none,
+            shadow=argb(K, .12 if LT else .30), shadowBig=argb(K, .20 if LT else .45),
+            win=argb(sur, 1), winSolid=argb(sur, 1), winBorder=argb(c["ov"], 1), barRad=6, panelRad=10, winRad=8, ctlRad=6, roundK=1.0)
+    # Sombras de los paneles del shell (Glass): radio/desplazamiento del estilo y «Sombras» de Apariencia
+    base_sh = {"flat": (14, 3, 52, 18, -2), "aurora": (26, 8, 52, 18, 0), "tonal": (20, 6, 48, 16, 0)}.get(estilo)
+    if base_sh:
+        S.update(shBlur=base_sh[0], shY=base_sh[1], shBigBlur=base_sh[2], shBigY=base_sh[3], shSpread=base_sh[4])
+    sk = SHADOWS.get(s.get("shadows", "suaves"), SHADOWS["suaves"])
+    for key in ("shadow", "shadowBig"):
+        a = int(S[key][1:3], 16) / 255
+        S[key] = argb("#" + S[key][3:], min(1, a * sk["alpha"]))
+    for key in ("shBlur", "shBigBlur"):
+        S[key] = round(S[key] * sk["blur"])
+    for key in ("shY", "shBigY"):
+        S[key] = round(S[key] * sk["y"])
+    S["shadows"] = s.get("shadows", "suaves") if s.get("shadows") in SHADOWS else "suaves"
+    S.setdefault("tint3", none)
+    S.setdefault("card", None)
+    if S["card"] is None:
+        S["card"] = S["bg2"] if estilo == "aurora" else argb(c["s3"], 1)
+        S["cardBorder"] = 1 if estilo == "aurora" else 0
+    k = ROUNDNESS.get(s.get("roundness", "auto"), 1.0)
+    for key in ("barRad", "panelRad", "winRad", "ctlRad"):
+        S[key] = max(0, round(S[key] * k))
+    S["roundK"] = round(S["roundK"] * k, 3)
+    S["pill"] = k >= 2.0 or (estilo == "suave" and k >= 0.7)
+    if high:   # también Material: bordes de verdad en lugar de solo tono
+        S["borderWidth"] = max(S["borderWidth"], 1)
+        S["border"] = argb(c["o"], 1)
+    return S
+
+# ---------- salidas ----------
+# Resaltado de la ventana activa (Ajustes › Apariencia › Ventanas): borde de Hyprland.
+#   sutil    1 px del acento muy rebajado; las inactivas, casi invisibles (por defecto)
+#   color    2 px con degradado acento → terciario
+#   brillo   como «sutil» y además un halo del acento alrededor (la sombra de la activa, en config/apply/10-look.py)
+#   ninguno  sin borde (las sombras separan las ventanas)
+def active_border(c, S, s):
+    """(border_size, active_border, inactive_border) ya como valores Lua (cadena o degradado)."""
+    mode = s.get("activeBorder", "sutil")
+    LT = bool(c.get("light"))
+    soft_in = rgba_hypr(c["ov"], .45 if LT else .35)
+    if mode == "ninguno":
+        return 0, '"%s"' % rgba_hypr(c["p"], 0), '"%s"' % rgba_hypr(c["ov"], 0)
+    if mode == "color":
+        return 2, '{ colors = { "%s", "%s" }, angle = 45 }' % (rgba_hypr(c["p"], .95), rgba_hypr(c.get("ter", c["p"]), .85)), \
+            '"%s"' % rgba_hypr(c["ov"], .7)
+    # sutil / brillo: el acento mezclado con el contorno, con poca opacidad
+    return 1, '"%s"' % rgba_hypr(mix(c["p"], c["ov"], .25), .55 if LT else .45), '"%s"' % soft_in
+
+def hypr_lua(c, S, s):
+    focus = bool(s.get("_focus"))
+    gi, go = (0, 0) if focus else (int(s.get("gapsIn", 4)), int(s.get("gapsOut", 4)))
+    anim = motion_preset(s)[0] != "ninguno"
+    bsize, act, inact = active_border(c, S, s)
+    lines = [
+        "-- GENERADO por hf-apply a partir de ~/.config/hyprfrijol/settings.json — no editar",
+        "hl.config({",
+        "    general = {",
+        f"        gaps_in = {gi}, gaps_out = {go}, border_size = {0 if focus else bsize},",
+        f'        col = {{ active_border = {act}, inactive_border = {inact} }},',
+        "    },",
+        "    decoration = {",
+        f"        rounding = {0 if focus else S['winRad']},",
+        f"        rounding_power = {ROUNDING_POWER.get(s.get('roundingShape', 'auto'), 2.6)},",
+        f"        blur = {{ enabled = {'true' if S['blur'] else 'false'} }},",
+        f"        inactive_opacity = {0.97 if S['blur'] else 1.0},",
+        "    },",
+        f"    animations = {{ enabled = {'true' if anim else 'false'} }},",
+        f'    misc = {{ background_color = "{rgba_hypr(c["bg"])}" }},',
+        "})",
+    ]
+    lines += motion_lua(s)
+    # Extensiones: cada archivo config/apply/*.py puede añadir líneas (los usa la app de Ajustes)
+    for ext in sorted((ROOT / "config/apply").glob("*.py")) if (ROOT / "config/apply").is_dir() else []:
+        ns = {}
+        try:
+            exec(compile(ext.read_text(), str(ext), "exec"), ns)
+            extra = ns.get("hypr_lua", lambda s, c: [])(s, c)
+            if extra:
+                lines.append(f"-- {ext.name}")
+                lines.extend(extra)
+        except Exception as e:  # una extensión rota no debe romper el resto
+            lines.append(f"-- {ext.name}: error {e!r}")
+    return "\n".join(lines) + "\n"
+
+def hyprlock_conf(c):
+    return "\n".join([
+        "# GENERADO por hf-apply",
+        f"$primary = {rgba_hypr(c['p'])}",
+        f"$surface = {rgba_hypr(c['s1'])}",
+        f"$text = {rgba_hypr(c['t'])}",
+        f"$textMuted = {rgba_hypr(c['tv'])}",
+        f"$outlineVariant = {rgba_hypr(c['ov'], .4)}",
+        f"$fieldBg = {rgba_hypr(c['s1'], .45)}",
+        "",
+    ])
+
+def hsl_hex(h, s, l):
+    import colorsys
+    r, g, b = colorsys.hls_to_rgb((h % 360) / 360, l, s)
+    return "#%02X%02X%02X" % (round(r * 255), round(g * 255), round(b * 255))
+
+def ansi_colors(c):
+    """Los 16 colores ANSI del terminal: los de la paleta (palettes.json "ansi", p. ej. Catppuccin o Nord) o,
+    si no los trae (paletas propias, matugen, monocromo, variantes derivadas), unos armónicos con ella:
+    rojo/verde/amarillo/azul/magenta/cian con la luminosidad del modo y un toque del color principal."""
+    a = c.get("ansi")
+    if isinstance(a, list) and len(a) == 16 and all(valid_hex(x) for x in a):
+        return [x.upper() for x in a]
+    LT = bool(c.get("light"))
+    hues = (4, 130, 42, 215, 300, 185)        # rojo verde amarillo azul magenta cian
+    norm = [mix(hsl_hex(h, .55, .40 if LT else .70), c["p"], .12) for h in hues]
+    bright = [mix(hsl_hex(h, .65, .33 if LT else .78), c["p"], .08) for h in hues]
+    if LT:
+        return [c["t"]] + norm + [c["o"], c["tv"]] + bright + [mix(c["t"], "#000000", .3)]
+    return [c["s4"]] + norm + [c["tv"], c["o"]] + bright + [c["t"]]
+
+def kitty_conf(c, S):
+    op = 0.86 if S["blur"] else 1.0
+    a = ansi_colors(c)
+    return "\n".join([
+        "# GENERADO por hf-apply · Ajustes › Apariencia › «Aplicar el tema a las apps» lo incluye en kitty.conf",
+        "# (include ~/.local/state/hyprfrijol/kitty-colors.conf) y kitty lo recarga en vivo (SIGUSR1)",
+        f"background {c['s1']}", f"foreground {c['t']}",
+        f"cursor {c['p']}", f"cursor_text_color {c['onP']}",
+        f"selection_background {c['pc']}", f"selection_foreground {c['onPc']}",
+        f"url_color {c['p']}",
+        f"active_border_color {c['p']}", f"inactive_border_color {c['ov']}", f"bell_border_color {c['ter']}",
+        f"active_tab_background {c['p']}", f"active_tab_foreground {c['onP']}",
+        f"inactive_tab_background {c['s3']}", f"inactive_tab_foreground {c['tv']}",
+        f"tab_bar_background {c['bg']}",
+        f"mark1_background {c['p']}", f"mark1_foreground {c['onP']}",
+        f"mark2_background {c['ter']}", f"mark2_foreground {c['s1']}",
+        *[f"color{i} {a[i]}" for i in range(16)],
+        f"background_opacity {op}", "",
+    ])
+
+def gtk_css(c):
+    return "\n".join([
+        "/* GENERADO por hf-apply · @import url(\"file://%s\"); en ~/.config/gtk-4.0/gtk.css */" % (STATE / "gtk-colors.css"),
+        f"@define-color accent_color {c['p']};", f"@define-color accent_bg_color {c['p']};",
+        f"@define-color accent_fg_color {c['onP']};", f"@define-color window_bg_color {c['s1']};",
+        f"@define-color window_fg_color {c['t']};", f"@define-color view_bg_color {c['s3']};",
+        f"@define-color headerbar_bg_color {c['s3']};", f"@define-color card_bg_color {c['s4']};", "",
+    ])
+
+def real_home():
+    """¿Es HOME el del usuario? Con un HOME de prueba no se recargan apps de la sesión real (kitty, Dolphin…)."""
+    try:
+        import pwd
+        return str(HOME) == pwd.getpwuid(os.getuid()).pw_dir
+    except Exception:
+        return False
+
+def cmd_set(pairs):
+    USER.mkdir(parents=True, exist_ok=True)
+    cur = load(SETTINGS, {}) or {}
+    for p in pairs:
+        k, _, v = p.partition("=")
+        try:
+            cur[k] = json.loads(v)
+        except Exception:
+            cur[k] = v
+    write_if_changed(SETTINGS, json.dumps(cur, indent=2, ensure_ascii=False) + "\n")
+
+def main(argv):
+    if argv[:1] == ["toggle-mode"]:
+        # Claro ⇄ oscuro (si estaba en «según la hora», pasa al contrario de lo que se ve ahora)
+        s = settings()
+        _, c = resolve_palette(s)
+        cmd_set(["themeMode=" + ("oscuro" if c.get("light") else "claro")])
+        argv = [a for a in argv[1:] if a.startswith("--")]
+    if argv[:1] == ["set"]:
+        cmd_set([a for a in argv[1:] if not a.startswith("--")])
+        argv = [a for a in argv[1:] if a.startswith("--")]
+    STATE.mkdir(parents=True, exist_ok=True)
+    s = settings()
+    key, c = resolve_palette(s)
+    c = apply_accent(c, s)
+    if s.get("estilo") == "suave" and c.get("light"):
+        # Suave marca la selección y lo activo con el contenedor primario: en claro, algo más de color para que
+        # se distinga de las tarjetas pastel
+        c["pc"] = mix(c["pc"], c["p"], .35)
+    c = fix_contrast(c, bool(s.get("highContrast")))
+    c["ansi"] = ansi_colors(c)   # 16 colores del terminal (kitty, btop, KDE): los de la paleta o armónicos
+    S = style_tokens(c, s)
+    theme = {
+        "paletteKey": key, "paletteName": c.get("name", key), "light": bool(c.get("light")),
+        "colorMode": s.get("colorMode"), "c": {k: v for k, v in c.items() if k not in ("name", "light")},
+        "S": S, "font": s.get("fontFamily", "Inter"), "fontScale": float(s.get("fontScale", 1.0)),
+        "reduceMotion": bool(s.get("reduceMotion")), "highContrast": bool(s.get("highContrast")),
+        "motion": motion_shell(s, S["estilo"]),
+    }
+    if "--print" in argv:
+        print(json.dumps(theme, indent=2)); return
+    write_if_changed(STATE / "theme.json", json.dumps(theme, indent=2) + "\n")
+    hypr_changed = write_if_changed(STATE / "settings.lua", hypr_lua(c, S, s))
+    write_if_changed(STATE / "hyprlock-colors.conf", hyprlock_conf(c))
+    kitty_changed = write_if_changed(STATE / "kitty-colors.conf", kitty_conf(c, S))
+    write_if_changed(STATE / "gtk-colors.css", gtk_css(c))
+    if "--no-reload" in argv:
+        return
+    if hypr_changed and os.environ.get("HF_SESSION"):
+        subprocess.run(["hyprctl", "reload", "config-only"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # kitty: solo con el HOME de verdad (con un HOME de prueba, p. ej. dev/try.sh, no tocar tus terminales)
+    if kitty_changed and real_home():
+        subprocess.run(["pkill", "-USR1", "-u", str(os.getuid()), "-x", "kitty"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

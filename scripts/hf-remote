@@ -1,0 +1,207 @@
+#!/usr/bin/env bash
+# hf-remote — escritorio remoto: conectarse a otros equipos (RDP, VNC, SSH, SPICE) y compartir este (VNC).
+# Lo usan Ajustes › Escritorio remoto, la IA y la terminal.
+#
+#   hf-remote list                       conexiones guardadas (ajuste "remoteHosts"), una línea JSON por equipo
+#   hf-remote clients                    clientes instalados (JSON)
+#   hf-remote connect <nombre|url>       url: rdp://[dominio\]usuario@equipo[:puerto] · vnc:// · ssh:// · spice://
+#   hf-remote secret set|clear|has <nombre>   contraseña en el llavero (libsecret); nunca en settings.json
+#   hf-remote server status|start|stop|restart   compartir este escritorio por VNC (wayvnc)
+#   hf-remote server auth <usuario>      pide contraseña y activa cifrado (TLS + RSA-AES) en ~/.config/wayvnc
+#   hf-remote server noauth              quita la contraseña (y con ella vuelve a escuchar solo en este equipo)
+#
+# Seguridad: sin contraseña wayvnc NUNCA escucha en la red; aunque vncListen pida 0.0.0.0, «server start»
+# se queda en 127.0.0.1 y avisa. «status» da listen (lo pedido) y effective (lo que se usa de verdad).
+#
+# Contraseñas: si hay una en el llavero se pasa a FreeRDP por stdin (/args-from:stdin), nunca en la línea de
+# órdenes. Si no, el cliente la pide (sdl-freerdp3 y Remmina con su diálogo; xfreerdp3 en una terminal).
+set -uo pipefail
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
+SETTINGS="$HOME/.config/hyprfrijol/settings.json"
+DEFAULTS="$ROOT/config/defaults/settings.json"
+VNCDIR="$HOME/.config/wayvnc"
+
+setting() {   # setting <clave> → JSON (el del usuario manda sobre el de config/defaults)
+  local f
+  for f in "$SETTINGS" "$DEFAULTS"; do
+    [ -f "$f" ] || continue
+    jq -ce --arg k "$1" 'if has($k) then .[$k] else error end' "$f" 2>/dev/null && return 0
+  done
+  echo null
+}
+notify() { command -v notify-send >/dev/null && notify-send -a "Escritorio remoto" -i preferences-desktop-remote-desktop "$@"; }
+term() {
+  local t="${TERMINAL:-}" c
+  for c in "$t" kitty ghostty foot alacritty wezterm konsole; do [ -n "$c" ] && command -v "$c" >/dev/null && { t=$c; break; }; done
+  case "$t" in wezterm) setsid -f wezterm start -- "$@";; *) setsid -f "$t" -e "$@";; esac >/dev/null 2>&1
+}
+have() { command -v "$1" >/dev/null 2>&1; }
+freerdp_bin() { local b; for b in sdl-freerdp3 xfreerdp3 wlfreerdp3 sdl-freerdp xfreerdp; do have $b && { echo $b; return; }; done; }
+
+clients() {
+  jq -cn --arg freerdp "$(freerdp_bin)" \
+    --argjson remmina "$(have remmina && echo true || echo false)" \
+    --argjson connections "$(have gnome-connections && echo true || echo false)" \
+    --argjson vncviewer "$(have vncviewer && echo true || echo false)" \
+    --argjson remoteviewer "$(have remote-viewer && echo true || echo false)" \
+    --argjson secret "$(have secret-tool && echo true || echo false)" \
+    --argjson wayvnc "$(have wayvnc && echo true || echo false)" \
+    '{freerdp:$freerdp,remmina:$remmina,connections:$connections,vncviewer:$vncviewer,remoteviewer:$remoteviewer,secret:$secret,wayvnc:$wayvnc}'
+}
+
+list() { setting remoteHosts | jq -c '(. // [])[]'; }
+
+# ---------- llavero ----------
+secret() {
+  local op="${1:?set|clear|has}" n="${2:?nombre}"
+  have secret-tool || { echo "Falta secret-tool (libsecret)" >&2; return 1; }
+  case "$op" in
+    set) echo "Contraseña para «$n» (se guarda en el llavero, no en settings.json):"
+         secret-tool store --label="hyprfrijol · $n" service hyprfrijol-remote host "$n";;
+    # hypr-liquid-remote: servicio anterior al cambio de nombre; se sigue leyendo
+    clear) secret-tool clear service hyprfrijol-remote host "$n"; secret-tool clear service hypr-liquid-remote host "$n";;
+    has) secret-tool lookup service hyprfrijol-remote host "$n" >/dev/null 2>&1 || secret-tool lookup service hypr-liquid-remote host "$n" >/dev/null 2>&1;;
+    get) secret-tool lookup service hyprfrijol-remote host "$n" 2>/dev/null || secret-tool lookup service hypr-liquid-remote host "$n" 2>/dev/null;;
+  esac
+}
+
+# ---------- conectar ----------
+# Convierte una url en un objeto como los de remoteHosts
+from_url() {
+  local u="$1" proto rest user="" host port="" domain=""
+  proto="${u%%://*}"; rest="${u#*://}"; rest="${rest%%/*}"
+  if [[ "$rest" == *@* ]]; then user="${rest%@*}"; rest="${rest##*@}"; fi
+  if [[ "$user" == *\\* ]]; then domain="${user%%\\*}"; user="${user#*\\}"; fi
+  if [[ "$user" == *\;* ]]; then domain="${user#*;}"; user="${user%%;*}"; fi
+  host="${rest%:*}"; [[ "$rest" == *:* ]] && port="${rest##*:}"
+  jq -cn --arg p "$proto" --arg h "$host" --arg po "$port" --arg u "$user" --arg d "$domain" --arg n "$host" \
+    '{name:$n,proto:$p,host:$h,port:(if $po=="" then null else ($po|tonumber) end),user:$u,domain:$d,opts:{}}'
+}
+connect() {
+  local target="${1:?nombre o url}" h
+  if [[ "$target" == *://* ]]; then h="$(from_url "$target")"
+  else h="$(setting remoteHosts | jq -c --arg n "$target" '(. // [])[] | select(.name == $n)' | head -1)"; fi
+  [ -n "$h" ] || { echo "No hay ninguna conexión llamada «$target»" >&2; notify -u critical "No encuentro «$target»"; exit 1; }
+  local name proto host port user domain client
+  name="$(jq -r '.name // .host' <<<"$h")"; proto="$(jq -r '.proto // "rdp"' <<<"$h")"
+  host="$(jq -r '.host // ""' <<<"$h")"; port="$(jq -r '.port // empty' <<<"$h")"
+  user="$(jq -r '.user // ""' <<<"$h")"; domain="$(jq -r '.domain // ""' <<<"$h")"
+  client="$(jq -r '.client // empty' <<<"$h")"; [ -n "$client" ] || client="$(setting remoteClient | jq -r '. // "auto"')"
+  opt() { jq -r --arg k "$1" '.opts[$k] // empty' <<<"$h"; }
+  [ -n "$host" ] || { echo "Falta el equipo" >&2; exit 1; }
+  case "$proto" in
+    rdp)
+      local fr; fr="$(freerdp_bin)"
+      if [ "$client" = remmina ] || { [ "$client" = auto ] && [ -z "$fr" ] && have remmina; }; then
+        setsid -f remmina -c "rdp://${user:+$user@}$host${port:+:$port}" >/dev/null 2>&1; return
+      fi
+      if [ "$client" = connections ] || { [ -z "$fr" ] && have gnome-connections; }; then
+        setsid -f gnome-connections "rdp://$host${port:+:$port}" >/dev/null 2>&1; return
+      fi
+      [ -n "$fr" ] || { notify -u critical "No hay cliente RDP" "Instala FreeRDP o Remmina en Ajustes › Escritorio remoto"; exit 1; }
+      local a=("/v:$host${port:+:$port}" "/cert:tofu" "/title:$name")
+      [ -n "$user" ] && a+=("/u:$user"); [ -n "$domain" ] && a+=("/d:$domain")
+      [ "$(opt fullscreen)" = true ] && a+=("/f")
+      [ "$(opt dynamicRes)" != false ] && a+=("/dynamic-resolution")
+      [ "$(opt sound)" != false ] && a+=("/sound")
+      [ "$(opt clipboard)" != false ] && a+=("/clipboard")
+      [ "$(opt drives)" = true ] && a+=("/drive:Inicio,$HOME")
+      local gw g=""; gw="$(opt gateway)"; [ -n "$gw" ] && g="/gateway:g:$gw${user:+,u:$user}${domain:+,d:$domain}"
+      local pw=""; have secret-tool && pw="$(secret get "$name" || true)"
+      if [ -n "$pw" ]; then
+        # Toda la línea por stdin: la contraseña no aparece en ps
+        { printf '%s\n' "${a[@]}" "/p:$pw"; [ -n "$g" ] && printf '%s\n' "$g,p:$pw"; } | setsid -f "$fr" /args-from:stdin >/dev/null 2>&1
+        return
+      fi
+      [ -n "$g" ] && a+=("$g")
+      if [[ "$fr" == sdl-* ]]; then
+        setsid -f "$fr" "${a[@]}" >/dev/null 2>&1   # el cliente SDL pide usuario/contraseña en una ventana
+      else
+        term "$fr" "${a[@]}" /from-stdin        # xfreerdp los pide en la terminal
+      fi;;
+    vnc)
+      if [ "$client" != remmina ] && [ "$client" != connections ] && have vncviewer; then
+        local v=("$host::${port:-5900}"); [ "$(opt fullscreen)" = true ] && v+=("-FullScreen")
+        setsid -f vncviewer "${v[@]}" >/dev/null 2>&1
+      elif [ "$client" != connections ] && have remmina; then setsid -f remmina -c "vnc://${user:+$user@}$host${port:+:$port}" >/dev/null 2>&1
+      elif have gnome-connections; then setsid -f gnome-connections "vnc://$host${port:+:$port}" >/dev/null 2>&1
+      else notify -u critical "No hay cliente VNC" "Instala TigerVNC, Remmina o Conexiones"; exit 1; fi;;
+    spice)
+      if have remote-viewer; then setsid -f remote-viewer "spice://$host:${port:-5900}" >/dev/null 2>&1
+      elif have remmina; then setsid -f remmina -c "spice://$host:${port:-5900}" >/dev/null 2>&1
+      else notify -u critical "No hay cliente SPICE" "Instala virt-viewer"; exit 1; fi;;
+    ssh)
+      term ssh ${port:+-p "$port"} "${user:+$user@}$host";;
+    *) echo "Protocolo desconocido: $proto" >&2; exit 1;;
+  esac
+}
+
+# ---------- compartir este escritorio (wayvnc) ----------
+vnc_ips() { ip -4 -o addr show scope global 2>/dev/null | awk '{split($4,a,"/"); print $2" "a[1]}'; }
+vnc_auth() { grep -qs '^enable_auth=true' "$VNCDIR/config"; }
+is_local() { case "$1" in 127.*|localhost|::1) return 0;; *) return 1;; esac; }
+server() {
+  local op="${1:-status}" listen port output effective
+  listen="$(setting vncListen | jq -r '. // "127.0.0.1"')"; port="$(setting vncPort | jq -r '. // 5900')"
+  output="$(setting vncOutput | jq -r '. // ""')"
+  effective="$listen"; is_local "$listen" || vnc_auth || effective=127.0.0.1
+  case "$op" in
+    status)
+      local run=false auth=false clients=0 ips
+      pgrep -x wayvnc >/dev/null && run=true
+      vnc_auth && auth=true
+      $run && have wayvncctl && clients="$(timeout 2 wayvncctl -j client-list 2>/dev/null | jq 'length' 2>/dev/null || echo 0)"
+      ips="$(vnc_ips | jq -Rnc '[inputs | split(" ") | {dev:.[0], ip:.[1]}]')"
+      local fw=""; systemctl is-active -q ufw 2>/dev/null && fw=ufw; systemctl is-active -q firewalld 2>/dev/null && fw=firewalld
+      jq -cn --argjson installed "$(have wayvnc && echo true || echo false)" --argjson running $run --argjson auth $auth \
+        --arg listen "$listen" --arg effective "$effective" --argjson port "$port" --arg output "$output" --argjson ips "$ips" --arg host "$(hostname 2>/dev/null || cat /etc/hostname)" \
+        --argjson clients "${clients:-0}" --arg fw "$fw" \
+        '{installed:$installed,running:$running,auth:$auth,listen:$listen,effective:$effective,port:$port,output:$output,ips:$ips,host:$host,clients:$clients,firewall:$fw}';;
+    start)
+      have wayvnc || { notify -u critical "Falta wayvnc"; exit 1; }
+      pgrep -x wayvnc >/dev/null && exit 0
+      local a=(); [ -n "$output" ] && a+=(-o "$output")
+      if [ "$effective" != "$listen" ]; then
+        notify -u critical "Sin contraseña solo se comparte en este equipo" "Para dejar entrar a otros equipos de tu red pon usuario y contraseña en Ajustes › Escritorio remoto. Mientras, VNC escucha en 127.0.0.1:$port."
+      fi
+      setsid -f wayvnc "${a[@]}" "$effective" "$port" >/dev/null 2>&1
+      sleep 0.6; pgrep -x wayvnc >/dev/null || { notify -u critical "wayvnc no arrancó" "Prueba «wayvnc $effective $port» en una terminal para ver el error"; exit 1; }
+      if is_local "$effective"; then
+        [ "$effective" = "$listen" ] && notify "Compartiendo el escritorio solo en este equipo" "VNC en 127.0.0.1:$port (entra con un túnel: ssh -L $port:localhost:$port)"
+      else
+        notify "Compartiendo el escritorio en la red · con contraseña" "VNC en $(vnc_ips | awk '{print $2}' | head -1 || echo localhost):$port"
+      fi;;
+    stop) pkill -x wayvnc; true;;
+    restart) pgrep -x wayvnc >/dev/null || exit 0; pkill -x wayvnc; sleep 0.5; "$0" server start;;
+    auth)
+      local u="${2:-$USER}" pw pw2
+      have openssl || { echo "Falta openssl" >&2; exit 1; }
+      mkdir -p "$VNCDIR"; chmod 700 "$VNCDIR"
+      read -rsp "Contraseña de VNC para «$u»: " pw; echo; read -rsp "Repítela: " pw2; echo
+      [ -n "$pw" ] && [ "$pw" = "$pw2" ] || { echo "No coinciden" >&2; exit 1; }
+      ( cd "$VNCDIR" || exit 1
+        [ -f tls_key.pem ] || openssl req -x509 -newkey rsa:4096 -sha384 -days 3650 -nodes -keyout tls_key.pem -out tls_cert.pem \
+             -subj "/CN=$(hostname)" -addext "subjectAltName=DNS:$(hostname),DNS:localhost" 2>/dev/null
+        [ -f rsa_key.pem ] || { if have ssh-keygen; then ssh-keygen -q -m pem -t rsa -b 3072 -N "" -f rsa_key.pem && rm -f rsa_key.pem.pub; else openssl genrsa -traditional -out rsa_key.pem 3072 2>/dev/null; fi; }
+        umask 077
+        { echo "use_relative_paths=true"; echo "enable_auth=true"; echo "username=$u"; echo "password=$pw"
+          echo "private_key_file=tls_key.pem"; echo "certificate_file=tls_cert.pem"; echo "rsa_private_key_file=rsa_key.pem"; } > config
+        chmod 600 config tls_key.pem rsa_key.pem )
+      echo "Listo: wayvnc pedirá usuario y contraseña, con cifrado TLS (VeNCrypt) y RSA-AES."
+      pgrep -x wayvnc >/dev/null && { pkill -x wayvnc; sleep 0.5; "$0" server start; };;
+    noauth)
+      [ -f "$VNCDIR/config" ] && sed -i 's/^enable_auth=.*/enable_auth=false/' "$VNCDIR/config"
+      pgrep -x wayvnc >/dev/null && { pkill -x wayvnc; sleep 0.5; "$0" server start; }; true;;
+    *) echo "server status|start|stop|restart|auth|noauth" >&2; exit 1;;
+  esac
+}
+
+case "${1:-}" in
+  list) list;;
+  clients) clients;;
+  connect) connect "${2:-}";;
+  secret) secret "${2:-}" "${3:-}";;
+  server) shift; server "$@";;
+  *) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 1;;
+esac

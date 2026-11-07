@@ -1,0 +1,231 @@
+#!/usr/bin/env python3
+"""Logo de la distribución en monocromo (para el botón de Aplicaciones de la barra).
+
+Lee LOGO= e ID= de /etc/os-release (HF_OS_LOGO=archlinux|fedora|… lo sustituye para probar), busca el icono
+en los temas (variante -symbolic, /usr/share/pixmaps, /usr/share/icons, Papirus, hicolor…) y escribe por
+stdout un SVG de un solo color con «currentColor» (quien lo pinta lo cambia por el color que quiera).
+Orden: logo de la distro → distributor-logo → tux. Sin nada usable no escribe nada (el shell usa ⌘).
+
+  hf-oslogo            SVG monocromo por stdout
+  hf-oslogo --info     qué archivo ha elegido y en qué modo
+"""
+import glob
+import os
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+import re
+import sys
+import xml.etree.ElementTree as ET
+
+SVG_NS = "http://www.w3.org/2000/svg"
+ET.register_namespace("", SVG_NS)
+ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+
+# ID de os-release → nombre que usan los temas cuando no coincide
+ALIAS = {
+    "linuxmint": ["linux-mint"], "pop": ["pop-os", "popos"], "opensuse-tumbleweed": ["opensuse"],
+    "opensuse-leap": ["opensuse"], "rhel": ["redhat"], "elementary": ["elementary-os"], "endeavouros": ["endeavour"],
+    "manjaro-arm": ["manjaro"], "kali": ["kali-linux", "kalilinux"], "nixos": ["nixos", "nix-snowflake"],
+}
+
+
+def os_release():
+    info = {}
+    for f in ("/etc/os-release", "/usr/lib/os-release"):
+        try:
+            with open(f) as fh:
+                for line in fh:
+                    k, _, v = line.strip().partition("=")
+                    if k:
+                        info[k] = v.strip().strip('"\'')
+            break
+        except OSError:
+            pass
+    return info
+
+
+def candidates():
+    info = os_release()
+    fake = os.environ.get("HF_OS_LOGO", "").strip()
+    logo, ident = (fake, fake) if fake else (info.get("LOGO", ""), info.get("ID", ""))
+    names = []
+    for i in [ident] + ALIAS.get(ident, []) + ([ident.split("-")[0]] if "-" in ident else []):
+        if i:
+            names += [f"distributor-logo-{i}", f"{i}-logo", i]
+    if logo:
+        names.insert(0, logo)
+        if logo.endswith("-logo"):
+            names.insert(1, logo[:-5])
+    names += ["distributor-logo", "tux"]
+    seen, out = set(), []
+    for n in names:
+        if n not in seen:
+            seen.add(n)
+            out.append(n)
+    return out
+
+
+def data_dirs():
+    xdg = os.environ.get("XDG_DATA_DIRS", "/usr/local/share:/usr/share").split(":")
+    home = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
+    dirs = [home] + [d for d in xdg if d]
+    if "/usr/share" not in dirs:
+        dirs.append("/usr/share")
+    return dirs
+
+
+def size_rank(path):
+    """Prefiere scalable y luego el tamaño más grande."""
+    if "/scalable/" in path or "/symbolic/" in path:
+        return 10000
+    m = re.search(r"/(\d+)(?:x\d+)?(?:@\d+x)?/", path)
+    return int(m.group(1)) if m else 0
+
+
+THEMES = ["Papirus", "Papirus-Dark", "Papirus-Light", "hicolor", "breeze", "breeze-dark", "Adwaita"]
+
+
+def index(names):
+    """Una sola pasada por los temas de iconos: {nombre: [rutas .svg]} solo para los nombres buscados."""
+    want = set(names) | {n + "-symbolic" for n in names}
+    found = {}
+    for d in data_dirs():
+        base = f"{d}/icons"
+        if not os.path.isdir(base):
+            continue
+        for top, _dirs, files in os.walk(base):
+            for f in files:
+                if f.endswith(".svg") and f[:-4] in want:
+                    found.setdefault(f[:-4], []).append(os.path.join(top, f))
+    return found
+
+
+def theme_of(path):
+    for d in data_dirs():
+        if path.startswith(f"{d}/icons/"):
+            parts = path[len(d) + 7:].split("/")
+            return parts[0] if len(parts) > 1 else ""
+    return ""
+
+
+def find(name, idx):
+    """(ruta, modo) del primer SVG que sirva. modo: silueta (todo de un color) o glifo (insignia de Papirus)."""
+    dirs = data_dirs()
+    # 1) variante simbólica (ya es monocromo) en cualquier tema
+    hits = idx.get(name + "-symbolic")
+    if hits:
+        return sorted(hits)[0], "silueta"
+    # 2) logos sueltos (pixmaps y raíz de icons): suelen ser la forma real del logo
+    for d in dirs:
+        for p in (f"{d}/pixmaps/{name}.svg", f"{d}/icons/{name}.svg"):
+            if os.path.isfile(p):
+                return p, "silueta"
+    # 3) temas de iconos: Papirus (insignias de color con el glifo en blanco) y el resto
+    hits = [h for h in idx.get(name, []) if theme_of(h)]
+    if not hits:
+        return None, None
+    order = lambda h: (THEMES.index(theme_of(h)) if theme_of(h) in THEMES else len(THEMES), theme_of(h))
+    best = min(order(h) for h in hits)
+    p = max((h for h in hits if order(h) == best), key=size_rank)
+    return p, "glifo" if theme_of(p).startswith("Papirus") else "silueta"
+
+
+def style_get(el, prop):
+    m = re.search(rf"(?:^|;)\s*{prop}\s*:\s*([^;]+)", el.get("style", ""))
+    return (m.group(1).strip() if m else el.get(prop, "")).lower()
+
+
+def is_white(c):
+    return c in ("#fff", "#ffffff", "white", "#fefefe")
+
+
+def opacity(el):
+    try:
+        return float(style_get(el, "opacity") or 1) * float(style_get(el, "fill-opacity") or 1)
+    except ValueError:
+        return 1.0
+
+
+SHAPES = {"path", "circle", "rect", "ellipse", "polygon", "polyline", "line", "use", "text"}
+
+
+def local(tag):
+    return tag.rsplit("}", 1)[-1]
+
+
+def recolor(el):
+    """fill/stroke visibles → currentColor."""
+    for prop in ("fill", "stroke"):
+        v = el.get(prop)
+        if v is not None and v.lower() != "none":
+            el.set(prop, "currentColor")
+    st = el.get("style")
+    if st:
+        st = re.sub(r"(?<![-\w])(fill|stroke|color|stop-color)\s*:\s*(?!none)[^;]+", r"\1:currentColor", st)
+        el.set("style", st)
+
+
+def monochrome(path, mode):
+    tree = ET.parse(path)
+    root = tree.getroot()
+    for s in root.iter(f"{{{SVG_NS}}}style"):
+        if s.text:
+            s.text = re.sub(r"(?<![-\w])(fill|stroke|color)\s*:\s*(?!none)[^;}]+", r"\1:currentColor", s.text)
+    parents = {c: p for p in root.iter() for c in p}
+    if mode == "glifo":
+        # Insignia de Papirus: fondo de color + glifo blanco. Se queda solo el glifo (sin brillos ni sombras).
+        shapes = [e for e in root.iter() if local(e.tag) in SHAPES and not any(local(a.tag) in ("defs", "clipPath", "mask") for a in ancestors(e, parents))]
+        glyph = [e for e in shapes if is_white(style_get(e, "fill")) and opacity(e) > 0.5]
+        if not glyph:
+            mode = "silueta"
+        else:
+            for e in shapes:
+                if e not in glyph and e in parents:
+                    parents[e].remove(e)
+            # el glifo ocupa el centro de la insignia: acerca la vista
+            vb = [float(v) for v in re.split(r"[\s,]+", root.get("viewBox", "").strip()) if v] or \
+                 [0, 0, float(re.sub(r"[^\d.]", "", root.get("width", "64")) or 64), float(re.sub(r"[^\d.]", "", root.get("height", "64")) or 64)]
+            x, y, w, h = vb
+            root.set("viewBox", f"{x + w * 0.14:g} {y + h * 0.14:g} {w * 0.72:g} {h * 0.72:g}")
+    for e in root.iter():
+        recolor(e)
+        if mode == "glifo" and local(e.tag) in SHAPES:
+            st = re.sub(r"(?<![-\w])(fill-)?opacity\s*:[^;]+;?", "", e.get("style", ""))
+            e.set("style", st)
+    root.set("fill", "currentColor")
+    root.set("color", "currentColor")
+    if not root.get("viewBox"):   # muchos -symbolic solo traen width/height: sin viewBox no escalarían
+        num = lambda a, d: float(re.sub(r"[^\d.]", "", root.get(a, "")) or d)
+        root.set("viewBox", f"0 0 {num('width', 16):g} {num('height', 16):g}")
+    for a in ("width", "height"):
+        root.attrib.pop(a, None)
+    return ET.tostring(root, encoding="unicode"), mode
+
+
+def ancestors(e, parents):
+    while e in parents:
+        e = parents[e]
+        yield e
+
+
+def main():
+    names = candidates()
+    idx = index(names)
+    for name in names:
+        path, mode = find(name, idx)
+        if not path:
+            continue
+        try:
+            svg, mode = monochrome(path, mode)
+        except (ET.ParseError, OSError, ValueError):
+            continue
+        if "--info" in sys.argv:
+            print(f"{name}\t{mode}\t{path}")
+        else:
+            sys.stdout.write(svg)
+        return 0
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

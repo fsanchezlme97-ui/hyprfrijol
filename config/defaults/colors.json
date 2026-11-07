@@ -1,0 +1,39 @@
+{
+  "name": "Autom\u00e1tico",
+  "dark": {
+    "bg": "#121314",
+    "s1": "#1A1C1E",
+    "s3": "#25272A",
+    "s4": "#2F3235",
+    "p": "#A9C1D9",
+    "onP": "#0E2A40",
+    "pc": "#2C3E50",
+    "onPc": "#D5E3F0",
+    "sc": "#353A40",
+    "onSc": "#E1E4E8",
+    "ter": "#C9B79C",
+    "t": "#E4E6E8",
+    "tv": "#AEB4BA",
+    "o": "#8A9097",
+    "ov": "#383C41",
+    "light": false
+  },
+  "light": {
+    "light": true,
+    "bg": "#DDE2E7",
+    "s1": "#F7F8FA",
+    "s3": "#EDF0F3",
+    "s4": "#E2E6EA",
+    "p": "#2F5E8C",
+    "onP": "#FFFFFF",
+    "pc": "#D3E1EE",
+    "onPc": "#10304F",
+    "sc": "#C9D3DD",
+    "onSc": "#1F2A35",
+    "ter": "#8A5F2A",
+    "t": "#1B1F24",
+    "tv": "#4D5762",
+    "o": "#6F7984",
+    "ov": "#CDD3D9"
+  }
+}

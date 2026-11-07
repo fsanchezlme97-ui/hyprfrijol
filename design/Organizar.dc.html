@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Organizar ventanas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 900px; font-family: 'Inter', system-ui, sans-serif">
+  <dc-import name="Main" view="snap" palette="{{palette}}" estilo="{{estilo}}" bar-pos="abajo" bar-mode="fija" wallpaper="amanecer" hint-size="1440px,900px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"palette":{"editor":"enum","options":["grafito","pizarra","claro","lavanda","verde","ambar","azul"],"default":"grafito"},"estilo":{"editor":"enum","options":["liquid","flat","tonal"],"default":"liquid"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return { palette: this.props.palette ?? 'grafito', estilo: this.props.estilo ?? 'liquid' }; }
+}
+</script>
+</body>
+</html>

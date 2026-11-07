@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# hf-updates — centro de actualizaciones de hyprfrijol
+#   hf-updates check           comprueba (pacman, AUR, Flatpak, firmware) y escribe JSON (también en caché)
+#   hf-updates cached          el último resultado sin volver a comprobar ({} si no hay)
+#   hf-updates count           solo el número total (para la barra)
+#   hf-updates run [--snapshot] [--poweroff]
+#                              abre una terminal que (opcionalmente) crea un punto de restauración con
+#                              snapper y actualiza todo; con --poweroff apaga al terminar bien
+# JSON: { checked, total, pacman:[{name,from,to}], aur:[…], flatpak:[…], firmware:[…],
+#         has:{paru,flatpak,fwupd,snapper,limine}, errors:{…} }
+#   hf-updates flatpak         actualiza solo Flatpak, sin terminal (no pide contraseña; lo usa el modo «Automáticas»)
+# Ajustes (settings.json): updatesFlatpak / updatesFirmware = false → no se comprueban ni se instalan.
+# Nunca ejecuta nada con sudo por su cuenta: «run» solo abre la terminal y tú escribes la contraseña.
+set -uo pipefail
+
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
+# setting <clave> <defecto>: ajuste del usuario, si no el de config/defaults, si no el defecto
+setting() {
+  local f files=()
+  for f in "$ROOT/config/defaults/settings.json" "$HOME/.config/hyprfrijol/settings.json"; do [ -s "$f" ] && files+=("$f"); done
+  jq -n -r --arg k "$1" --arg d "$2" \
+    '([inputs] | add // {}) as $s | if ($s | has($k)) then ($s[$k] | tostring) else $d end' \
+    "${files[@]}" 2>/dev/null || echo "$2"
+}
+USE_FLATPAK=true; [ "$(setting updatesFlatpak true)" = false ] && USE_FLATPAK=false
+USE_FW=true;      [ "$(setting updatesFirmware true)" = false ] && USE_FW=false
+
+CACHE="$HOME/.cache/hyprfrijol"
+OUT="$CACHE/updates.json"
+mkdir -p "$CACHE"
+have() { command -v "$1" >/dev/null 2>&1; }
+
+# "nombre ver -> ver" → JSON
+to_json() { awk 'NF>=4 && $3=="->" {printf "%s\t%s\t%s\n",$1,$2,$4}' | jq -R -s -c 'split("\n") | map(select(length>0) | split("\t") | {name: .[0], from: .[1], to: .[2]})'; }
+
+check() {
+  local tmp; tmp="$(mktemp -d)"
+  ( checkupdates 2>"$tmp/pacman.err" | to_json > "$tmp/pacman" ) &
+  if have paru; then ( paru -Qua 2>"$tmp/aur.err" | grep -v '\[ignored\]' | to_json > "$tmp/aur" ) &
+  elif have yay; then ( yay -Qua 2>"$tmp/aur.err" | to_json > "$tmp/aur" ) &
+  fi
+  if have flatpak && [ "$USE_FLATPAK" = true ]; then
+    ( flatpak remote-ls --updates --columns=application,version 2>"$tmp/flatpak.err" \
+        | jq -R -s -c 'split("\n") | map(select(length>0) | split("\t") | {name: .[0], from: "", to: (.[1] // "")})' > "$tmp/flatpak" ) &
+  fi
+  if have fwupdmgr && [ "$USE_FW" = true ]; then
+    ( timeout 60 fwupdmgr get-updates --json 2>"$tmp/fw.err" \
+        | jq -c '[.Devices[]? | {name: .Name, from: (.Version // ""), to: ((.Releases // [])[0].Version // "")}]' > "$tmp/firmware" 2>/dev/null ) &
+  fi
+  wait
+  for k in pacman aur flatpak firmware; do [ -s "$tmp/$k" ] || echo '[]' > "$tmp/$k"; done
+  local snap=false limine=false
+  have snapper && snapper list-configs 2>/dev/null | grep -q '^root ' && snap=true
+  { have limine-snapper-sync || [ -f /boot/limine.conf ] || [ -f /boot/limine/limine.conf ]; } && limine=true
+  jq -n -c \
+    --slurpfile p "$tmp/pacman" --slurpfile a "$tmp/aur" --slurpfile f "$tmp/flatpak" --slurpfile w "$tmp/firmware" \
+    --argjson paru "$(have paru && echo true || echo false)" --argjson flat "$(have flatpak && echo true || echo false)" \
+    --argjson fw "$(have fwupdmgr && echo true || echo false)" --argjson snap "$snap" --argjson lim "$limine" \
+    --arg pe "$(grep -v '^==>' "$tmp/pacman.err" 2>/dev/null | head -c 300)" \
+    '{checked: (now|floor), pacman: $p[0], aur: $a[0], flatpak: $f[0], firmware: $w[0],
+      has: {paru: $paru, flatpak: $flat, fwupd: $fw, snapper: $snap, limine: $lim},
+      errors: {pacman: $pe}} | .total = ([.pacman, .aur, .flatpak, .firmware] | map(length) | add)' > "$OUT.tmp" \
+    && mv "$OUT.tmp" "$OUT"
+  rm -rf "$tmp"
+  cat "$OUT"
+}
+
+run() {
+  local snap=0 off=0 a
+  for a in "$@"; do case $a in --snapshot) snap=1;; --poweroff) off=1;; esac; done
+  local cmd="set -e; echo; echo '  hyprfrijol · actualización del sistema'; echo;"
+  if [ "$snap" = 1 ] && have snapper; then
+    cmd+=" echo '→ Creando punto de restauración (snapper)…';"
+    cmd+=" N=\$(sudo snapper -c root create -c number -p -d 'hyprfrijol: antes de actualizar');"
+    cmd+=" echo \"  Punto de restauración #\$N creado. Si algo falla, elígelo en el menú de arranque.\"; echo;"
+  fi
+  if have paru; then cmd+=" paru -Syu;"; else cmd+=" sudo pacman -Syu;"; fi
+  have flatpak && [ "$USE_FLATPAK" = true ] && cmd+=" flatpak update -y;"
+  # Firmware: solo si hay algo y no se va a apagar sin nadie delante (fwupdmgr pregunta)
+  if [ "$off" = 0 ] && [ "$USE_FW" = true ] && have fwupdmgr && [ "$(jq -r '.firmware | length' "$OUT" 2>/dev/null || echo 0)" != 0 ]; then
+    cmd+=" echo; echo '→ Firmware (fwupd)…'; fwupdmgr update || true;"
+  fi
+  cmd+=" rm -f '$OUT';"
+  if [ "$off" = 1 ]; then
+    cmd+=" echo; echo 'Listo. Apagando en 10 s (Ctrl+C para cancelar)…'; sleep 10; systemctl poweroff"
+  else
+    cmd+=" echo; echo 'Listo. Pulsa Intro para cerrar.'; read -r _"
+  fi
+  local term="${TERMINAL:-kitty}"
+  have "$term" || term=kitty
+  case "$term" in
+    kitty) setsid kitty --class hf-updates --title "Actualizaciones" bash -c "$cmd || { echo; echo 'Algo falló. Pulsa Intro para cerrar.'; read -r _; }" >/dev/null 2>&1 & ;;
+    *)     setsid "$term" -e bash -c "$cmd || { echo; echo 'Algo falló. Pulsa Intro para cerrar.'; read -r _; }" >/dev/null 2>&1 & ;;
+  esac
+}
+
+case "${1:-check}" in
+  check)  check ;;
+  cached) cat "$OUT" 2>/dev/null || echo '{}' ;;
+  count)  jq -r '.total // 0' "$OUT" 2>/dev/null || echo 0 ;;
+  run)    shift; run "$@" ;;
+  flatpak) { have flatpak && [ "$USE_FLATPAK" = true ] && flatpak update -y --noninteractive >/dev/null 2>&1; } || true ;;
+  -h|--help) sed -n '2,13p' "$0" ;;
+  *) echo "uso: hf-updates check|cached|count|flatpak|run [--snapshot] [--poweroff]" >&2; exit 1 ;;
+esac

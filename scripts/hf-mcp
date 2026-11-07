@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""hf-mcp — servidor MCP (stdio, JSON-RPC 2.0) para que Claude u otro cliente MCP maneje hyprfrijol.
+
+  claude mcp add hyprfrijol -- /ruta/a/hyprfrijol/scripts/hf-mcp
+
+Herramientas: get_state, set_settings, apply_actions, undo, wallpaper, profile, open_view, workspace, notify y las
+mismas que usa el asistente del panel (hf-ai TOOL_SPECS): list_windows, read_active_window, read_screen,
+notifications, find_files, list_apps, list_settings, system_status, window_action, launch_app, open_url, media,
+volume, brightness, do_not_disturb, caffeine, timer, window_mode, pomodoro, clear_notifications.
+Todo pasa por las mismas piezas que el panel: scripts/hf-ai (acciones validadas + deshacer, consultas de solo
+lectura), hf-apply, hf-wallpaper, hf-profile y `qs ipc`. Respeta Ajustes › IA (aiControlShell, aiReadDesktop,
+aiContextCapture). Solo biblioteca estándar.
+"""
+import json, os, subprocess, sys, pathlib
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
+os.environ.setdefault("HF_ROOT", str(ROOT))
+HLAI = str(ROOT / "scripts/hf-ai")
+QS = ["qs", "-p", str(ROOT / "config/quickshell"), "ipc", "call"]
+PROTOCOL = "2025-06-18"
+
+sys.dont_write_bytecode = True
+from importlib.machinery import SourceFileLoader  # noqa: E402
+hlai = SourceFileLoader("hlai", HLAI).load_module()
+
+
+def sh(cmd, timeout=30):
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    return (r.stdout or "").strip(), (r.stderr or "").strip(), r.returncode
+
+
+def apply(actions):
+    return hlai.do_apply(actions)
+
+
+def t_get_state(_):
+    s = hlai.settings()
+    st = hlai.STATE
+    out = {
+        "settings": {k: s.get(k) for k in list(hlai.SET_KEYS) + ["aiProvider", "aiModel"] if k in s},
+        "wallpaper": (st / "wallpaper-path").read_text().strip() if (st / "wallpaper-path").exists() else None,
+        "profile": (st / "profile").read_text().strip() if (st / "profile").exists() else None,
+        "dnd": (st / "dnd").exists(),
+        "openView": sh(QS + ["shell", "current"])[0],
+    }
+    w, _, _ = sh(["hyprctl", "activewindow", "-j"])
+    ws, _, _ = sh(["hyprctl", "activeworkspace", "-j"])
+    try:
+        aw = json.loads(w or "{}")
+        out["activeWindow"] = {"class": aw.get("class"), "title": aw.get("title")}
+    except Exception:
+        pass
+    try:
+        out["workspace"] = json.loads(ws or "{}").get("id")
+    except Exception:
+        pass
+    return out
+
+
+def t_set_settings(a):
+    acts = [{"type": "set", "key": k, "value": v} for k, v in (a.get("settings") or {}).items()]
+    ok = hlai.validate(acts)
+    rejected = sorted({x["key"] for x in acts} - {x["key"] for x in ok})
+    res = apply(ok) if ok else {"undo": None, "labels": []}
+    if rejected:
+        res["rejected"] = rejected
+    return res
+
+
+def t_apply_actions(a):
+    acts = a.get("actions") or []
+    runs = [x for x in acts if isinstance(x, dict) and x.get("type") == "run"]
+    res = apply(acts)
+    if runs:
+        res["note"] = "Las acciones 'run' no se ejecutan por MCP; usa tu propia herramienta de terminal."
+    return res
+
+
+def t_undo(a):
+    return hlai.do_undo(str(a.get("id", "")))
+
+
+def t_wallpaper(a):
+    return apply([{"type": "wallpaper", "value": str(a.get("value", "next"))}])
+
+
+def t_profile(a):
+    return apply([{"type": "profile", "value": a.get("name")}])
+
+
+def t_open_view(a):
+    v = str(a.get("view", ""))
+    if v == "":
+        sh(QS + ["shell", "close"]); return {"ok": True}
+    if a.get("arg"):
+        sh(QS + ["shell", "openWith", v, str(a["arg"])])
+    else:
+        sh(QS + ["shell", "open", v])
+    return {"ok": True}
+
+
+def t_workspace(a):
+    return apply([{"type": "workspace", "value": a.get("id")}])
+
+
+def t_notify(a):
+    sh(["notify-send", "-a", "Claude", str(a.get("title", "Claude")), str(a.get("body", ""))])
+    return {"ok": True}
+
+
+SET_PROPS = {k: ({"enum": [x for x in v[1]]} if v[1] else {"type": "integer"} if k.startswith("gaps") else {"type": "string"})
+             for k, v in hlai.SET_KEYS.items()}
+TOOLS = [
+    ("get_state", "Estado actual de hyprfrijol: ajustes de apariencia, fondo, perfil, no molestar, ventana y espacio activos.",
+     {"type": "object", "properties": {}}, t_get_state),
+    ("set_settings", "Cambia ajustes del escritorio (estilo, paleta, barra, huecos, PiP… y cualquier otra clave que liste "
+     "list_settings, con su mismo tipo). Devuelve un id para deshacer y las claves rechazadas.",
+     {"type": "object", "properties": {"settings": {"type": "object", "properties": SET_PROPS, "additionalProperties": True}},
+      "required": ["settings"]}, t_set_settings),
+    ("apply_actions", "Aplica un plan (lista ordenada de acciones del esquema de hyprfrijol) con un solo id para deshacer. "
+     + hlai.SCHEMA_DOC.replace("\n", " "),
+     {"type": "object", "properties": {"actions": {"type": "array", "items": {"type": "object"}}}, "required": ["actions"]}, t_apply_actions),
+    ("undo", "Deshace un cambio aplicado antes (id devuelto por set_settings/apply_actions).",
+     {"type": "object", "properties": {"id": {"type": "string"}}, "required": ["id"]}, t_undo),
+    ("wallpaper", "Cambia el fondo: next, prev, random o una ruta absoluta a una imagen/vídeo. También regenera los colores.",
+     {"type": "object", "properties": {"value": {"type": "string"}}, "required": ["value"]}, t_wallpaper),
+    ("profile", "Activa un perfil de escritorio.",
+     {"type": "object", "properties": {"name": {"enum": list(hlai.PROFILES)}}, "required": ["name"]}, t_profile),
+    ("open_view", "Abre un panel del shell (o lo cierra con view vacío). Panel lateral: view 'ia' con arg 'wa'|'yt'|'pin'.",
+     {"type": "object", "properties": {"view": {"type": "string", "enum": [""] + list(hlai.VIEWS) + ["ia"]}, "arg": {"type": "string"}},
+      "required": ["view"]}, t_open_view),
+    ("workspace", "Va a un espacio de trabajo (1–9; el 5 es el flotante).",
+     {"type": "object", "properties": {"id": {"type": "integer", "minimum": 1, "maximum": 10}}, "required": ["id"]}, t_workspace),
+    ("notify", "Muestra una notificación en el escritorio.",
+     {"type": "object", "properties": {"title": {"type": "string"}, "body": {"type": "string"}}, "required": ["title"]}, t_notify),
+]
+# Las herramientas del asistente (mismo registro que el panel lateral y Spotlight «?»)
+TOOLS += [(n, d, sch, (lambda name: (lambda a: hlai.tool_call(name, a)))(n)) for n, d, sch, _k, _b in hlai.TOOL_SPECS]
+BY_NAME = {t[0]: t for t in TOOLS}
+
+
+def handle(msg):
+    mid, method, params = msg.get("id"), msg.get("method"), msg.get("params") or {}
+    if method == "initialize":
+        return {"protocolVersion": params.get("protocolVersion") or PROTOCOL,
+                "capabilities": {"tools": {"listChanged": False}},
+                "serverInfo": {"name": "hyprfrijol", "version": "1.0.0"},
+                "instructions": "Controla el escritorio hyprfrijol (Hyprland + Quickshell). Consulta antes de actuar (get_state, "
+                                "list_windows, system_status, list_settings) y devuelve al usuario el id de deshacer de cada cambio."}
+    if method == "ping":
+        return {}
+    if method == "tools/list":
+        return {"tools": [{"name": n, "description": d, "inputSchema": s} for n, d, s, _ in TOOLS]}
+    if method == "tools/call":
+        t = BY_NAME.get(params.get("name"))
+        if not t:
+            raise LookupError(f"Herramienta desconocida: {params.get('name')}")
+        try:
+            res = t[3](params.get("arguments") or {})
+            return {"content": [{"type": "text", "text": json.dumps(res, ensure_ascii=False)}], "isError": bool(isinstance(res, dict) and res.get("error"))}
+        except Exception as e:
+            return {"content": [{"type": "text", "text": f"Error: {e}"}], "isError": True}
+    if method in ("resources/list",):
+        return {"resources": []}
+    if method in ("prompts/list",):
+        return {"prompts": []}
+    raise NotImplementedError(method)
+
+
+def main():
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            msg = json.loads(line)
+        except Exception:
+            out = {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}}
+            print(json.dumps(out), flush=True); continue
+        if "id" not in msg:          # notificación (initialized, cancelled…)
+            continue
+        try:
+            out = {"jsonrpc": "2.0", "id": msg["id"], "result": handle(msg)}
+        except NotImplementedError as e:
+            out = {"jsonrpc": "2.0", "id": msg["id"], "error": {"code": -32601, "message": f"Método no soportado: {e}"}}
+        except Exception as e:
+            out = {"jsonrpc": "2.0", "id": msg["id"], "error": {"code": -32602, "message": str(e)}}
+        print(json.dumps(out, ensure_ascii=False), flush=True)
+
+
+if __name__ == "__main__":
+    main()

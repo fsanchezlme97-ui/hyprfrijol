@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# hf-shell — arranca Quickshell (fondo, barra, paneles) y lo mantiene vivo.
+#   hf-shell           arranca el shell si no está, y el vigilante (lo usa autostart.lua)
+#   hf-shell restart   lo reinicia (Ctrl + Super + R)
+#   hf-shell watch     vigilante: si el shell se cae, lo reabre a los pocos segundos. Pasa, por ejemplo,
+#                      con monitores que «desconectan» el HDMI al apagarse la pantalla por inactividad.
+# Un cerrojo por sesión de Hyprland (flock) evita dos shells a la vez; cada sesión anidada lleva el suyo.
+set -u
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
+SIG="${HYPRLAND_INSTANCE_SIGNATURE:-sin-hyprland}"
+RUN="${XDG_RUNTIME_DIR:-/tmp}/hf-shell-$SIG"
+LOCK="$RUN.lock"
+CMD="qs -p $ROOT/config/quickshell"
+
+running() { ! flock -n "$LOCK" true 2>/dev/null; }
+# El socket queda como archivo tras cerrar una sesión anidada: hay que preguntar a Hyprland
+alive_session() { [ -S "${XDG_RUNTIME_DIR:-/tmp}/hypr/$SIG/.socket.sock" ] && HYPRLAND_INSTANCE_SIGNATURE=$SIG timeout 3 hyprctl version >/dev/null 2>&1; }
+# -o: los hijos de qs (web apps…) no heredan el candado; si no, lo retienen tras cerrarse la barra
+start() { running || setsid -f flock -n -o "$LOCK" $CMD >/dev/null 2>&1; }
+
+# Solo los Quickshell de ESTA sesión (no los de una sesión de prueba anidada con el mismo repo)
+mine() {
+  local p
+  for p in $(pgrep -xf "$CMD"); do
+    tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null | grep -qx "HYPRLAND_INSTANCE_SIGNATURE=$SIG" && echo "$p"
+  done
+}
+
+case "${1:-}" in
+  restart)
+    pids="$(mine)"; [ -n "$pids" ] && kill $pids
+    for _ in $(seq 30); do [ -z "$(mine)" ] && ! running && break; sleep 0.1; done
+    start
+    ;;
+  watch)
+    exec 9>"$RUN.watch"; flock -n 9 || exit 0          # un solo vigilante por sesión
+    while sleep 3; do
+      alive_session || { sleep 3; alive_session; } || exit 0   # Hyprland ya no está: fin
+      { running || [ -n "$(mine)" ]; } && continue
+      sleep 2; { running || [ -n "$(mine)" ]; } && continue   # deja terminar un reinicio en curso
+      command -v logger >/dev/null && logger -t hf-shell "Quickshell no estaba en marcha: lo reabro"
+      start
+    done
+    ;;
+  *)
+    [ -n "$(mine)" ] || start
+    setsid -f "$0" watch >/dev/null 2>&1
+    ;;
+esac
