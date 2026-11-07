@@ -85,20 +85,17 @@ Scope {
         return m ? (langNames[m[1]] ?? m[1]) + " (" + (countryNames[m[2]] ?? m[2]) + ")" : l;
     }
 
-    // Primer arranque
-    Timer {
-        interval: 2500
-        running: Settings.loaded && Settings.user.welcomeDone === undefined && Quickshell.env("HF_TRY") !== "1"
-        onTriggered: Shell.open("bienvenida")
+    // Primer arranque: lo abre modules/Modules.qml (este módulo se carga al abrir la vista «bienvenida»)
+    function syncView() {
+        if (Shell.view !== "bienvenida" && wz.wasShown) { wz.wasShown = false; root.finish(); }
+        // Al volver a abrirlo (Ajustes › Aplicaciones, Spotlight) empieza desde el principio
+        if (Shell.view === "bienvenida" && !wz.wasShown) { wz.wasShown = true; root.step = parseInt(Quickshell.env("HF_WELCOME_STEP") || "0") || 0; root.installed = false; }
     }
     Connections {
         target: Shell
-        function onViewChanged() {
-            if (Shell.view !== "bienvenida" && wz.wasShown) { wz.wasShown = false; root.finish(); }
-            // Al volver a abrirlo (Ajustes › Aplicaciones, Spotlight) empieza desde el principio
-            if (Shell.view === "bienvenida" && !wz.wasShown) { wz.wasShown = true; root.step = parseInt(Quickshell.env("HF_WELCOME_STEP") || "0") || 0; root.installed = false; }
-        }
+        function onViewChanged() { root.syncView(); }
     }
+    Component.onCompleted: syncView()
 
     Overlay {
         id: wz

@@ -48,6 +48,7 @@ En `/etc/greetd/config.toml` cambia el `command` por la línea comentada de la f
 La distribución de teclado está en `hyprland-greeter.lua` (`kb_layout`).
 
 - **Sesiones**: las de `/usr/share/wayland-sessions` (la de hyprfrijol, `hyprfrijol.desktop`, va primero como «Hyprland»), más «Modo juego (Steam)» si hay `steam` (necesita `gamescope`).
+- **Modo seguro**: «HyprFrijol (modo seguro)» (`hyprfrijol-seguro.desktop`, `hf-session --safe`) va al final; no se recuerda como última sesión, así que el siguiente inicio vuelve a la normal.
 - **Recuerda** el último usuario y la sesión de cada uno en `~greeter/.cache/hf-greeter.json`.
 - **Avatar**: `/var/lib/AccountsService/icons/<usuario>` si existe.
 - **Huella**: `fprintd` + `auth sufficient pam_fprintd.so` en `/etc/pam.d/greetd` (aparece «Huella»).

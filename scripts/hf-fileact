@@ -1,0 +1,212 @@
+#!/usr/bin/env python3
+"""hf-fileact — acciones sobre archivos (las usa el menú «HyprFrijol» de Nautilus, config/nautilus/hyprfrijol.py;
+sirven también en la terminal y para la IA).
+
+  hf-fileact actions <archivo…>          JSON: qué acciones valen para esos archivos y sus formatos de conversión
+  hf-fileact ai <archivo>                abre el asistente con el archivo: imagen adjunta; PDF → su 1.ª página como
+                                         imagen; texto → su contenido en la pregunta
+  hf-fileact sign <archivo>              «Firmar documentos» con ese PDF o imagen (hf-firmar)
+  hf-fileact ocr <archivo…>              texto de imágenes o PDF escaneados (tesseract, español + inglés) →
+                                         portapapeles + notificación
+  hf-fileact convert <formato> <archivo…>  imagen → png|jpg|webp|avif|pdf (ImageMagick) · vídeo → mp4|webm|gif|mp3
+                                         (ffmpeg) · audio → mp3|ogg|opus|flac|wav · PDF → png (una por página).
+                                         Deja el resultado al lado («foto.webp», «foto (1).webp» si ya existe)
+  hf-fileact wallpaper <archivo>         lo pone de fondo (hf-wallpaper <archivo>)
+
+  --print   no ejecuta: imprime los comandos que usaría (pruebas)
+"""
+import json, mimetypes, os, pathlib, shlex, shutil, subprocess, sys, tempfile
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
+SCRIPTS = ROOT / "scripts"
+QS = ["qs", "-p", str(ROOT / "config/quickshell")]
+CACHE = pathlib.Path.home() / ".cache/hyprfrijol"
+PRINT = "--print" in sys.argv
+ARGV = [a for a in sys.argv[1:] if a != "--print"]
+
+IMG = {"png", "jpg", "jpeg", "webp", "gif", "bmp", "tif", "tiff", "avif", "heic", "heif", "jxl", "svg", "ico"}
+VID = {"mp4", "mkv", "webm", "mov", "avi", "m4v", "wmv", "flv", "mpg", "mpeg", "ogv"}
+AUD = {"mp3", "flac", "ogg", "oga", "opus", "wav", "m4a", "aac", "wma"}
+TXT = {"txt", "md", "markdown", "csv", "json", "log", "py", "sh", "lua", "qml", "js", "ts", "html", "css", "xml", "yaml", "yml", "toml", "ini", "conf", "rs", "c", "h", "cpp", "go"}
+TARGETS = {"image": ["png", "jpg", "webp", "avif", "pdf"], "video": ["mp4", "webm", "gif", "mp3"],
+           "audio": ["mp3", "ogg", "opus", "flac", "wav"], "pdf": ["png"]}
+LABELS = {"png": "PNG", "jpg": "JPG", "webp": "WebP", "avif": "AVIF", "pdf": "PDF", "mp4": "MP4 (H.264)", "webm": "WebM (VP9)",
+          "gif": "GIF animado", "mp3": "MP3 (solo audio)", "ogg": "OGG Vorbis", "opus": "Opus", "flac": "FLAC", "wav": "WAV"}
+WALL = IMG - {"svg", "ico", "heic", "heif"} | {"mp4", "webm", "mkv", "mov"}
+
+
+def kind(p):
+    ext = pathlib.Path(p).suffix.lower().lstrip(".")
+    if ext == "pdf": return "pdf"
+    if ext in IMG: return "image"
+    if ext in VID: return "video"
+    if ext in AUD: return "audio"
+    if ext in TXT: return "text"
+    m = mimetypes.guess_type(str(p))[0] or ""
+    return "text" if m.startswith("text/") else "image" if m.startswith("image/") else "video" if m.startswith("video/") \
+        else "audio" if m.startswith("audio/") else "other"
+
+
+def run(cmd, detach=False):
+    if PRINT:
+        print(" ".join(shlex.quote(str(c)) for c in cmd)); return 0
+    if detach:
+        subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True); return 0
+    return subprocess.run(cmd, stdin=subprocess.DEVNULL).returncode
+
+
+def notify(title, body="", icon="dialog-information"):
+    if PRINT:
+        print(f"# notificación: {title} — {body}"); return
+    if shutil.which("notify-send"):
+        subprocess.run(["notify-send", "-a", "HyprFrijol", "-i", icon, title, body], capture_output=True)
+
+
+def free_name(src, ext):
+    src = pathlib.Path(src)
+    out = src.with_suffix("." + ext)
+    i = 1
+    while out.exists() or out == src:
+        out = src.with_name(f"{src.stem} ({i}).{ext}"); i += 1
+    return out
+
+
+# ---------------------------------------------------------------- acciones
+def actions(files):
+    ks = [kind(f) for f in files]
+    one = len(files) == 1
+    conv = sorted(set.intersection(*[set(TARGETS.get(k, [])) for k in ks]) if ks else set(), key=lambda x: list(LABELS).index(x))
+    conv = [c for c in conv if not all(pathlib.Path(f).suffix.lower().lstrip(".") in (c, "jpeg" if c == "jpg" else c) for f in files)]
+    return {"ai": one,
+            "sign": one and ks[0] in ("pdf", "image"),
+            "ocr": all(k in ("image", "pdf") for k in ks),
+            "convert": [{"fmt": c, "label": LABELS[c]} for c in conv],
+            "wallpaper": one and pathlib.Path(files[0]).suffix.lower().lstrip(".") in WALL,
+            "kinds": ks}
+
+
+def do_ai(f):
+    f = pathlib.Path(f).resolve()
+    k = kind(f)
+    if k == "image":
+        arg = {"image": str(f)}
+    elif k == "pdf":
+        png = CACHE / "fileact" / (f.stem + "-p1.png")
+        if not PRINT: png.parent.mkdir(parents=True, exist_ok=True)
+        run([str(SCRIPTS / "hf-sign"), "render", str(f), "0", str(png), "--width", "1400"])
+        arg = {"image": str(png), "ask": f"Esta es la primera página del PDF «{f.name}». ¿De qué trata?"}
+    elif k == "text":
+        try: txt = f.read_text(errors="replace")[:6000]
+        except Exception: txt = ""
+        arg = {"ask": f"Explícame este archivo «{f.name}»:\n\n```\n{txt}\n```"}
+    else:
+        size = f.stat().st_size if f.exists() else 0
+        arg = {"ask": f"¿Qué es el archivo «{f.name}» ({mimetypes.guess_type(str(f))[0] or 'tipo desconocido'}, {size // 1024} KB) y con qué lo abro en Linux?"}
+    return run(QS + ["ipc", "call", "shell", "openWith", "ia", json.dumps(arg, ensure_ascii=False)])
+
+
+def do_sign(f):
+    return run([str(SCRIPTS / "hf-firmar"), str(pathlib.Path(f).resolve())], detach=True)
+
+
+def ocr_langs():
+    if PRINT: return "spa+eng"
+    try:
+        have = set(subprocess.run(["tesseract", "--list-langs"], capture_output=True, text=True, timeout=10).stdout.split())
+    except Exception:
+        have = set()
+    langs = [l for l in ("spa", "eng") if l in have]
+    return "+".join(langs) or "eng"
+
+
+def do_ocr(files):
+    if not shutil.which("tesseract") and not PRINT:
+        notify("Falta tesseract", "Instálalo para extraer texto (paquete tesseract y sus idiomas)", "dialog-error"); return 1
+    langs, parts = ocr_langs(), []
+    for f in files:
+        f = pathlib.Path(f).resolve()
+        imgs = [f]
+        tmp = None
+        if kind(f) == "pdf":
+            tmp = pathlib.Path(tempfile.mkdtemp(prefix="hf-ocr-"))
+            run(["pdftoppm", "-r", "300", "-png", str(f), str(tmp / "p")])
+            imgs = sorted(tmp.glob("p*.png")) if not PRINT else [tmp / "p-1.png"]
+        for i in imgs:
+            if PRINT:
+                run(["tesseract", str(i), "-", "-l", langs]); continue
+            r = subprocess.run(["tesseract", str(i), "-", "-l", langs], capture_output=True, text=True, timeout=180)
+            parts.append(r.stdout.strip())
+        if tmp and not PRINT: shutil.rmtree(tmp, ignore_errors=True)
+    text = "\n\n".join(p for p in parts if p)
+    if PRINT:
+        print("wl-copy  # ← el texto"); notify("Texto copiado", "…"); return 0
+    if not text:
+        notify("No encontré texto", ", ".join(pathlib.Path(f).name for f in files), "dialog-warning"); return 1
+    subprocess.run(["wl-copy"], input=text, text=True)
+    notify(f"Texto copiado ({len(text)} caracteres)", text[:200] + ("…" if len(text) > 200 else ""), "edit-paste")
+    return 0
+
+
+def magick():
+    return ["magick"] if shutil.which("magick") or PRINT else ["convert"]
+
+
+def convert_cmd(src, fmt):
+    k, out = kind(src), free_name(src, fmt)
+    if k == "image":
+        if fmt == "jpg": return magick() + [f"{src}[0]" if pathlib.Path(src).suffix.lower() == ".gif" else str(src), "-background", "white", "-flatten", "-quality", "92", str(out)], out
+        return magick() + [str(src), str(out)], out
+    if k == "pdf" and fmt == "png":
+        out = pathlib.Path(src).with_suffix("")
+        return ["pdftoppm", "-r", "150", "-png", str(src), str(out)], pathlib.Path(str(out) + "-1.png")
+    ff = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-i", str(src)]
+    if fmt == "mp4": return ff + ["-c:v", "libx264", "-crf", "23", "-preset", "medium", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", str(out)], out
+    if fmt == "webm": return ff + ["-c:v", "libvpx-vp9", "-crf", "32", "-b:v", "0", "-c:a", "libopus", str(out)], out
+    if fmt == "gif": return ff + ["-vf", "fps=12,scale=640:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse", "-loop", "0", str(out)], out
+    if fmt == "mp3": return ff + ["-vn", "-c:a", "libmp3lame", "-q:a", "2", str(out)], out
+    if fmt == "ogg": return ff + ["-vn", "-c:a", "libvorbis", "-q:a", "5", str(out)], out
+    if fmt == "opus": return ff + ["-vn", "-c:a", "libopus", "-b:a", "128k", str(out)], out
+    if fmt == "flac": return ff + ["-vn", "-c:a", "flac", str(out)], out
+    if fmt == "wav": return ff + ["-vn", "-c:a", "pcm_s16le", str(out)], out
+    raise SystemExit(f"hf-fileact: no sé convertir {pathlib.Path(src).name} a {fmt}")
+
+
+def do_convert(fmt, files):
+    fmt = fmt.lower().lstrip(".").replace("jpeg", "jpg")
+    done, bad = [], []
+    for f in files:
+        f = pathlib.Path(f).resolve()
+        if fmt not in TARGETS.get(kind(f), []):
+            bad.append(f.name); continue
+        if f.suffix.lower().lstrip(".").replace("jpeg", "jpg") == fmt:
+            continue   # ya está en ese formato (selección mixta)
+        cmd, out = convert_cmd(f, fmt)
+        if run(cmd) == 0: done.append(out.name)
+        else: bad.append(f.name)
+    if done: notify("Convertido a " + LABELS.get(fmt, fmt), ", ".join(done[:5]) + ("…" if len(done) > 5 else ""), "emblem-ok-symbolic")
+    if bad: notify("No se pudo convertir", ", ".join(bad[:5]), "dialog-error")
+    return 0 if not bad else 1
+
+
+def do_wallpaper(f):
+    return run([str(SCRIPTS / "hf-wallpaper"), str(pathlib.Path(f).resolve())], detach=True)
+
+
+def main():
+    if not ARGV or ARGV[0] in ("-h", "--help"):
+        print(__doc__); return 0
+    c, rest = ARGV[0], ARGV[1:]
+    if c == "actions" and rest: print(json.dumps(actions(rest), ensure_ascii=False)); return 0
+    if c == "ai" and len(rest) == 1: return do_ai(rest[0])
+    if c == "sign" and len(rest) == 1: return do_sign(rest[0])
+    if c == "ocr" and rest: return do_ocr(rest)
+    if c == "convert" and len(rest) >= 2: return do_convert(rest[0], rest[1:])
+    if c == "wallpaper" and len(rest) == 1: return do_wallpaper(rest[0])
+    print(f"hf-fileact: orden no válida: {' '.join(ARGV)} (hf-fileact --help)", file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

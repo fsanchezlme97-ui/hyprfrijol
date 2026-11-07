@@ -19,7 +19,9 @@ import "../capture"
 
 Scope {
     id: root
-    readonly property bool shown: Shell.view === "color"
+    property bool loaded: false     // ver components/Overlay (carga diferida)
+    Component.onCompleted: Qt.callLater(() => root.loaded = true)
+    readonly property bool shown: loaded && Shell.view === "color"
     property string stage: "off"               // off | congelando | elegir | tarjeta
     property string frozen: ""
     property var screenUsed: Shell.screen
@@ -101,7 +103,6 @@ Scope {
     function save(): void { store.setText(JSON.stringify({ format: format, history: history }, null, 1)); }
 
     // ── Apertura ───────────────────────────────────────────────────────
-    GlobalShortcut { appid: "hf"; name: "color"; description: "HyprFrijol: selector de color"; onPressed: Shell.toggle("color") }
 
     onShownChanged: {
         if (!shown) { stage = "off"; dropFrozen(); missing = ""; return; }
@@ -415,12 +416,9 @@ Scope {
     }
     Timer { id: toastTimer; interval: 2200; onTriggered: root.toast = "" }
 
-    IpcHandler {
-        target: "color"
-        function open(): void { Shell.open("color"); }
-        function pick(x: int, y: int): void { if (root.stage === "elegir" && root.ready) { root.px = x; root.py = y; root.sample(); root.choose(root.cur); } }
-        function current(): string { return root.hasPick ? root.hex(root.picked) : ""; }
-        function last(): string { return root.history[0] ?? ""; }
-        function state(): string { return root.stage + (root.ready ? " ready" : ""); }
-    }
+    // IPC "color" (en modules/Modules.qml, siempre cargado; llama a estas funciones)
+    function ipcPick(x: int, y: int): void { if (stage === "elegir" && ready) { px = x; py = y; sample(); choose(cur); } }
+    function ipcCurrent(): string { return hasPick ? hex(picked) : ""; }
+    function ipcState(): string { return stage + (ready ? " ready" : ""); }
+    readonly property bool busyState: stage !== "off" || toast !== ""
 }

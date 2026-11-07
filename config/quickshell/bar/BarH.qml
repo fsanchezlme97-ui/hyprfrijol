@@ -50,6 +50,7 @@ Item {
         Workspaces { id: ws; visible: Settings.barHas("espacios"); screen: root.barWindow.screen }
         Divider { visible: Settings.barHas("espacios") && title.visible }
         ActiveTitle { id: title; visible: Settings.get("barShowTitle", true) && Settings.barHas("titulo") && text !== "" && root.titleMax >= 48; Layout.leftMargin: 2; Layout.maximumWidth: root.titleMax }
+        OmarchySlot { barWindow: root.barWindow; place: "izquierda" }   // widgets de plugins de Omarchy (omarchyBarSlot)
     }
 
     Loader {
@@ -75,13 +76,17 @@ Item {
         Loader { active: Settings.barHas("clima"); visible: active && (item?.want ?? false); sourceComponent: WeatherChip {} }
         Loader { active: Settings.barHas("recursos"); visible: active; sourceComponent: StatsChip {} }
         Loader { active: Settings.barHas("impresora"); visible: active && (item?.want ?? false); sourceComponent: PrinterChip {} }
+        // Memorias USB montadas y descargas en curso: solo aparecen cuando hay algo (devicesBarIcon, downloadsBarIcon)
+        Loader { visible: item?.want ?? false; sourceComponent: DevicesChip {} }
+        Loader { visible: item?.want ?? false; sourceComponent: DownloadsChip {} }
         // Utilidades
         Divider { visible: root.hasInfo && root.hasUtil; Layout.leftMargin: 4; Layout.rightMargin: 4 }
         PomodoroChip { id: pomo; visible: Settings.barHas("pomodoro") }
         CaffeineChip { id: cafe; visible: Settings.barHas("cafeina") }
-        IconBtn { id: clipBtn; visible: Settings.barHas("portapapeles"); icon: "clipboard"; tooltip: "Portapapeles"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // abre Spotlight en modo portapapeles
-        IconBtn { id: aiBtn; visible: Settings.barHas("ia"); icon: "ai"; active: Shell.view === "ia"; onClicked: Shell.toggle("ia") }
+        IconBtn { id: clipBtn; visible: Settings.barHas("portapapeles"); icon: "clipboard"; tooltip: "Portapapeles"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // abre Spotlight en modo portapapeles
+        IconBtn { id: aiBtn; visible: Settings.barHas("ia"); icon: "ai"; preload: "ia"; active: Shell.view === "ia"; onClicked: Shell.toggle("ia") }
         IconBtn { id: gearBtn; visible: Settings.barHas("ajustes"); icon: "gear"; onClicked: Shell.open("ajustesapp") }   // Ajustes (tuerca; opcional, ya está en el panel)
+        OmarchySlot { barWindow: root.barWindow; place: "derecha" }     // widgets de plugins de Omarchy (omarchyBarSlot)
         Tray { id: tray; barWindow: root.barWindow; visible: Settings.get("barTray", true) && any; Layout.leftMargin: 4 }
         // Estado: privacidad + red, sonido, batería, notificaciones y reloj (un solo botón: centro de control)
         Item {

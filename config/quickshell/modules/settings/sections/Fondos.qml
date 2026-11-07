@@ -1,5 +1,6 @@
 // Ajustes › Fondos de pantalla — colección (hf-wallpaper list; filtro Todos / Imágenes / Animados), cambio automático
-// y fondos en movimiento (vídeos y GIF con mpvpaper: «Añadir fondo animado…» = hf-wallpaper pick-animated).
+// y fondos en movimiento (vídeos y GIF con mpvpaper: «Añadir fondo animado…» = hf-wallpaper pick-animated) y Wallhaven
+// (ui/WallhavenCard: wallpaperSource, wallhaven*).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -189,4 +190,6 @@ ColumnLayout {
             }
         }
     }
+    // Wallhaven: buscar, añadir a mis fondos y usarlo como origen del cambio automático (ui/WallhavenCard, hf-wallhaven)
+    WallhavenCard { Layout.fillWidth: true }
 }

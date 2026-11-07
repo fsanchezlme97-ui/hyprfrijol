@@ -22,13 +22,14 @@ Scope {
 
     readonly property var nav: [
         { key: "apariencia", label: "Apariencia", icon: "palette", file: "Apariencia", sub: "matugen · hf-apply · settings.lua", kw: "tema color estilo aurora material flat vidrio paleta monocromo claro oscuro automático según la hora fondo esquinas redondeo forma squircle espacio gaps escala interfaz tipografía fuente letra tamaño del texto animaciones gtk qt" },
-        { key: "fondos", label: "Fondos de pantalla", icon: "image", file: "Fondos", sub: "hf-wallpaper · mpvpaper · matugen", kw: "fondo wallpaper video animado movimiento escenas cambio automático cada orden al azar según la hora colección transición fps" },
+        { key: "fondos", label: "Fondos de pantalla", icon: "image", file: "Fondos", sub: "hf-wallpaper · mpvpaper · matugen", kw: "fondo wallpaper video animado movimiento escenas cambio automático cada orden al azar según la hora colección transición fps wallhaven buscar descargar fondos internet caché clave api" },
         { key: "barra", label: "Barra", icon: "layout", file: "Barra", sub: "quickshell · bar/", kw: "barra posición arriba abajo izquierda derecha forma fija flotante isla tamaño altura grosor módulos reloj ocultar automáticamente ocultación inteligente esquivar ventanas comportamiento avisos emergentes osd onda audio título transparente" },
         { key: "escritorio", label: "Escritorio y gestos", icon: "grid", file: "Escritorio", sub: "hyprland · general:layout · gestures", kw: "modo de ventanas flotantes flotante mosaico escritorio clásico iconos del escritorio archivos carpeta widgets dock minimizar maximizar ocultación inteligente esquivar ocultar automáticamente numeración japonesa romana arábiga puntos kanji 1 9 esquinas calientes gestos touchpad mosaico dwindle master scrolling desplazamiento columnas cinta ancho de columna enfocar cursor acoplar espacios de trabajo nombres iconos emoji clima ciudad impresora 3d" },
         { key: "enfoque", label: "Enfoque y pomodoro", icon: "focus", file: "Enfoque", sub: "pomodoro + modo foco", kw: "pomodoro foco descanso ciclos sin distracciones ocultar barra gaps silenciar notificaciones sonido bloquear apps" },
         { key: "ia", label: "Asistente de IA", icon: "ai", file: "IA", sub: "servicio local del asistente", kw: "ia asistente claude ollama proveedor modelo servidor api clave permisos portapapeles terminal spotlight historial" },
-        { key: "panel", label: "Panel lateral y PiP", icon: "pip", file: "Panel", sub: "window_rule · pin · float", kw: "panel lateral pip imagen en imagen ancho lado esquina margen opacidad vídeos transparente" },
+        { key: "panel", label: "Panel lateral y PiP", icon: "pip", file: "Panel", sub: "window_rule · pin · float", kw: "panel lateral pip imagen en imagen ancho lado esquina margen opacidad vídeos transparente videollamadas meet teams reproductores spotify" },
         { key: "plugins", label: "Plugins", icon: "puzzle", file: "Plugins", sub: "hyprpm · plugins de Hyprland", kw: "plugins hyprpm extensiones módulos hyprbars hyprexpo hyprspace hyprfocus hyprglass hyprgrass cursores barras de título vista de espacios" },
+        { key: "omarchy", label: "Plugins de Omarchy", icon: "puzzle", file: "PluginsOmarchy", sub: "hf-plugin · widgets, paneles y temas de Omarchy", kw: "omarchy plugins quickshell widgets barra panel superposición servicio temas colors.toml importar paleta marketplace probado" },
         { key: "aplicaciones", label: "Aplicaciones", icon: "package", file: "Aplicaciones", sub: "centro de aplicaciones · bienvenida", kw: "aplicaciones apps instalar programas tienda software herramientas catálogo bienvenida asistente inicial flathub aur" },
         { key: "webapps", label: "Web apps", icon: "globe", file: "WebApps", sub: "~/.local/share/applications", kw: "web apps whatsapp youtube gmail atajo" },
         { key: "pantallas", label: "Pantallas", icon: "monitor", file: "Pantallas", sub: "hyprctl monitors · hl.monitor", sep: true, kw: "pantalla monitor resolución frecuencia hz escala orientación girar rotar principal identificar disposición vrr hdr duplicar luz nocturna hyprsunset temperatura amanecer atardecer" },
@@ -40,7 +41,8 @@ Scope {
         { key: "sonido", label: "Sonido", icon: "volume", file: "Sonido", sub: "PipeWire · WirePlumber", kw: "sonido audio salida entrada micrófono volumen por app aplicaciones altavoces hdmi bluetooth sobreamplificar supresión de ruido auriculares perfiles sonidos del sistema" },
         { key: "notificaciones", label: "Notificaciones", icon: "bell", file: "Notificaciones", sub: "por aplicación", kw: "notificaciones avisos no molestar horario emergentes posición duración sonido pantalla de bloqueo aplicaciones" },
         { key: "impresoras", label: "Impresoras y escáneres", icon: "printer", file: "Impresoras", sub: "CUPS · SANE", kw: "impresora escáner imprimir cola cups" },
-        { key: "energia", label: "Energía y rendimiento", icon: "power", file: "Energia", sub: "power-profiles-daemon · hypridle", kw: "energía batería límite de carga 80 historial salud ahorro equilibrado rendimiento atenuar apagar pantalla suspender inactividad gráficos gpu brillo carga vidrio desenfoque juegos tapa botón de encendido hibernar" },
+        { key: "almacenamiento", label: "Almacenamiento", icon: "folder", file: "Almacenamiento", sub: "udisks2 · hf-devices · hf-download", kw: "almacenamiento discos disco usb memoria pendrive tarjeta sd expulsar montar desmontar automático espacio libre gnome discos particiones descargas descargar yt-dlp gallery-dl aria2 vídeo audio mp3 opus carpetas cola historial" },
+        { key: "energia", label: "Energía y rendimiento", icon: "power", file: "Energia", sub: "power-profiles-daemon · hypridle", kw: "energía batería límite de carga 80 historial salud ahorro equilibrado rendimiento atenuar apagar pantalla suspender inactividad gráficos gpu brillo carga vidrio desenfoque juegos tapa botón de encendido hibernar memoria ram paneles carga diferida" },
         { key: "sistema", label: "Sistema y recuperación", icon: "restart", file: "Sistema", sub: "snapper · limine · paru", kw: "sistema snapper puntos de restauración copia de seguridad kernel lts actualizaciones firmware flatpak exportar importar ajustes" },
         { key: "privacidad", label: "Privacidad y seguridad", icon: "shield", file: "Privacidad", sub: "cámara · micrófono · ubicación", kw: "privacidad seguridad cámara micrófono ubicación historial archivos recientes portapapeles papelera bloqueo de pantalla bloquear cifrado tpm arranque seguro" },
         { key: "predeterminadas", label: "Apps predeterminadas e inicio", icon: "sliders", file: "Predeterminadas", sub: "xdg-mime · autostart", kw: "apps predeterminadas navegador correo abrir con inicio automático arranque" },
@@ -106,6 +108,7 @@ Scope {
             sec = sec.slice(0, i);
         }
         if (sec && nav.some(n => n.key === sec)) section = sec;
+        if (!open && Date.now() - Shell.openedAt > 1000) Shell.stamp();
         open = true;
         if (pendingFind) findRequested();
     }
@@ -178,6 +181,7 @@ Scope {
             color: Theme.blur ? Theme.winSolid : Theme.s1
             onVisibleChanged: if (!visible) root.open = false
 
+            OpenProbe { name: "ajustesapp"; shown: true }
             Shortcut { sequence: "Ctrl+W"; onActivated: root.open = false }
             Shortcut { sequence: "Ctrl+F"; onActivated: search.focusInput() }
             Shortcut { sequence: "F11"; onActivated: win.toggleMax() }

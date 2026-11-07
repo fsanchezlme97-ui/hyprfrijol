@@ -1,0 +1,299 @@
+#!/usr/bin/env bash
+# hf-safe — modo seguro y recuperación de hyprfrijol («que no se rompa»).
+# Funciona sin Quickshell, sin la configuración normal de Hyprland y desde una TTY.
+#
+#   hf-safe menu              menú de recuperación (lo abre el modo seguro; Super+R dentro de él)
+#   hf-safe status [--json]   estado: modo seguro, ajustes, local.lua, plugins, copias guardadas
+#   hf-safe reset-settings    settings.json → valores por defecto (guarda una copia antes)
+#   hf-safe disable-local     aparta ~/.config/hyprfrijol/local.lua (tus cambios en Lua) y pone la plantilla
+#   hf-safe disable-plugins   no cargar plugins de Hyprland (hyprpm) ni de Omarchy al iniciar
+#   hf-safe snapshot [nota]   guarda una copia de tus ajustes (~/.config/hyprfrijol)
+#   hf-safe mark-good         copia «buena conocida» (lo llama hf-shell cuando el shell lleva un rato estable)
+#   hf-safe list [--json]     copias guardadas (la última buena, marcada con ★)
+#   hf-safe restore [ID]      vuelve a la última copia buena (o a ID); antes guarda la actual
+#   hf-safe normal            sale del modo seguro: vuelve al login (o arranca la sesión normal desde una TTY)
+#   hf-safe safe              cierra la sesión normal y arranca el modo seguro (desde una TTY: directamente)
+#   hf-safe offer [motivo]    avisa de que el shell no arranca y ofrece el modo seguro (lo usa hf-shell)
+#   hf-safe terminal [menu|safe]  abre la primera terminal instalada (con el menú, o preguntando si cerrar
+#                             la sesión para entrar en modo seguro)
+#
+# Las copias van en ~/.local/state/hyprfrijol/snapshots/<fecha>/ (se guardan las 12 últimas y la buena).
+# Opciones: --yes (sin preguntar) · --dry-run (solo enseña qué haría)
+set -uo pipefail
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+# El repo es SIEMPRE el de este script: un HF_ROOT roto no debe impedir recuperar
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+USERCFG="$HOME/.config/hyprfrijol"
+STATE="$HOME/.local/state/hyprfrijol"
+SNAPS="$STATE/snapshots"
+GOOD="$SNAPS/good"          # enlace a la última copia buena
+SETTINGS="$USERCFG/settings.json"
+KEEP=12
+
+YES=0 DRY=0 JSON=0 ARGS=()
+for a in "$@"; do
+  case "$a" in
+    --yes|-y) YES=1 ;; --dry-run|-n) DRY=1 ;; --json) JSON=1 ;;
+    -h|--help) sed -n '2,/^set -uo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
+    *) ARGS+=("$a") ;;
+  esac
+done
+set -- "${ARGS[@]+"${ARGS[@]}"}"
+CMD="${1:-menu}"; shift || true
+
+if [ -t 1 ]; then B=$'\033[1m' G=$'\033[1;32m' Y=$'\033[1;33m' R=$'\033[1;31m' Z=$'\033[0m'; else B="" G="" Y="" R="" Z=""; fi
+say()  { printf '%s▸%s %s\n' "$G" "$Z" "$*"; }
+warn() { printf '%s!%s %s\n' "$Y" "$Z" "$*" >&2; }
+die()  { printf '%s✗%s %s\n' "$R" "$Z" "$*" >&2; exit 1; }
+run()  { if [ "$DRY" = 1 ]; then printf '  (dry-run) %s\n' "$*"; else "$@"; fi; }
+have() { command -v "$1" >/dev/null 2>&1; }
+stamp() { date +%Y%m%d-%H%M%S; }
+ask() { # ask "pregunta" → 0 sí
+  [ "$YES" = 1 ] && return 0
+  [ -t 0 ] || return 1
+  local r; read -r -p "$1 [s/N] " r; [[ "$r" =~ ^[sSyY] ]]
+}
+in_session() { [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && have hyprctl; }
+is_safe() { [ "${HF_SAFE:-}" = 1 ]; }
+
+# ---------- copias ----------
+# Qué se guarda: todo ~/.config/hyprfrijol salvo .git y copias de seguridad sueltas
+snapshot() { # snapshot <nota> → imprime el ID
+  local note="${1:-manual}" id dir
+  [ -d "$USERCFG" ] || { warn "No existe $USERCFG: nada que guardar"; return 1; }
+  id="$(stamp)"; dir="$SNAPS/$id"
+  [ -e "$dir" ] && { id="$id-$$"; dir="$SNAPS/$id"; }
+  if [ "$DRY" = 1 ]; then echo "  (dry-run) copia de $USERCFG → $dir"; echo "$id"; return 0; fi
+  mkdir -p "$dir/config"
+  ( cd "$USERCFG" && find . -mindepth 1 -maxdepth 3 \( -name .git -prune \) -o \( -type f ! -name '*.bak*' ! -name '*.desactivado-*' -size -5M -print0 \) \
+      | xargs -0 -r cp --parents -t "$dir/config" ) 2>/dev/null
+  { echo "note=$note"; echo "date=$(date -Iseconds)"; echo "rev=$(git -C "$ROOT" describe --tags --always --dirty 2>/dev/null)"; } > "$dir/info"
+  prune
+  echo "$id"
+}
+prune() {
+  local keep_good="" n=0 d
+  [ -L "$GOOD" ] && keep_good="$(basename "$(readlink "$GOOD")")"
+  for d in $(ls -1 "$SNAPS" 2>/dev/null | grep -E '^[0-9]{8}-' | sort -r); do
+    n=$((n + 1)); [ "$n" -le "$KEEP" ] && continue; [ "$d" = "$keep_good" ] && continue
+    rm -rf "${SNAPS:?}/$d"
+  done
+}
+snap_ids() { ls -1 "$SNAPS" 2>/dev/null | grep -E '^[0-9]{8}-' | sort -r; }
+snap_note() { sed -n 's/^note=//p' "$SNAPS/$1/info" 2>/dev/null; }
+good_id() { [ -L "$GOOD" ] && basename "$(readlink "$GOOD")"; }
+
+mark_good() {
+  # Solo si cambió algo desde la última buena: no llena el disco con copias iguales
+  local g; g="$(good_id)"
+  if [ -n "$g" ] && [ -d "$SNAPS/$g/config" ] && diff -rq -x .git -x '*.bak*' -x '*.desactivado-*' "$SNAPS/$g/config" "$USERCFG" >/dev/null 2>&1; then
+    return 0
+  fi
+  local id; id="$(snapshot "buena: el escritorio arrancó bien")" || return 1
+  [ "$DRY" = 1 ] && return 0
+  ln -sfn "$id" "$GOOD"
+}
+
+restore() { # restore [ID]
+  local id="${1:-$(good_id)}"
+  [ -n "$id" ] || { id="$(snap_ids | head -n1)"; [ -n "$id" ] && warn "No hay copia marcada como buena: uso la más reciente ($id)"; }
+  [ -n "$id" ] && [ -d "$SNAPS/$id/config" ] || die "No hay copias guardadas (hf-safe list)"
+  say "Restaurar tus ajustes a la copia $id ($(snap_note "$id"))"
+  ask "¿Restaurar? Antes se guarda lo actual" || { [ "$YES" = 1 ] || { echo "Cancelado"; return 1; }; }
+  local bak; bak="$(snapshot "antes de restaurar $id")" && say "Lo actual queda en la copia $bak"
+  # Se sobrescriben los archivos de la copia; lo que no estaba en ella se aparta (*.desactivado-<fecha>)
+  local s; s="$(stamp)"
+  if [ "$DRY" = 0 ]; then
+    ( cd "$USERCFG" && find . -mindepth 1 -maxdepth 3 \( -name .git -prune \) -o \( -type f ! -name '*.bak*' ! -name '*.desactivado-*' -print \) ) | while read -r f; do
+      [ -e "$SNAPS/$id/config/$f" ] || mv -f "$USERCFG/$f" "$USERCFG/$f.desactivado-$s"
+    done
+    cp -a "$SNAPS/$id/config/." "$USERCFG/"
+  else
+    echo "  (dry-run) cp -a $SNAPS/$id/config/. $USERCFG/"
+  fi
+  reapply
+  say "Hecho. Vuelve a la sesión normal para verlo (hf-safe normal)."
+}
+
+reapply() { # regenera el estado (settings.lua, tema…) sin recargar; si hf-apply falla, no pasa nada
+  [ "$DRY" = 1 ] && { echo "  (dry-run) hf-apply --no-reload"; return 0; }
+  HF_ROOT="$ROOT" timeout 60 "$ROOT/scripts/hf-apply" --no-reload >/dev/null 2>&1 || warn "hf-apply falló; los ajustes se aplicarán al iniciar la sesión normal"
+}
+
+reset_settings() {
+  say "Volver a los ajustes por defecto (settings.json)"
+  ask "¿Seguro? Se guarda una copia antes" || { [ "$YES" = 1 ] || { echo "Cancelado"; return 1; }; }
+  local id; id="$(snapshot "antes de restablecer los ajustes")" && say "Copia guardada: $id (hf-safe restore $id para deshacer)"
+  run mkdir -p "$USERCFG"
+  [ -f "$SETTINGS" ] && run cp -f "$SETTINGS" "$SETTINGS.bak-seguro-$(stamp)"
+  run cp -f "$ROOT/config/defaults/settings.json" "$SETTINGS"
+  reapply
+  say "Ajustes por defecto ✓ (la copia anterior: $SETTINGS.bak-seguro-…)"
+}
+
+disable_local() {
+  local f="$USERCFG/local.lua"
+  [ -f "$f" ] || { say "No tienes local.lua"; return 0; }
+  if cmp -s "$f" "$ROOT/config/defaults/local.lua"; then say "local.lua ya es la plantilla (no tiene cambios tuyos)"; return 0; fi
+  say "Apartar local.lua (tus cambios en Lua) y poner la plantilla vacía"
+  ask "¿Apartarlo?" || { [ "$YES" = 1 ] || { echo "Cancelado"; return 1; }; }
+  local d; d="$f.desactivado-$(stamp)"
+  run mv -f "$f" "$d"
+  run cp "$ROOT/config/defaults/local.lua" "$f"
+  say "Apartado en $d (vuelve a ponerlo cuando lo arregles)"
+}
+
+disable_plugins() {
+  have jq || die "Falta jq"
+  say "No cargar plugins de Hyprland (hyprpm) ni de Omarchy al iniciar"
+  local id; id="$(snapshot "antes de desactivar los plugins")" && say "Copia guardada: $id"
+  [ "$DRY" = 1 ] && { echo "  (dry-run) settings.json: pluginsAutoload=false, plugins.*.on=false, omarchy*Autoload/Enabled=false"; return 0; }
+  mkdir -p "$USERCFG"
+  local cur='{}'
+  [ -s "$SETTINGS" ] && jq -e 'type == "object"' "$SETTINGS" >/dev/null 2>&1 && cur="$(cat "$SETTINGS")"
+  # Claves conocidas (pluginsAutoload, plugins.*.on, omarchyPlugins: interruptor general de los plugins de Omarchy)
+  # + cualquier otro interruptor booleano «omarchy…Autoload/Enabled»
+  jq '.pluginsAutoload = false
+      | (if (.plugins | type) == "object" then .plugins |= with_entries(if (.value | type) == "object" then .value.on = false else . end) else . end)
+      | with_entries(if (.key | test("^omarchy.*(Autoload|Enabled|Plugins?On)$"; "i")) and (.value | type) == "boolean" then .value = false else . end)
+      | (if (.omarchyPlugins | type) == "object" then .omarchyPlugins |= with_entries(if (.value | type) == "object" then .value.on = false elif (.value | type) == "boolean" then .value = false else . end) else .omarchyPlugins = false end)' \
+      <<<"$cur" > "$SETTINGS.tmp" && mv -f "$SETTINGS.tmp" "$SETTINGS"
+  reapply
+  if in_session && ! is_safe && have hyprctl; then hyprctl plugin list 2>/dev/null | grep -q 'Plugin' && warn "Hay plugins cargados ahora mismo: se quitan al reiniciar la sesión"; fi
+  say "Plugins desactivados ✓ (vuelve a activarlos en Ajustes › Plugins)"
+}
+
+# ---------- sesión ----------
+leave_safe() {
+  if in_session; then
+    say "Cerrando el modo seguro: elige «Hyprland» (HyprFrijol) en el login"
+    [ "$DRY" = 1 ] && { echo "  (dry-run) hyprctl dispatch hl.dsp.exit()"; return 0; }
+    hyprctl dispatch 'hl.dsp.exit()' >/dev/null 2>&1
+  else
+    say "Arrancando la sesión normal…"; run exec "$ROOT/scripts/hf-session"
+  fi
+}
+enter_safe() {
+  if in_session; then
+    say "Para entrar en modo seguro: cierra la sesión y elige «HyprFrijol (modo seguro)» en el login (o, desde una TTY: hf-session --safe)"
+    ask "¿Cerrar la sesión ahora?" && { [ "$DRY" = 1 ] || hyprctl dispatch 'hl.dsp.exit()' >/dev/null 2>&1; }
+  else
+    run exec "$ROOT/scripts/hf-session" --safe
+  fi
+}
+
+TERMS=(kitty foot alacritty wezterm ghostty konsole gnome-terminal xfce4-terminal xterm)
+terminal() { # terminal [menu]
+  local t cmd=() title="HyprFrijol · modo seguro"
+  [ "${1:-}" = menu ] && cmd=(sh -c "'$ROOT/scripts/hf-safe' menu; exec \"\${SHELL:-bash}\"")
+  [ "${1:-}" = safe ] && cmd=(sh -c "'$ROOT/scripts/hf-safe' safe; '$ROOT/scripts/hf-safe' menu; exec \"\${SHELL:-bash}\"")
+  for t in "${TERMS[@]}"; do
+    have "$t" || continue
+    if [ ${#cmd[@]} -eq 0 ]; then exec "$t"; fi
+    case "$t" in
+      kitty)          exec kitty --config NONE -o font_size=12 -T "$title" "${cmd[@]}" ;;   # --config NONE: un kitty.conf roto no molesta
+      foot)           exec foot -T "$title" "${cmd[@]}" ;;
+      alacritty)      exec alacritty -T "$title" -e "${cmd[@]}" ;;
+      wezterm)        exec wezterm start -- "${cmd[@]}" ;;
+      ghostty)        exec ghostty -e "${cmd[@]}" ;;
+      gnome-terminal) exec gnome-terminal -- "${cmd[@]}" ;;
+      *)              exec "$t" -e "${cmd[@]}" ;;
+    esac
+  done
+  die "No encuentro ninguna terminal (${TERMS[*]})"
+}
+
+offer() { # offer [motivo] — sin barra no hay servidor de avisos propio: aviso de Hyprland + notify-send si hay alguien
+  local why="${1:-El shell (Quickshell) se ha cerrado varias veces al arrancar.}"
+  local msg="$why Prueba el modo seguro: cierra sesión y elige «HyprFrijol (modo seguro)», o abre «Restaurar ajustes» con hf-safe menu."
+  command -v logger >/dev/null && logger -t hf-safe "$why"
+  in_session && hyprctl eval "hl.notification.create({ text = $(printf '%s' "$msg" | jq -Rs .), timeout = 20000 })" >/dev/null 2>&1
+  if have notify-send; then
+    local act
+    act="$(timeout 120 notify-send -a HyprFrijol -u critical -i dialog-warning -w \
+      -A menu="Restaurar ajustes…" -A safe="Modo seguro" "HyprFrijol no arranca bien" "$msg" 2>/dev/null)"
+    case "$act" in
+      menu) setsid -f "$0" terminal menu >/dev/null 2>&1 ;;
+      safe) setsid -f "$0" terminal safe >/dev/null 2>&1 ;;   # pregunta antes de cerrar la sesión
+      *) [ -z "$act" ] && [ "${HF_SAFE_OFFER_TERMINAL:-1}" = 1 ] && ! timeout 2 sh -c 'gdbus call --session --dest org.freedesktop.Notifications --object-path /org/freedesktop/Notifications --method org.freedesktop.Notifications.GetServerInformation' >/dev/null 2>&1 \
+           && setsid -f "$0" terminal menu >/dev/null 2>&1 ;;   # nadie muestra avisos: abre directamente el menú
+    esac
+  fi
+}
+
+status() {
+  local plug omp g n
+  plug="$(jq -r 'if has("pluginsAutoload") then .pluginsAutoload else true end' "$SETTINGS" 2>/dev/null || echo "?")"
+  g="$(good_id)"; n="$(snap_ids | wc -l)"
+  local valid=true; [ -f "$SETTINGS" ] && ! jq -e . "$SETTINGS" >/dev/null 2>&1 && valid=false
+  local localmod=false; [ -f "$USERCFG/local.lua" ] && ! cmp -s "$USERCFG/local.lua" "$ROOT/config/defaults/local.lua" && localmod=true
+  if [ "$JSON" = 1 ]; then
+    jq -n --argjson safe "$(is_safe && echo true || echo false)" --argjson valid "$valid" --argjson localmod "$localmod" \
+      --arg plug "$plug" --arg good "$g" --argjson n "$n" --arg root "${ROOT/#$HOME/\~}" \
+      '{ safeMode: $safe, settingsValid: $valid, localLuaModified: $localmod, pluginsAutoload: ($plug != "false"),
+         lastGood: $good, snapshots: $n, root: $root }'
+    return
+  fi
+  echo "${B}Estado${Z}"
+  echo "  Modo seguro:        $(is_safe && echo "sí (esta sesión)" || echo no)"
+  echo "  settings.json:      $([ -f "$SETTINGS" ] || echo "no existe (valores por defecto)")$([ -f "$SETTINGS" ] && { [ "$valid" = true ] && echo "válido" || echo "${R}NO es JSON válido${Z}"; })"
+  echo "  local.lua:          $([ "$localmod" = true ] && echo "con cambios tuyos" || echo "plantilla")"
+  echo "  Plugins al iniciar: $([ "$plug" = false ] && echo no || echo sí)"
+  echo "  Copias guardadas:   $n$([ -n "$g" ] && echo " · última buena: $g")"
+}
+
+list() {
+  local g; g="$(good_id)"
+  if [ "$JSON" = 1 ]; then
+    local id; for id in $(snap_ids); do jq -n --arg id "$id" --arg note "$(snap_note "$id")" --argjson good "$([ "$id" = "$g" ] && echo true || echo false)" '{id:$id, note:$note, good:$good}'; done | jq -s .
+    return
+  fi
+  [ -n "$(snap_ids)" ] || { echo "Sin copias (hf-safe snapshot)"; return; }
+  local id; for id in $(snap_ids); do printf '  %s %s  %s\n' "$([ "$id" = "$g" ] && echo "★" || echo " ")" "$id" "$(snap_note "$id")"; done
+}
+
+menu() {
+  while :; do
+    echo
+    echo "${B}HyprFrijol · restaurar ajustes${Z}$(is_safe && echo "  (modo seguro)")"
+    status | tail -n +2
+    echo
+    echo "  1) Volver a la última copia buena de tus ajustes"
+    echo "  2) Restablecer los ajustes por defecto (guarda una copia)"
+    echo "  3) Desactivar los plugins (Hyprland/Omarchy) al iniciar"
+    echo "  4) Apartar local.lua (tus cambios en Lua)"
+    echo "  5) Ver las copias guardadas"
+    echo "  6) Diagnóstico (hf-doctor)"
+    if is_safe; then echo "  7) Volver a la sesión normal (sale al login)"; else echo "  7) Reiniciar en modo seguro"; fi
+    echo "  0) Salir a la terminal"
+    local o; read -r -p "Elige: " o || return 0
+    case "$o" in
+      1) restore || true ;;
+      2) reset_settings || true ;;
+      3) disable_plugins || true ;;
+      4) disable_local || true ;;
+      5) list; read -r -p "ID a restaurar (Intro = ninguno): " o; [ -n "$o" ] && { restore "$o" || true; } ;;
+      6) "$ROOT/scripts/hf-doctor" | ${PAGER:-less -R} ;;
+      7) if is_safe; then leave_safe; else enter_safe; fi ;;
+      0|q|"") return 0 ;;
+      *) echo "Opción no válida" ;;
+    esac
+  done
+}
+
+case "$CMD" in
+  menu)             menu ;;
+  status)           status ;;
+  reset-settings)   reset_settings ;;
+  disable-local)    disable_local ;;
+  disable-plugins)  disable_plugins ;;
+  snapshot)         snapshot "${1:-manual}" ;;
+  mark-good)        mark_good ;;
+  list)             list ;;
+  restore)          restore "${1:-}" ;;
+  normal)           leave_safe ;;
+  safe)             enter_safe ;;
+  offer)            offer "${1:-}" ;;
+  terminal)         terminal "${1:-}" ;;
+  *) die "Orden desconocida: $CMD (usa --help)" ;;
+esac

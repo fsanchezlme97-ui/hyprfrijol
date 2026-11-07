@@ -7,6 +7,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import "../.."
+import "../../components"
 
 PanelWindow {
     id: win
@@ -14,7 +15,9 @@ PanelWindow {
     property real panelWidth: 360
     property real panelHeight: 300
     property real margin: 6
-    readonly property bool shown: Shell.view === view
+    property bool ready: false              // ver components/Overlay (carga diferida)
+    Component.onCompleted: Qt.callLater(() => win.ready = true)
+    readonly property bool shown: ready && Shell.view === view
     default property alias content: panel.data
     property alias panel: panel
 
@@ -81,4 +84,5 @@ PanelWindow {
         ]
         Behavior on opacity { NumberAnimation { id: fade; duration: win.shown ? Theme.durIn * 0.6 : Theme.durOut; easing.type: Easing.OutCubic } }
     }
+    OpenProbe { name: win.view; shown: win.shown }
 }

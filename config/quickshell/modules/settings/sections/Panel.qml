@@ -1,5 +1,6 @@
 // Ajustes › Panel lateral y PiP — pestañas del panel (sidePanelApps), ancho y lado; PiP: esquina, tamaño,
-// margen, opacidad (config/apply/pip.py genera la window_rule).
+// margen, opacidad (config/apply/pip.py genera la window_rule); también las miniventanas de llamadas
+// (pipCalls) y reproductores (pipPlayers), ver modules/pip/pip-apps.json.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -130,6 +131,8 @@ ColumnLayout {
             SwRow { label: "Visible en todos los espacios"; sub: "pin = true"; mono: true; key: "pipAllWs"; def: true }
             SwRow { label: "Controles solo al pasar el cursor"; key: "pipHoverControls"; def: true }
             SwRow { label: "Transparente si el cursor se acerca"; sub: "para ver lo que hay debajo"; key: "pipFadeNear"; def: false }
+            SwRow { label: "Videollamadas (Meet, Teams…)"; sub: "su ventana flotante: cerrar sin colgar y volver a la llamada"; key: "pipCalls"; def: true }
+            SwRow { label: "Reproductores (Spotify…)"; sub: "miniventana con pausa, siguiente y volver a la app"; key: "pipPlayers"; def: true }
             Mono {
                 Layout.fillWidth: true
                 wrapMode: Text.WrapAnywhere; elide: Text.ElideNone

@@ -1,0 +1,647 @@
+#!/usr/bin/env python3
+"""hf-apps — las apps de hyprfrijol por nivel (catálogo install/apps.json). Lo usan install.sh --apps=…,
+Ajustes › Aplicaciones, la IA (hf-ai/hf-mcp) y la terminal.
+
+  hf-apps list [nivel] [--json]          catálogo con estado (instalada, por dónde) y la fuente que se usaría
+  hf-apps status [app|nivel…] [--json]   solo el estado
+  hf-apps plan <app|nivel…> [--json]     los pasos que haría «install», sin ejecutar nada
+  hf-apps install <app|nivel…>           instala (niveles: serie, productividad, destacada, creativa, experimental;
+                                         varios con comas: serie,productividad; «all» = todos)
+  hf-apps remove <app…>                  desinstala por donde esté instalada
+  hf-apps defaults                       hace predeterminadas las de serie instaladas (navegador → Chrome, fotos →
+                                         Loupe, PDF → Papers…; con scripts/hf-defaults)
+  hf-apps extension [--remove]           enlaza la extensión de Nautilus (menú «HyprFrijol») en
+                                         ~/.local/share/nautilus-python/extensions/
+
+Opciones: --dry-run (enseña los comandos, no ejecuta nada) · --yes (sin preguntas del gestor de paquetes) ·
+  --with-alt (un nivel con sus alternativas) · --flatpak (Flatpak antes que el paquete nativo) ·
+  --pkexec (lo de sistema con pkexec en un solo paso, para la interfaz; si no, sudo) · --progress (líneas
+  «@@ i/n texto» para la barra de progreso de Ajustes) · --json.
+Distro: la de install/distro.sh (HF_DISTRO=arch|fedora|debian|ubuntu|opensuse-tumbleweed… la simula; con una
+  distro simulada no se consulta el sistema). Ajustes: appsPreferFlatpak (= --flatpak), appsAutoDefaults
+  (tras instalar las de serie, «defaults»).
+Orden de fuentes: paquete nativo → AUR (Arch, con paru/yay) → repositorio del fabricante (Chrome, VS Code) →
+  Flatpak (Flathub o el remoto oficial de la app) → AppImage / .flatpak de GitHub → compilar. «prefer» en el
+  catálogo lo cambia para una app. Lo de sistema solo se ejecuta con sudo/pkexec cuando tú lo pides.
+"""
+import json, os, pathlib, re, shlex, shutil, subprocess, sys, urllib.request
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
+CAT = ROOT / "install/apps.json"
+HOME = pathlib.Path.home()
+DATA = pathlib.Path(os.environ.get("XDG_DATA_HOME") or HOME / ".local/share")
+APPDIR = DATA / "hyprfrijol/apps"            # AppImage descargados
+SRCDIR = HOME / ".local/src"                  # apps compiladas (Sung)
+LAUNCH = DATA / "applications"
+EXT_SRC = ROOT / "config/nautilus/hyprfrijol.py"
+EXT_DST = DATA / "nautilus-python/extensions/hyprfrijol.py"
+SETTINGS = HOME / ".config/hyprfrijol/settings.json"
+APP_DIRS = [LAUNCH] + [pathlib.Path(d) / "applications" for d in (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":") if d] + \
+           [DATA / "flatpak/exports/share/applications", pathlib.Path("/var/lib/flatpak/exports/share/applications")]
+
+FAM_LABEL = {"arch": "Arch", "fedora": "Fedora", "rhel": "RHEL", "suse": "openSUSE", "suse-leap": "openSUSE Leap",
+             "debian": "Debian", "ubuntu": "Ubuntu", "void": "Void", "gentoo": "Gentoo", "nixos": "NixOS", "unknown": "?"}
+SRC_LABEL = {"native": "Repos", "aur": "AUR", "vendor": "Fabricante", "flatpak": "Flatpak", "appimage": "AppImage",
+             "flatpakBundle": "Flatpak (GitHub)", "build": "Compilar"}
+
+ARGS = sys.argv[1:]
+FLAGS = {a for a in ARGS if a.startswith("--")}
+POS = [a for a in ARGS if not a.startswith("--")]
+DRY = "--dry-run" in FLAGS
+YES = "--yes" in FLAGS
+JSON = "--json" in FLAGS
+PKEXEC = "--pkexec" in FLAGS
+PROGRESS = "--progress" in FLAGS
+
+
+def load_settings():
+    def rd(p):
+        try: return json.loads(pathlib.Path(p).read_text())
+        except Exception: return {}
+    s = rd(ROOT / "config/defaults/settings.json")
+    s.update(rd(SETTINGS))
+    return s
+
+
+SET = load_settings()
+PREFER_FLATPAK = "--flatpak" in FLAGS or SET.get("appsPreferFlatpak") is True
+
+
+# ---------------------------------------------------------------- distro (install/distro.sh)
+def distro():
+    sh = (f'. {shlex.quote(str(ROOT / "install/distro.sh"))}; load_os_release; f="$(hf_family)"; '
+          'printf "%s\\n%s\\n%s\\n%s\\n" "$f" "$OS_ID" "$OS_PRETTY" "$SIMULATED"')
+    try:
+        out = subprocess.run(["bash", "-c", sh], capture_output=True, text=True, timeout=10).stdout.split("\n")
+    except Exception:
+        out = ["unknown", "", "", "0"]
+    fam, osid, pretty, sim = (out + ["", "", "", ""])[:4]
+    return fam or "unknown", osid, pretty, sim == "1"
+
+
+FAMILY, OS_ID, OS_PRETTY, SIMULATED = distro()
+PM = {"arch": "pacman", "fedora": "dnf", "rhel": "dnf", "suse": "zypper", "suse-leap": "zypper",
+      "debian": "apt-get", "ubuntu": "apt-get", "void": "xbps-install"}.get(FAMILY, "")
+COL = {"arch": "arch", "fedora": "fedora", "rhel": "fedora", "suse": "suse", "suse-leap": "suse",
+       "debian": "debian", "ubuntu": "ubuntu"}.get(FAMILY, "")
+VFAM = {"fedora": "fedora", "rhel": "fedora", "suse": "suse", "suse-leap": "suse", "debian": "debian", "ubuntu": "debian"}.get(FAMILY, "")
+PROBE = not SIMULATED and bool(PM) and bool(shutil.which(PM))
+
+
+def have(b):
+    return bool(shutil.which(b))
+
+
+def q(args, timeout=20):
+    try:
+        return subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------- catálogo
+def catalog():
+    return json.loads(CAT.read_text())
+
+
+CATALOG = catalog()
+APPS = CATALOG["apps"]
+TIERS = [t["key"] for t in CATALOG["tiers"]]
+BY_ID = {a["id"]: a for a in APPS}
+
+
+def native_pkgs(a):
+    v = a.get("src", {}).get(COL) or (a.get("src", {}).get("debian") if COL == "ubuntu" else "")
+    return [] if not v or v == "-" else v.split()
+
+
+# ---------------------------------------------------------------- estado
+_installed_native = None
+_flatpaks = None
+
+
+def installed_native(names):
+    """Qué paquetes nativos están instalados (una consulta para todos)."""
+    global _installed_native
+    if _installed_native is None:
+        _installed_native = set()
+        if PROBE:
+            allp = sorted({p.removeprefix("aur:") for a in APPS for p in native_pkgs(a)} |
+                          {CATALOG["vendors"][a["src"]["vendor"]]["pkg"].get(VFAM, "") for a in APPS if a.get("src", {}).get("vendor")} - {""})
+            if PM == "pacman":
+                r = q(["pacman", "-Qq", *allp])
+                _installed_native = set((r.stdout if r else "").split())
+            elif PM in ("dnf", "zypper"):
+                r = q(["rpm", "-q", "--qf", "%{NAME}\n", *allp])
+                _installed_native = {l for l in (r.stdout if r else "").split("\n") if l and " " not in l}
+            elif PM == "apt-get":
+                r = q(["dpkg-query", "-W", "-f", "${Package} ${db:Status-Status}\n", *allp])
+                _installed_native = {l.split()[0] for l in (r.stdout if r else "").split("\n") if l.endswith(" installed")}
+    return all(n.removeprefix("aur:") in _installed_native for n in names) if names else False
+
+
+def flatpaks():
+    """id → "user" | "system" de las apps Flatpak instaladas."""
+    global _flatpaks
+    if _flatpaks is None:
+        _flatpaks = {}
+        if have("flatpak"):
+            for inst in ("system", "user"):
+                r = q(["flatpak", "list", "--app", f"--{inst}", "--columns=application"])
+                for l in (r.stdout if r else "").split():
+                    _flatpaks.setdefault(l.strip(), inst)
+    return _flatpaks
+
+
+def desktop_exists(d):
+    return any((p / d).is_file() for p in APP_DIRS)
+
+
+def appimage_path(a):
+    return APPDIR / f"{a['id']}.AppImage"
+
+
+def installed_via(a):
+    """Por dónde está instalada (native/aur/vendor/flatpak/appimage/flatpakBundle/build) o None."""
+    s = a.get("src", {})
+    nat = native_pkgs(a)
+    if nat and installed_native(nat):
+        return "aur" if any(p.startswith("aur:") for p in nat) else "native"
+    if s.get("vendor") and installed_native([CATALOG["vendors"][s["vendor"]]["pkg"].get(VFAM, "-")]):
+        return "vendor"
+    fp = flatpaks()
+    if s.get("flatpak") and s["flatpak"] in fp:
+        return "flatpak"
+    if s.get("appimage") and appimage_path(a).is_file():
+        return "appimage"
+    if s.get("flatpakBundle") and any(k.lower().find(a["id"]) >= 0 for k in fp):
+        return "flatpakBundle"
+    if s.get("build") and a.get("bin") and (have(a["bin"]) or (HOME / ".local/bin" / a["bin"]).exists()):
+        return "build"
+    # Instalada de otra forma (otro paquete, a mano): su lanzador o su ejecutable
+    if not PROBE and SIMULATED:
+        return None
+    if any(desktop_exists(d) for d in a.get("desktop", [])) or (a.get("bin") and have(a["bin"])):
+        return "other"
+    return None
+
+
+# ---------------------------------------------------------------- fuentes
+def sources(a):
+    """Fuentes posibles en esta distro, por prioridad: [{key, detail}]."""
+    s = a.get("src", {})
+    out = []
+    nat = native_pkgs(a)
+    if nat:
+        aur = [p for p in nat if p.startswith("aur:")]
+        out.append({"key": "aur" if aur else "native", "pkgs": nat,
+                    "detail": " ".join(p.removeprefix("aur:") for p in nat) + (" (AUR)" if aur else "")})
+    if s.get("vendor") and VFAM and CATALOG["vendors"][s["vendor"]]["pkg"].get(VFAM):
+        v = CATALOG["vendors"][s["vendor"]]
+        out.append({"key": "vendor", "vendor": s["vendor"], "pkgs": [v["pkg"][VFAM]], "detail": v["pkg"][VFAM] + " · " + v["label"]})
+    if s.get("flatpak"):
+        rem = s.get("flatpakRemote", "flathub")
+        out.append({"key": "flatpak", "id": s["flatpak"], "remote": rem, "detail": s["flatpak"] + " · " + CATALOG["remotes"][rem]["label"]})
+    if s.get("appimage"):
+        out.append({"key": "appimage", "spec": s["appimage"], "detail": "GitHub " + s["appimage"]["repo"]})
+    if s.get("flatpakBundle"):
+        out.append({"key": "flatpakBundle", "spec": s["flatpakBundle"], "detail": "GitHub " + s["flatpakBundle"]["repo"]})
+    if s.get("build"):
+        out.append({"key": "build", "spec": s["build"], "detail": s["build"]["repo"]})
+    first = []
+    if a.get("prefer"): first.append(a["prefer"])
+    if PREFER_FLATPAK: first.append("flatpak")
+    out.sort(key=lambda x: first.index(x["key"]) if x["key"] in first else len(first))
+    return out
+
+
+def aur_helper():
+    if not PROBE:
+        return "paru"
+    return next((h for h in ("paru", "yay") if have(h)), "")
+
+
+def pick(a):
+    """La fuente que se usaría (salta AUR sin ayudante en modo pkexec, y lo que no sirve aquí)."""
+    for s in sources(a):
+        if s["key"] == "aur" and (PKEXEC or (PROBE and not aur_helper())):
+            continue
+        if s["key"] == "build" and FAMILY not in s["spec"].get("deps", {}) and not s["spec"].get("anyDistro"):
+            s = dict(s, manualDeps=True)
+        return s
+    return None
+
+
+# ---------------------------------------------------------------- objetivos
+def resolve(targets, with_alt=False):
+    ids = []
+    for t in targets:
+        for x in t.split(","):
+            x = x.strip()
+            if not x: continue
+            if x == "all":
+                ids += [a["id"] for a in APPS if with_alt or not a.get("alt_of")]
+            elif x in TIERS:
+                ids += [a["id"] for a in APPS if a["tier"] == x and (with_alt or not a.get("alt_of"))]
+            elif x in BY_ID:
+                ids.append(x)
+            else:
+                m = [a["id"] for a in APPS if a["name"].lower() == x.lower()]
+                if not m:
+                    raise SystemExit(f"hf-apps: no conozco «{x}» (niveles: {', '.join(TIERS)}; apps: hf-apps list)")
+                ids += m
+    seen = set()
+    return [BY_ID[i] for i in ids if not (i in seen or seen.add(i))]
+
+
+# ---------------------------------------------------------------- plan de instalación
+# Paso: {"root": bool, "argv": [...]} o {"root": bool, "sh": "…"} · "desc" en español · "fn": acción interna
+def step(desc, argv=None, sh=None, root=False, fn=None, args=None):
+    return {"desc": desc, "argv": argv, "sh": sh, "root": root, "fn": fn, "args": args}
+
+
+def pm_install(pkgs):
+    y = YES or PKEXEC
+    return {"pacman": ["pacman", "-S", "--needed"] + (["--noconfirm"] if y else []) + pkgs,
+            "dnf": ["dnf", "install"] + (["-y"] if y else []) + pkgs,
+            "zypper": ["zypper"] + (["--non-interactive"] if y else []) + ["install"] + pkgs,
+            "apt-get": ["apt-get", "install"] + (["-y"] if y else []) + pkgs,
+            "xbps-install": ["xbps-install", "-S"] + (["-y"] if y else []) + pkgs}.get(PM)
+
+
+def pm_remove(pkgs):
+    y = YES or PKEXEC
+    return {"pacman": ["pacman", "-Rns"] + (["--noconfirm"] if y else []) + pkgs,
+            "dnf": ["dnf", "remove"] + (["-y"] if y else []) + pkgs,
+            "zypper": ["zypper"] + (["--non-interactive"] if y else []) + ["remove"] + pkgs,
+            "apt-get": ["apt-get", "remove"] + (["-y"] if y else []) + pkgs}.get(PM)
+
+
+def flatpak_ready_steps(remotes):
+    st = []
+    if PM and (SIMULATED or not have("flatpak")):
+        st.append(step("Instalar Flatpak", pm_install(["flatpak"]), root=True))
+    for r in remotes:
+        st.append(step(f"Añadir el remoto {r} ({CATALOG['remotes'][r]['label']})",
+                       ["flatpak", "remote-add", "--user", "--if-not-exists", r, CATALOG["remotes"][r]["url"]]))
+    return st
+
+
+def plan(apps):
+    """→ (pasos, resumen [{id, name, source, detail, skip}])"""
+    native, aur, vendor_pk, vendors, fl, other, summary = [], [], [], [], {}, [], []
+    for a in apps:
+        via = installed_via(a)
+        if via:
+            summary.append({"id": a["id"], "name": a["name"], "skip": "ya instalada" + (f" ({SRC_LABEL.get(via, 'otra fuente')})" if via != "other" else "")})
+            continue
+        s = pick(a)
+        if not s:
+            summary.append({"id": a["id"], "name": a["name"], "skip": f"sin fuente en {FAM_LABEL.get(FAMILY, FAMILY)}"
+                            + (" (instala paru o yay para AUR)" if any(x["key"] == "aur" for x in sources(a)) else "")})
+            continue
+        summary.append({"id": a["id"], "name": a["name"], "source": s["key"], "detail": s["detail"]})
+        k = s["key"]
+        if k == "native": native += s["pkgs"]
+        elif k == "aur": aur += [p.removeprefix("aur:") for p in s["pkgs"]]
+        elif k == "vendor":
+            vendor_pk += s["pkgs"]
+            if s["vendor"] not in vendors: vendors.append(s["vendor"])
+        elif k == "flatpak": fl.setdefault(s["remote"], []).append(s["id"])
+        else: other.append((a, s))
+    steps = []
+    for v in vendors:
+        vd = CATALOG["vendors"][v]
+        chk = vd.get("check", {}).get(VFAM)
+        if PROBE and chk and os.path.exists(chk):
+            continue
+        steps.append(step(f"Añadir: {vd['label']}", sh=" && ".join(vd["setup"][VFAM]), root=True))
+    if native or vendor_pk:
+        steps.append(step(f"Paquetes de {FAM_LABEL.get(FAMILY, FAMILY)}: {' '.join(native + vendor_pk)}", pm_install(native + vendor_pk), root=True))
+    if aur:
+        h = aur_helper()
+        steps.append(step(f"AUR ({h}): {' '.join(aur)}", [h, "-S", "--needed"] + (["--noconfirm"] if YES else []) + aur))
+    needs_flatpak = list(fl) + (["flathub"] if any(s["key"] == "flatpakBundle" for _, s in other) and "flathub" not in fl else [])
+    if needs_flatpak:
+        steps += flatpak_ready_steps(needs_flatpak)
+    for rem, ids in fl.items():
+        steps.append(step(f"Flatpak ({CATALOG['remotes'][rem]['label']}): {' '.join(ids)}",
+                          ["flatpak", "install", "--user", "--noninteractive" if (YES or PKEXEC) else "--assumeyes", rem, *ids]))
+    for a, s in other:
+        if s["key"] == "appimage":
+            steps.append(step(f"{a['name']}: AppImage de GitHub ({s['spec']['repo']})", fn="appimage", args=a["id"]))
+        elif s["key"] == "flatpakBundle":
+            steps.append(step(f"{a['name']}: paquete .flatpak de GitHub ({s['spec']['repo']})", fn="bundle", args=a["id"]))
+        elif s["key"] == "build":
+            b = s["spec"]
+            deps = b.get("deps", {}).get(FAMILY)
+            if deps:
+                steps.append(step(f"{a['name']}: dependencias para compilar", pm_install(deps.split()), root=True))
+            else:
+                steps.append(step(f"{a['name']}: en {FAM_LABEL.get(FAMILY, FAMILY)} instala tú antes las dependencias", sh="echo " + shlex.quote("  " + a.get("note", ""))))
+            dst = SRCDIR / a["id"]
+            steps.append(step(f"{a['name']}: descargar el código en {dst}",
+                              sh=f"if [ -d {shlex.quote(str(dst))}/.git ]; then git -C {shlex.quote(str(dst))} pull --ff-only; "
+                                 f"else git clone --depth 1 {shlex.quote(b['repo'])} {shlex.quote(str(dst))}; fi"))
+            steps.append(step(f"{a['name']}: compilar e instalar en ~/.local", sh=f"cd {shlex.quote(str(dst))} && {b['cmd']}"))
+    planned = {x["id"] for x in summary if not x.get("skip")}
+    if any(a["id"] == "nautilus" for a in apps) and ("nautilus" in planned or not EXT_DST.exists()):
+        steps.append(step("Extensión de Nautilus (menú «HyprFrijol»)", fn="extension", args=""))
+    if any(a["tier"] == "serie" and a["id"] in planned for a in apps) and SET.get("appsAutoDefaults", True) is not False:
+        steps.append(step("Apps predeterminadas de serie (navegador, fotos, PDF…)", fn="defaults", args=""))
+    return steps, summary
+
+
+# ---------------------------------------------------------------- ejecutar
+def sudo():
+    if os.geteuid() == 0: return []
+    if PKEXEC: return ["pkexec"]
+    return ["sudo"] if have("sudo") else (["doas"] if have("doas") else ["sudo"])
+
+
+def show(st):
+    pre = (" ".join(sudo()) + " ") if st["root"] and sudo() else ""
+    if st["argv"]: return pre + " ".join(shlex.quote(x) for x in st["argv"])
+    if st["sh"]: return (pre + "sh -c " + shlex.quote(st["sh"])) if pre else st["sh"]
+    return f"(hf-apps {st['fn']}{' ' + st['args'] if st['args'] else ''})"
+
+
+def run_steps(steps):
+    n = len(steps)
+    if PKEXEC and not DRY:   # todo lo de sistema en una sola autorización
+        roots = [s for s in steps if s["root"]]
+        if roots:
+            script = "set -e\n" + "\n".join(
+                f"echo {shlex.quote('@@ sistema: ' + s['desc'])}\n" + (" ".join(shlex.quote(x) for x in s["argv"]) if s["argv"] else s["sh"]) for s in roots)
+            say(f"@@ 0/{n} Pidiendo permiso para: " + "; ".join(s["desc"] for s in roots))
+            r = subprocess.run(["pkexec", "bash", "-c", script])
+            if r.returncode != 0:
+                say(f"✗ Se canceló o falló la parte de sistema (código {r.returncode})"); return r.returncode
+            steps = [dict(s, done=True) if s["root"] else s for s in steps]
+    rc = 0
+    for i, st in enumerate(steps, 1):
+        if PROGRESS or not JSON: say(f"@@ {i}/{n} {st['desc']}" if PROGRESS else f"▸ {st['desc']}")
+        if st.get("done"): continue
+        if DRY and not st["fn"]:
+            print(f"  [dry-run] {show(st)}"); continue
+        if st["fn"]:
+            ok = INTERNAL[st["fn"]](st["args"])
+            if not ok: rc = 1
+            continue
+        print(f"  $ {show(st)}", flush=True)
+        cmd = (sudo() + st["argv"]) if st["root"] and st["argv"] else st["argv"] if st["argv"] else \
+              (sudo() + ["sh", "-c", st["sh"]]) if st["root"] else ["sh", "-c", st["sh"]]
+        r = subprocess.run(cmd)
+        if r.returncode != 0:
+            say(f"✗ Falló ({r.returncode}): {st['desc']}"); rc = r.returncode
+    return rc
+
+
+def say(m):
+    print(m, flush=True)
+
+
+def gh_asset(spec):
+    req = urllib.request.Request(f"https://api.github.com/repos/{spec['repo']}/releases?per_page=20", headers={"User-Agent": "hyprfrijol"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        rels = json.loads(r.read())
+    rx = re.compile(spec["asset"])
+    for rel in rels:
+        if rel.get("draft") or (rel.get("prerelease") and not spec.get("pre")): continue
+        for a in rel.get("assets", []):
+            if rx.search(a["name"]): return rel["tag_name"], a["name"], a["browser_download_url"]
+    raise RuntimeError("no encuentro el archivo en las releases de " + spec["repo"])
+
+
+def download(url, dst):
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dst.with_suffix(dst.suffix + ".part")
+    r = subprocess.run(["curl", "-fL", "--progress-bar", "-o", str(tmp), url])
+    if r.returncode != 0: tmp.unlink(missing_ok=True); raise RuntimeError("la descarga falló")
+    tmp.rename(dst)
+
+
+def write_launcher(a, exec_cmd):
+    LAUNCH.mkdir(parents=True, exist_ok=True)
+    f = LAUNCH / f"hf-app-{a['id']}.desktop"
+    f.write_text("[Desktop Entry]\nType=Application\n"
+                 f"Name={a['name']}\nComment={a['desc']}\nExec={exec_cmd} %U\nIcon={a['id']}\nTerminal=false\n"
+                 f"Categories=Utility;\nX-HF-App={a['id']}\n")
+    if have("update-desktop-database"): q(["update-desktop-database", "-q", str(LAUNCH)])
+
+
+def do_appimage(app_id):
+    a = BY_ID[app_id]
+    if DRY:
+        sp = a["src"]["appimage"]
+        print(f"  [dry-run] curl -fL -o {appimage_path(a)} <la última release de github.com/{sp['repo']} que case con {sp['asset']}>")
+        print(f"  [dry-run] chmod +x {appimage_path(a)} && lanzador {LAUNCH}/hf-app-{a['id']}.desktop"); return True
+    try:
+        tag, name, url = gh_asset(a["src"]["appimage"])
+        say(f"  {name} ({tag})")
+        dst = appimage_path(a)
+        download(url, dst)
+        dst.chmod(0o755)
+        if a.get("bin"):
+            b = HOME / ".local/bin" / a["bin"]
+            b.parent.mkdir(parents=True, exist_ok=True)
+            if not b.exists() or b.is_symlink(): b.unlink(missing_ok=True); b.symlink_to(dst)
+        write_launcher(a, shlex.quote(str(dst)))
+        (APPDIR / f"{app_id}.version").write_text(tag + "\n")
+        say(f"  ✓ {a['name']} en {dst}")
+        return True
+    except Exception as e:
+        say(f"  ✗ {a['name']}: {e}"); return False
+
+
+def do_bundle(app_id):
+    a = BY_ID[app_id]
+    if DRY:
+        sp = a["src"]["flatpakBundle"]
+        print(f"  [dry-run] curl -fL -o ~/.cache/hyprfrijol/apps/<archivo> <release de github.com/{sp['repo']} que case con {sp['asset']}>")
+        print("  [dry-run] flatpak install --user -y --bundle ~/.cache/hyprfrijol/apps/<archivo>"); return True
+    try:
+        tag, name, url = gh_asset(a["src"]["flatpakBundle"])
+        say(f"  {name} ({tag})")
+        dst = HOME / ".cache/hyprfrijol/apps" / name
+        download(url, dst)
+        r = subprocess.run(["flatpak", "install", "--user", "-y", "--bundle", str(dst)])
+        return r.returncode == 0
+    except Exception as e:
+        say(f"  ✗ {a['name']}: {e}"); return False
+
+
+def do_extension(arg=""):
+    remove = arg == "remove"
+    if DRY:
+        print(f"  [dry-run] rm -f {EXT_DST}" if remove else f"  [dry-run] ln -sfn {EXT_SRC} {EXT_DST}"); return True
+    if remove:
+        if EXT_DST.is_symlink() or EXT_DST.exists():
+            EXT_DST.unlink(); say(f"  ✓ quitada {EXT_DST}")
+        return True
+    EXT_DST.parent.mkdir(parents=True, exist_ok=True)
+    if EXT_DST.exists() and not EXT_DST.is_symlink():
+        say(f"  ! {EXT_DST} existe y no es un enlace: no lo toco"); return True
+    if EXT_DST.is_symlink() and os.readlink(EXT_DST) == str(EXT_SRC):
+        say("  ✓ ya enlazada"); return True
+    EXT_DST.unlink(missing_ok=True)
+    EXT_DST.symlink_to(EXT_SRC)
+    say(f"  ✓ {EXT_DST} → {EXT_SRC} (reinicia Nautilus: nautilus -q)")
+    return True
+
+
+def defaults_plan():
+    """[(rol, desktop, app)] de las apps de serie instaladas con roles."""
+    out = []
+    for a in APPS:
+        if a["tier"] != "serie" or not a.get("roles") or a.get("alt_of"): continue
+        d = next((d for d in a.get("desktop", []) if desktop_exists(d)), None)
+        if DRY and not d and SIMULATED: d = a["desktop"][0]
+        if not d: continue
+        out += [(r, d, a["name"]) for r in a["roles"]]
+    return out
+
+
+def do_defaults(arg=""):
+    hd = ROOT / "scripts/hf-defaults"
+    for role, d, name in defaults_plan():
+        if DRY:
+            print(f"  [dry-run] {hd} set {role} {d}   # {name}"); continue
+        r = q([str(hd), "set", role, d])
+        ok = r is not None and '"ok": true' in (r.stdout or "")
+        say(f"  {'✓' if ok else '✗'} {role} → {name} ({d})")
+    return True
+
+
+INTERNAL = {"appimage": do_appimage, "bundle": do_bundle, "extension": do_extension, "defaults": do_defaults}
+
+
+# ---------------------------------------------------------------- desinstalar
+def remove_steps(apps):
+    st, native = [], []
+    for a in apps:
+        via = installed_via(a)
+        if via in ("native", "aur"): native += [p.removeprefix("aur:") for p in native_pkgs(a) if installed_native([p])]
+        elif via == "vendor": native += CATALOG["vendors"][a["src"]["vendor"]]["pkg"][VFAM].split()
+        elif via == "flatpak":
+            inst = flatpaks().get(a["src"]["flatpak"], "user")
+            st.append(step(f"Quitar {a['name']} (Flatpak)", ["flatpak", "uninstall", f"--{inst}", "-y", a["src"]["flatpak"]], root=False))
+        elif via == "appimage":
+            files = [appimage_path(a), APPDIR / f"{a['id']}.version", LAUNCH / f"hf-app-{a['id']}.desktop"] + \
+                    ([HOME / ".local/bin" / a["bin"]] if a.get("bin") else [])
+            st.append(step(f"Quitar {a['name']} (AppImage)", ["rm", "-f", *map(str, files)]))
+        elif via == "flatpakBundle":
+            ids = [k for k in flatpaks() if a["id"] in k.lower()]
+            st.append(step(f"Quitar {a['name']} (Flatpak)", ["flatpak", "uninstall", "--user", "-y", *ids]))
+        elif via == "build":
+            d = SRCDIR / a["id"]
+            st.append(step(f"Quitar {a['name']} (compilada)", sh=f"cd {shlex.quote(str(d))} && ./scripts/uninstall.sh" if (d / "scripts/uninstall.sh").exists()
+                           else f"echo 'Quítala a mano: {a['name']} se instaló desde {d}'"))
+        elif via == "other":
+            st.append(step(f"{a['name']} está instalada por otra vía: quítala con tu gestor de paquetes", sh="true"))
+        else:
+            st.append(step(f"{a['name']} no está instalada", sh="true"))
+        if a["id"] == "nautilus":
+            st.append(step("Quitar la extensión de Nautilus", fn="extension", args="remove"))
+    if native:
+        st.insert(0, step(f"Quitar paquetes: {' '.join(native)}", pm_remove(native), root=True))
+    return st
+
+
+# ---------------------------------------------------------------- salida
+def app_info(a):
+    via = installed_via(a)
+    s = pick(a)
+    return {"id": a["id"], "tier": a["tier"], "task": a["task"], "name": a["name"], "desc": a["desc"],
+            "alt_of": a.get("alt_of", ""), "status": a.get("status", ""), "license": a.get("license", ""), "url": a.get("url", ""),
+            "note": a.get("note", ""), "group": a.get("group", ""), "desktop": a.get("desktop", []), "roles": a.get("roles", []),
+            "installed": bool(via), "via": via or "", "viaLabel": SRC_LABEL.get(via, "otra fuente") if via else "",
+            "source": s["key"] if s else "", "sourceLabel": SRC_LABEL.get(s["key"], "") if s else "", "detail": s["detail"] if s else "",
+            "sources": [{"key": x["key"], "label": SRC_LABEL[x["key"]], "detail": x["detail"]} for x in sources(a)]}
+
+
+def header():
+    return {"family": FAMILY, "familyLabel": FAM_LABEL.get(FAMILY, FAMILY), "distro": OS_ID, "pretty": OS_PRETTY,
+            "simulated": SIMULATED, "probed": PROBE, "aur": aur_helper() if FAMILY == "arch" else "", "flatpak": have("flatpak"),
+            "preferFlatpak": PREFER_FLATPAK, "verified": CATALOG.get("verified", ""),
+            "extension": {"installed": EXT_DST.exists(), "nautilusPython": nautilus_python()}}
+
+
+def nautilus_python():
+    return any(pathlib.Path(p).exists() for p in ("/usr/lib/nautilus/extensions-4/libnautilus-python.so",
+                                                  "/usr/lib64/nautilus/extensions-4/libnautilus-python.so",
+                                                  "/usr/lib/x86_64-linux-gnu/nautilus/extensions-4/libnautilus-python.so"))
+
+
+def cmd_list(tier=None):
+    apps = [a for a in APPS if not tier or a["tier"] == tier]
+    if JSON:
+        print(json.dumps(dict(header(), tiers=CATALOG["tiers"], apps=[app_info(a) for a in apps]), ensure_ascii=False)); return 0
+    print(f"Distro: {OS_PRETTY or OS_ID or '?'} · familia {FAMILY}{' (simulada)' if SIMULATED else ''} · catálogo comprobado el {CATALOG.get('verified')}")
+    for t in CATALOG["tiers"]:
+        if tier and t["key"] != tier: continue
+        print(f"\n── {t['label']} ({t['key']})")
+        for a in apps:
+            if a["tier"] != t["key"]: continue
+            i = app_info(a)
+            mark = "✓" if i["installed"] else "·"
+            alt = f"  (alternativa a {BY_ID[a['alt_of']]['name']})" if a.get("alt_of") else ""
+            st = "" if a.get("status") in ("estable", "") else f" [{a['status']}]"
+            src = f"instalada · {i['viaLabel']}" if i["installed"] else (f"{i['sourceLabel']}: {i['detail']}" if i["source"] else "sin fuente aquí")
+            print(f"  {mark} {a['id']:12} {a['task'][:22]:22} {a['name']}{st}{alt}  — {src}")
+    return 0
+
+
+def main():
+    if not POS or POS[0] in ("-h", "help"):
+        print(__doc__); return 0
+    c, rest = POS[0], POS[1:]
+    if c == "list":
+        if rest and rest[0] not in TIERS: raise SystemExit(f"hf-apps: nivel desconocido «{rest[0]}» ({', '.join(TIERS)})")
+        return cmd_list(rest[0] if rest else None)
+    if c == "status":
+        apps = resolve(rest, True) if rest else APPS
+        out = {a["id"]: {"installed": bool(v := installed_via(a)), "via": v or ""} for a in apps}
+        if JSON: print(json.dumps(out, ensure_ascii=False))
+        else:
+            for k, v in out.items(): print(f"{k:13} {'instalada · ' + SRC_LABEL.get(v['via'], 'otra fuente') if v['installed'] else 'no instalada'}")
+        return 0
+    if c in ("plan", "install"):
+        if not rest: raise SystemExit("hf-apps: ¿qué instalo? (una app o un nivel: serie, productividad…)")
+        apps = resolve(rest, "--with-alt" in FLAGS)
+        steps, summary = plan(apps)
+        if c == "plan" and JSON:
+            print(json.dumps(dict(header(), apps=summary, steps=[{"desc": s["desc"], "root": s["root"], "cmd": show(s)} for s in steps]), ensure_ascii=False))
+            return 0
+        if not JSON:
+            say(f"Distro: {OS_PRETTY or OS_ID or '?'} · familia {FAMILY}{' (simulada: no se consulta el sistema)' if SIMULATED else ''}")
+            for x in summary:
+                say(f"  {'–' if x.get('skip') else '+'} {x['name']}: {x.get('skip') or SRC_LABEL[x['source']] + ' · ' + x['detail']}")
+            if not steps: say("Nada que hacer."); return 0
+        if c == "plan":
+            for s in steps: print(f"  {show(s)}")
+            return 0
+        return run_steps(steps)
+    if c == "remove":
+        if not rest: raise SystemExit("hf-apps: ¿qué quito?")
+        return run_steps(remove_steps(resolve(rest, True)))
+    if c == "defaults":
+        p = defaults_plan()
+        if JSON: print(json.dumps([{"role": r, "desktop": d, "name": n} for r, d, n in p], ensure_ascii=False)); return 0
+        if not p: say("Ninguna app de serie con tipos de archivo está instalada.")
+        do_defaults(); return 0
+    if c == "extension":
+        do_extension("remove" if "--remove" in FLAGS else "")
+        if not nautilus_python() and "--remove" not in FLAGS:
+            say("  ! nautilus-python no está instalado: el menú no saldrá hasta que lo instales (hf-apps install nautilus)")
+        return 0
+    raise SystemExit(f"hf-apps: orden desconocida «{c}» (hf-apps --help)")
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(130)

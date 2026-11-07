@@ -108,7 +108,7 @@ Rectangle {
     Connections { target: Theme; function onPChanged() { cv.requestPaint(); } function onTerChanged() { cv.requestPaint(); } }
     onKindChanged: cv.requestPaint()
 
-    HoverHandler { id: hover }
+    HoverHandler { id: hover; onHoveredChanged: if (hovered) Shell.preload("musica") }
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor

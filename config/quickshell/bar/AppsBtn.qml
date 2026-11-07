@@ -23,6 +23,6 @@ Rectangle {
         source: root.logo ? OsLogo.source(Theme.light ? "#000000" : "#FFFFFF") : ""
     }
     Icon { anchors.centerIn: parent; visible: !root.logo; name: "command"; size: 15; color: Theme.pText }
-    MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Shell.toggle("spotlight", "mode:apps") }
+    MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onEntered: Shell.preload("spotlight"); onClicked: Shell.toggle("spotlight", "mode:apps") }
     BarTip { target: ma; text: "Aplicaciones" }
 }

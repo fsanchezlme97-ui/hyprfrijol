@@ -9,7 +9,8 @@
   hf-ai labels '<acciones>'  etiquetas en español de unas acciones (+ plan: ¿se puede deshacer?, ¿pide confirmación?)
   hf-ai query <tipo> [texto] consulta de solo lectura: windows | active_window | screen | notifications | files <texto> |
                              apps <texto> | settings <filtro> | system | timers   (o un JSON {"type":…})
-  hf-ai tool <nombre> '<json>'  herramienta (las mismas que hf-mcp): hf-ai tools las lista
+  hf-ai tool <nombre> '<json>'  herramienta (las mismas que hf-mcp): hf-ai tools las lista (approval: si pide aprobación)
+  hf-ai approvals            lo «aprobado siempre» (aiAlwaysApprove) con su nombre en español
   hf-ai summon               atajo Super+Ctrl+A: guarda la ventana activa (y su captura) y abre el asistente con ella
   hf-ai timers               temporizadores en marcha (acción "timer")
   hf-ai handoff '<json>'     copia la conversación y la abre en Claude Desktop (o `claude` en kitty)
@@ -124,7 +125,7 @@ MEDIA_OPS = {"play": "Reproducir", "pause": "Pausar", "play-pause": "Reproducir 
 # Claves de settings.json que la IA NO puede tocar aunque existan (sus propios permisos, comandos, red, seguridad)
 DENY_KEYS = re.compile(r"^(ai[A-Z]|windowMode$|monitors$|kb|binds?$|keybinds|terminal$|browser$|fileManager$|codeEditor$|textEditor$"
                        r"|office$|taskManager$|volumeMixer$|welcomeDone$|primaryMonitor$|printer|remote|vnc|cockpit|sync"
-                       r"|plugins|autostart|lock|idleLock|gpuMode|updatesSnapshot|weatherLat|weatherLon)"
+                       r"|plugins|autostart|lock|idleLock|gpuMode|updatesSnapshot|weatherLat|weatherLon|wallhavenPurity)"
                        r"|(Cmd|Command|Exec|Script|Path|Paths|Url|Urls|Key|Keys|Token|Secret|Password|Env)$")
 # Etiquetas de claves frecuentes que no están en SET_KEYS
 KEY_LABELS = {"barHeight": "Alto de la barra", "fontScale": "Tamaño de letra", "uiScale": "Escala de la interfaz",
@@ -176,6 +177,13 @@ SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden
 - {"type":"profile","value":"trabajo"|"diseno"|"juego"|"personal"}
 - {"type":"open","value":VISTA}             abrir: spotlight, ajustes, vista, agenda, portapapeles, snap, energia, fondos,
                                              captura, perfiles, widgets, actualizaciones, notificaciones, ajustesapp, herramientas
+- {"type":"device","op":"mount"|"unmount"|"eject"|"open"|"eject-all","dev":"/dev/sdb1"}   memorias USB y tarjetas SD
+                                              (consulta "devices" antes para saber el dev)
+- {"type":"download","urls":["https://…"],"kind":"auto"|"video"|"audio"|"image"|"file","format":"best"|"720"|"mp3"|"opus"}
+                                              añadir a la cola de descargas (yt-dlp, gallery-dl, aria2c)
+- {"type":"download_ctl","op":"pause"|"resume"|"cancel"|"retry","id":ID|"all"}   controlar la cola (consulta "downloads")
+- {"type":"wallhaven","op":"add"|"set","id":"abc123"}   fondo de wallhaven.cc: añadir a mis fondos o ponerlo (consulta
+                                              "wallhaven" para buscar)
 - {"type":"run","command":"…"}               comando de terminal; el usuario debe confirmarlo antes"""
 
 QUERY_DOC = """Consultas (solo lectura; se ejecutan solas y te devuelvo el resultado para que sigas):
@@ -185,7 +193,9 @@ QUERY_DOC = """Consultas (solo lectura; se ejecutan solas y te devuelvo el resul
 Tipos: windows (ventanas abiertas) · active_window (la ventana activa y su texto por OCR) · screen (texto de la pantalla
 por OCR) · notifications (avisos sin leer e historial) · files {"query":"informe","ext":"pdf"} (buscar en la carpeta
 personal) · apps {"query":"editor"} (apps instaladas) · settings {"filter":"barra"} (claves de ajustes y su valor) ·
-system (volumen, brillo, batería, música, no molestar, cafeína, modo de ventanas) · timers (temporizadores en marcha).
+system (volumen, brillo, batería, música, no molestar, cafeína, modo de ventanas) · timers (temporizadores en marcha) ·
+devices (memorias USB, tarjetas SD y discos, con su espacio) · downloads (la cola de descargas) ·
+wallhaven {"query":"montañas","sorting":"toplist"|"random"} (buscar fondos en wallhaven.cc).
 Usa una consulta solo si la necesitas de verdad; después responde (con hf-actions si hay que cambiar algo)."""
 
 SYSTEM_BASE = """Eres el asistente de hyprfrijol, un escritorio Hyprland en Linux. Respondes en español, breve y claro
@@ -297,14 +307,107 @@ def label(a):
         return f"Abrir {VIEWS.get(v, v)}"
     if t == "run":
         return "Ejecutar en la terminal"
+    if t == "device":
+        op, n = a.get("op"), a.get("name") or a.get("dev") or "la unidad"
+        return {"mount": f"Montar «{n}»", "unmount": f"Desmontar «{n}»", "eject": f"Expulsar «{n}»", "open": f"Abrir «{n}»",
+                "eject-all": "Expulsar todas las unidades extraíbles"}.get(op, f"Unidad {n}")
+    if t == "download":
+        u = a.get("urls") or []
+        what = {"video": "el vídeo", "audio": "el audio" + (f" ({a['format']})" if a.get("format") else ""), "image": "las imágenes",
+                "file": "el archivo"}.get(a.get("kind"), "")
+        if len(u) > 1:
+            return f"Descargar {len(u)} enlaces" + (f" ({what.split(' ', 1)[-1]})" if what else "")
+        host = re.sub(r"^https?://(www\.)?", "", u[0] if u else "")[:40]
+        return f"Descargar {what or ''} de {host}".replace("  ", " ")
+    if t == "download_ctl":
+        who = "todas las descargas" if a.get("id") == "all" else "la descarga " + (a.get("name") or str(a.get("id")))
+        return {"pause": "Pausar ", "resume": "Reanudar ", "cancel": "Cancelar ", "retry": "Reintentar "}.get(a.get("op"), "") + who
+    if t == "wallhaven":
+        return (f"Añadir el fondo {a.get('id')} de Wallhaven a mis fondos" if a.get("op") == "add"
+                else f"Poner de fondo {a.get('id')} (Wallhaven)")
     return str(a)
+
+def _show(k, v):
+    vals = SET_KEYS.get(k, (None, None))[1]
+    v = vals.get(v, v) if vals else v
+    if isinstance(v, bool):
+        return "sí" if v else "no"
+    if isinstance(v, list):
+        return ", ".join(map(str, v)) or "—"
+    return "—" if v in (None, "") else str(v)
+
+def preview(a, s=None):
+    """Lo que cambia, en una línea, para la tarjeta de aprobación («abajo → arriba», carpeta de destino…)."""
+    t = a.get("type")
+    try:
+        if t == "set":
+            s = s or settings()
+            return f"{_show(a['key'], s.get(a['key']))} → {_show(a['key'], a['value'])}"
+        if t == "wallpaper":
+            cur = (STATE / "wallpaper-path").read_text().strip() if (STATE / "wallpaper-path").exists() else ""
+            return (pathlib.Path(cur).name or "—") + " → " + ({"next": "el siguiente", "prev": "el anterior", "random": "uno al azar"}.get(a.get("value")) or pathlib.Path(str(a.get("value"))).name)
+        if t == "profile":
+            cur = (STATE / "profile").read_text().strip() if (STATE / "profile").exists() else ""
+            return f"{PROFILES.get(cur, cur or '—')} → {PROFILES.get(a.get('value'), a.get('value'))}"
+        if t == "volume":
+            cur = volume_get()
+            return f"ahora {cur['vol']} %" + (" (silenciado)" if cur.get("muted") else "") if cur.get("vol") is not None else ""
+        if t == "brightness":
+            cur = brightness_get()
+            return f"ahora {cur} %" if cur is not None else ""
+        if t == "window":
+            w = find_window(a.get("target"))
+            return f"{w.get('class')} — {(w.get('title') or '')[:50]}" if w else "no encuentro esa ventana"
+        if t == "download":
+            return " · ".join(re.sub(r"^https?://(www\.)?", "", u)[:48] for u in (a.get("urls") or [])[:3]) \
+                + (f" · y {len(a['urls']) - 3} más" if len(a.get("urls") or []) > 3 else "") + (f"\n→ {a['dest']}" if a.get("dest") else "")
+        if t == "device":
+            return (a.get("dev") or "") + (f" · montada en {a['mountpoint']}" if a.get("mountpoint") else "")
+        if t == "wallhaven":
+            return f"wallhaven.cc/w/{a.get('id')}"
+        if t == "launch":
+            return a.get("desktop") or ""
+        if t == "url":
+            return str(a.get("value"))[:80]
+    except Exception:
+        return ""
+    return ""
+
+KIND_LABELS = {"wallpaper": "Cambiar el fondo", "workspace": "Ir a otro espacio", "launch": "Abrir apps", "url": "Abrir webs",
+               "volume": "Cambiar el volumen", "brightness": "Cambiar el brillo", "media": "Controlar la música", "dnd": "No molestar",
+               "caffeine": "Cafeína", "timer": "Temporizadores", "pomodoro": "Pomodoro", "focus": "Modo sin distracciones",
+               "profile": "Cambiar de perfil", "open": "Abrir paneles del shell", "winmode": "Modo de ventanas",
+               "download": "Añadir descargas", "device:mount": "Montar unidades", "device:unmount": "Desmontar unidades",
+               "device:open": "Abrir unidades", "download_ctl:pause": "Pausar descargas", "download_ctl:resume": "Reanudar descargas",
+               "download_ctl:retry": "Reintentar descargas", "wallhaven:add": "Añadir fondos de Wallhaven",
+               "wallhaven:set": "Poner fondos de Wallhaven"}
+
+def kind_label(kind):
+    """Nombre en español de una clave de aiAlwaysApprove (para la lista de Ajustes › IA)."""
+    k = str(kind)
+    if k.startswith("set:"):
+        key = k[4:]
+        return f"Cambiar «{SET_KEYS.get(key, (KEY_LABELS.get(key, key), None))[0]}»"
+    if k.startswith("window:"):
+        return "Ventanas: " + WINDOW_OPS.get(k[7:], k[7:]).lower()
+    return KIND_LABELS.get(k, k)
+
+def approve_kind(a):
+    """Clave de «aprobar siempre» (Ajustes › IA, aiAlwaysApprove): el tipo, y la operación si la hay."""
+    t = a.get("type")
+    if t == "set":
+        return "set:" + str(a.get("key"))
+    op = a.get("op") if t in ("window", "device", "download_ctl", "wallhaven") else None
+    return f"{t}:{op}" if op else str(t)
 
 def meta(a):
     """Para la tarjeta del plan: ¿se puede deshacer? ¿pide confirmación aunque aiConfirm esté apagado?"""
     t = a.get("type")
     irreversible = (t == "window" and a.get("op") == "close") or t in ("notifications", "url", "run") \
-        or (t == "media" and a.get("value") == "stop")
-    return {"label": label(a), "undo": not irreversible, "confirm": irreversible and t != "url"}
+        or (t == "media" and a.get("value") == "stop") or (t == "device" and a.get("op") in ("eject", "eject-all")) \
+        or (t == "download_ctl" and a.get("op") == "cancel")
+    return {"label": label(a), "undo": not irreversible, "confirm": irreversible and t != "url",
+            "kind": approve_kind(a), "preview": preview(a)}
 
 def _num(v):
     if isinstance(v, bool):
@@ -403,6 +506,28 @@ def validate(actions):
             elif t == "open" and a.get("value") in VIEWS:
                 ok.append(a)
             elif t == "run" and isinstance(a.get("command"), str) and a["command"].strip():
+                ok.append(a)
+            elif t == "device" and a.get("op") in ("mount", "unmount", "eject", "open", "eject-all"):
+                if a["op"] != "eject-all":
+                    dv = next((x for x in script_json("hf-devices", "list", "--json", "--all") or []
+                               if str(a.get("dev") or "") in (x.get("dev"), x.get("label"), x.get("mountpoint"))), None)
+                    if not dv or (not dv.get("removable") and a["op"] != "open"):
+                        continue
+                    a.update(dev=dv["dev"], name=dv["name"], mountpoint=dv.get("mountpoint") or "")
+                ok.append(a)
+            elif t == "download":
+                urls = a.get("urls") or ([a["url"]] if isinstance(a.get("url"), str) else [])
+                urls = [u.strip() for u in urls if isinstance(u, str) and re.match(r"^https?://\S+$", u.strip())][:50]
+                if urls:
+                    a["urls"] = urls
+                    a["kind"] = a.get("kind") if a.get("kind") in ("video", "audio", "image", "file") else "auto"
+                    a["format"] = a.get("format") if a.get("format") in ("best", "1080", "720", "480", "mp3", "opus", "m4a") else ""
+                    a.pop("url", None); a.pop("dest", None)
+                    ok.append(a)
+            elif t == "download_ctl" and a.get("op") in ("pause", "resume", "cancel", "retry"):
+                a["id"] = str(a.get("id") or "all")[:40]
+                ok.append(a)
+            elif t == "wallhaven" and a.get("op") in ("add", "set") and re.fullmatch(r"[a-z0-9]{4,12}", str(a.get("id") or "")):
                 ok.append(a)
         except Exception:
             continue
@@ -687,7 +812,47 @@ def exec_action(a):
         return {"kind": "timer", "id": timer_start(a["minutes"], a.get("label", ""))}
     elif t == "notifications":
         qs_call("notifs", "clear")
+    elif t == "device":
+        op = a["op"]
+        r = script_json("hf-devices", op, *([a["dev"]] if op != "eject-all" else []), timeout=120) or {}
+        if not r.get("ok"):
+            return {"kind": "error", "msg": r.get("error") or "No se pudo"}
+        back = {"mount": "unmount", "unmount": "mount"}.get(op)
+        if op == "open" and not a.get("mountpoint"):
+            back = "unmount"
+        return {"kind": "device", "op": back, "dev": a["dev"]} if back else None
+    elif t == "download":
+        args = ["add"] + (["--type", a["kind"]] if a.get("kind") not in ("", "auto", None) else []) \
+            + (["--format", a["format"]] if a.get("format") else []) + a["urls"]
+        r = script_json("hf-download", *args) or {}
+        if not r.get("added"):
+            return {"kind": "error", "msg": "; ".join(x.get("why", "") for x in r.get("skipped") or []) or "No se añadió nada"}
+        return {"kind": "download", "ids": r["added"]}
+    elif t == "download_ctl":
+        script_json("hf-download", a["op"], a["id"])
+        back = {"pause": "resume", "resume": "pause"}.get(a["op"])
+        return {"kind": "download_ctl", "op": back, "id": a["id"]} if back else None
+    elif t == "wallhaven":
+        t0 = time.time()
+        if a["op"] == "add":
+            r = script_json("hf-wallhaven", "add", a["id"], timeout=120) or {}
+            if not r.get("ok"):
+                return {"kind": "error", "msg": r.get("error") or "No se pudo traer el fondo"}
+            p = r.get("path") or ""
+            fresh = p and os.path.exists(p) and os.path.getmtime(p) >= t0 - 1   # solo la copia nueva se borra al deshacer
+            return {"kind": "rmfile", "path": p} if fresh else None
+        r = script_json("hf-wallhaven", "fetch", a["id"], timeout=120) or {}
+        if not r.get("ok"):
+            return {"kind": "error", "msg": r.get("error") or "No se pudo traer el fondo"}
+        subprocess.Popen([str(ROOT / "scripts/hf-wallpaper"), r["path"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return None
+
+def script_json(name, *args, timeout=60):
+    """Ejecuta scripts/<name> y devuelve su JSON (o None)."""
+    try:
+        return json.loads(run([str(ROOT / "scripts" / name), *map(str, args)], timeout=timeout) or "null")
+    except Exception:
+        return None
 
 def undo_record(r):
     k = r.get("kind")
@@ -719,6 +884,15 @@ def undo_record(r):
             qs_call("caffeine", "off")
     elif k == "timer":
         timer_cancel(r["id"])
+    elif k == "device" and r.get("op"):
+        script_json("hf-devices", r["op"], r["dev"], timeout=120)
+    elif k == "download":
+        for i in r.get("ids") or []:
+            script_json("hf-download", "remove", i)
+    elif k == "download_ctl" and r.get("op"):
+        script_json("hf-download", r["op"], r["id"])
+    elif k == "rmfile" and r.get("path"):
+        pathlib.Path(r["path"]).unlink(missing_ok=True)
 
 def do_apply(actions, record=True):
     if not allowed()[0]:
@@ -779,7 +953,7 @@ def do_undo(uid):
             undo_record(r)
         except Exception:
             pass
-    if "wallpaper" in types and b.get("wallpaper"):
+    if ("wallpaper" in types or any(a["type"] == "wallhaven" and a.get("op") == "set" for a in acts)) and b.get("wallpaper"):
         subprocess.Popen([str(ROOT / "scripts/hf-wallpaper"), b["wallpaper"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if "profile" in types and b.get("profile"):
         subprocess.Popen([str(ROOT / "scripts/hf-profile"), b["profile"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -796,7 +970,9 @@ def do_undo(uid):
 QUERY_LABELS = {"windows": "Miró las ventanas abiertas", "active_window": "Leyó la ventana activa",
                 "screen": "Leyó la pantalla", "notifications": "Revisó las notificaciones", "files": "Buscó archivos",
                 "apps": "Buscó apps instaladas", "settings": "Consultó los ajustes", "system": "Miró el estado del sistema",
-                "timers": "Miró los temporizadores"}
+                "timers": "Miró los temporizadores", "devices": "Miró las unidades conectadas",
+                "downloads": "Miró la cola de descargas", "wallhaven": "Buscó fondos en Wallhaven",
+                "doctor": "Hizo un diagnóstico del sistema", "deps": "Miró qué dependencias faltan"}
 WINDOW_CAP = HOME / ".cache/hyprfrijol/ai-window.png"
 WINDOW_INFO = HOME / ".cache/hyprfrijol/ai-window.json"
 
@@ -890,6 +1066,35 @@ def run_query(q, ctx=None, s=None):
                                 "workspace": jrun(["hyprctl", "activeworkspace", "-j"]).get("id"),
                                 "windowMode": run(QS + ["ipc", "call", "winmode", "get", "0"]) or None,
                                 "timers": timers_list()}, ensure_ascii=False)
+    if t == "doctor":   # hf-doctor --json: ya oculta claves, correos y la carpeta personal
+        d = script_json("hf-doctor", "--json", "--quick", timeout=40) or {}
+        issues = [c for c in d.get("checks", []) if c.get("status") in ("warn", "error")]
+        return lab, json.dumps({"summary": d.get("summary"), "issues": issues[:25], "logs": d.get("logs")}, ensure_ascii=False)[:6000]
+    if t == "deps":   # hf-deps (install/packages.tsv): qué falta por función, o qué necesita un programa
+        cmd = str(q.get("command") or "").strip()
+        if cmd:
+            return lab, json.dumps(script_json("hf-deps", "explain", cmd[:60], "--json", timeout=30) or {}, ensure_ascii=False)[:4000]
+        d = script_json("hf-deps", "missing", "--level", "optional", "--json", timeout=40) or {}
+        feats = [{"feature": f.get("label"), "install": f.get("install"),
+                  "items": [{k: i.get(k) for k in ("id", "level", "desc", "missing")} for i in f.get("items", [])]}
+                 for f in d.get("features", [])]
+        return lab, json.dumps({"family": d.get("family"), "missing": feats,
+                                "note": "Instalar lo pide el usuario en una terminal: hf-deps install <función|id> (o --recommended)."},
+                               ensure_ascii=False)[:6000]
+    if t == "devices":
+        keep = ("dev", "name", "kind", "fstype", "size", "used", "avail", "mounted", "mountpoint", "removable")
+        return lab, json.dumps([{k: d.get(k) for k in keep} for d in script_json("hf-devices", "list", "--json", "--all") or []
+                                if not d.get("system") or d.get("mountpoint") in ("/", "/home")], ensure_ascii=False)
+    if t == "downloads":
+        keep = ("id", "name", "title", "status", "progress", "type", "tool", "error", "dest")
+        return lab, json.dumps([{k: d.get(k) for k in keep} for d in (script_json("hf-download", "list", "--json") or [])[-30:]], ensure_ascii=False)
+    if t == "wallhaven":
+        args = ["search"] + (["--q", str(q.get("query"))[:80]] if q.get("query") else []) \
+            + (["--sorting", q["sorting"]] if q.get("sorting") in ("toplist", "random", "date_added", "relevance", "views", "favorites") else [])
+        r = script_json("hf-wallhaven", *args, timeout=30) or {}
+        if r.get("error"):
+            return lab, r["error"]
+        return lab, json.dumps([{k: x.get(k) for k in ("id", "resolution", "category", "url")} for x in (r.get("results") or [])[:12]], ensure_ascii=False)
     if t == "timers":
         now = time.time()
         return lab, json.dumps([{"id": x["id"], "label": x["label"], "left_s": int(x["end"] - now)} for x in timers_list()], ensure_ascii=False)
@@ -1586,8 +1791,10 @@ def parse_reply(raw, s=None):
     if runs:
         code = "\n".join(a["command"] for a in runs)
     plan = [meta(a) for a in actions]
+    always = set((s or settings()).get("aiAlwaysApprove") or [])
     return {"text": raw.strip(), "actions": actions, "labels": [p["label"] for p in plan], "plan": plan,
-            "confirm": any(p["confirm"] for p in plan), "code": code, "error": None}
+            "confirm": any(p["confirm"] for p in plan), "code": code, "error": None,
+            "auto": bool(plan) and all(p["kind"] in always and not p["confirm"] for p in plan)}
 
 def _elide(o):
     """Copia de una petición con el base64 de las imágenes abreviado (para --print-request)."""
@@ -1702,6 +1909,12 @@ TOOL_SPECS = [
      "query", lambda a: {"type": "apps", "query": a.get("query", "")}),
     ("list_settings", "Claves de ajustes de hyprfrijol que se pueden cambiar, con su valor actual (filtro opcional).",
      {"type": "object", "properties": {"filter": {"type": "string"}}}, "query", lambda a: {"type": "settings", "filter": a.get("filter", "")}),
+    ("diagnose", "Diagnóstico de hyprfrijol (hf-doctor): avisos y errores de versiones, GPU, dependencias, servicios, configuración y últimos registros.",
+     {"type": "object", "properties": {}}, "query", lambda a: {"type": "doctor"}),
+    ("check_deps", "Dependencias de hyprfrijol por función (install/packages.tsv): qué paquetes faltan y la orden «hf-deps install …» "
+     "para instalarlos; con «command», qué función usa ese programa y qué paquete lo trae. Solo lee.",
+     {"type": "object", "properties": {"command": {"type": "string", "description": "programa por el que preguntar (p. ej. lpstat, arecord); vacío = todo lo que falta"}}},
+     "query", lambda a: {"type": "deps", "command": a.get("command", "")}),
     ("system_status", "Volumen, brillo, batería, música, no molestar, cafeína, espacio y temporizadores.",
      {"type": "object", "properties": {}}, "query", lambda a: {"type": "system"}),
     ("window_action", "Actúa sobre una ventana: focus, close, fullscreen, maximize, float, tile, pin, move (con workspace), minimize, restore.",
@@ -1735,7 +1948,32 @@ TOOL_SPECS = [
      "action", lambda a: {"type": "pomodoro", "value": a.get("op"), "minutes": a.get("minutes") or 25}),
     ("clear_notifications", "Borra todas las notificaciones.",
      {"type": "object", "properties": {}}, "action", lambda a: {"type": "notifications", "op": "clear"}),
+    # Ronda 8: dispositivos (hf-devices), descargas (hf-download) y Wallhaven (hf-wallhaven)
+    ("list_devices", "Memorias USB, tarjetas SD y discos: dev, nombre, tipo, espacio usado/libre y dónde están montados.",
+     {"type": "object", "properties": {}}, "query", lambda a: {"type": "devices"}),
+    ("device_action", "Monta, desmonta, abre o expulsa (desmonta y apaga) una unidad extraíble; eject-all expulsa todas. "
+     "dev: el de list_devices (/dev/sdb1) o su etiqueta.",
+     {"type": "object", "properties": {"op": {"enum": ["mount", "unmount", "open", "eject", "eject-all"]}, "dev": {"type": "string"}},
+      "required": ["op"]}, "action", lambda a: {"type": "device", "op": a.get("op"), "dev": a.get("dev")}),
+    ("list_downloads", "La cola de descargas: id, nombre, estado (queued/running/paused/done/error/canceled), progreso 0–1 y error.",
+     {"type": "object", "properties": {}}, "query", lambda a: {"type": "downloads"}),
+    ("download", "Añade enlaces a la cola de descargas (vídeo/audio con yt-dlp, galerías con gallery-dl, archivos con aria2c; "
+     "la herramienta y la carpeta se eligen solas). kind: auto|video|audio|image|file · format: best|1080|720|480 (vídeo) o mp3|opus|m4a (audio).",
+     {"type": "object", "properties": {"urls": {"type": "array", "items": {"type": "string"}}, "kind": {"enum": ["auto", "video", "audio", "image", "file"]},
+                                       "format": {"enum": ["best", "1080", "720", "480", "mp3", "opus", "m4a"]}}, "required": ["urls"]},
+     "action", lambda a: {"type": "download", "urls": a.get("urls"), "kind": a.get("kind") or "auto", "format": a.get("format") or ""}),
+    ("download_control", "Pausa, reanuda, cancela o reintenta una descarga (id de list_downloads) o todas (id 'all').",
+     {"type": "object", "properties": {"op": {"enum": ["pause", "resume", "cancel", "retry"]}, "id": {"type": "string"}}, "required": ["op"]},
+     "action", lambda a: {"type": "download_ctl", "op": a.get("op"), "id": a.get("id") or "all"}),
+    ("wallhaven_search", "Busca fondos en wallhaven.cc (solo aptos salvo que el usuario diga otra cosa en Ajustes; al menos la resolución de su pantalla).",
+     {"type": "object", "properties": {"query": {"type": "string"}, "sorting": {"enum": ["toplist", "random", "date_added", "relevance", "views", "favorites"]}}},
+     "query", lambda a: {"type": "wallhaven", "query": a.get("query", ""), "sorting": a.get("sorting")}),
+    ("wallhaven_wallpaper", "Con un id de wallhaven_search: 'add' lo añade a los fondos del usuario, 'set' lo pone de fondo.",
+     {"type": "object", "properties": {"op": {"enum": ["add", "set"]}, "id": {"type": "string"}}, "required": ["op", "id"]},
+     "action", lambda a: {"type": "wallhaven", "op": a.get("op"), "id": a.get("id")}),
 ]
+# Herramientas que pueden borrar o quitar algo sin vuelta atrás (hf-mcp lo anuncia como destructiveHint)
+DESTRUCTIVE_TOOLS = {"window_action", "clear_notifications", "device_action", "download_control"}
 
 def tool_call(name, args):
     t = next((x for x in TOOL_SPECS if x[0] == name), None)
@@ -1816,7 +2054,8 @@ def main(argv):
         out = do_undo(arg)
     elif cmd == "labels":
         acts = validate(json.loads(arg))
-        out = {"labels": [label(a) for a in acts], "plan": [meta(a) for a in acts]}
+        out = {"labels": [label(a) for a in acts], "plan": [meta(a) for a in acts],
+               "auto": bool(acts) and all(meta(a)["kind"] in set(settings().get("aiAlwaysApprove") or []) and not meta(a)["confirm"] for a in acts)}
     elif cmd == "query":
         q = json.loads(arg) if arg.strip().startswith("{") else {"type": arg, **({"query": rest[1], "filter": rest[1]} if len(rest) > 1 else {})}
         lab, res = run_query(q, {"window": True})
@@ -1824,9 +2063,12 @@ def main(argv):
     elif cmd == "tool":
         out = tool_call(arg, json.loads(rest[1]) if len(rest) > 1 else {})
     elif cmd == "tools":
-        out = [{"name": n, "description": d, "kind": k} for n, d, _, k, _ in TOOL_SPECS]
+        out = [{"name": n, "description": d, "kind": k, "approval": k == "action"} for n, d, _, k, _ in TOOL_SPECS]
     elif cmd == "summon":
         out = do_summon()
+    elif cmd == "approvals":
+        # hf-ai approvals → [{kind, label}] de lo «aprobado siempre» (aiAlwaysApprove; lo revoca Ajustes › IA)
+        out = [{"kind": k, "label": kind_label(k)} for k in (settings().get("aiAlwaysApprove") or [])]
     elif cmd == "timers":
         out = timers_list()
     elif cmd == "handoff":

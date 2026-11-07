@@ -4,6 +4,9 @@
 #   hf-shell restart   lo reinicia (Ctrl + Super + R)
 #   hf-shell watch     vigilante: si el shell se cae, lo reabre a los pocos segundos. Pasa, por ejemplo,
 #                      con monitores que «desconectan» el HDMI al apagarse la pantalla por inactividad.
+#                      Si el shell se cae safeModeCrashLimit veces (por defecto 3) en los primeros minutos,
+#                      avisa y ofrece el modo seguro (hf-safe offer). Si lleva un rato estable, guarda tus
+#                      ajustes como «copia buena» (hf-safe mark-good) para poder volver a ella.
 # Un cerrojo por sesión de Hyprland (flock) evita dos shells a la vez; cada sesión anidada lleva el suyo.
 set -u
 for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
@@ -35,16 +38,32 @@ case "${1:-}" in
     ;;
   watch)
     exec 9>"$RUN.watch"; flock -n 9 || exit 0          # un solo vigilante por sesión
+    # Caídas al arrancar → ofrecer el modo seguro; shell estable → copia buena de los ajustes
+    LIMIT="$(jq -r '.safeModeCrashLimit // empty' "$HOME/.config/hyprfrijol/settings.json" 2>/dev/null)"
+    case "$LIMIT" in ''|*[!0-9]*) LIMIT=3 ;; esac
+    T0=$SECONDS CRASHES=0 OFFERED=0 GOOD=0 UP_SINCE=$SECONDS
     while sleep 3; do
       alive_session || { sleep 3; alive_session; } || exit 0   # Hyprland ya no está: fin
-      { running || [ -n "$(mine)" ]; } && continue
+      if running || [ -n "$(mine)" ]; then
+        if [ "$GOOD" = 0 ] && [ -z "${HF_TRY:-}" ] && [ $((SECONDS - UP_SINCE)) -ge 90 ]; then   # (no en dev/try.sh: sus ajustes son temporales)
+          GOOD=1; "$ROOT/scripts/hf-safe" mark-good >/dev/null 2>&1 &
+        fi
+        continue
+      fi
       sleep 2; { running || [ -n "$(mine)" ]; } && continue   # deja terminar un reinicio en curso
       command -v logger >/dev/null && logger -t hf-shell "Quickshell no estaba en marcha: lo reabro"
-      start
+      if [ $((SECONDS - T0)) -le 300 ]; then CRASHES=$((CRASHES + 1)); fi
+      if [ "$LIMIT" -gt 0 ] && [ "$CRASHES" -ge "$LIMIT" ] && [ "$OFFERED" = 0 ]; then
+        OFFERED=1
+        setsid -f "$ROOT/scripts/hf-safe" offer "El shell (Quickshell) se ha cerrado $CRASHES veces al arrancar." >/dev/null 2>&1
+      fi
+      start; UP_SINCE=$SECONDS
     done
     ;;
   *)
     [ -n "$(mine)" ] || start
     setsid -f "$0" watch >/dev/null 2>&1
+    # Actualizaciones de hyprfrijol (hfUpdateCheck: semanal por defecto); solo en una sesión real
+    [ -z "${HF_NESTED:-}" ] && [ -x "$ROOT/scripts/hf-update" ] && setsid -f "$ROOT/scripts/hf-update" auto >/dev/null 2>&1
     ;;
 esac

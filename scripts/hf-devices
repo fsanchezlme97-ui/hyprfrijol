@@ -1,0 +1,388 @@
+#!/usr/bin/env python3
+"""hf-devices — memorias USB, tarjetas SD e imágenes de disco (udisks2) para hyprfrijol.
+
+  hf-devices list [--json] [--all]   unidades extraíbles montables (--all: también los discos internos, con su uso)
+  hf-devices mount <dev>             monta (udisksctl mount) → {"ok", "mountpoint", "error"}
+  hf-devices unmount <dev>           desmonta
+  hf-devices eject <dev>             desmonta todas las particiones de la unidad y la apaga (power-off; imagen: loop-delete)
+  hf-devices eject-all               expulsa todas las extraíbles
+  hf-devices open <dev>              la monta si hace falta y abre la carpeta en el gestor de archivos
+  hf-devices watch                   una línea JSON {"devices":[…], "event":…} al empezar y en cada cambio (lo lee el shell)
+  hf-devices disks                   GNOME Disks (o lo que haya) para formatear y particionar
+
+Cada unidad: {dev, drive, name, label, fstype, size, used, avail, mounted, mountpoint, removable, kind (usb|sd|imagen|
+optical|interno), ro}. Las internas solo se pueden montar (con contraseña si udisks lo pide): ni se desmontan ni se
+expulsan desde aquí, para no tocar el sistema.
+`watch` escucha las señales de UDisks2 (gdbus monitor en el bus del sistema; si no hay, mira cada 3 s) y, según
+Ajustes › Almacenamiento: devicesAutomount (montar al conectar), devicesOpenOnPlug (abrir la carpeta),
+devicesNotify (aviso con «Abrir» y «Expulsar»).
+Pruebas: HF_DEVICES_LSBLK=<json de lsblk -J> sustituye a lsblk (watch vigila el archivo) y HF_DEVICES_DRYRUN=1
+imprime las órdenes de udisksctl en lugar de ejecutarlas.
+"""
+import json, os, re, shutil, subprocess, sys, threading, time, pathlib, select
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+HOME = pathlib.Path.home()
+ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
+SETTINGS = HOME / ".config/hyprfrijol/settings.json"
+MOCK = os.environ.get("HF_DEVICES_LSBLK", "")
+DRY = bool(os.environ.get("HF_DEVICES_DRYRUN"))
+COLS = "NAME,PATH,PKNAME,TYPE,SIZE,FSTYPE,LABEL,UUID,MOUNTPOINTS,RM,HOTPLUG,TRAN,MODEL,VENDOR,FSUSED,FSAVAIL,FSSIZE,RO"
+SYSTEM_MOUNT = re.compile(r"^/(|boot.*|efi|usr.*|var.*|home|opt.*|srv|root|nix.*|snap/.*|gnu.*|swap)$")
+NOT_MOUNTABLE = {"swap", "crypto_LUKS", "LVM2_member", "linux_raid_member", "zfs_member", "bcache", "squashfs", None, ""}
+
+
+def load(p, d=None):
+    try:
+        return json.loads(pathlib.Path(p).read_text())
+    except Exception:
+        return d
+
+
+def settings():
+    s = dict(load(ROOT / "config/defaults/settings.json", {}) or {})
+    s.update(load(SETTINGS, {}) or {})
+    return s
+
+
+def run(cmd, timeout=30):
+    if DRY and cmd and cmd[0] == "udisksctl":
+        print("DRYRUN " + " ".join(cmd), file=sys.stderr)
+        if cmd[1] == "mount":
+            return 0, f"Mounted {cmd[-1]} at /run/media/{os.environ.get('USER', 'user')}/PRUEBA", ""
+        return 0, "", ""
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        return r.returncode, (r.stdout or "").strip(), (r.stderr or "").strip()
+    except Exception as e:
+        return 1, "", str(e)
+
+
+def human(n):
+    n = float(n or 0)
+    for u in ("B", "KB", "MB", "GB", "TB"):
+        if n < 1000 or u == "TB":
+            return (f"{n:.0f} {u}" if n >= 100 or u == "B" else f"{n:.1f} {u}").replace(".", ",")
+        n /= 1000
+
+
+# ---------------------------------------------------------------- listado
+def lsblk():
+    if MOCK:
+        return load(MOCK, {}) or {}
+    rc, out, _ = run(["lsblk", "-J", "-b", "-o", COLS], timeout=10)
+    try:
+        return json.loads(out) if rc == 0 else {}
+    except Exception:
+        return {}
+
+
+def _mp(d):
+    mps = sorted((m for m in (d.get("mountpoints") or []) if m), key=len)   # btrfs: «/» antes que sus subvolúmenes
+    return mps[0] if mps else ""
+
+
+def _kind(top, d):
+    name = top.get("name") or ""
+    if top.get("type") == "loop":
+        return "imagen"
+    if top.get("type") == "rom" or name.startswith("sr"):
+        return "optical"
+    if name.startswith("mmcblk") or (top.get("tran") or "") == "mmc":
+        return "sd"
+    if (top.get("tran") or "") == "usb" or top.get("rm") or top.get("hotplug"):
+        return "usb"
+    return "interno"
+
+
+def devices(include_internal=False):
+    out = []
+
+    def walk(node, top):
+        kids = node.get("children") or []
+        fs = node.get("fstype")
+        if fs not in NOT_MOUNTABLE and node.get("type") in ("part", "disk", "loop", "crypt", "rom", "lvm"):
+            kind = _kind(top, node)
+            mp = _mp(node)
+            removable = kind != "interno"
+            if kind == "imagen" and mp and SYSTEM_MOUNT.match(mp):
+                removable = False     # imágenes del sistema (snaps…)
+            if removable or include_internal:
+                model = " ".join(x for x in [(top.get("vendor") or "").strip(), (top.get("model") or "").strip()] if x and x != "ATA")
+                label = node.get("label") or ""
+                size = int(node.get("fssize") or node.get("size") or 0)
+                name = label or (model if model else {"sd": "Tarjeta SD", "imagen": "Imagen de disco", "optical": "Disco óptico"}.get(kind, "Unidad"))
+                if not label and size:
+                    name += " · " + human(size)
+                out.append({
+                    "dev": node.get("path"), "drive": top.get("path"), "name": name, "label": label, "model": model,
+                    "fstype": fs, "size": size, "used": int(node.get("fsused") or 0) if mp else None,
+                    "avail": int(node.get("fsavail") or 0) if mp else None, "mounted": bool(mp), "mountpoint": mp,
+                    "removable": removable, "kind": kind if removable else "interno", "ro": bool(node.get("ro")),
+                    "system": bool(mp and SYSTEM_MOUNT.match(mp)),
+                })
+        for k in kids:
+            walk(k, top)
+
+    for top in (lsblk().get("blockdevices") or []):
+        if top.get("type") == "loop" and not (top.get("children") or top.get("fstype")):
+            continue
+        walk(top, top)
+    return out
+
+
+def find(dev, include_internal=True):
+    dev = str(dev or "").strip()
+    for d in devices(include_internal):
+        if dev in (d["dev"], d["mountpoint"], d["label"]) or (dev and d["dev"].endswith("/" + dev)):
+            return d
+    return None
+
+
+# ---------------------------------------------------------------- acciones
+def friendly(err):
+    e = err.lower()
+    if "busy" in e or "ocupado" in e:
+        return "Hay archivos abiertos en la unidad: ciérralos y vuelve a intentarlo"
+    if "not authorized" in e or "notauthorized" in e or "no autorizado" in e:
+        return "El sistema no te deja hacerlo (permiso de polkit)"
+    if "already mounted" in e:
+        return "Ya está montada"
+    if "not mounted" in e:
+        return "No está montada"
+    if "not configured in kernel" in e or "unknown filesystem type" in e:
+        fs = "NTFS" if "ntfs" in e else "exFAT" if "exfat" in e else "este sistema de archivos"
+        rel = os.uname().release
+        if not os.path.isdir(f"/lib/modules/{rel}") and not os.path.isdir(f"/usr/lib/modules/{rel}"):
+            return (f"El kernel se actualizó y el que está en marcha ({rel}) ya no tiene sus módulos, "
+                    f"entre ellos el de {fs}: reinicia el equipo")
+        return f"Falta el driver de {fs}: instala {'ntfs-3g' if fs == 'NTFS' else 'exfatprogs' if fs == 'exFAT' else 'su paquete'}"
+    return err.splitlines()[-1] if err else "No se pudo"
+
+
+def do_mount(dev, allow_internal=False, interactive=True):
+    d = find(dev)
+    if not d:
+        return {"ok": False, "error": f"No encuentro {dev}"}
+    if not d["removable"] and not allow_internal:
+        return {"ok": False, "error": "Es un disco interno: móntalo desde Ajustes › Almacenamiento"}
+    if d["mounted"]:
+        return {"ok": True, "mountpoint": d["mountpoint"], "dev": d["dev"]}
+    cmd = ["udisksctl", "mount", "-b", d["dev"]] + ([] if interactive else ["--no-user-interaction"])
+    rc, out, err = run(cmd, timeout=90)
+    m = re.search(r" (?:at|en) (.+?)\.?$", out)
+    if rc != 0:
+        return {"ok": False, "error": friendly(err or out), "dev": d["dev"]}
+    return {"ok": True, "mountpoint": m.group(1) if m else "", "dev": d["dev"]}
+
+
+def do_unmount(dev):
+    d = find(dev)
+    if not d:
+        return {"ok": False, "error": f"No encuentro {dev}"}
+    if not d["removable"]:
+        return {"ok": False, "error": "No desmonto discos internos desde aquí"}
+    if not d["mounted"]:
+        return {"ok": True, "dev": d["dev"]}
+    rc, out, err = run(["udisksctl", "unmount", "-b", d["dev"]], timeout=60)
+    return {"ok": rc == 0, "dev": d["dev"], **({} if rc == 0 else {"error": friendly(err or out)})}
+
+
+def do_eject(dev):
+    d = find(dev)
+    if not d:
+        return {"ok": False, "error": f"No encuentro {dev}"}
+    if not d["removable"]:
+        return {"ok": False, "error": "No expulso discos internos"}
+    parts = [x for x in devices() if x["drive"] == d["drive"]]
+    for p in parts:
+        if p["mounted"]:
+            rc, out, err = run(["udisksctl", "unmount", "-b", p["dev"]], timeout=60)
+            if rc != 0:
+                return {"ok": False, "dev": d["dev"], "error": friendly(err or out)}
+    if d["kind"] == "imagen":
+        rc, out, err = run(["udisksctl", "loop-delete", "-b", d["drive"]], timeout=30)
+    else:
+        rc, out, err = run(["udisksctl", "power-off", "-b", d["drive"]], timeout=30)
+        if rc != 0 and d["kind"] in ("sd", "optical"):   # lectores que no se apagan: basta con desmontar
+            rc, err = 0, ""
+    if rc != 0:
+        return {"ok": False, "dev": d["dev"], "error": "Desmontada, pero no se pudo apagar: ya puedes quitarla"}
+    return {"ok": True, "dev": d["dev"], "name": d["name"], "text": f"Ya puedes quitar «{d['name']}»"}
+
+
+def do_eject_all():
+    seen, res = set(), []
+    for d in devices():
+        if d["removable"] and d["drive"] not in seen:
+            seen.add(d["drive"])
+            res.append(do_eject(d["dev"]))
+    return {"ok": all(r.get("ok") for r in res), "results": res}
+
+
+def file_manager():
+    fm = settings().get("fileManager") or ""
+    return fm if fm and shutil.which(fm.split()[0]) else ""
+
+
+def do_open(dev):
+    r = do_mount(dev, allow_internal=True)
+    if not r.get("ok"):
+        return r
+    mp = r.get("mountpoint") or (find(dev) or {}).get("mountpoint")
+    if not mp:
+        return {"ok": False, "error": "No sé dónde se montó"}
+    if not DRY:
+        fm = file_manager()
+        subprocess.Popen((fm.split() + [mp]) if fm else ["xdg-open", mp], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+    return {"ok": True, "mountpoint": mp}
+
+
+def open_disks():
+    for b in ("gnome-disks", "kdepartitionmanager", "gparted"):
+        if shutil.which(b):
+            subprocess.Popen([b], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            return {"ok": True, "app": b}
+    return {"ok": False, "error": "Instala GNOME Discos (gnome-disk-utility)"}
+
+
+# ---------------------------------------------------------------- vigilar
+def notify_plugged(d, mounted_at):
+    """Aviso con «Abrir» y «Expulsar» (notify-send espera a la respuesta en su propio hilo)."""
+    if not shutil.which("notify-send"):
+        return
+    what = {"sd": "Tarjeta SD conectada", "imagen": "Imagen de disco conectada", "optical": "Disco insertado"}.get(d["kind"], "Memoria USB conectada")
+    body = d["name"] + (f" · {human(d['avail'])} libres" if d.get("avail") else "") + ("\nMontada en " + mounted_at if mounted_at else "")
+    try:
+        r = subprocess.run(["notify-send", "-a", "Dispositivos", "-i", "drive-removable-media", "-A", "open=Abrir",
+                            "-A", "eject=Expulsar", what, body], capture_output=True, text=True, timeout=600)
+        act = (r.stdout or "").strip()
+    except Exception:
+        return
+    if act == "open":
+        do_open(d["dev"])
+    elif act == "eject":
+        res = do_eject(d["dev"])
+        subprocess.run(["notify-send", "-a", "Dispositivos", "-i", "media-eject",
+                        "Expulsada" if res.get("ok") else "No se pudo expulsar", res.get("text") or res.get("error") or ""])
+
+
+def on_added(d):
+    s = settings()
+    mp = d["mountpoint"]
+    if not d["mounted"] and s.get("devicesAutomount", True) is not False:
+        r = do_mount(d["dev"], interactive=False)
+        mp = r.get("mountpoint") or ""
+    if mp and s.get("devicesOpenOnPlug", False) is True:
+        do_open(d["dev"])
+    if s.get("devicesNotify", True) is not False:
+        threading.Thread(target=notify_plugged, args=(d, mp), daemon=True).start()
+
+
+def emit(devs, event=None, dev=None):
+    print(json.dumps({"devices": devs, "event": event, "dev": dev}, ensure_ascii=False), flush=True)
+
+
+def die_with_parent():
+    """gdbus se cierra si se cierra watch (p. ej. al reiniciar el shell): PR_SET_PDEATHSIG."""
+    try:
+        import ctypes, signal as _s
+        ctypes.CDLL("libc.so.6", use_errno=True).prctl(1, _s.SIGTERM)
+    except Exception:
+        pass
+
+
+def watch():
+    prev = {d["dev"]: d for d in devices()}
+    emit(list(prev.values()), "start")
+    wake = threading.Event()
+
+    def listen():
+        if not MOCK and shutil.which("gdbus"):
+            try:
+                p = subprocess.Popen(["gdbus", "monitor", "--system", "--dest", "org.freedesktop.UDisks2",
+                                      "--object-path", "/org/freedesktop/UDisks2"],
+                                     stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, preexec_fn=die_with_parent)
+                for _ in p.stdout:
+                    wake.set()
+            except Exception:
+                pass
+        # sin gdbus/udisks (o con el JSON de pruebas): mirar cada pocos segundos
+        last = None
+        while True:
+            if MOCK:
+                try:
+                    m = os.stat(MOCK).st_mtime
+                except Exception:
+                    m = None
+                if m != last:
+                    last = m
+                    wake.set()
+                time.sleep(0.5)
+            else:
+                time.sleep(3)
+                wake.set()
+
+    threading.Thread(target=listen, daemon=True).start()
+    while True:
+        wake.wait()
+        time.sleep(0.6)          # varias señales seguidas → una sola lectura
+        wake.clear()
+        cur = {d["dev"]: d for d in devices()}
+        if cur == prev:
+            continue
+        added = [d for k, d in cur.items() if k not in prev and d["removable"]]
+        removed = [k for k in prev if k not in cur]
+        changed = bool(added or removed)
+        prev = cur
+        emit(list(cur.values()), "added" if added else "removed" if removed else "changed",
+             added[0]["dev"] if added else removed[0] if removed else None)
+        for d in added:
+            on_added(d)
+        if changed:
+            # tras montar, los datos (punto de montaje, espacio libre) cambian: otra lectura enseguida
+            wake.set()
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__); return 0
+    cmd, rest = argv[0], argv[1:]
+    arg = next((a for a in rest if not a.startswith("--")), "")
+    if cmd == "list":
+        devs = devices("--all" in rest)
+        if "--json" in rest:
+            print(json.dumps(devs, ensure_ascii=False))
+        else:
+            for d in devs:
+                st = d["mountpoint"] or "sin montar"
+                print(f"{d['dev']}\t{d['kind']}\t{d['name']}\t{st}")
+        return 0
+    if cmd == "watch":
+        try:
+            watch()
+        except KeyboardInterrupt:
+            pass
+        return 0
+    if cmd == "mount":
+        out = do_mount(arg, allow_internal="--internal" in rest)
+    elif cmd == "unmount":
+        out = do_unmount(arg)
+    elif cmd == "eject":
+        out = do_eject(arg)
+    elif cmd == "eject-all":
+        out = do_eject_all()
+    elif cmd == "open":
+        out = do_open(arg)
+    elif cmd == "disks":
+        out = open_disks()
+    else:
+        print(f"Orden desconocida: {cmd}", file=sys.stderr); return 2
+    print(json.dumps(out, ensure_ascii=False))
+    return 0 if out.get("ok") else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

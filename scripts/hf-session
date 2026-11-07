@@ -4,9 +4,12 @@
 # No toca ~/.config/hypr: tu configuración normal de Hyprland sigue intacta.
 #   hf-session            sesión normal (desde el gestor de inicio o una TTY)
 #   hf-session --nested   lo abre en una ventana dentro de tu sesión actual, para probarlo
+#   hf-session --safe     modo seguro: Hyprland mínimo (config/hypr/safe.lua) sin shell, plugins ni local.lua,
+#                         con una terminal y el menú «Restaurar ajustes» (hf-safe). Combinable con --nested.
 set -euo pipefail
 for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
-NESTED=0; [ "${1:-}" = --nested ] && NESTED=1
+NESTED=0; SAFE=0
+for _a in "$@"; do case "$_a" in --nested) NESTED=1 ;; --safe) SAFE=1 ;; esac; done; unset _a
 
 # Desde el gestor de inicio no hay terminal: todo lo que pase queda en ~/.cache/hf-session.log
 # (si la sesión vuelve al login al instante, ahí está el motivo).
@@ -15,7 +18,7 @@ if [ "$NESTED" = 0 ] && ! [ -t 1 ]; then
   LOG="$HOME/.cache/hf-session.log"; mkdir -p "$HOME/.cache"
   [ -f "$LOG" ] && [ "$(stat -c %s "$LOG")" -gt 2000000 ] && mv -f "$LOG" "$LOG.1"
   exec >>"$LOG" 2>&1
-  echo "=== $(date '+%F %T') hf-session · tty=$(tty 2>/dev/null) XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-} XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-} PATH=$PATH"
+  echo "=== $(date '+%F %T') hf-session$([ "$SAFE" = 1 ] && echo " (modo seguro)") · tty=$(tty 2>/dev/null) XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-} XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-} PATH=$PATH"
   trap 'echo "hf-session: falló «$BASH_COMMAND» (línea $LINENO, código $?)"' ERR
 fi
 
@@ -34,6 +37,16 @@ if [ "$NESTED" = 0 ] && [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && ! [ -S "$XDG_R
    && [ -z "${HF_DBUS_WRAPPED:-}" ] && command -v dbus-run-session >/dev/null; then
   export HF_DBUS_WRAPPED=1
   exec dbus-run-session -- "$ROOT/scripts/hf-session" "$@"
+fi
+# Modo seguro: nada del repo salvo safe.lua y hf-safe (sin migrar, sin hf-apply, sin ajustes generados)
+if [ "$SAFE" = 1 ]; then
+  export HF_ROOT="$ROOT" HF_SAFE=1
+  CFG="$ROOT/config/hypr/safe.lua"
+  if [ "$NESTED" = 1 ]; then
+    [ -n "${WAYLAND_DISPLAY:-}" ] || { echo "--nested necesita una sesión Wayland abierta" >&2; exit 1; }
+    export HF_NESTED=1; unset HYPRLAND_INSTANCE_SIGNATURE
+  fi
+  exec start-hyprland -- --config "$CFG"
 fi
 # Primera vez tras el cambio de nombre: mueve ~/.config|.local/state|.local/share|.cache/hypr-liquid a …/hyprfrijol (deja enlaces)
 for d in "$HOME/.config/hypr-liquid" "$HOME/.local/state/hypr-liquid" "$HOME/.local/share/hypr-liquid" "$HOME/.cache/hypr-liquid"; do

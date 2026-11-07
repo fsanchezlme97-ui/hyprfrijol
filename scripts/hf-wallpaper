@@ -13,6 +13,8 @@
 #   hf-wallpaper add <archivo…>   copia imágenes/vídeos a tu carpeta de fondos (imprime la ruta de cada copia)
 #   hf-wallpaper pick-animated    elige un vídeo/GIF (zenity o kdialog), lo copia a la carpeta y lo pone de fondo
 #   hf-wallpaper deps             qué hay instalado para los fondos animados: "mpvpaper 1", "ffmpeg 0"…
+#   hf-wallpaper wallhaven …      lo mismo que scripts/hf-wallhaven (buscar, caché, añadir a mis fondos); con
+#                                 wallpaperSource = "wallhaven", next/random traen uno nuevo de wallhaven.cc
 # Fondos animados: .mp4 .webm .mkv .mov .gif en bucle con mpvpaper (sin sonido, a wallpaperFps). El color sale del
 #   primer cuadro. Shell (Wallpaper.qml) los pausa según wallpaperPauseOn (batería, pantalla completa…) con
 #   SIGSTOP al pid guardado en ~/.local/state/hyprfrijol/motion.pid (solo el de esta sesión).
@@ -90,6 +92,14 @@ step() {   # $1 = +1 / -1
   if [ "$i" -lt 0 ]; then i=0; else i=$(( (i + $1 + ${#L[@]}) % ${#L[@]} )); fi
   printf '%s' "${L[$i]}"
 }
+# Origen «Wallhaven» (Ajustes › Fondos, wallpaperSource): next/random piden uno nuevo a scripts/hf-wallhaven (caché con
+# límite); sin red o sin resultados se sigue con la carpeta de siempre.
+wh_next() {
+  [ "$(setting wallpaperSource carpeta)" = wallhaven ] || return 1
+  local f; f="$("$ROOT/scripts/hf-wallhaven" next 2>/dev/null)" || return 1
+  [ -f "$f" ] || return 1
+  printf '%s' "$f"
+}
 # Fondo según la hora (como en el diseño: 06:00 atardecer, 10:00 bruma, 17:30 lago, 20:00 noche)
 by_hour() {
   local m=$(( 10#$(date +%H) * 60 + 10#$(date +%M) )) k
@@ -120,9 +130,11 @@ OUTPUT=""
 if [ "${1:-}" = -o ]; then OUTPUT="${2:?falta la pantalla}"; shift 2; fi
 
 case "${1:-next}" in
-  next)    FILE="$(step 1)" ;;
+  next)    FILE="$(wh_next || step 1)" ;;
   prev)    FILE="$(step -1)" ;;
-  random)  FILE="$(list | grep -vxF "$(current)" | shuf -n1 || true)"; [ -n "$FILE" ] || FILE="$(list | head -n1)" ;;
+  random)  FILE="$(wh_next || true)"
+           [ -n "$FILE" ] || FILE="$(list | grep -vxF "$(current)" | shuf -n1 || true)"; [ -n "$FILE" ] || FILE="$(list | head -n1)" ;;
+  wallhaven) shift; exec "$ROOT/scripts/hf-wallhaven" "$@" ;;
   hora)    FILE="$(by_hour)"; [ -z "$OUTPUT" ] && [ "$FILE" = "$(current)" ] && exit 0 ;;
   restore) FILE="$(current)"; [ -f "$FILE" ] || is_scene "$FILE" || FILE="$(list | head -n1)" ;;
   list)    list all; exit 0 ;;
@@ -142,7 +154,7 @@ case "${1:-next}" in
     mkdir -p "$DIR"; cp -n -- "$F" "$DIR/"
     exec "$0" "$DIR/$(basename -- "$F")" ;;
   reset)   [ -n "$OUTPUT" ] && write_json --arg o "$OUTPUT" '.monitors = ((.monitors // {}) | del(.[$o]))'; exit 0 ;;
-  -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
+  -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
   *)       FILE="$(readlink -f "$1")" ;;
 esac
 [ -n "$FILE" ] && { [ -f "$FILE" ] || is_scene "$FILE"; } || { echo "No hay fondo que poner (${FILE:-vacío}). Pon imágenes en $DIR" >&2; exit 1; }

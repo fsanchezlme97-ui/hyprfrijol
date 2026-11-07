@@ -1,0 +1,437 @@
+#!/usr/bin/env python3
+"""hf-deps — las dependencias de hyprfrijol por función (install/packages.tsv). Lo usan hf-doctor, la IA
+(hf-ai «deps»), Ajustes y la terminal. Solo instala cuando tú lo pides.
+
+  hf-deps status [función|id…] [--json]       cada función con lo instalado y lo que falta
+  hf-deps missing [--level recommended] [--json]
+                                              solo lo que falta, hasta ese nivel (required · recommended ·
+                                              optional · manual; por defecto recommended); sale con 1 si falta algo
+  hf-deps install <función|id…|--recommended|--all> [--dry-run] [--yes] [--pkexec]
+                                              instala lo que falta: --recommended = imprescindible + recomendado,
+                                              --all = también los opcionales (no los «manual»: solo por su id)
+  hf-deps explain <orden> [--json]            qué función usa ese programa y qué instalar
+  hf-deps list [--json]                       las funciones y sus claves
+
+Funciones: las claves de las líneas «#@función» de install/packages.tsv (impresoras, dictado, red,
+  virtualizacion…); también vale un id de fila (alsa, printing, vm…) y varios separados por comas o espacios.
+Distro: la de install/distro.sh (HF_DISTRO=arch|fedora|debian|ubuntu|opensuse-tumbleweed|void la simula; con una
+  distro simulada no se consulta el sistema y todo sale como «falta»).
+Instalar: sudo (o doas) en la terminal; pkexec con --pkexec o si no hay terminal. AUR con paru o yay.
+  --dry-run solo enseña los comandos.
+"""
+import json, os, pathlib, shlex, shutil, subprocess, sys, unicodedata
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+SELF_ROOT = pathlib.Path(__file__).resolve().parent.parent
+ROOT = pathlib.Path(os.environ.get("HF_ROOT") or SELF_ROOT)
+if not (ROOT / "install/packages.tsv").is_file(): ROOT = SELF_ROOT
+TSV = ROOT / "install/packages.tsv"
+
+ARGS = sys.argv[1:]
+FLAGS = {a.split("=", 1)[0] for a in ARGS if a.startswith("--")}
+JSON = "--json" in FLAGS
+DRY = "--dry-run" in FLAGS
+YES = "--yes" in FLAGS
+PKEXEC = "--pkexec" in FLAGS
+LEVELS = ["base", "required", "recommended", "optional", "manual", "greeter"]
+LEVEL_ES = {"base": "sistema", "required": "imprescindible", "recommended": "recomendado", "optional": "opcional",
+            "manual": "según hardware", "greeter": "login"}
+
+# Programas que no salen de packages.tsv: de dónde vienen
+HINTS = {
+    "nvidia-smi": "viene con el driver de NVIDIA (Arch: nvidia-utils · Fedora: xorg-x11-drv-nvidia-cuda de RPM Fusion · "
+                  "Debian: nvidia-smi · Ubuntu: nvidia-utils-<versión>). Solo hace falta con una GPU NVIDIA.",
+    "kdialog": "alternativa a zenity para elegir archivos; con zenity (función «sesion») no hace falta.",
+    "livecaptions": "Subtítulos en vivo: flatpak install flathub net.sapples.LiveCaptions",
+    "nerd-dictation": "dictado alternativo (pip); hyprfrijol usa whisper.cpp o faster-whisper (hf-deps install whisper).",
+    "faster-whisper": "pip install --user faster-whisper (o lo instala Ajustes › Dictado en su propio venv).",
+    "steam": "app: hf-apps install steam (o el paquete de tu distro).",
+    "hyprpolkitagent": "no hace falta: el agente de polkit lo pone el propio shell.",
+    "claude": "CLI de IA: lo instala Ajustes › Asistente de IA.", "codex": "CLI de IA: lo instala Ajustes › Asistente de IA.",
+    "gemini": "CLI de IA: lo instala Ajustes › Asistente de IA.",
+    "blueman-sendto": "alternativa a bluetooth-sendto (hf-deps install bt-sendto).",
+    "vncviewer": "alternativa a Remmina (TigerVNC); hf-deps install remote-client instala Remmina.",
+    "gnome-connections": "alternativa a Remmina; hf-deps install remote-client instala Remmina.",
+    "skanpage": "alternativa a simple-scan; hf-deps install scanner.", "skanlite": "alternativa a simple-scan; hf-deps install scanner.",
+    "systemd-inhibit": "parte de systemd (cafeína).", "timedatectl": "parte de systemd (Ajustes › Fecha).",
+    "localectl": "parte de systemd.", "hostnamectl": "parte de systemd.", "busctl": "parte de systemd.",
+    "journalctl": "parte de systemd.", "systemctl": "parte de systemd.",
+}
+# Lo que hay que hacer después de instalar (no se hace solo)
+AFTER = {
+    "printing": "sudo systemctl enable --now cups.socket   (en Void: sudo ln -s /etc/sv/cupsd /var/service/)",
+    "vm": "sudo systemctl enable --now libvirtd && sudo usermod -aG libvirt $USER   (y vuelve a entrar)",
+    "containers": "distrobox create --name arch --image archlinux:latest",
+    "ydotool": "systemctl --user enable --now ydotool   (o el servicio ydotoold de tu distro)",
+    "tailscale": "sudo systemctl enable --now tailscaled && sudo tailscale up",
+    "zerotier": "sudo systemctl enable --now zerotier-one",
+    "firewall": "sudo systemctl enable --now firewalld   (o: sudo ufw enable)",
+    "fingerprint": "fprintd-enroll   (y añade pam_fprintd a /etc/pam.d/hyprlock si quieres huella en el bloqueo)",
+    "hybrid-gpu": "cambia de modo en Ajustes › Energía y rendimiento; hace falta reiniciar",
+    "snapper": "sudo snapper -c root create-config /   (solo con btrfs)",
+    "hyprpm": "hyprpm update",
+    "greetd": "./install.sh --greeter   (configura el login visual)",
+    "flatpak": "flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo",
+    "ollama": "sudo systemctl enable --now ollama   (si tu paquete trae el servicio)",
+}
+
+
+def say(*a):
+    print(*a, file=sys.stderr if JSON else sys.stdout, flush=True)
+
+
+def norm(s):
+    return "".join(c for c in unicodedata.normalize("NFD", s.lower()) if unicodedata.category(c) != "Mn")
+
+
+def q(args, timeout=30):
+    try:
+        return subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------- distro (install/distro.sh)
+def distro():
+    sh = (f'. {shlex.quote(str(ROOT / "install/distro.sh"))}; load_os_release; f="$(hf_family)"; '
+          'printf "%s\\n%s\\n%s\\n%s\\n" "$f" "$OS_ID" "$OS_PRETTY" "$SIMULATED"')
+    r = q(["bash", "-c", sh], timeout=10)
+    out = (r.stdout if r else "unknown\n\n\n0").split("\n")
+    fam, osid, pretty, sim = (out + ["", "", "", ""])[:4]
+    return fam or "unknown", osid, pretty, sim == "1"
+
+
+FAMILY, OS_ID, OS_PRETTY, SIMULATED = distro()
+PM = {"arch": "pacman", "fedora": "dnf", "rhel": "dnf", "suse": "zypper", "suse-leap": "zypper",
+      "debian": "apt-get", "ubuntu": "apt-get", "void": "xbps-install"}.get(FAMILY, "")
+COL = {"arch": 2, "fedora": 3, "rhel": 3, "suse": 4, "suse-leap": 4, "debian": 5, "ubuntu": 5, "void": 6}.get(FAMILY)
+PROBE = not SIMULATED and bool(PM) and bool(shutil.which(PM))
+
+
+# ---------------------------------------------------------------- tabla
+def load():
+    feats, rows = [], []
+    for line in TSV.read_text(encoding="utf-8").splitlines():
+        if line.startswith("#@función\t"):
+            _, k, label = (line.split("\t") + ["", ""])[:3]
+            feats.append({"key": k, "label": label or k})
+            continue
+        if line.startswith("#") or not line.strip(): continue
+        f = line.split("\t") + [""] * 10
+        if len(line.split("\t")) < 8: continue
+        pk = f[COL] if COL is not None else "-"
+        pk = [] if pk in ("", "-") else [p for p in pk.split(",") if p]
+        rows.append({"id": f[0], "level": f[1], "desc": f[7], "feature": f[8] or "otros",
+                     "commands": [c for c in f[9].split(",") if c], "packages": pk,
+                     "aur": [p[4:] for p in pk if p.startswith("aur:")], "native": [p for p in pk if not p.startswith("aur:")]})
+    keys = {x["key"] for x in feats}
+    for r in rows:
+        if r["feature"] not in keys:
+            feats.append({"key": r["feature"], "label": r["feature"]}); keys.add(r["feature"])
+    return feats, rows
+
+
+FEATS, ROWS = load()
+FEAT_LABEL = {f["key"]: f["label"] for f in FEATS}
+
+
+# ---------------------------------------------------------------- qué está instalado
+_inst = None
+
+
+def installed_set():
+    """Paquetes instalados (o que algo instalado provee) de entre todos los de la tabla: una consulta."""
+    global _inst
+    if _inst is not None: return _inst
+    _inst = set()
+    if not PROBE: return _inst
+    allp = sorted({p for r in ROWS for p in r["native"] + r["aur"]})
+    if PM == "pacman":
+        r = q(["pacman", "-T", *allp])            # imprime lo que falta (también mira «provides»)
+        miss = set((r.stdout if r else "").split())
+        _inst = {p for p in allp if p not in miss}
+    elif PM in ("dnf", "zypper"):
+        r = q(["rpm", "-q", "--whatprovides", "--qf", "%{NAME}\n", *allp])
+        out = (r.stdout if r else "")
+        miss = {l.split()[-1] for l in out.split("\n") if l.startswith("no package provides") or l.endswith("is not installed")}
+        _inst = {p for p in allp if p not in miss}
+    elif PM == "apt-get":
+        r = q(["dpkg-query", "-W", "-f", "${Package} ${db:Status-Status}\n", *allp])
+        _inst = {l.split()[0] for l in (r.stdout if r else "").split("\n") if l.endswith(" installed")}
+    elif PM == "xbps-install":
+        r = q(["xbps-query", "-l"])
+        names = set()
+        for l in (r.stdout if r else "").split("\n"):
+            parts = l.split()
+            if len(parts) > 1: names.add(parts[1].rsplit("-", 1)[0])
+        _inst = {p for p in allp if p in names}
+    return _inst
+
+
+FONTS = {"fonts-inter": "Inter", "fonts-mono": "JetBrains Mono", "fonts-emoji": "Noto Color Emoji", "fonts-noto": "Noto Sans"}
+_fams = None
+
+
+def font_families():
+    global _fams
+    if _fams is None:
+        r = q(["fc-list", ":", "family"]) if shutil.which("fc-list") else None
+        _fams = {f.strip() for l in (r.stdout if r else "").split("\n") for f in l.split(",")}
+    return _fams
+
+
+def state(r):
+    inst = installed_set()
+    pk = r["native"] + r["aur"]
+    missing = [p for p in pk if p not in inst] if PROBE else list(pk)
+    cmds = {c: bool(shutil.which(c)) for c in r["commands"]}
+    # Con todos sus programas presentes (instalados por otra vía, otro nombre…) cuenta como instalado;
+    # una fuente, si fontconfig ya la tiene (p. ej. en ~/.local/share/fonts)
+    by_cmd = PROBE and ((bool(cmds) and all(cmds.values())) or (r["id"] in FONTS and FONTS[r["id"]] in font_families()))
+    if not pk:
+        status = "ok" if by_cmd else ("nopkg" if r["level"] != "base" else "ok")
+    elif not missing or by_cmd:
+        status = "ok"
+    elif len(missing) < len(pk):
+        status = "partial"
+    else:
+        status = "missing"
+    via = status == "ok" and bool(missing)   # instalado por otra vía: sus programas están, sus paquetes no
+    if status == "ok": missing = []
+    return dict(r, status=status, missing=missing, cmds=cmds, viaCommands=via)
+
+
+def lvl_ok(level, upto):
+    order = ["base", "required", "recommended", "optional", "manual"]
+    if level == "greeter": return upto in ("manual",)
+    return level in order and order.index(level) <= order.index(upto)
+
+
+# ---------------------------------------------------------------- selección
+def select(tokens):
+    out, unknown = [], []
+    by_id = {r["id"]: r for r in ROWS}
+    fkeys = {norm(f["key"]): f["key"] for f in FEATS}
+    flabel = {norm(f["label"]): f["key"] for f in FEATS}
+    for t in [x for tok in tokens for x in tok.replace(",", " ").split()]:
+        n = norm(t)
+        if t in by_id:
+            out.append(by_id[t]); continue
+        k = fkeys.get(n) or flabel.get(n) or next((v for lab, v in flabel.items() if n and n in lab), None)
+        if k:
+            out += [r for r in ROWS if r["feature"] == k and r["level"] not in ("manual", "greeter")]
+            continue
+        hit = [r for r in ROWS if t in r["commands"]]
+        if hit:
+            out += hit; continue
+        unknown.append(t)
+    seen, uniq = set(), []
+    for r in out:
+        if r["id"] not in seen: seen.add(r["id"]); uniq.append(r)
+    return uniq, unknown
+
+
+def manual_in(tokens):
+    fk = {norm(t) for tok in tokens for t in tok.replace(",", " ").split()}
+    return [r for r in ROWS if r["level"] == "manual" and norm(r["feature"]) in fk]
+
+
+# ---------------------------------------------------------------- salida
+def feature_report(states):
+    feats = []
+    for f in FEATS:
+        items = [s for s in states if s["feature"] == f["key"]]
+        if not items: continue
+        miss = [s for s in items if s["status"] in ("missing", "partial")]
+        feats.append({"key": f["key"], "label": f["label"], "items": items,
+                      "missingIds": [s["id"] for s in miss],
+                      "missingRecommended": [s["id"] for s in miss if lvl_ok(s["level"], "recommended")]})
+    return feats
+
+
+def jitem(s):
+    return {k: s[k] for k in ("id", "level", "desc", "status", "packages", "missing", "commands")} | \
+           {"install": f"hf-deps install {s['id']}" if s["status"] in ("missing", "partial") else None}
+
+
+def header():
+    return {"family": FAMILY, "os": OS_PRETTY or OS_ID, "simulated": SIMULATED, "probed": PROBE, "packageManager": PM}
+
+
+MARK = {"ok": "✓", "partial": "◐", "missing": "✗", "nopkg": "–"}
+
+
+def cmd_status(tokens):
+    rows = select(tokens)[0] + manual_in(tokens) if tokens else ROWS
+    states = [state(r) for r in rows]
+    feats = feature_report(states)
+    if JSON:
+        print(json.dumps(header() | {"features": [{"key": f["key"], "label": f["label"], "missing": f["missingIds"],
+                                                     "missingRecommended": f["missingRecommended"],
+                                                     "items": [jitem(s) for s in f["items"]]} for f in feats]},
+                         ensure_ascii=False, indent=1))
+        return 0
+    print(f"Distro: {OS_PRETTY or OS_ID or '?'} · familia {FAMILY}" + ("" if PROBE else " · sin consultar el sistema (simulada o sin gestor)"))
+    for f in feats:
+        nm = len(f["missingIds"])
+        print(f"\n{f['label']}  [{f['key']}]" + (f"  — faltan {nm}" if nm else "  — completo"))
+        for s in f["items"]:
+            extra = ""
+            if s["status"] in ("missing", "partial"): extra = "  falta: " + " ".join(s["missing"])
+            elif s["status"] == "nopkg": extra = f"  sin paquete en {FAMILY}"
+            print(f"  {MARK[s['status']]} {s['id']:<16} {LEVEL_ES.get(s['level'], s['level']):<15} {s['desc']}{extra}")
+    miss_rec = [s["id"] for s in states if s["status"] in ("missing", "partial") and lvl_ok(s["level"], "recommended")]
+    if miss_rec:
+        print(f"\nFaltan recomendadas: hf-deps install --recommended   (o una a una: hf-deps install {' '.join(miss_rec)})")
+    return 0
+
+
+def cmd_missing():
+    upto = "recommended"
+    for i, a in enumerate(ARGS):
+        if a.startswith("--level="): upto = a.split("=", 1)[1]
+        elif a == "--level" and i + 1 < len(ARGS): upto = ARGS[i + 1]
+    if upto not in ("base", "required", "recommended", "optional", "manual"):
+        say(f"Nivel desconocido: {upto} (required · recommended · optional · manual)"); return 2
+    states = [state(r) for r in ROWS if lvl_ok(r["level"], upto)]
+    miss = [s for s in states if s["status"] in ("missing", "partial")]
+    feats = feature_report(miss)
+    if JSON:
+        print(json.dumps(header() | {"level": upto, "count": len(miss), "features": [
+            {"key": f["key"], "label": f["label"], "ids": f["missingIds"], "install": f"hf-deps install {' '.join(f['missingIds'])}",
+             "items": [jitem(s) for s in f["items"]]} for f in feats]}, ensure_ascii=False, indent=1))
+        return 0
+    if not miss:
+        print(f"No falta nada hasta el nivel «{upto}» ({FAMILY})."); return 0
+    for f in feats:
+        print(f"{f['label']}: " + " · ".join(f"{s['id']} ({' '.join(s['missing'])})" for s in f["items"]))
+        print(f"    → hf-deps install {' '.join(f['missingIds'])}")
+    return 1
+
+
+def sudo():
+    if os.geteuid() == 0: return []
+    if PKEXEC or (not DRY and not sys.stdin.isatty() and shutil.which("pkexec")): return ["pkexec"]
+    return ["sudo"] if shutil.which("sudo") else (["doas"] if shutil.which("doas") else ["sudo"])
+
+
+def pm_cmd(pkgs):
+    y = YES or (PKEXEC and not sys.stdin.isatty())
+    return {"pacman": ["pacman", "-S", "--needed"] + (["--noconfirm"] if y else []),
+            "dnf": ["dnf", "install"] + (["-y"] if y else []),
+            "zypper": ["zypper"] + (["--non-interactive"] if y else []) + ["install"],
+            "apt-get": ["apt-get", "install"] + (["-y"] if y else []),
+            "xbps-install": ["xbps-install", "-S"] + (["-y"] if y else [])}[PM] + pkgs
+
+
+def aur_helper():
+    if not PROBE: return "paru"
+    return next((h for h in ("paru", "yay") if shutil.which(h)), "")
+
+
+def run(cmd):
+    print("  [dry-run] " if DRY else "  $ ", " ".join(shlex.quote(x) for x in cmd), sep="", flush=True)
+    if DRY: return 0
+    return subprocess.run(cmd).returncode
+
+
+def cmd_install(tokens):
+    if not PM:
+        say(f"No sé instalar paquetes en esta distro ({OS_ID or '?'}, familia {FAMILY}). Mira install/packages.tsv."); return 2
+    if "--all" in FLAGS: rows = [r for r in ROWS if lvl_ok(r["level"], "optional")]
+    elif "--recommended" in FLAGS: rows = [r for r in ROWS if lvl_ok(r["level"], "recommended")]
+    else:
+        if not tokens:
+            say("¿Qué instalo? hf-deps install <función|id> (hf-deps list) · --recommended · --all"); return 2
+        rows, unknown = select(tokens)
+        if unknown:
+            say(f"No conozco: {' '.join(unknown)} (mira hf-deps list)")
+            if not rows: return 2
+    states = [state(r) for r in rows]
+    todo = [s for s in states if s["status"] in ("missing", "partial")]
+    nopkg = [s for s in states if s["status"] == "nopkg" and s["level"] != "base"]
+    ok = [s["id"] for s in states if s["status"] == "ok"]
+    if len(ok) > 4: say(f"✓ Ya están ({len(ok)}): {' '.join(ok)}")
+    else: [say(f"✓ {i}: ya está") for i in ok]
+    for s in nopkg: say(f"– {s['id']}: no hay paquete en {FAMILY} · {s['desc']}")
+    native = [p for s in todo for p in s["missing"] if p in s["native"]]
+    aur = [p for s in todo for p in s["missing"] if p in s["aur"]]
+    native = list(dict.fromkeys(native)); aur = list(dict.fromkeys(aur))
+    manual = manual_in(tokens)
+    for m in manual:
+        say(f"(También hay «{m['id']}»: {m['desc']} → hf-deps install {m['id']})")
+    if not native and not aur:
+        say("Nada que instalar."); return 0
+    say(f"▸ Instalo para: {', '.join(s['id'] + ' (' + FEAT_LABEL.get(s['feature'], s['feature']) + ')' for s in todo)}")
+    rc = 0
+    if native:
+        rc = run(sudo() + pm_cmd(native)) or rc
+    if aur:
+        h = aur_helper()
+        if h: rc = run([h, "-S", "--needed"] + (["--noconfirm"] if YES else []) + aur) or rc
+        else:
+            say(f"! Paquetes de AUR ({' '.join(aur)}) y no hay paru ni yay: instala uno (sudo pacman -S --needed base-devel git && "
+                "git clone https://aur.archlinux.org/paru-bin.git && cd paru-bin && makepkg -si) y repite."); rc = rc or 1
+    after = [AFTER[s["id"]] for s in todo if s["id"] in AFTER]
+    if after:
+        say("Después:"); [say(f"  → {a}") for a in after]
+    if not DRY and rc == 0: say("✓ Hecho.")
+    return rc
+
+
+def cmd_explain(name):
+    if not name:
+        say("hf-deps explain <orden>   (p. ej. arecord, lpstat, virt-manager)"); return 2
+    hits = [r for r in ROWS if name in r["commands"]] or [r for r in ROWS if name == r["id"] or name in r["packages"]
+                                                          or ("aur:" + name) in r["packages"]]
+    present = bool(shutil.which(name))
+    if not hits:
+        h = HINTS.get(name)
+        if JSON: print(json.dumps({"command": name, "present": present, "known": bool(h), "hint": h}, ensure_ascii=False)); return 0 if h else 1
+        print(f"{name}: {'instalado' if present else 'no instalado'}")
+        print(f"  {h}" if h else "  hyprfrijol no lo usa (o no está en install/packages.tsv).")
+        return 0 if h else 1
+    states = [state(r) for r in hits]
+    if JSON:
+        print(json.dumps({"command": name, "present": present, "family": FAMILY,
+                          "items": [jitem(s) | {"feature": s["feature"], "featureLabel": FEAT_LABEL.get(s["feature"], s["feature"]),
+                                                "after": AFTER.get(s["id"])} for s in states]}, ensure_ascii=False, indent=1))
+        return 0
+    print(f"{name}: {'instalado' if present else 'no instalado'}")
+    for s in states:
+        print(f"  Lo usa: {FEAT_LABEL.get(s['feature'], s['feature'])} · {s['desc']}")
+        print(f"  Nivel: {LEVEL_ES.get(s['level'], s['level'])} · paquete en {FAMILY}: {', '.join(s['packages']) or 'ninguno'}")
+        if s["status"] in ("missing", "partial"): print(f"  Instalar: hf-deps install {s['id']}")
+        elif s["status"] == "nopkg": print(f"  Sin paquete en {FAMILY}: {s['desc']}")
+        else: print("  Ya está instalado.")
+    return 0
+
+
+def cmd_list():
+    if JSON:
+        print(json.dumps([{"key": f["key"], "label": f["label"], "ids": [r["id"] for r in ROWS if r["feature"] == f["key"]]}
+                          for f in FEATS], ensure_ascii=False, indent=1)); return 0
+    for f in FEATS:
+        ids = [f"{r['id']}{'*' if r['level'] in ('manual', 'greeter') else ''}" for r in ROWS if r["feature"] == f["key"]]
+        print(f"{f['key']:<15} {f['label']}\n{'':<15} {' '.join(ids)}")
+    print("\n* solo por su id (hardware concreto o login)")
+    return 0
+
+
+def main():
+    pos = [a for i, a in enumerate(ARGS) if not a.startswith("--") and not (i and ARGS[i - 1] == "--level")]
+    cmd = pos[0] if pos else "status"
+    rest = pos[1:]
+    if cmd in ("-h", "help") or "--help" in FLAGS or "-h" in ARGS:
+        print(__doc__.strip()); return 0
+    if cmd == "status": return cmd_status(rest)
+    if cmd == "missing": return cmd_missing()
+    if cmd == "install": return cmd_install(rest)
+    if cmd == "explain": return cmd_explain(rest[0] if rest else "")
+    if cmd == "list": return cmd_list()
+    say(f"Orden desconocida: {cmd} (hf-deps --help)"); return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

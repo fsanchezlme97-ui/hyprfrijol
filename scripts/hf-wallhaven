@@ -1,0 +1,368 @@
+#!/usr/bin/env python3
+"""hf-wallhaven — fondos de wallhaven.cc para hyprfrijol (búsqueda, caché con límite y «añadir a mis fondos»).
+
+  hf-wallhaven search [--q TEXTO] [--sorting toplist|random|date_added|views|favorites|relevance] [--page N]
+                      [--categories general,anime,people] [--purity sfw,sketchy,nsfw] [--atleast 1920x1080|auto]
+                      [--range 1d|3d|1w|1M|3M|6M|1y]     → {"results":[…], "page", "last_page", "total", "error"}
+                      (lo que no se pase sale de Ajustes › Fondos › Wallhaven)
+  hf-wallhaven fetch <id>      descarga el fondo a la caché (si no está) → {"ok", "path"}
+  hf-wallhaven next            para el cambio automático: uno nuevo según los ajustes; imprime solo la ruta
+  hf-wallhaven add <id|ruta>   lo copia a tus fondos (hf-wallpaper add) → {"ok", "path"}
+  hf-wallhaven set <id>        lo descarga y lo pone de fondo (hf-wallpaper <ruta>)
+  hf-wallhaven cache           {"files", "bytes", "limit_mb", "dir"} · cache clear · cache prune
+  hf-wallhaven key status|set|clear   clave de la API (opcional; set la lee de stdin o HF_WALLHAVEN_KEY_IN, nunca de argv)
+
+Ajustes (settings.json): wallpaperSource ("carpeta" | "wallhaven": de dónde saca hf-wallpaper next/random el siguiente),
+wallhavenQuery, wallhavenCategories (["general","anime","people"]), wallhavenPurity (["sfw"] por defecto; «nsfw» solo
+con clave), wallhavenSorting ("toplist" | "random" | "date_added"…), wallhavenTopRange ("1M"), wallhavenMinRes
+("auto" = la pantalla más grande, o "2560x1440"), wallhavenCacheMB (límite de la caché, 500).
+Clave: $WALLHAVEN_API_KEY → llavero (secret-tool service=hyprfrijol provider=wallhaven) → ~/.config/hyprfrijol/secrets/
+wallhaven.key (600). Nunca va en settings.json ni en la línea de órdenes. Caché: ~/.cache/hyprfrijol/wallhaven.
+"""
+import json, os, re, shutil, subprocess, sys, time, pathlib, random, urllib.request, urllib.parse, urllib.error
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+HOME = pathlib.Path.home()
+ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
+SETTINGS = HOME / ".config/hyprfrijol/settings.json"
+STATE = HOME / ".local/state/hyprfrijol"
+CACHE = HOME / ".cache/hyprfrijol/wallhaven"
+SEEN = CACHE / ".seen.json"
+API = os.environ.get("HF_WALLHAVEN_API") or "https://wallhaven.cc/api/v1"
+SECRETS = HOME / ".config/hyprfrijol/secrets"
+SECRET_ATTRS = ["service", "hyprfrijol", "provider", "wallhaven"]
+UA = {"User-Agent": "hyprfrijol (https://github.com/fsanchezlme97-ui/hyprfrijol)"}
+CATS = ("general", "anime", "people")
+PURS = ("sfw", "sketchy", "nsfw")
+SORTS = ("toplist", "random", "date_added", "relevance", "views", "favorites", "hot")
+RANGES = ("1d", "3d", "1w", "1M", "3M", "6M", "1y")
+
+
+def load(p, d=None):
+    try:
+        return json.loads(pathlib.Path(p).read_text())
+    except Exception:
+        return d
+
+
+def settings():
+    s = dict(load(ROOT / "config/defaults/settings.json", {}) or {})
+    s.update(load(SETTINGS, {}) or {})
+    return s
+
+
+def run(cmd, timeout=10, input=None):
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, input=input)
+        return r.stdout.strip()
+    except Exception:
+        return ""
+
+
+# ---------------------------------------------------------------- clave (como la de Gemini en hf-ai)
+def _keyring_ok():
+    return bool(shutil.which("secret-tool")) and not (os.environ.get("HF_AI_NO_KEYRING") or os.environ.get("HF_WALLHAVEN_NO_KEYRING"))
+
+
+def api_key():
+    if os.environ.get("WALLHAVEN_API_KEY", "").strip():
+        return os.environ["WALLHAVEN_API_KEY"].strip(), "env:WALLHAVEN_API_KEY"
+    if _keyring_ok():
+        k = run(["secret-tool", "lookup", *SECRET_ATTRS], timeout=5)
+        if k:
+            return k, "llavero"
+    try:
+        k = (SECRETS / "wallhaven.key").read_text().strip()
+        if k:
+            return k, "archivo"
+    except Exception:
+        pass
+    return "", ""
+
+
+def key_clear():
+    if _keyring_ok():
+        run(["secret-tool", "clear", *SECRET_ATTRS], timeout=5)
+    (SECRETS / "wallhaven.key").unlink(missing_ok=True)
+    return {"ok": True}
+
+
+def key_set(key):
+    key = (key or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9]{16,64}", key):
+        return {"ok": False, "error": "Eso no parece una clave de Wallhaven (wallhaven.cc › Ajustes › Cuenta › Clave de API)"}
+    key_clear()
+    if _keyring_ok():
+        try:
+            r = subprocess.run(["secret-tool", "store", "--label=hyprfrijol · clave de Wallhaven", *SECRET_ATTRS],
+                               input=key, capture_output=True, text=True, timeout=60)
+            if r.returncode == 0 and run(["secret-tool", "lookup", *SECRET_ATTRS], timeout=5) == key:
+                return {"ok": True, "where": "llavero"}
+        except Exception:
+            pass
+    SECRETS.mkdir(parents=True, exist_ok=True)
+    os.chmod(SECRETS, 0o700)
+    f = SECRETS / "wallhaven.key"
+    fd = os.open(f, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as h:
+        h.write(key + "\n")
+    os.chmod(f, 0o600)
+    return {"ok": True, "where": "archivo"}
+
+
+def key_status():
+    k, where = api_key()
+    return {"stored": bool(k), "where": where, "hint": (k[:3] + "…" + k[-3:]) if len(k) > 10 else ""}
+
+
+# ---------------------------------------------------------------- API
+class WHError(Exception):
+    pass
+
+
+def http(url, headers=None, timeout=20):
+    req = urllib.request.Request(url, headers={**UA, **(headers or {})})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.read()
+    except urllib.error.HTTPError as e:
+        raise WHError({401: "La clave de Wallhaven no es válida", 429: "Demasiadas búsquedas seguidas: espera un minuto",
+                       404: "No existe en Wallhaven"}.get(e.code, f"Wallhaven respondió {e.code}"))
+    except urllib.error.URLError:
+        raise WHError("Sin conexión con wallhaven.cc")
+
+
+def monitor_res():
+    try:
+        mons = json.loads(run(["hyprctl", "monitors", "-j"]) or "[]")
+        best = max(mons, key=lambda m: m.get("width", 0) * m.get("height", 0))
+        w, h = int(best["width"]), int(best["height"])
+        if best.get("transform", 0) in (1, 3, 5, 7):
+            w, h = h, w
+        return f"{w}x{h}"
+    except Exception:
+        return ""
+
+
+def bits(chosen, names):
+    return "".join("1" if n in chosen else "0" for n in names)
+
+
+def params(over=None):
+    s, o = settings(), over or {}
+    q = o.get("q", s.get("wallhavenQuery", ""))
+    cats = o.get("categories") or s.get("wallhavenCategories") or ["general"]
+    cats = [c for c in (cats.split(",") if isinstance(cats, str) else cats) if c in CATS] or ["general"]
+    pur = o.get("purity") or s.get("wallhavenPurity") or ["sfw"]
+    pur = [p for p in (pur.split(",") if isinstance(pur, str) else pur) if p in PURS] or ["sfw"]
+    key, _ = api_key()
+    if not key:
+        pur = [p for p in pur if p != "nsfw"] or ["sfw"]     # sin clave la API no da NSFW
+    sorting = o.get("sorting") or s.get("wallhavenSorting") or "toplist"
+    sorting = sorting if sorting in SORTS else "toplist"
+    res = o.get("atleast") or s.get("wallhavenMinRes") or "auto"
+    res = monitor_res() if res == "auto" else res
+    p = {"q": q, "categories": bits(cats, CATS), "purity": bits(pur, PURS), "sorting": sorting, "page": str(o.get("page") or 1)}
+    if re.fullmatch(r"\d{3,5}x\d{3,5}", res or ""):
+        p["atleast"] = res
+    if sorting == "toplist":
+        rg = o.get("range") or s.get("wallhavenTopRange") or "1M"
+        p["topRange"] = rg if rg in RANGES else "1M"
+    if sorting == "random":
+        p["seed"] = o.get("seed") or "".join(random.choice("abcdefghijkmnpqrstuvwxyz23456789") for _ in range(6))
+    return {k: v for k, v in p.items() if v != ""}, key
+
+
+def search(over=None):
+    p, key = params(over)
+    try:
+        raw = http(API + "/search?" + urllib.parse.urlencode(p), {"X-API-Key": key} if key else None)
+        d = json.loads(raw)
+    except WHError as e:
+        return {"results": [], "error": str(e), "params": p}
+    except Exception:
+        return {"results": [], "error": "Respuesta no válida de Wallhaven", "params": p}
+    out = []
+    for x in d.get("data") or []:
+        if x.get("purity") not in PURS:
+            continue
+        out.append({"id": x.get("id"), "url": x.get("url"), "full": x.get("path"), "thumb": (x.get("thumbs") or {}).get("small"),
+                    "thumbLarge": (x.get("thumbs") or {}).get("large"), "resolution": x.get("resolution"),
+                    "size": x.get("file_size"), "type": x.get("file_type"), "purity": x.get("purity"),
+                    "category": x.get("category"), "cached": str(cached(x.get("id")) or "")})
+    m = d.get("meta") or {}
+    return {"results": out, "page": m.get("current_page", 1), "last_page": m.get("last_page", 1), "total": m.get("total", len(out)),
+            "seed": m.get("seed"), "params": p, "error": None}
+
+
+def cached(wid):
+    if not wid or not re.fullmatch(r"[a-z0-9]{4,12}", str(wid)):
+        return None
+    for f in CACHE.glob(f"wallhaven-{wid}.*") if CACHE.is_dir() else []:
+        if f.suffix != ".part" and f.stat().st_size > 0:
+            return f
+    return None
+
+
+def info(wid):
+    key, _ = api_key()
+    d = json.loads(http(f"{API}/w/{wid}", {"X-API-Key": key} if key else None))
+    return d.get("data") or {}
+
+
+def fetch(wid, full=None):
+    wid = str(wid or "").strip()
+    m = re.search(r"wallhaven-([a-z0-9]+)\.", wid) or re.search(r"(?:wallhaven\.cc/w/|whvn\.cc/)([a-z0-9]+)", wid)
+    if m:
+        wid = m.group(1)
+    if not re.fullmatch(r"[a-z0-9]{4,12}", wid):
+        return {"ok": False, "error": "Id de Wallhaven no válido"}
+    f = cached(wid)
+    if f:
+        os.utime(f)
+        return {"ok": True, "path": str(f), "id": wid}
+    try:
+        if not full:
+            x = info(wid)
+            if x.get("purity") == "nsfw" and "nsfw" not in (settings().get("wallhavenPurity") or ["sfw"]):
+                return {"ok": False, "error": "Ese fondo no es apto (NSFW) y lo tienes desactivado"}
+            full = x.get("path")
+        if not full or not full.startswith("https://w.wallhaven.cc/"):
+            return {"ok": False, "error": "Wallhaven no dio la imagen"}
+        CACHE.mkdir(parents=True, exist_ok=True)
+        dst = CACHE / os.path.basename(urllib.parse.urlparse(full).path)
+        tmp = dst.with_name(dst.name + ".part")
+        tmp.write_bytes(http(full, timeout=90))
+        os.replace(tmp, dst)
+    except WHError as e:
+        return {"ok": False, "error": str(e)}
+    prune()
+    return {"ok": True, "path": str(dst), "id": wid}
+
+
+# ---------------------------------------------------------------- caché
+def cache_files():
+    return sorted([f for f in CACHE.glob("wallhaven-*") if f.is_file() and f.suffix != ".part"], key=lambda f: f.stat().st_mtime) \
+        if CACHE.is_dir() else []
+
+
+def current_wallpaper():
+    try:
+        return (STATE / "wallpaper-path").read_text().strip()
+    except Exception:
+        return ""
+
+
+def prune(limit_mb=None):
+    if limit_mb is None:
+        limit_mb = settings().get("wallhavenCacheMB", 500)
+    limit = max(0, int(limit_mb if isinstance(limit_mb, (int, float)) else 500)) * 1024 * 1024
+    files = cache_files()
+    total = sum(f.stat().st_size for f in files)
+    cur = current_wallpaper()
+    removed = 0
+    for f in files:           # los más antiguos primero; nunca el fondo puesto ahora
+        if total <= limit:
+            break
+        if str(f) == cur:
+            continue
+        total -= f.stat().st_size
+        f.unlink(missing_ok=True)
+        removed += 1
+    return {"removed": removed, "bytes": total}
+
+
+def cache_info():
+    files = cache_files()
+    return {"files": len(files), "bytes": sum(f.stat().st_size for f in files), "limit_mb": int(settings().get("wallhavenCacheMB", 500) if isinstance(settings().get("wallhavenCacheMB", 500), (int, float)) else 500),
+            "dir": str(CACHE)}
+
+
+def cache_clear():
+    cur = current_wallpaper()
+    n = 0
+    for f in cache_files():
+        if str(f) != cur:
+            f.unlink(missing_ok=True); n += 1
+    SEEN.unlink(missing_ok=True)
+    return {"ok": True, "removed": n}
+
+
+# ---------------------------------------------------------------- rotación y «añadir a mis fondos»
+def next_wallpaper():
+    """Uno que no se haya puesto aún (recuerda los últimos 200); si no hay red, uno de la caché."""
+    seen = load(SEEN, []) or []
+    cur = current_wallpaper()
+    s = settings()
+    pick = None
+    r = search({"page": random.randint(1, 3) if s.get("wallhavenSorting", "toplist") == "toplist" else 1})
+    fresh = [x for x in r["results"] if x["id"] not in seen]
+    if fresh:
+        pick = random.choice(fresh[:12])
+        res = fetch(pick["id"], pick.get("full"))
+        if res.get("ok"):
+            seen = (seen + [pick["id"]])[-200:]
+            CACHE.mkdir(parents=True, exist_ok=True)
+            SEEN.write_text(json.dumps(seen))
+            return res["path"]
+    pool = [str(f) for f in cache_files() if str(f) != cur]
+    return random.choice(pool) if pool else ""
+
+
+def add_to_mine(src):
+    p = pathlib.Path(os.path.expanduser(src))
+    if not p.is_file():
+        r = fetch(src)
+        if not r.get("ok"):
+            return r
+        p = pathlib.Path(r["path"])
+    out = run([str(ROOT / "scripts/hf-wallpaper"), "add", str(p)], timeout=30).splitlines()
+    return {"ok": bool(out), "path": out[-1] if out else "", **({} if out else {"error": "No se pudo copiar"})}
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__); return 0
+    cmd, rest = argv[0], argv[1:]
+    if cmd == "search":
+        over, i = {}, 0
+        while i < len(rest):
+            a = rest[i]
+            if a.startswith("--") and i + 1 < len(rest):
+                over[a[2:]] = rest[i + 1]; i += 2
+            else:
+                over["q"] = (over.get("q", "") + " " + a).strip(); i += 1
+        out = search(over)
+    elif cmd == "fetch":
+        out = fetch(rest[0] if rest else "")
+    elif cmd == "next":
+        p = next_wallpaper()
+        if p:
+            print(p); return 0
+        return 1
+    elif cmd == "add":
+        out = add_to_mine(rest[0] if rest else "")
+    elif cmd == "set":
+        out = fetch(rest[0] if rest else "")
+        if out.get("ok"):
+            os.execv(str(ROOT / "scripts/hf-wallpaper"), [str(ROOT / "scripts/hf-wallpaper"), out["path"]])
+    elif cmd == "cache":
+        sub = rest[0] if rest else ""
+        out = cache_clear() if sub == "clear" else prune() if sub == "prune" else cache_info()
+    elif cmd == "key":
+        sub = rest[0] if rest else "status"
+        if sub == "set":
+            out = key_set(os.environ.get("HF_WALLHAVEN_KEY_IN") or ("" if sys.stdin.isatty() else sys.stdin.read()))
+        elif sub == "clear":
+            out = key_clear()
+        else:
+            out = key_status()
+    else:
+        print(f"Orden desconocida: {cmd}", file=sys.stderr); return 2
+    print(json.dumps(out, ensure_ascii=False))
+    return 0 if out.get("ok", not out.get("error")) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

@@ -117,6 +117,20 @@ RowLayout {
                     text: "Apps de GNOME (Archivos, Loupe, Papers, Showtime…) si están instaladas. El navegador no se toca."
                 }
             }
+            RowLayout {   // las de serie de install/apps.json (también Chrome como navegador): scripts/hf-apps defaults
+                Layout.fillWidth: true
+                spacing: 10
+                Button {
+                    text: serieDefaults.running ? "Aplicando…" : "Usar las de serie"
+                    enabled: !serieDefaults.running
+                    onClicked: serieDefaults.running = true
+                }
+                Process { id: serieDefaults; command: [Paths.script("hf-apps"), "defaults"]; onExited: root.reload() }
+                Txt {
+                    Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                    text: "Las de serie de HyprFrijol que tengas: Chrome para la web, Loupe, Papers, Showtime, Decibels, Editor de texto, File Roller…"
+                }
+            }
         }
     }
 

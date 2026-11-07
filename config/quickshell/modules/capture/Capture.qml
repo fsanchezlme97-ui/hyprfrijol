@@ -67,7 +67,9 @@ Scope {
     property rect recRect: Qt.rect(0, 0, 0, 0)
     property var recScreen: null
 
-    readonly property bool shown: Shell.view === "captura"
+    property bool ready: false      // ver components/Overlay (carga diferida)
+    Component.onCompleted: Qt.callLater(() => root.ready = true)
+    readonly property bool shown: ready && Shell.view === "captura"
     readonly property string hc: Paths.script("hf-capture")
     readonly property real dpr: capWin.width > 0 && bg.implicitWidth > 0 ? bg.implicitWidth / capWin.width : 1
     readonly property var inks: [["Naranja", "#E0603F"], ["Amarillo", "#D9A400"], ["Verde", "#3E9D6E"], ["Azul", "#4A7BD0"]]
@@ -1235,21 +1237,16 @@ Scope {
         }
     }
 
-    IpcHandler {
-        target: "capture"
-        // qs … ipc call capture region 380 200 680 440   (abre la vista con esa zona elegida)
-        function region(x: int, y: int, w: int, h: int): void {
-            root.mode = "region";
-            if (root.shown && root.frozen) { root.sel = Qt.rect(x, y, w, h); root.stage = "listo"; }
-            else { root.preset = Qt.rect(x, y, w, h); Shell.open("captura"); }
-        }
-        // qs … ipc call capture run texto   (copiar | guardar | anotar | editar | fijar | texto | lens | ia | grabar)
-        function run(action: string): void { root.run(action); }
-        function stop(): void { if (root.recording) root.stopRec(); }
-        function shoot(): void { if (root.shown) root.run(root.kind === "video" ? "grabar" : "copiar"); }
-        function status(): string { return root.recording ? "recording " + root.recFile : root.stage; }
-        function unpinAll(): void { root.pins = []; }
+    // IPC "capture" (en modules/Modules.qml, siempre cargado; llama a estas funciones):
+    function ipcRegion(x: int, y: int, w: int, h: int): void {
+        mode = "region";
+        if (shown && frozen) { sel = Qt.rect(x, y, w, h); stage = "listo"; }
+        else { preset = Qt.rect(x, y, w, h); Shell.open("captura"); }
     }
+    function ipcShoot(): void { if (shown) run(kind === "video" ? "grabar" : "copiar"); }
+    function ipcStatus(): string { return recording ? "recording " + recFile : stage; }
+    // Carga diferida: no se descarga mientras graba, hay capturas fijadas o queda trabajo pendiente
+    readonly property bool busyState: recording || pins.length > 0 || stage !== "off" || busy !== "" || exporting || countdown > 0 || toast !== ""
 
     // ── Indicador de grabación (fuera de la zona grabada) ───────────────
     PanelWindow {

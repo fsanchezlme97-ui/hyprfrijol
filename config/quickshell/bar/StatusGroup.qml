@@ -18,6 +18,7 @@ Rectangle {
     property bool vertical: false
     readonly property bool on: Shell.view === "ajustes"
     readonly property bool hovered: mIcons.containsMouse || mBell.containsMouse || mClock.containsMouse
+    onHoveredChanged: if (hovered) Shell.preload("ajustes")   // carga diferida: el centro de control, mientras llega el clic
     readonly property bool showBell: Settings.barHas("notificaciones")
     readonly property bool showClock: Settings.barHas("reloj")
     implicitHeight: vertical ? vcol.implicitHeight + 12 : 24

@@ -17,6 +17,7 @@ Rectangle {
     signal rightClicked()
     implicitWidth: 26
     implicitHeight: 22
+    property string preload: ""          // vista que abre: al pasar el cursor se va cargando (Shell.preload)
     radius: Theme.pill ? Math.min(width, height) / 2 + 2 : Theme.r(7)
     scale: Theme.estilo !== "flat" && mouse.pressed ? 0.92 : 1
     Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
@@ -37,6 +38,7 @@ Rectangle {
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
+        onEntered: if (root.preload) Shell.preload(root.preload)
         onPressed: m => rip.burst(m.x, m.y)
         onClicked: m => m.button === Qt.RightButton ? root.rightClicked() : root.clicked()
     }

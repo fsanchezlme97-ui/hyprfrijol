@@ -226,4 +226,44 @@ ColumnLayout {
             SwRow { label: "Guardar historial de conversaciones"; sub: "~/.local/share/hyprfrijol/ai"; key: "aiHistory"; def: true }
         }
     }
+
+    // «Aprobar siempre esta acción» (tarjeta del plan en el panel): aiAlwaysApprove, con su nombre de `hf-ai approvals`
+    readonly property var always: Settings.get("aiAlwaysApprove", [])
+    property var alwaysLabels: ({})
+    onAlwaysChanged: { appr.running = false; appr.running = true; }
+    Process {
+        id: appr
+        running: true
+        command: [Paths.script("hf-ai"), "approvals"]
+        stdout: StdioCollector { onStreamFinished: { try { const m = {}; JSON.parse(text).forEach(x => m[x.kind] = x.label); root.alwaysLabels = m; } catch (e) {} } }
+    }
+    Section {
+        Layout.fillWidth: true
+        title: "Aprobadas siempre"
+        headerRight: Button { visible: root.always.length > 0; text: "Quitar todas"; h: 26; onClicked: Settings.set("aiAlwaysApprove", []) }
+        Txt {
+            Layout.fillWidth: true
+            text: root.always.length
+                ? "Estas acciones se aplican sin preguntar (siguen pudiéndose deshacer). Lo que no tiene vuelta atrás —cerrar ventanas, expulsar, cancelar descargas, comandos— pregunta siempre."
+                : "Ninguna. En el panel de la IA, bajo cada paso propuesto, «Aprobar siempre esta acción» hace que esa acción no vuelva a preguntar."
+            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+        }
+        Repeater {
+            model: root.always
+            RowLayout {
+                required property string modelData
+                Layout.fillWidth: true
+                spacing: 10
+                Txt { Layout.fillWidth: true; text: root.alwaysLabels[parent.modelData] ?? parent.modelData; weight: Font.DemiBold }
+                Txt { text: parent.modelData; muted: true; size: 11; font.family: Theme.mono }
+                Button { text: "Revocar"; h: 26; onClicked: Settings.set("aiAlwaysApprove", root.always.filter(k => k !== parent.modelData)) }
+            }
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            Txt { Layout.fillWidth: true; text: "Presentación del asistente (qué puede hacer y ejemplos)"; muted: true; size: 11.5 }
+            Button { text: "Volver a verla"; kind: "link"; enabled: Settings.get("aiOnboarded", false) === true; onClicked: Settings.set("aiOnboarded", false) }
+        }
+    }
 }

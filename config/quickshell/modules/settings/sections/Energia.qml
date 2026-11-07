@@ -230,6 +230,16 @@ RowLayout {
     }
     Section {
         Layout.fillWidth: true
+        title: "Memoria del escritorio"
+        headerRight: Mono { text: "components/LazyView" }
+        SwRow {
+            label: "Cargar los paneles al abrirlos"
+            sub: "Spotlight, centro de control, vista general… solo ocupan memoria mientras se usan. Apágalo solo para depurar"
+            key: "lazyModules"; def: true
+        }
+    }
+    Section {
+        Layout.fillWidth: true
         title: "Tapa y botón de encendido"
         headerRight: Mono { text: "logind.conf.d" }
         LabeledRow {

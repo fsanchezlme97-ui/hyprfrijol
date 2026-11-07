@@ -10,6 +10,7 @@
 #     -r WxH           resolución de la pantalla virtual (por defecto 1440x900, la del diseño)
 #     -x 'CMD'         sonda: comando que corre en la sesión anidada (hyprctl, $QS ipc …) antes de la captura
 #     -s 'k=v …'       ajustes temporales (hf-apply set) solo para esta prueba; se restauran al acabar
+#     -S               modo seguro: arranca hf-session --safe (config/hypr/safe.lua, sin Quickshell)
 #
 # Para probar un módulo que aún no está en modules/Modules.qml:
 #   HF_DEV_MODULES="modules/spotlight/Spotlight.qml,modules/x/Otro.qml" dev/try.sh spotlight
@@ -17,8 +18,8 @@
 # Imprime los avisos/errores de Quickshell. Compara la captura con design/capturas/<Pantalla>.png
 set -uo pipefail
 ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
-OUT=""; WAIT=9; EXTRA=""; KEEP=0; SETS=""; PROBE=""; RES="1440x900"
-while getopts "o:w:c:ks:x:r:" o; do case $o in r) RES=$OPTARG;; o) OUT=$OPTARG;; w) WAIT=$OPTARG;; c) EXTRA=$OPTARG;; k) KEEP=1;; s) SETS=$OPTARG;; x) PROBE=$OPTARG;; *) exit 1;; esac; done
+OUT=""; WAIT=9; EXTRA=""; KEEP=0; SETS=""; PROBE=""; RES="1440x900"; SAFE=""
+while getopts "o:w:c:ks:x:r:S" o; do case $o in S) SAFE=--safe;; r) RES=$OPTARG;; o) OUT=$OPTARG;; w) WAIT=$OPTARG;; c) EXTRA=$OPTARG;; k) KEEP=1;; s) SETS=$OPTARG;; x) PROBE=$OPTARG;; *) exit 1;; esac; done
 shift $((OPTIND-1))
 VIEWS=("$@")
 NAME="${VIEWS[0]:-escritorio}"
@@ -38,7 +39,7 @@ export HF_TRY=1
 # para no interrumpir lo que estés haciendo. Verla:  hyprctl dispatch 'hl.dsp.workspace.toggle_special("hftry")'
 hyprctl eval 'hl.window_rule({ name = "hf-try-hidden", match = { class = "^aquamarine$" }, workspace = "special:hftry silent", no_initial_focus = true })' >/dev/null 2>&1 || true
 # Bus de sesión propio: notificaciones, polkit y bandeja van a la sesión de prueba, no a la tuya
-dbus-run-session -- "$ROOT/scripts/hf-session" --nested >"$LOG" 2>&1 &
+dbus-run-session -- "$ROOT/scripts/hf-session" --nested $SAFE >"$LOG" 2>&1 &
 PID=$!
 cleanup() {
   if [ "$KEEP" = 0 ]; then
@@ -92,8 +93,13 @@ if [ -n "$PROBE" ]; then
   [ "$NBUS" = none ] || WAYLAND_DISPLAY=$SOCK DBUS_SESSION_BUS_ADDRESS=$NBUS QS="$QS" sh -c "$PROBE"
 fi
 WAYLAND_DISPLAY=$SOCK grim -o HF-TRY "$OUT" && echo "captura: $OUT"
+if [ -n "$SAFE" ]; then   # modo seguro: no debe haber Quickshell en la sesión de prueba
+  n=0; for q in $(pgrep -x qs; pgrep -x quickshell); do tr '\0' '\n' < /proc/$q/environ 2>/dev/null | grep -qx "HYPRLAND_INSTANCE_SIGNATURE=$SIG" && n=$((n+1)); done
+  echo "--- modo seguro: Quickshell en la sesión de prueba: $n (debe ser 0) ---"
+else
 echo "--- quickshell (avisos y errores) ---"
 WAYLAND_DISPLAY=$SOCK qs log -p "$ROOT/config/quickshell" 2>/dev/null | grep -E -A3 "WARN|ERROR|caused by" | grep -vE "notification server|Registration will be attempted|placeholder screen|does not correspond to a real screen" | sort | uniq -c | head -40
+fi
 if [ "$KEEP" = 1 ]; then
   echo "Sesión abierta: HYPRLAND_INSTANCE_SIGNATURE=$SIG WAYLAND_DISPLAY=$SOCK  (pid $PID)"
   trap - EXIT

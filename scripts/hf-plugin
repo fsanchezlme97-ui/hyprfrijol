@@ -1,0 +1,514 @@
+#!/usr/bin/env python3
+"""hf-plugin — plugins y temas de Omarchy en hyprfrijol (capa de compatibilidad).
+
+Los plugins de la shell de Omarchy (Quickshell, `manifest.json` + `entryPoints`) se guardan en
+  ~/.local/share/hyprfrijol/plugins/<id>/
+y su estado (activados, en la barra, ajustes por widget, «probado», origen) en
+  ~/.config/hyprfrijol/omarchy-plugins.json
+Quickshell (modules/omarchy, services/OmarchyPlugins.qml) solo enseña y carga lo que dice `hf-plugin list --json`.
+
+  hf-plugin add <url-git|carpeta> [--yes] [--enable]   copia o clona (git clone es tu acción) y valida; NO ejecuta nada
+  hf-plugin remove <id> [--yes]                        lo desactiva y borra su carpeta
+  hf-plugin list [--json]                              instalados: id, activo, tipos, origen, «probado / no probado»
+  hf-plugin info <id>                                  manifiesto y estado (JSON)
+  hf-plugin enable <id> [--yes] [--no-bar]             lo activa (pregunta antes: es código sin aislar)
+  hf-plugin disable <id>
+  hf-plugin bar <id> on|off                            pone o quita su widget de la barra
+  hf-plugin set <id> '<json>'                          ajustes del widget (lo que en Omarchy va en shell.json)
+  hf-plugin mark <id> probado|no-probado               marca si lo has probado en hyprfrijol
+  hf-plugin validate <carpeta>                         las mismas comprobaciones que `omarchy plugin validate`
+  hf-plugin summon|toggle <id> [payload] · hide <id>   lo abre/cierra en la shell (= omarchy-shell shell summon)
+  hf-plugin rescan                                     la shell vuelve a leer los plugins
+  hf-plugin theme <colors.toml|carpeta|url-git> [--name N] [--apply] [--yes]
+                                                       importa un tema de Omarchy a la lista de paletas
+                                                       (~/.config/hyprfrijol/palettes-user.json)
+  hf-plugin themes · theme-remove <clave>              temas importados
+
+Formato (leído el 2026-11-07 de github.com/omacom/omarchy, rama quattro):
+  docs/omarchy-shell.md, manual/32-shell-plugins.md, bin/omarchy-plugin-validate, shell/services/PluginRegistry.qml,
+  bin/omarchy-theme-color (colors.toml). Catálogo: github.com/omacom/omarchy-plugin-marketplace (site/catalog.json).
+"""
+import json, os, re, shutil, subprocess, sys, tempfile, time, pathlib
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+HOME = pathlib.Path.home()
+ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
+DATA = pathlib.Path(os.environ.get("XDG_DATA_HOME") or HOME / ".local/share") / "hyprfrijol"
+PLUGINS = DATA / "plugins"
+USER = HOME / ".config/hyprfrijol"
+STATE = USER / "omarchy-plugins.json"
+USER_PALETTES = USER / "palettes-user.json"
+TESTED = ROOT / "config/omarchy/probados.json"
+
+KIND_ENTRY = {"bar": "bar", "bar-widget": "barWidget", "menu": "menu", "overlay": "overlay", "panel": "panel", "service": "service"}
+SUPPORTED = {"bar-widget", "panel", "overlay", "menu", "service"}     # «bar» (barra completa): no
+SECTIONS = ["left", "centerBegin", "center", "centerEnd", "right", "tray"]
+ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]*$")
+
+WARNING = ("Los plugins de Omarchy son código sin aislar: se ejecutan dentro de la shell con todo lo que puede\n"
+           "hacer tu usuario (archivos, red, procesos). Léelo antes de activarlo y añade solo lo que te fíes.")
+
+def die(msg, code=1):
+    print(f"hf-plugin: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+def load(p, default=None):
+    try:
+        return json.loads(pathlib.Path(p).read_text())
+    except Exception:
+        return default
+
+def save_json(p, data):
+    p = pathlib.Path(p)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_name(p.name + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    tmp.replace(p)
+
+def state():
+    s = load(STATE, {}) or {}
+    s.setdefault("version", 1)
+    for k, d in (("enabled", []), ("bar", []), ("settings", {}), ("tested", {}), ("sources", {})):
+        if not isinstance(s.get(k), type(d)): s[k] = d
+    return s
+
+def save_state(s):
+    s["rev"] = int(s.get("rev", 0)) + 1          # la shell vigila este archivo: cualquier cambio = volver a leer
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    STATE.write_text(json.dumps(s, indent=2, ensure_ascii=False) + "\n")   # en el sitio (no rename): sigue vigilado
+
+def confirm(prompt, yes):
+    if yes: return True
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        die("hace falta confirmación; repite con --yes")
+    try:
+        return input(f"{prompt} [s/N] ").strip().lower() in ("s", "si", "sí", "y", "yes")
+    except EOFError:
+        return False
+
+# ---------------------------------------------------------------- validación (= omarchy-plugin-validate)
+def safe_entry(ep):
+    return isinstance(ep, str) and ep != "" and "\n" not in ep and not ep.startswith("/") and ".." not in ep
+
+def validate(d):
+    """→ (manifest | None, [errores], [avisos])"""
+    d = pathlib.Path(d)
+    errs, warns = [], []
+    mf = d / "manifest.json"
+    if not mf.is_file() or mf.is_symlink():
+        return None, ["no hay manifest.json en la raíz"], warns
+    try:
+        m = json.loads(mf.read_text())
+    except Exception as e:
+        return None, [f"manifest.json no es JSON válido: {e}"], warns
+    if not isinstance(m, dict):
+        return None, ["manifest.json no es un objeto"], warns
+    if m.get("schemaVersion") != 1:
+        errs.append("schemaVersion debe ser 1")
+    for f in ("id", "name", "version", "kinds", "entryPoints"):
+        if f not in m: errs.append(f"falta el campo «{f}»")
+    pid = str(m.get("id", ""))
+    if pid and (not ID_RE.match(pid) or ".." in pid):
+        errs.append(f"id no válido: «{pid}»")
+    if pid.startswith("omarchy."):
+        errs.append("el espacio «omarchy.» está reservado a los plugins de Omarchy")
+    kinds = m.get("kinds")
+    if not isinstance(kinds, list) or not kinds:
+        errs.append("«kinds» debe ser una lista no vacía"); kinds = []
+    eps = m.get("entryPoints")
+    if not isinstance(eps, dict):
+        errs.append("«entryPoints» debe ser un objeto"); eps = {}
+    for k, ep in eps.items():
+        if not safe_entry(ep): errs.append(f"entryPoints.{k} no es una ruta relativa segura: «{ep}»")
+        elif not (d / ep).is_file(): errs.append(f"entryPoints.{k}: no existe «{ep}»")
+    for kind in kinds:
+        key = KIND_ENTRY.get(kind)
+        if key and key not in eps: errs.append(f"el tipo «{kind}» necesita entryPoints.{key}")
+        if kind not in KIND_ENTRY: warns.append(f"tipo desconocido «{kind}» (se ignora)")
+    bw = m.get("barWidget")
+    if isinstance(bw, dict) and "defaultSection" in bw and bw["defaultSection"] not in SECTIONS:
+        errs.append("barWidget.defaultSection no válido")
+    for root, dirs, files in os.walk(d):
+        if ".git" in dirs: dirs.remove(".git")
+        for n in dirs + files:
+            if os.path.islink(os.path.join(root, n)):
+                errs.append(f"no se permiten enlaces simbólicos: {os.path.relpath(os.path.join(root, n), d)}")
+                break
+    if "bar" in kinds:
+        warns.append("«bar» (barra completa) no está soportado en hyprfrijol")
+    return (m if not errs else None), errs, warns
+
+# ---------------------------------------------------------------- listado
+def tested_list():
+    t = load(TESTED, {}) or {}
+    return t.get("plugins", {}) if isinstance(t, dict) else {}
+
+def plugin_info(d, s, shipped):
+    m, errs, warns = validate(d)
+    raw = load(d / "manifest.json", {}) or {}
+    pid = str((m or raw).get("id") or d.name) if isinstance(raw, dict) else d.name
+    if m and pid != d.name:
+        warns.append(f"la carpeta se llama «{d.name}» y el id es «{pid}»")
+    kinds = [k for k in (raw.get("kinds") or []) if isinstance(k, str)] if isinstance(raw, dict) else []
+    eps = raw.get("entryPoints") if isinstance(raw, dict) and isinstance(raw.get("entryPoints"), dict) else {}
+    sup = [k for k in kinds if k in SUPPORTED]
+    bw = raw.get("barWidget") if isinstance(raw.get("barWidget"), dict) else None
+    defaults = (bw or {}).get("defaults") if isinstance((bw or {}).get("defaults"), dict) else {}
+    settings = dict(defaults); settings.update(s["settings"].get(pid, {}) or {})
+    mark = s["tested"].get(pid)
+    if mark is None and pid in shipped:
+        tested, by = "probado", "hyprfrijol"
+    else:
+        tested, by = ("probado", "tú") if mark else ("no-probado", "")
+    valid = m is not None
+    return {
+        "id": pid, "dir": str(d), "valid": valid, "errors": errs, "warnings": warns,
+        "name": str(raw.get("name") or pid), "version": str(raw.get("version") or ""),
+        "author": str(raw.get("author") or ""), "description": str(raw.get("description") or ""),
+        "license": str(raw.get("license") or ""),
+        "kinds": kinds, "supportedKinds": sup, "unsupportedKinds": [k for k in kinds if k not in SUPPORTED],
+        "supported": valid and bool(sup),
+        "keepLoaded": raw.get("keepLoaded") is True,
+        "entryUrls": {k: "file://" + str((d / v).resolve()) for k, v in eps.items() if safe_entry(v) and (d / v).is_file()},
+        "barWidget": bw, "settings": settings,
+        "enabled": valid and bool(sup) and pid in s["enabled"],
+        "inBar": valid and "bar-widget" in kinds and pid in s["enabled"] and pid in s["bar"],
+        "barIndex": s["bar"].index(pid) if pid in s["bar"] else -1,
+        "source": s["sources"].get(pid, {"type": "manual", "where": str(d)}),
+        "tested": tested, "testedBy": by,
+        "notes": shipped.get(pid, {}).get("notes", "") if isinstance(shipped.get(pid), dict) else "",
+    }
+
+def all_plugins():
+    s, shipped = state(), tested_list()
+    out = []
+    if PLUGINS.is_dir():
+        for d in sorted(PLUGINS.iterdir()):
+            if d.is_dir() and not d.name.startswith("."):
+                out.append(plugin_info(d, s, shipped))
+    return out
+
+def find(pid):
+    for p in all_plugins():
+        if p["id"] == pid or pathlib.Path(p["dir"]).name == pid:
+            return p
+    die(f"no hay ningún plugin «{pid}» (hf-plugin list)")
+
+# ---------------------------------------------------------------- shell (IPC)
+def qs_ipc(*args):
+    qs = shutil.which("qs") or shutil.which("quickshell")
+    if not qs: die("no encuentro qs (Quickshell)")
+    r = subprocess.run([qs, "-p", str(ROOT / "config/quickshell"), "ipc", "call", *args], capture_output=True, text=True)
+    out = (r.stdout or r.stderr).strip()
+    if out: print(out)
+    return r.returncode
+
+# ---------------------------------------------------------------- órdenes
+def git_url_ok(u):
+    if u.startswith("-") or "\n" in u: return False
+    if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*::", u): return False        # transportes remotos (ext::, fd::…)
+    return bool(re.match(r"^(https://|http://|ssh://|git://|git@[^:/]+:)", u))
+
+def cmd_add(args):
+    yes, enable = "--yes" in args, "--enable" in args
+    srcs = [a for a in args if not a.startswith("--")]
+    if len(srcs) != 1: die("uso: hf-plugin add <url-git|carpeta> [--yes] [--enable]")
+    src = srcs[0]
+    local = pathlib.Path(os.path.expanduser(src))
+    is_local = local.is_dir()
+    if not is_local and not git_url_ok(src):
+        die(f"«{src}» no es una carpeta ni una URL de git válida (https://, ssh://, git@host:ruta)")
+    print(WARNING)
+    print(f"Origen: {src}")
+    if not confirm("¿Copiarlo a tu carpeta de plugins? (no se ejecuta nada al añadirlo)", yes):
+        die("cancelado", 2)
+    PLUGINS.mkdir(parents=True, exist_ok=True)
+    stage = pathlib.Path(tempfile.mkdtemp(prefix=".add-", dir=PLUGINS))
+    dest_tmp = stage / "p"
+    try:
+        commit = ""
+        if is_local:
+            shutil.copytree(local, dest_tmp, symlinks=True, ignore=shutil.ignore_patterns(".git"))
+            where = str(local.resolve())
+        else:
+            env = dict(os.environ, GIT_TERMINAL_PROMPT="0", GIT_SSH_COMMAND=os.environ.get("GIT_SSH_COMMAND", "ssh -oBatchMode=yes"))
+            r = subprocess.run(["git", "-c", "protocol.ext.allow=never", "-c", "protocol.fd.allow=never",
+                                "clone", "--depth", "1", "--no-recurse-submodules", "--", src, str(dest_tmp)], env=env)
+            if r.returncode != 0: die("git clone falló")
+            commit = subprocess.run(["git", "-C", str(dest_tmp), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+            where = src
+        m, errs, warns = validate(dest_tmp)
+        for w in warns: print(f"aviso: {w}")
+        if not m:
+            die("el plugin no es válido:\n  " + "\n  ".join(errs))
+        pid = m["id"]
+        dest = PLUGINS / pid
+        if dest.exists(): die(f"ya hay un plugin con el id «{pid}» (hf-plugin remove {pid} primero)")
+        dest_tmp.rename(dest)
+    finally:
+        shutil.rmtree(stage, ignore_errors=True)
+    s = state()
+    s["sources"][pid] = {"type": "local" if is_local else "git", "where": where, "commit": commit,
+                         "addedAt": time.strftime("%Y-%m-%d %H:%M")}
+    save_state(s)
+    kinds = ", ".join(m.get("kinds", []))
+    print(f"Añadido «{m.get('name', pid)}» ({pid}) · tipos: {kinds} · {dest}")
+    print("Está DESACTIVADO. Revisa el código y actívalo con:  hf-plugin enable " + pid)
+    if enable: cmd_enable([pid] + (["--yes"] if yes else []))
+
+def cmd_remove(args):
+    yes = "--yes" in args
+    ids = [a for a in args if not a.startswith("--")]
+    if len(ids) != 1: die("uso: hf-plugin remove <id> [--yes]")
+    p = find(ids[0])
+    if not confirm(f"¿Borrar {p['dir']}?", yes): die("cancelado", 2)
+    s = state()
+    pid = p["id"]
+    s["enabled"] = [x for x in s["enabled"] if x != pid]
+    s["bar"] = [x for x in s["bar"] if x != pid]
+    for k in ("settings", "tested", "sources"): s[k].pop(pid, None)
+    d = pathlib.Path(p["dir"])
+    if d.resolve().parent != PLUGINS.resolve(): die("ruta inesperada; no borro nada")
+    shutil.rmtree(d)
+    save_state(s)
+    print(f"Quitado {pid}")
+
+def cmd_list(args):
+    if not STATE.exists(): save_state(state())       # que exista: la shell lo vigila
+    ps = all_plugins()
+    if "--json" in args:
+        print(json.dumps({"dir": str(PLUGINS), "plugins": ps}, ensure_ascii=False)); return
+    if not ps:
+        print(f"No hay plugins de Omarchy en {PLUGINS}"); return
+    for p in ps:
+        st = "activo" if p["enabled"] else ("NO VÁLIDO" if not p["valid"] else "sin soporte" if not p["supported"] else "inactivo")
+        bar = " · en la barra" if p["inBar"] else ""
+        print(f"{p['id']:<36} {st:<11} {p['tested']:<10} {','.join(p['kinds']):<24} {p['name']}{bar}")
+        if not p["valid"]:
+            for e in p["errors"]: print(f"    · {e}")
+
+def cmd_info(args):
+    if len(args) != 1: die("uso: hf-plugin info <id>")
+    print(json.dumps(find(args[0]), indent=2, ensure_ascii=False))
+
+def cmd_enable(args):
+    yes, nobar = "--yes" in args, "--no-bar" in args
+    ids = [a for a in args if not a.startswith("--")]
+    if len(ids) != 1: die("uso: hf-plugin enable <id> [--yes] [--no-bar]")
+    p = find(ids[0])
+    if not p["valid"]: die("no es válido:\n  " + "\n  ".join(p["errors"]))
+    if not p["supported"]: die("hyprfrijol no soporta sus tipos (" + ", ".join(p["kinds"]) + ")")
+    src = p["source"]
+    print(WARNING)
+    print(f"Plugin: {p['name']} ({p['id']}) · origen: {src.get('where', '?')} · {p['tested']}")
+    if not confirm("¿Activarlo?", yes): die("cancelado", 2)
+    s = state()
+    if p["id"] not in s["enabled"]: s["enabled"].append(p["id"])
+    if "bar-widget" in p["kinds"] and not nobar and p["id"] not in s["bar"]: s["bar"].append(p["id"])
+    save_state(s)
+    print(f"Activado {p['id']}")
+
+def cmd_disable(args):
+    if len(args) != 1: die("uso: hf-plugin disable <id>")
+    p = find(args[0])
+    s = state()
+    s["enabled"] = [x for x in s["enabled"] if x != p["id"]]
+    save_state(s)
+    print(f"Desactivado {p['id']}")
+
+def cmd_bar(args):
+    if len(args) != 2 or args[1] not in ("on", "off"): die("uso: hf-plugin bar <id> on|off")
+    p = find(args[0])
+    if "bar-widget" not in p["kinds"]: die("no tiene widget de barra (bar-widget)")
+    s = state()
+    s["bar"] = [x for x in s["bar"] if x != p["id"]] + ([p["id"]] if args[1] == "on" else [])
+    save_state(s)
+
+def cmd_set(args):
+    if len(args) != 2: die("uso: hf-plugin set <id> '<json>'")
+    p = find(args[0])
+    try:
+        v = json.loads(args[1])
+        assert isinstance(v, dict)
+    except Exception:
+        die("los ajustes deben ser un objeto JSON")
+    s = state()
+    cur = dict(s["settings"].get(p["id"], {}) or {}); cur.update(v)
+    s["settings"][p["id"]] = cur
+    save_state(s)
+
+def cmd_mark(args):
+    if len(args) != 2 or args[1] not in ("probado", "no-probado"): die("uso: hf-plugin mark <id> probado|no-probado")
+    p = find(args[0])
+    s = state()
+    s["tested"][p["id"]] = args[1] == "probado"
+    save_state(s)
+
+def cmd_validate(args):
+    if len(args) != 1: die("uso: hf-plugin validate <carpeta>")
+    m, errs, warns = validate(pathlib.Path(args[0]))
+    for w in warns: print(f"aviso: {w}")
+    if not m:
+        for e in errs: print(f"error: {e}")
+        sys.exit(1)
+    print(f"válido: {m['id']} ({', '.join(m['kinds'])})")
+
+# ---------------------------------------------------------------- temas (colors.toml)
+HEX = re.compile(r"^#?[0-9A-Fa-f]{6}$")
+
+def parse_toml(text):
+    try:
+        import tomllib
+        return tomllib.loads(text)
+    except Exception:
+        out = {}
+        for line in text.splitlines():
+            mm = re.match(r'^\s*([A-Za-z0-9_-]+)\s*=\s*["\']?([^"\'#\n]+)', line)
+            if mm: out[mm.group(1)] = mm.group(2).strip()
+        return out
+
+def theme_colors(raw):
+    """Mismo orden de alias que bin/omarchy-theme-color (nombres nuevos y los antiguos color0..15)."""
+    c = {k: ("#" + v.lstrip("#")).upper() for k, v in raw.items() if isinstance(v, str) and HEX.match(v.strip())}
+    def alias(k, f):
+        if not c.get(k) and c.get(f): c[k] = c[f]
+    for k, f in (("darker_background", "darker_bg"), ("dark_background", "dark_bg"), ("lighter_background", "lighter_bg"),
+                 ("light_foreground", "light_fg"), ("dark_foreground", "dark_fg")):
+        alias(k, f)
+    if not c.get("background") and c.get("color0"): c["background"] = c["color0"]
+    if not c.get("foreground") and c.get("color7"): c["foreground"] = c["color7"]
+    for k, f in (("red", "color1"), ("green", "color2"), ("yellow", "color3"), ("blue", "color4"), ("magenta", "color5"),
+                 ("cyan", "color6"), ("bright_red", "color9"), ("bright_green", "color10"), ("bright_yellow", "color11"),
+                 ("bright_blue", "color12"), ("bright_magenta", "color13"), ("bright_cyan", "color14"),
+                 ("magenta", "purple"), ("bright_magenta", "bright_purple")):
+        alias(k, f)
+    if not c.get("background") or not c.get("foreground"):
+        die("el colors.toml no trae background/foreground (ni color0/color7)")
+    c.setdefault("bright_foreground", c.get("color15") or c["foreground"])
+    c.setdefault("light_foreground", c["foreground"])
+    c.setdefault("muted", c.get("color8") or c.get("dark_foreground") or mix(c["foreground"], c["background"], .5))
+    c.setdefault("selection", c.get("selection_background") or c.get("color8") or c["background"])
+    c.setdefault("accent", c.get("blue") or c.get("color4") or c["foreground"])
+    for k in ("red", "green", "yellow", "blue", "magenta", "cyan"):
+        c.setdefault(k, c["accent"]); c.setdefault("bright_" + k, c[k])
+    mode = str(raw.get("mode") or raw.get("theme_type") or "").lower()
+    light = mode == "light" if mode in ("light", "dark") else lum(c["background"]) > 0.5
+    return c, light
+
+def rgb(h): h = h.lstrip("#"); return [int(h[i:i + 2], 16) for i in (0, 2, 4)]
+def hexs(v): return "#%02X%02X%02X" % tuple(max(0, min(255, round(x))) for x in v)
+def mix(a, b, t): return hexs([x + (y - x) * t for x, y in zip(rgb(a), rgb(b))])
+def lum(h):
+    def ch(x):
+        x /= 255
+        return x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4
+    r, g, b = (ch(x) for x in rgb(h))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+def to_palette(name, c, light):
+    """colors.toml → entrada de palettes.json (las mismas claves que las paletas del diseño)."""
+    bg0, fg = c["background"], c["foreground"]
+    p = c["accent"]
+    on_p = mix(p, "#000000", .78) if lum(p) > 0.3 else mix(p, "#FFFFFF", .9)
+    if light:
+        bg = c.get("dark_background") or mix(bg0, "#000000", .04)
+        s1 = bg0
+        s3 = c.get("lighter_background") if c.get("lighter_background") and c["lighter_background"] != bg0 else mix(bg0, fg, .07)
+        s4 = mix(bg0, fg, .13)
+        pc, on_pc = mix(p, "#FFFFFF", .7), mix(p, "#000000", .7)
+    else:
+        bg = c.get("darker_background") or mix(bg0, "#000000", .3)
+        s1 = bg0
+        s3 = c.get("lighter_background") if c.get("lighter_background") and c["lighter_background"] != bg0 else mix(bg0, fg, .08)
+        s4 = c["selection"] if c["selection"] != bg0 else mix(bg0, fg, .14)
+        pc, on_pc = mix(p, bg0, .55), mix(p, "#FFFFFF", .78)
+    sc = mix(c["muted"], s1, .55)
+    ansi = [c["background"], c["red"], c["green"], c["yellow"], c["blue"], c["magenta"], c["cyan"], c["foreground"],
+            c["muted"], c["bright_red"], c["bright_green"], c["bright_yellow"], c["bright_blue"], c["bright_magenta"],
+            c["bright_cyan"], c["bright_foreground"]]
+    return {"name": name, "group": "omarchy", "bg": bg, "s1": s1, "s3": s3, "s4": s4, "p": p, "onP": on_p,
+            "pc": pc, "onPc": on_pc, "sc": sc, "onSc": fg, "ter": c["magenta"] if c["magenta"] != p else c["cyan"],
+            "t": fg, "tv": c["light_foreground"] if c["light_foreground"] != fg else mix(fg, bg0, .3),
+            "o": c["muted"], "ov": s4, "light": light, "ansi": [a.upper() for a in ansi]}
+
+def slug(s):
+    s = re.sub(r"[^a-z0-9]+", "-", s.lower().replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ñ", "n")).strip("-")
+    return s or "tema"
+
+def cmd_theme(args):
+    yes, apply = "--yes" in args, "--apply" in args
+    name = None
+    rest = []
+    it = iter(args)
+    for a in it:
+        if a == "--name": name = next(it, None)
+        elif not a.startswith("--"): rest.append(a)
+    if len(rest) != 1: die("uso: hf-plugin theme <colors.toml|carpeta|url-git> [--name N] [--apply] [--yes]")
+    src = rest[0]
+    tmp = None
+    p = pathlib.Path(os.path.expanduser(src))
+    if not p.exists():
+        if not git_url_ok(src): die(f"«{src}» no es un archivo, una carpeta ni una URL de git")
+        print(f"Se va a clonar {src} (solo se lee su colors.toml; no se ejecuta nada).")
+        if not confirm("¿Seguir?", yes): die("cancelado", 2)
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="hf-theme-"))
+        env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
+        if subprocess.run(["git", "-c", "protocol.ext.allow=never", "clone", "--depth", "1", "--", src, str(tmp / "t")], env=env).returncode:
+            die("git clone falló")
+        p = tmp / "t"
+        base = re.sub(r"\.git$", "", src.rstrip("/").split("/")[-1].split(":")[-1])
+    else:
+        base = (p if p.is_dir() else p.parent).name
+    f = p / "colors.toml" if p.is_dir() else p
+    if not f.is_file(): die(f"no hay colors.toml en {p}")
+    try:
+        raw = parse_toml(f.read_text())
+    finally:
+        if tmp: shutil.rmtree(tmp, ignore_errors=True)
+    c, light = theme_colors(raw)
+    if (f.parent / "light.mode").exists() and not raw.get("mode"): light = True    # Omarchy: light.mode = tema claro
+    pretty = name or re.sub(r"^omarchy-|-theme$", "", base, flags=re.I).replace("-", " ").replace("_", " ").title()
+    key = "omarchy-" + slug(pretty)
+    pal = to_palette(f"{pretty} (Omarchy)", c, light)
+    pals = load(USER_PALETTES, {}) or {}
+    pals[key] = pal
+    save_json(USER_PALETTES, pals)
+    print(f"Importado «{pal['name']}» como «{key}» ({'claro' if light else 'oscuro'}) en {USER_PALETTES}")
+    if apply:
+        subprocess.run([str(ROOT / "scripts/hf-apply"), "set", "colorMode=elegir", f"palette={key}"])
+
+def cmd_themes(args):
+    pals = load(USER_PALETTES, {}) or {}
+    if "--json" in args: print(json.dumps(pals, ensure_ascii=False)); return
+    for k, v in pals.items(): print(f"{k:<32} {v.get('name', '')}")
+
+def cmd_theme_remove(args):
+    if len(args) != 1: die("uso: hf-plugin theme-remove <clave>")
+    pals = load(USER_PALETTES, {}) or {}
+    if pals.pop(args[0], None) is None: die(f"no hay ningún tema importado «{args[0]}»")
+    save_json(USER_PALETTES, pals)
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(__doc__); return
+    cmd, args = argv[0], argv[1:]
+    if cmd not in ("add", "install", "remove", "uninstall", "enable", "theme"):
+        args = [x for x in args if x != "--yes"]           # Ajustes la pasa siempre; aquí no hace falta
+    table = {"add": cmd_add, "install": cmd_add, "remove": cmd_remove, "uninstall": cmd_remove, "list": cmd_list,
+             "info": cmd_info, "enable": cmd_enable, "disable": cmd_disable, "bar": cmd_bar, "set": cmd_set,
+             "mark": cmd_mark, "validate": cmd_validate, "theme": cmd_theme, "themes": cmd_themes,
+             "theme-remove": cmd_theme_remove}
+    if cmd in table: return table[cmd](args)
+    if cmd in ("summon", "toggle"):
+        if not args: die(f"uso: hf-plugin {cmd} <id> [payload]")
+        sys.exit(qs_ipc("omarchy", cmd, args[0], args[1] if len(args) > 1 else ""))
+    if cmd == "hide":
+        if len(args) != 1: die("uso: hf-plugin hide <id>")
+        sys.exit(qs_ipc("omarchy", "hide", args[0]))
+    if cmd == "rescan":
+        sys.exit(qs_ipc("omarchy", "rescan"))
+    die(f"orden desconocida «{cmd}» (hf-plugin --help)")
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

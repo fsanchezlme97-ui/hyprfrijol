@@ -1,15 +1,20 @@
 # hyprfrijol — dependencias por familia de distro (lo lee install.sh)
 #
-# Columnas (separadas por TABULADOR): id  nivel  arch  fedora  suse  debian  void  descripción
+# Columnas (separadas por TABULADOR): id  nivel  arch  fedora  suse  debian  void  descripción  función  órdenes
 #   nivel:  required    imprescindible para arrancar la sesión
 #           recommended se instala por defecto (cada módulo funciona sin ello, con menos funciones)
 #           optional    solo con --full o si respondes «s» a la pregunta
 #           base        sistema mínimo: sesión de usuario (D-Bus/logind) y drivers gráficos abiertos
 #           greeter     solo con --greeter (login visual con greetd)
+#           manual      solo para cierto hardware o arranque: nunca se instala sola (ni con --full); hf-deps install <id>
 #   paquetes: varios separados por comas · «-» = no hay paquete en esa familia (el instalador avisa)
 #             «aur:x» = solo en AUR (Arch: se instala con paru/yay si hay)
 #   La columna «debian» vale para Debian, Ubuntu, Pop!_OS y Linux Mint (los nombres coinciden).
 #   Los que no estén en los repositorios activos se saltan y salen en el resumen final.
+#   función: la parte de hyprfrijol que lo usa (clave de las líneas «#@función» de abajo). La usan
+#            scripts/hf-deps (status · missing · install <función|id> · explain <orden>) y hf-doctor.
+#   órdenes: programas que trae (separados por comas; vacío si no trae ninguno): hf-deps explain <orden>.
+#   install.sh solo lee las 8 primeras columnas.
 #
 # Comprobado el 2026-11-07 contra: archlinux.org/packages + AUR RPC (Arch), mdapi.fedoraproject.org
 # (Fedora 44) + COPR lionheartp/Hyprland y errornointernet/quickshell, el índice primary de
@@ -18,58 +23,171 @@
 # ppa:cppiber/hyprland y ppa:avengemedia/danklinux, el repodata de repo-default.voidlinux.org,
 # y repology.org/api/v1 para las versiones.
 #
-#id	nivel	arch	fedora	suse	debian	void	descripción
-session-base	base	-	-	-	dbus-user-session,libpam-systemd	dbus,elogind	sesión de usuario sin escritorio: D-Bus de usuario y logind
-gpu	base	mesa	mesa-dri-drivers,mesa-vulkan-drivers	Mesa-dri	libgl1-mesa-dri,libegl1,mesa-vulkan-drivers	mesa-dri	drivers gráficos abiertos (Intel/AMD; NVIDIA aparte)
-hyprland	required	hyprland	hyprland	hyprland	hyprland	-	compositor (≥ 0.57: la configuración es Lua)
-hyprlock	required	hyprlock	hyprlock	hyprlock	hyprlock	-	pantalla de bloqueo
-hypridle	required	hypridle	hypridle	hypridle	hypridle	-	inactividad (apagar pantalla, bloquear, suspender)
-portal-hyprland	required	xdg-desktop-portal-hyprland	xdg-desktop-portal-hyprland	xdg-desktop-portal-hyprland	xdg-desktop-portal-hyprland	-	portal: capturas, compartir pantalla
-quickshell	required	quickshell	quickshell	quickshell	quickshell	quickshell	el shell (barra, paneles, Spotlight…)
-qt-modules	required	qt6-declarative,qt6-svg,qt6-wayland,qt6-imageformats	qt6-qtdeclarative,qt6-qtsvg,qt6-qtwayland,qt6-qtimageformats	qt6-declarative-imports,libQt6Svg6,qt6-wayland,qt6-imageformats	qml6-module-qtquick,qml6-module-qtquick-controls,qml6-module-qtquick-layouts,qml6-module-qtquick-effects,qml6-module-qtquick-shapes,qml6-module-qtquick-window,qml6-module-qtcore,qt6-svg-plugins,qt6-wayland,qt6-image-formats-plugins	qt6-declarative,qt6-svg,qt6-wayland,qt6-imageformats	módulos QML que usa el shell (iconos SVG, efectos, formatos de imagen)
-matugen	required	matugen	matugen	matugen	-	matugen	colores a partir del fondo (si no hay paquete: cargo install matugen)
-python3	required	python	python3	python3	python3	python3	hf-apply y sus extensiones
-jq	required	jq	jq	jq	jq	jq	scripts
-wl-clipboard	required	wl-clipboard	wl-clipboard	wl-clipboard	wl-clipboard	wl-clipboard	portapapeles (wl-copy / wl-paste)
-polkit	required	polkit	polkit	polkit	polkitd,pkexec	polkit	permisos de administrador (el agente lo pone el shell)
-fonts-inter	required	inter-font	rsms-inter-fonts	inter-fonts	fonts-inter	font-inter	tipografía de la interfaz
-portal-gtk	recommended	xdg-desktop-portal-gtk	xdg-desktop-portal-gtk	xdg-desktop-portal-gtk	xdg-desktop-portal-gtk	xdg-desktop-portal-gtk	portal: diálogos de abrir/guardar
-qt-webengine	recommended	qt6-webengine	qt6-qtwebengine	qt6-webengine-imports	qml6-module-qtwebengine	qt6-webengine	web apps del panel lateral (WhatsApp, YouTube…)
-audio	recommended	pipewire,wireplumber,pipewire-pulse,libpulse	pipewire,wireplumber,pipewire-pulseaudio,pulseaudio-utils	pipewire,wireplumber,pipewire-pulseaudio,pulseaudio-utils	pipewire,wireplumber,pipewire-pulse,pulseaudio-utils	pipewire,wireplumber,pulseaudio-utils	sonido (PipeWire) y pactl
-networkmanager	recommended	networkmanager	NetworkManager,NetworkManager-wifi	NetworkManager	network-manager	NetworkManager	red y Wi-Fi (nmcli)
-fonts-noto	recommended	noto-fonts	google-noto-sans-fonts	google-noto-sans-fonts	fonts-noto-core	noto-fonts-ttf	tipografía de respaldo
-fonts-emoji	recommended	noto-fonts-emoji	google-noto-color-emoji-fonts	google-noto-coloremoji-fonts	fonts-noto-color-emoji	noto-fonts-emoji	emojis (Spotlight «;»)
-fonts-mono	recommended	ttf-jetbrains-mono	jetbrains-mono-fonts	jetbrains-mono-fonts	fonts-jetbrains-mono	-	monoespaciada (Ajustes, terminal)
-icons	recommended	papirus-icon-theme	papirus-icon-theme	papirus-icon-theme	papirus-icon-theme	papirus-icon-theme	iconos de apps (con carpetas del acento)
-terminal	recommended	kitty	kitty	kitty	kitty	kitty	terminal por defecto (HF.terminal)
-screenshot	recommended	grim,slurp	grim,slurp	grim,slurp	grim,slurp	grim,slurp	capturas de pantalla
-clipboard-history	recommended	cliphist	cliphist	cliphist	cliphist	cliphist	historial del portapapeles
-recorder	recommended	wf-recorder	wf-recorder	wf-recorder	wf-recorder	wf-recorder	grabación de pantalla
-hyprsunset	recommended	hyprsunset	hyprsunset	hyprsunset	hyprsunset	-	luz nocturna
-media	recommended	playerctl,brightnessctl	playerctl,brightnessctl	playerctl,brightnessctl	playerctl,brightnessctl	playerctl,brightnessctl	música y brillo
-notify	recommended	libnotify	libnotify	libnotify-tools	libnotify-bin	libnotify	notify-send
-images	recommended	imagemagick,ffmpeg	ImageMagick,ffmpeg-free	ImageMagick,ffmpeg	imagemagick,ffmpeg	ImageMagick,ffmpeg6	miniaturas, fondos animados, conversión
-ocr	recommended	tesseract,tesseract-data-spa,tesseract-data-eng	tesseract,tesseract-langpack-spa,tesseract-langpack-eng	tesseract-ocr,tesseract-ocr-traineddata-spa,tesseract-ocr-traineddata-eng	tesseract-ocr,tesseract-ocr-spa,tesseract-ocr-eng	tesseract-ocr,tesseract-ocr-spa,tesseract-ocr-eng	OCR de capturas (copiar texto)
-typing	recommended	wtype	wtype	wtype	wtype	wtype	escribir emojis / dictado en la ventana con foco
-dialogs	recommended	zenity	zenity	zenity	zenity	zenity	diálogos de los scripts
-cava	recommended	cava	cava	cava	cava	cava	onda de audio de la barra
-xdg	recommended	xdg-user-dirs,xdg-utils	xdg-user-dirs,xdg-utils	xdg-user-dirs,xdg-utils	xdg-user-dirs,xdg-utils	xdg-user-dirs,xdg-utils	carpetas del usuario y xdg-open
-power	recommended	power-profiles-daemon,upower	power-profiles-daemon,upower	power-profiles-daemon,upower	power-profiles-daemon,upower	power-profiles-daemon,upower	batería y modos de energía
-keyring	recommended	gnome-keyring,libsecret	gnome-keyring,libsecret	gnome-keyring,secret-tool	gnome-keyring,libsecret-tools	gnome-keyring,libsecret	llavero (contraseñas, claves de la IA)
-gtk-settings	recommended	gsettings-desktop-schemas,adw-gtk-theme	gsettings-desktop-schemas,adw-gtk3-theme	gsettings-desktop-schemas	gsettings-desktop-schemas	gsettings-desktop-schemas	tema claro/oscuro de las apps GTK
-system-apps	recommended	btop,pavucontrol	btop,pavucontrol	btop,pavucontrol	btop,pavucontrol	btop,pavucontrol	administrador de tareas y mezclador
-curl	recommended	curl	curl	curl	curl	curl	IA, actualizaciones
-hyprpicker	optional	hyprpicker	hyprpicker	hyprpicker	hyprpicker	hyprpicker	selector de color externo
-mpvpaper	optional	aur:mpvpaper	mpvpaper	mpvpaper	-	mpvpaper	fondos animados (vídeo)
-thumbnailer	optional	ffmpegthumbnailer	ffmpegthumbnailer	ffmpegthumbnailer	ffmpegthumbnailer	ffmpegthumbnailer	miniaturas rápidas de vídeos
-annotate	optional	swappy	swappy	swappy	swappy	swappy	anotar capturas en un editor externo
-fd	optional	fd	fd-find	fd	fd-find	fd	búsqueda de archivos más rápida en Spotlight
-calculator	optional	libqalculate	qalculate	qalculate	qalc	libqalculate	calculadora avanzada de Spotlight (qalc)
-translate	optional	translate-shell	translate-shell	translate-shell	-	translate-shell	traducir texto de capturas
-sounds	optional	libcanberra,sound-theme-freedesktop	libcanberra-gtk3,sound-theme-freedesktop	canberra-gtk-play,sound-theme-freedesktop	gnome-session-canberra,sound-theme-freedesktop	libcanberra-gtk3,sound-theme-freedesktop	sonidos del sistema
-bluetooth	optional	bluez,bluez-utils	bluez	bluez	bluez	bluez	Bluetooth
-kdeconnect	optional	kdeconnect	kde-connect	kdeconnect-kde	kdeconnect	kdeconnect	móvil (KDE Connect)
-firmware	optional	fwupd	fwupd	fwupd	fwupd	fwupd	actualizaciones de firmware
-remote	optional	wayvnc	wayvnc	wayvnc	wayvnc	wayvnc	escritorio remoto (VNC)
-files	optional	nautilus	nautilus	nautilus	nautilus	nautilus	gestor de archivos (HF.files)
-greetd	greeter	greetd	greetd	greetd	greetd	greetd	login visual (--greeter)
+# Las funciones de la ronda 8 (impresoras, escáner, móvil, huella, VMs, contenedores, VPN, cortafuegos,
+# dictado, IA local…) se comprobaron el 2026-11-07 con los Packages de deb.debian.org (sid) y
+# archive.ubuntu.com (resolute main+universe), el primary de Tumbleweed, el repodata de Void,
+# archlinux.org/packages + AUR RPC, mdapi.fedoraproject.org/f44 y repology.org/api/v1.
+#
+# Funciones: #@función<TAB>clave<TAB>nombre (el orden es el de hf-deps status)
+#@función	sesion	Sesión y lo básico
+#@función	apariencia	Ajustes › Apariencia
+#@función	fondos	Ajustes › Fondos de pantalla
+#@función	panel	Ajustes › Panel lateral y PiP
+#@función	plugins	Ajustes › Plugins
+#@función	aplicaciones	Ajustes › Aplicaciones
+#@función	pantallas	Ajustes › Pantallas
+#@función	raton	Ajustes › Ratón y panel táctil
+#@función	red	Ajustes › Red
+#@función	bluetooth	Ajustes › Bluetooth
+#@función	remoto	Ajustes › Escritorio remoto
+#@función	sonido	Ajustes › Sonido
+#@función	impresoras	Ajustes › Impresoras y escáneres
+#@función	almacenamiento	Ajustes › Almacenamiento
+#@función	energia	Ajustes › Energía y rendimiento
+#@función	sistema	Ajustes › Sistema y recuperación
+#@función	usuarios	Ajustes › Usuarios
+#@función	virtualizacion	Ajustes › Máquinas virtuales
+#@función	accesibilidad	Ajustes › Accesibilidad
+#@función	dictado	Ajustes › Dictado
+#@función	ia	Ajustes › Asistente de IA
+#@función	captura	Capturas y grabación
+#@función	portapapeles	Portapapeles
+#@función	centro	Centro de control (música, brillo, móvil)
+#@función	spotlight	Spotlight
+#@función	archivos	Archivos y PDF (Nautilus, Firmar)
+#@función	descargas	Descargas
+#@función	juegos	Perfiles de juego
+#@función	login	Login visual (greeter)
+#
+#id	nivel	arch	fedora	suse	debian	void	descripción	función	órdenes
+# — Sesión y lo básico
+session-base	base	-	-	-	dbus-user-session,libpam-systemd	dbus,elogind	sesión de usuario sin escritorio: D-Bus de usuario y logind	sesion	dbus-run-session,loginctl
+gpu	base	mesa	mesa-dri-drivers,mesa-vulkan-drivers	Mesa-dri	libgl1-mesa-dri,libegl1,mesa-vulkan-drivers	mesa-dri	drivers gráficos abiertos (Intel/AMD; NVIDIA aparte)	sesion	
+hyprland	required	hyprland	hyprland	hyprland	hyprland	-	compositor (≥ 0.57: la configuración es Lua)	sesion	Hyprland,hyprctl,start-hyprland
+hyprlock	required	hyprlock	hyprlock	hyprlock	hyprlock	-	pantalla de bloqueo	sesion	hyprlock
+hypridle	required	hypridle	hypridle	hypridle	hypridle	-	inactividad (apagar pantalla, bloquear, suspender)	sesion	hypridle
+portal-hyprland	required	xdg-desktop-portal-hyprland	xdg-desktop-portal-hyprland	xdg-desktop-portal-hyprland	xdg-desktop-portal-hyprland	-	portal: capturas, compartir pantalla	sesion	
+quickshell	required	quickshell	quickshell	quickshell	quickshell	quickshell	el shell (barra, paneles, Spotlight…)	sesion	qs,quickshell
+qt-modules	required	qt6-declarative,qt6-svg,qt6-wayland,qt6-imageformats	qt6-qtdeclarative,qt6-qtsvg,qt6-qtwayland,qt6-qtimageformats	qt6-declarative-imports,libQt6Svg6,qt6-wayland,qt6-imageformats	qml6-module-qtquick,qml6-module-qtquick-controls,qml6-module-qtquick-layouts,qml6-module-qtquick-effects,qml6-module-qtquick-shapes,qml6-module-qtquick-window,qml6-module-qtcore,qt6-svg-plugins,qt6-wayland,qt6-image-formats-plugins	qt6-declarative,qt6-svg,qt6-wayland,qt6-imageformats	módulos QML que usa el shell (iconos SVG, efectos, formatos de imagen)	sesion	
+matugen	required	matugen	matugen	matugen	-	matugen	colores a partir del fondo (si no hay paquete: cargo install matugen)	sesion	matugen
+python3	required	python	python3	python3	python3	python3	hf-apply y sus extensiones	sesion	python3
+jq	required	jq	jq	jq	jq	jq	scripts	sesion	jq
+wl-clipboard	required	wl-clipboard	wl-clipboard	wl-clipboard	wl-clipboard	wl-clipboard	portapapeles (wl-copy / wl-paste)	sesion	wl-copy,wl-paste
+polkit	required	polkit	polkit	polkit	polkitd,pkexec	polkit	permisos de administrador (el agente lo pone el shell)	sesion	pkexec
+fonts-inter	required	inter-font	rsms-inter-fonts	inter-fonts	fonts-inter	font-inter	tipografía de la interfaz	sesion	
+portal-gtk	recommended	xdg-desktop-portal-gtk	xdg-desktop-portal-gtk	xdg-desktop-portal-gtk	xdg-desktop-portal-gtk	xdg-desktop-portal-gtk	portal: diálogos de abrir/guardar	sesion	
+notify	recommended	libnotify	libnotify	libnotify-tools	libnotify-bin	libnotify	notify-send	sesion	notify-send
+dialogs	recommended	zenity	zenity	zenity	zenity	zenity	diálogos de los scripts	sesion	zenity
+xdg	recommended	xdg-user-dirs,xdg-utils	xdg-user-dirs,xdg-utils	xdg-user-dirs,xdg-utils	xdg-user-dirs,xdg-utils	xdg-user-dirs,xdg-utils	carpetas del usuario y xdg-open	sesion	xdg-open,xdg-user-dir,xdg-user-dirs-update,xdg-mime,xdg-settings
+keyring	recommended	gnome-keyring,libsecret	gnome-keyring,libsecret	gnome-keyring,secret-tool	gnome-keyring,libsecret-tools	gnome-keyring,libsecret	llavero (contraseñas, claves de la IA)	sesion	secret-tool,gnome-keyring-daemon
+curl	recommended	curl	curl	curl	curl	curl	IA, actualizaciones	sesion	curl
+glib-tools	recommended	glib2	glib2	glib2-tools	libglib2.0-bin	glib	gsettings, gdbus y gio (tema GTK, papelera, avisos de unidades)	sesion	gsettings,gdbus,gio
+gtk-launch	recommended	gtk3	gtk3	gtk3-tools	libgtk-3-bin	gtk+3	abrir apps por su .desktop (gtk-launch)	sesion	gtk-launch
+util-linux	recommended	util-linux	util-linux	util-linux	util-linux,rfkill	util-linux	lsblk, findmnt y rfkill (discos y modo avión)	sesion	lsblk,findmnt,rfkill
+# — Ajustes › Apariencia
+fonts-noto	recommended	noto-fonts	google-noto-sans-fonts	google-noto-sans-fonts	fonts-noto-core	noto-fonts-ttf	tipografía de respaldo	apariencia	
+fonts-emoji	recommended	noto-fonts-emoji	google-noto-color-emoji-fonts	google-noto-coloremoji-fonts	fonts-noto-color-emoji	noto-fonts-emoji	emojis (Spotlight «;»)	apariencia	
+fonts-mono	recommended	ttf-jetbrains-mono	jetbrains-mono-fonts	jetbrains-mono-fonts	fonts-jetbrains-mono	-	monoespaciada (Ajustes, terminal)	apariencia	
+icons	recommended	papirus-icon-theme	papirus-icon-theme	papirus-icon-theme	papirus-icon-theme	papirus-icon-theme	iconos de apps (con carpetas del acento)	apariencia	
+gtk-settings	recommended	gsettings-desktop-schemas,adw-gtk-theme	gsettings-desktop-schemas,adw-gtk3-theme	gsettings-desktop-schemas	gsettings-desktop-schemas	gsettings-desktop-schemas	tema claro/oscuro de las apps GTK	apariencia	
+qt6ct	recommended	qt6ct	qt6ct	qt6ct	qt6ct	qt6ct	tema y colores de las apps Qt	apariencia	qt6ct
+# — Ajustes › Fondos de pantalla
+images	recommended	imagemagick,ffmpeg	ImageMagick,ffmpeg-free	ImageMagick,ffmpeg	imagemagick,ffmpeg	ImageMagick,ffmpeg6	miniaturas, fondos animados, conversión	fondos	magick,convert,identify,ffmpeg,ffprobe
+mpvpaper	optional	aur:mpvpaper	mpvpaper	mpvpaper	-	mpvpaper	fondos animados (vídeo)	fondos	mpvpaper
+thumbnailer	optional	ffmpegthumbnailer	ffmpegthumbnailer	ffmpegthumbnailer	ffmpegthumbnailer	ffmpegthumbnailer	miniaturas rápidas de vídeos	fondos	ffmpegthumbnailer
+wallpaperengine	optional	aur:linux-wallpaperengine-git	-	-	-	-	fondos de Wallpaper Engine (necesitas el juego en Steam)	fondos	linux-wallpaperengine
+# — Ajustes › Panel lateral y PiP
+qt-webengine	recommended	qt6-webengine	qt6-qtwebengine	qt6-webengine-imports	qml6-module-qtwebengine	qt6-webengine	web apps del panel lateral (WhatsApp, YouTube…)	panel	
+# — Ajustes › Plugins
+hyprpm	optional	hyprpm,cmake,meson,cpio,pkgconf,gcc,git	hyprland-devel,cmake,meson,cpio,gcc-c++,git	hyprland-devel,cmake,meson,cpio,gcc-c++,git	cmake,meson,cpio,pkg-config,g++,git	-	plugins de Hyprland (hyprpm y lo necesario para compilarlos)	plugins	hyprpm,cmake,meson,cpio
+# — Ajustes › Aplicaciones
+terminal	recommended	kitty	kitty	kitty	kitty	kitty	terminal por defecto (HF.terminal)	aplicaciones	kitty
+system-apps	recommended	btop,pavucontrol	btop,pavucontrol	btop,pavucontrol	btop,pavucontrol	btop,pavucontrol	administrador de tareas y mezclador	aplicaciones	btop,pavucontrol
+flatpak	recommended	flatpak	flatpak	flatpak	flatpak	flatpak	apps de Flathub (Aplicaciones, Subtítulos en vivo)	aplicaciones	flatpak
+desktop-files	recommended	desktop-file-utils	desktop-file-utils	desktop-file-utils	desktop-file-utils	desktop-file-utils	registrar apps y web apps (update-desktop-database)	aplicaciones	update-desktop-database
+files	optional	nautilus	nautilus	nautilus	nautilus	nautilus	gestor de archivos (HF.files)	aplicaciones	nautilus
+nautilus-ext	optional	nautilus-python	nautilus-python	python313-nautilus	python3-nautilus	nautilus-python	menú «HyprFrijol» en Nautilus (convertir, OCR, firmar…)	aplicaciones	
+# — Ajustes › Pantallas
+hyprsunset	recommended	hyprsunset	hyprsunset	hyprsunset	hyprsunset	-	luz nocturna	pantallas	hyprsunset
+# — Ajustes › Ratón y panel táctil
+tablet	optional	aur:opentabletdriver	-	-	-	-	tabletas gráficas (OpenTabletDriver; en otras distros: Flathub o la web del proyecto)	raton	otd,otd-daemon
+# — Ajustes › Red
+networkmanager	recommended	networkmanager	NetworkManager,NetworkManager-wifi	NetworkManager	network-manager	NetworkManager	red y Wi-Fi (nmcli)	red	nmcli
+nm-editor	recommended	nm-connection-editor	nm-connection-editor	NetworkManager-connection-editor	nm-connection-editor	network-manager-applet	editor avanzado de conexiones y VPN (nm-connection-editor)	red	nm-connection-editor
+tailscale	optional	tailscale	tailscale	tailscale	-	tailscale	VPN Tailscale (en Debian/Ubuntu: repositorio de tailscale.com)	red	tailscale
+zerotier	optional	zerotier-one	-	-	-	-	VPN ZeroTier (en otras distros: install.zerotier.com)	red	zerotier-cli
+firewall	optional	ufw	firewalld	firewalld	ufw	ufw	cortafuegos (firewalld o ufw)	red	ufw,firewall-cmd
+# — Ajustes › Bluetooth
+bluetooth	optional	bluez,bluez-utils	bluez	bluez	bluez	bluez	Bluetooth	bluetooth	bluetoothctl
+bt-sendto	optional	gnome-bluetooth-3.0,bluez-obex	gnome-bluetooth,bluez-obexd	gnome-bluetooth	gnome-bluetooth-sendto	gnome-bluetooth	enviar archivos por Bluetooth (bluetooth-sendto)	bluetooth	bluetooth-sendto
+# — Ajustes › Escritorio remoto
+remote	optional	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	compartir este escritorio por VNC (wayvnc; openssl para el cifrado)	remoto	wayvnc,wayvncctl,openssl
+remote-client	optional	remmina,freerdp,libvncserver	remmina,remmina-plugins-rdp,remmina-plugins-vnc	remmina,remmina-plugin-rdp,remmina-plugin-vnc	remmina,remmina-plugin-rdp,remmina-plugin-vnc	remmina,freerdp	conectarse a otros equipos por RDP/VNC (Remmina)	remoto	remmina
+# — Ajustes › Sonido
+audio	recommended	pipewire,wireplumber,pipewire-pulse,libpulse	pipewire,wireplumber,pipewire-pulseaudio,pulseaudio-utils	pipewire,wireplumber,pipewire-pulseaudio,pulseaudio-utils	pipewire,wireplumber,pipewire-pulse,pulseaudio-utils	pipewire,wireplumber,pulseaudio-utils	sonido (PipeWire) y pactl	sonido	pactl,wpctl,pipewire
+cava	recommended	cava	cava	cava	cava	cava	onda de audio de la barra	sonido	cava
+sounds	optional	libcanberra,sound-theme-freedesktop	libcanberra-gtk3,sound-theme-freedesktop	canberra-gtk-play,sound-theme-freedesktop	gnome-session-canberra,sound-theme-freedesktop	libcanberra-gtk3,sound-theme-freedesktop	sonidos del sistema	sonido	canberra-gtk-play
+easyeffects	optional	easyeffects	easyeffects	easyeffects	easyeffects	easyeffects	ecualizador y efectos de sonido	sonido	easyeffects
+# — Ajustes › Impresoras y escáneres
+printing	recommended	cups,cups-filters,system-config-printer	cups,cups-client,cups-filters,system-config-printer	cups,cups-client,cups-filters,system-config-printer	cups,cups-client,cups-filters,system-config-printer	cups,cups-filters,system-config-printer	impresoras: lpstat, lpoptions y el asistente (servicio: systemctl enable --now cups.socket)	impresoras	lpstat,lpoptions,cancel,system-config-printer
+scanner	optional	sane,simple-scan	sane-backends,simple-scan	sane-backends,simple-scan	sane-utils,simple-scan	sane,simple-scan	escáneres (scanimage y Escáner de documentos)	impresoras	scanimage,simple-scan
+# — Ajustes › Almacenamiento
+udisks	recommended	udisks2	udisks2	udisks2	udisks2	udisks2	memorias USB y tarjetas SD: montar, expulsar y avisos (hf-devices)	almacenamiento	udisksctl
+fs-drivers	recommended	ntfs-3g,exfatprogs	ntfs-3g,exfatprogs	ntfs-3g,exfatprogs	ntfs-3g,exfatprogs	ntfs-3g,exfatprogs	discos de Windows (NTFS) y memorias exFAT, aunque el kernel no traiga o no cargue su driver	almacenamiento	ntfs-3g,mkfs.exfat
+disks	optional	gnome-disk-utility	gnome-disk-utility	gnome-disk-utility	gnome-disk-utility	gnome-disk-utility	GNOME Discos: formatear y particionar (Ajustes › Almacenamiento)	almacenamiento	gnome-disks
+# — Ajustes › Energía y rendimiento
+power	recommended	power-profiles-daemon,upower	power-profiles-daemon,upower	power-profiles-daemon,upower	power-profiles-daemon,upower	power-profiles-daemon,upower	batería y modos de energía	energia	powerprofilesctl,upower
+hybrid-gpu	manual	aur:envycontrol	-	supergfxctl	-	-	cambiar de GPU en portátiles híbridos (envycontrol o supergfxctl; solo con dos GPU)	energia	envycontrol,supergfxctl
+# — Ajustes › Sistema y recuperación
+git	recommended	git	git	git	git	git	actualizar HyprFrijol por versiones (hf-update)	sistema	git
+pciutils	recommended	pciutils	pciutils	pciutils	pciutils	pciutils	nombre de la GPU (lspci) en Acerca y hf-doctor	sistema	lspci
+firmware	optional	fwupd	fwupd	fwupd	fwupd	fwupd	actualizaciones de firmware	sistema	fwupdmgr
+backup	optional	pika-backup	deja-dup	pika-backup	deja-dup	pika-backup	copias de seguridad (Pika Backup; Déjà Dup donde no hay)	sistema	pika-backup,deja-dup
+snapper	optional	snapper,snap-pac	snapper	snapper	snapper	snapper	instantáneas del sistema (solo con btrfs)	sistema	snapper
+vulkan-tools	optional	vulkan-tools	vulkan-tools	vulkan-tools	vulkan-tools	Vulkan-Tools	vulkaninfo para hf-doctor	sistema	vulkaninfo
+limine-snapper	manual	aur:limine-snapper-sync	-	-	-	-	instantáneas en el menú de arranque Limine (solo con Limine + btrfs)	sistema	limine-snapper-sync
+# — Ajustes › Usuarios
+accounts	recommended	accountsservice	accountsservice	accountsservice	accountsservice	accountsservice	nombre y avatar de tu cuenta (AccountsService)	usuarios	
+fingerprint	optional	fprintd	fprintd,fprintd-pam	fprintd,fprintd-pam	fprintd,libpam-fprintd	fprintd	huella dactilar en el bloqueo y en polkit (fprintd)	usuarios	fprintd-verify,fprintd-list,fprintd-enroll
+# — Ajustes › Máquinas virtuales
+vm	optional	libvirt,qemu-desktop,virt-manager,virt-viewer,dnsmasq	libvirt,qemu-kvm,virt-manager,virt-viewer	libvirt,qemu-x86,virt-manager,virt-viewer	libvirt-daemon-system,qemu-system-x86,virt-manager,virt-viewer	libvirt,qemu,virt-manager,virt-viewer	máquinas virtuales (libvirt + QEMU + virt-manager; luego: sudo usermod -aG libvirt $USER)	virtualizacion	virsh,virt-manager,virt-viewer,remote-viewer,qemu-system-x86_64
+boxes	optional	gnome-boxes	gnome-boxes	gnome-boxes	gnome-boxes	gnome-boxes	GNOME Boxes: máquinas virtuales sencillas	virtualizacion	gnome-boxes
+containers	optional	distrobox,podman,boxbuddy	distrobox,podman	distrobox,podman	distrobox,podman	podman	contenedores de otras distros (distrobox + podman; BoxBuddy en Arch, en Flathub en otras)	virtualizacion	distrobox,podman,boxbuddy-rs
+# — Ajustes › Accesibilidad
+osk	optional	squeekboard	-	wvkbd	wvkbd	wvkbd	teclado en pantalla (squeekboard o wvkbd)	accesibilidad	squeekboard,wvkbd-mobintl
+orca	optional	orca	orca	orca	orca	orca	lector de pantalla	accesibilidad	orca
+# — Ajustes › Dictado
+typing	recommended	wtype	wtype	wtype	wtype	wtype	escribir emojis / dictado en la ventana con foco	dictado	wtype
+alsa	recommended	alsa-utils	alsa-utils	alsa-utils	alsa-utils	alsa-utils	grabar el micrófono con arecord (si no hay pw-record)	dictado	arecord
+pw-tools	recommended	pipewire	pipewire-utils	pipewire-tools	pipewire-bin	pipewire	pw-record y pw-dump: dictado y «micrófono en uso»	dictado	pw-record,pw-dump
+ydotool	recommended	ydotool	ydotool	ydotool	ydotool	-	escribir en apps XWayland y clics simulados (si wtype no basta)	dictado	ydotool
+whisper	optional	aur:whisper.cpp-git	whisper-cpp	-	whisper.cpp	-	motor de dictado local whisper.cpp (sin él: faster-whisper con pip)	dictado	whisper-cli
+# — Ajustes › Asistente de IA
+ollama	optional	ollama	ollama	ollama	-	-	IA local con Ollama (en otras distros: ollama.com/download)	ia	ollama
+# — Capturas y grabación
+screenshot	recommended	grim,slurp	grim,slurp	grim,slurp	grim,slurp	grim,slurp	capturas de pantalla	captura	grim,slurp
+recorder	recommended	wf-recorder	wf-recorder	wf-recorder	wf-recorder	wf-recorder	grabación de pantalla	captura	wf-recorder
+ocr	recommended	tesseract,tesseract-data-spa,tesseract-data-eng	tesseract,tesseract-langpack-spa,tesseract-langpack-eng	tesseract-ocr,tesseract-ocr-traineddata-spa,tesseract-ocr-traineddata-eng	tesseract-ocr,tesseract-ocr-spa,tesseract-ocr-eng	tesseract-ocr,tesseract-ocr-spa,tesseract-ocr-eng	OCR de capturas (copiar texto)	captura	tesseract
+hyprpicker	optional	hyprpicker	hyprpicker	hyprpicker	hyprpicker	hyprpicker	selector de color externo	captura	hyprpicker
+annotate	optional	satty	swappy	swappy	swappy	satty	editar y anotar capturas (satty; swappy donde no hay satty)	captura	satty,swappy
+translate	optional	translate-shell	translate-shell	translate-shell	-	translate-shell	traducir texto de capturas	captura	trans
+# — Portapapeles
+clipboard-history	recommended	cliphist	cliphist	cliphist	cliphist	cliphist	historial del portapapeles	portapapeles	cliphist
+# — Centro de control (música, brillo, móvil)
+media	recommended	playerctl,brightnessctl	playerctl,brightnessctl	playerctl,brightnessctl	playerctl,brightnessctl	playerctl,brightnessctl	música y brillo	centro	playerctl,brightnessctl
+kdeconnect	optional	kdeconnect	kde-connect	kdeconnect-kde	kdeconnect	kdeconnect	móvil (KDE Connect)	centro	kdeconnect-cli
+android	optional	scrcpy,android-tools	android-tools	scrcpy,android-tools	scrcpy,adb	scrcpy,android-tools	ver y controlar el móvil Android (scrcpy + adb)	centro	scrcpy,adb
+# — Spotlight
+fd	optional	fd	fd-find	fd	fd-find	fd	búsqueda de archivos más rápida en Spotlight	spotlight	fd
+calculator	optional	libqalculate	qalculate	qalculate	qalc	libqalculate	calculadora avanzada de Spotlight (qalc)	spotlight	qalc
+# — Archivos y PDF (Nautilus, Firmar)
+pdftools	recommended	poppler	poppler-utils	poppler-tools	poppler-utils	poppler-utils	OCR y conversión de PDF desde Nautilus (pdftoppm, hf-fileact)	archivos	pdftoppm,pdfinfo
+rembg	optional	aur:python-rembg	-	-	-	-	quitar el fondo de firmas e imágenes (en otras distros: pipx install rembg)	archivos	rembg
+# — Descargas
+ytdlp	recommended	yt-dlp	yt-dlp	yt-dlp	yt-dlp	yt-dlp	descargas de vídeo y audio (hf-download)	descargas	yt-dlp
+gallerydl	optional	aur:gallery-dl	-	-	gallery-dl	gallery-dl	descargas de galerías de imágenes (hf-download)	descargas	gallery-dl
+aria2	optional	aria2	aria2	aria2	aria2	aria2	descargas de archivos más rápidas (sin él, hf-download usa su propio descargador)	descargas	aria2c
+# — Perfiles de juego
+gamescope	optional	gamescope	gamescope	gamescope	gamescope	gamescope	perfil de juego (gamescope)	juegos	gamescope
+# — Login visual (greeter)
+greetd	greeter	greetd	greetd	greetd	greetd	greetd	login visual (--greeter)	login	greetd

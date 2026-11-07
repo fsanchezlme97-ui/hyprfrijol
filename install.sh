@@ -4,7 +4,8 @@
 #   ./install.sh                  dependencias + arranque mínimo del sistema + scripts + sesión «Hyprland (HyprFrijol)»
 #   ./install.sh --dry-run        enseña los comandos exactos sin ejecutar nada
 #   ./install.sh --yes            sin preguntas: acepta lo recomendado (los opcionales, solo con --full)
-#   ./install.sh --full           también los opcionales (Bluetooth, KDE Connect, fondos animados, calculadora…)
+#   ./install.sh --full           también los opcionales (VMs, contenedores, VPN, escáner, Bluetooth, KDE Connect, fondos
+#                                 animados…); después, uno a uno: hf-deps install <función> (lista: hf-deps list)
 #   ./install.sh --no-deps        sin paquetes ni repositorios extra
 #   ./install.sh --no-system      sin tocar servicios ni grupos (NetworkManager, PipeWire, logind, grupo video…)
 #   ./install.sh --no-session     sin la entrada en el gestor de inicio
@@ -14,6 +15,8 @@
 #   ./install.sh --greeter-off    vuelve al gestor de inicio que había antes
 #   ./install.sh --greeter-sync   copia tu tema y tu fondo al login (scripts/hf-greeter-sync)
 #   ./install.sh --migrate        pasa una instalación de hypr-liquid (nombre anterior) a hyprfrijol
+#   ./install.sh --apps=serie,productividad   apps por nivel (install/apps.json, scripts/hf-apps): serie (por defecto),
+#                                 productividad, destacada, creativa, experimental, all; --apps=none o --no-apps: ninguna
 #
 # Pruebas: HF_DISTRO=<id> [HF_DISTRO_VERSION=<versión o nombre>] simula otra distro (úsalo con --dry-run);
 #          HF_INIT=systemd|runit|openrc fuerza el sistema de arranque; HF_NO_COLORS=1 no genera los colores iniciales. Ids: arch cachyos endeavouros manjaro garuda
@@ -24,6 +27,7 @@
 set -euo pipefail
 
 DRY=0 YES=0 FULL=0 DEPS=1 SYSTEM=1 SESSION=1 UNINSTALL=0 PURGE=0 GREETER="" MIGRATE=0
+APPS=""   # niveles de install/apps.json (--apps=…); vacío = preguntar (o «serie» con --yes/--dry-run)
 for a in "$@"; do
   case "$a" in
     --dry-run)      DRY=1 ;;
@@ -37,6 +41,8 @@ for a in "$@"; do
     --greeter)      GREETER=on ;;
     --greeter-off)  GREETER=off ;;
     --greeter-sync) GREETER=sync ;;
+    --apps=*)       APPS="${a#--apps=}" ;;
+    --no-apps)      APPS=none ;;
     --migrate)      MIGRATE=1 ;;
     -h|--help)      sed -n '2,/^set -euo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
     *) echo "Opción desconocida: $a (usa --help)" >&2; exit 1 ;;
@@ -51,6 +57,7 @@ BIN="$HOME/.local/bin"
 USERCFG="$HOME/.config/hyprfrijol"
 STATE="$HOME/.local/state/hyprfrijol"
 SESSION_FILE=/usr/share/wayland-sessions/hyprfrijol.desktop
+SAFE_SESSION_FILE=/usr/share/wayland-sessions/hyprfrijol-seguro.desktop   # «HyprFrijol (modo seguro)» (hf-safe)
 MIN_HYPR=0.57
 MIN_QS=0.3
 
@@ -112,46 +119,8 @@ if [ "$(id -u)" = 0 ] && [ "$DRY" = 0 ] && [ -z "${HF_ALLOW_ROOT:-}" ]; then
 fi
 
 # ---------- Distro ----------
-OS_ID="" OS_LIKE="" OS_VER="" OS_CODENAME="" OS_UCODENAME="" OS_PRETTY="" SIMULATED=0
-load_os_release() {
-  local f=/etc/os-release; [ -r "$f" ] || f=/usr/lib/os-release
-  if [ -r "$f" ]; then
-    eval "$( . "$f" >/dev/null 2>&1
-      printf 'OS_ID=%q OS_LIKE=%q OS_VER=%q OS_CODENAME=%q OS_UCODENAME=%q OS_PRETTY=%q\n' \
-        "${ID:-}" "${ID_LIKE:-}" "${VERSION_ID:-}" "${VERSION_CODENAME:-}" "${UBUNTU_CODENAME:-}" "${PRETTY_NAME:-}" )"
-  fi
-  if [ -n "${HF_DISTRO:-}" ]; then
-    SIMULATED=1 OS_ID="$HF_DISTRO" OS_LIKE="" OS_CODENAME="" OS_UCODENAME="" OS_VER="${HF_DISTRO_VERSION:-}"
-    case "$OS_VER" in *[a-z]*) OS_CODENAME="$OS_VER" OS_UCODENAME="$OS_VER" OS_VER="" ;; esac
-    # Valores típicos si no se da versión
-    case "$OS_ID" in
-      fedora)    : "${OS_VER:=44}" ;;
-      rocky|almalinux|rhel|centos) : "${OS_VER:=10}" ;;
-      debian)    [ -n "$OS_CODENAME$OS_VER" ] || OS_CODENAME=forky ;;
-      ubuntu)    [ -n "$OS_UCODENAME$OS_VER" ] || OS_VER=26.04 ;;
-      pop)       [ -n "$OS_UCODENAME$OS_VER" ] || OS_UCODENAME=noble ;;
-      linuxmint) [ -n "$OS_UCODENAME$OS_VER" ] || OS_UCODENAME=noble ;;
-      opensuse-leap) : "${OS_VER:=16.0}" ;;
-    esac
-    OS_PRETTY="$OS_ID${OS_VER:+ $OS_VER}${OS_CODENAME:+ ($OS_CODENAME)} — simulada con HF_DISTRO"
-  fi
-  return 0
-}
-family_of() {
-  case "$1" in
-    arch|archarm|cachyos|endeavouros|manjaro|manjaro-arm|garuda|artix|arcolinux|archcraft|rebornos) echo arch ;;
-    fedora|nobara|ultramarine) echo fedora ;;
-    rhel|centos|rocky|almalinux|ol|eurolinux|circle) echo rhel ;;
-    opensuse-tumbleweed|opensuse-slowroll|opensuse-microos|opensuse-aeon|opensuse-kalpa|opensuse|suse) echo suse ;;
-    opensuse-leap|sles|sled) echo suse-leap ;;
-    debian|raspbian|devuan|kali|parrot) echo debian ;;
-    ubuntu|pop|linuxmint|elementary|zorin|neon|tuxedo) echo ubuntu ;;
-    void) echo void ;;
-    gentoo|funtoo) echo gentoo ;;
-    nixos) echo nixos ;;
-    *) return 1 ;;
-  esac
-}
+# Detección (compartida con scripts/hf-apps): load_os_release, family_of
+. "$HERE/install/distro.sh"
 FAMILY=unknown
 detect_distro() {
   load_os_release
@@ -399,18 +368,33 @@ read_table() {   # read_table NIVEL… → imprime «id<TAB>paquetes<TAB>descrip
     /^#/ || NF < 8 { next }
     index(levels, " " $2 " ") { print $1 "\t" $col "\t" $8 "\t" $2 }' "$PKG_TABLE"
 }
+# opt_features NIVEL → «clave<TAB>nombre<TAB>ids» de las funciones con filas de ese nivel (columna 9 + líneas #@función)
+opt_features() {
+  awk -F'\t' -v lvl="$1" '
+    /^#@función\t/ { label[$2] = $3; order[++n] = $2; next }
+    /^#/ || NF < 8 { next }
+    $2 == lvl { k = ($9 == "" ? "otros" : $9); ids[k] = ids[k] (ids[k] == "" ? "" : " ") $1 }
+    END { for (i = 1; i <= n; i++) if (order[i] in ids) printf "%s\t%s\t%s\n", order[i], label[order[i]], ids[order[i]]
+          if ("otros" in ids) printf "otros\totros\t%s\n", ids["otros"] }' "$PKG_TABLE"
+}
 collect_packages() {
-  local levels="base required recommended" id pk desc lvl p list
+  local levels="base required recommended" id pk desc lvl p list k label ids
   # Opcionales: con --full, o preguntando una vez
   while IFS=$'\t' read -r id pk desc lvl; do OPTIONAL_IDS+=("$id"); done < <(read_table optional)
   if [ "$FULL" = 1 ]; then WANT_OPTIONAL=1
   elif [ "$YES" = 0 ] && [ "$DRY" = 0 ]; then
-    say "Opcionales: $(read_table optional | awk -F'\t' '{ printf "%s%s", (NR > 1 ? " · " : ""), $3 }')"
+    say "Opcionales (${#OPTIONAL_IDS[@]}): $(opt_features optional | awk -F'\t' '{ printf "%s%s", (NR > 1 ? " · " : ""), $2 }')"
     ask "¿Instalar también los opcionales?" n && WANT_OPTIONAL=1
   fi
   [ "$WANT_OPTIONAL" = 1 ] && levels="$levels optional"
   [ "$WANT_GREETD" = 1 ] && levels="$levels greeter"
-  [ "$WANT_OPTIONAL" = 0 ] && skip_ "opcionales (${OPTIONAL_IDS[*]}): usa --full"
+  if [ "$WANT_OPTIONAL" = 0 ]; then
+    skip_ "opcionales (${#OPTIONAL_IDS[@]}; todos con --full). Añade luego lo que quieras con  hf-deps install <función>  (estado: hf-deps status):"
+    while IFS=$'\t' read -r k label ids; do skip_ "  $k — $label: $ids"; done < <(opt_features optional)
+  fi
+  # «manual»: solo para cierto hardware o arranque; nunca se instala sola
+  ids="$(opt_features manual | cut -f3 | tr '\n' ' ')"
+  [ -n "${ids// /}" ] && skip_ "según hardware (no se instalan solos, ni con --full): ${ids% } → hf-deps install <id>"
   while IFS=$'\t' read -r id pk desc lvl; do
     # Sin fuente válida (p. ej. Hyprland demasiado antiguo en los repos): no se instala la versión vieja
     case "$id" in
@@ -594,6 +578,8 @@ system_setup() {
     if svc_active tlp || svc_active tuned; then warn "tlp/tuned activo: no activo power-profiles-daemon (chocan)."
     elif [ "$PROBE" = 0 ] || { have powerprofilesctl && ! svc_enabled power-profiles-daemon && ! svc_active power-profiles-daemon; }; then svc_enable power-profiles-daemon --now && done_ "servicio power-profiles-daemon"; fi
     if [ "$WANT_OPTIONAL" = 1 ] && { [ "$PROBE" = 0 ] || { have bluetoothctl && ! svc_enabled bluetooth && ! svc_active bluetooth; }; }; then svc_enable bluetooth --now && done_ "servicio bluetooth"; fi
+    # Impresoras (Ajustes › Impresoras): CUPS por socket, arranca solo al imprimir
+    if [ "$PROBE" = 0 ] || { have lpstat && ! svc_enabled cups.socket && ! svc_enabled cups && ! svc_active cups; }; then svc_enable cups.socket --now && done_ "servicio cups (impresoras)"; fi
   fi
   # 7. polkit (el agente lo pone el shell; aquí solo el servicio)
   if [ "$PROBE" = 1 ] && ! have pkexec && ! [ -x /usr/lib/polkit-1/polkitd ] && ! [ -x /usr/libexec/polkitd ]; then warn "polkit no está instalado: las acciones de administrador no pedirán contraseña."; fi
@@ -731,6 +717,11 @@ user_install() {
       "Exec=$BIN/hf-session" 'Type=Application' 'DesktopNames=Hyprland' 'Keywords=tiling;wayland;compositor;')"
     if [ -f "$SESSION_FILE" ] && [ "$(cat "$SESSION_FILE")" = "$want" ]; then say "Entrada de sesión ✓"
     else say "Entrada de sesión $SESSION_FILE (pide sudo)"; printf '%s\n' "$want" | root_write "$SESSION_FILE" 644 && done_ "entrada de sesión «Hyprland (HyprFrijol)»"; fi
+    # Modo seguro: Hyprland mínimo sin shell, plugins ni local.lua, con el menú «Restaurar ajustes» (hf-safe)
+    want="$(printf '%s\n' '[Desktop Entry]' 'Name=HyprFrijol (modo seguro)' 'Comment=Hyprland mínimo para reparar HyprFrijol: sin shell ni plugins' \
+      "Exec=$BIN/hf-session --safe" 'Type=Application' 'DesktopNames=Hyprland' 'Keywords=recovery;safe;rescue;')"
+    if [ -f "$SAFE_SESSION_FILE" ] && [ "$(cat "$SAFE_SESSION_FILE")" = "$want" ]; then say "Entrada de modo seguro ✓"
+    else printf '%s\n' "$want" | root_write "$SAFE_SESSION_FILE" 644 && done_ "entrada de sesión «HyprFrijol (modo seguro)»"; fi
   else
     skip_ "entrada de sesión (--no-session)"
   fi
@@ -759,11 +750,14 @@ uninstall() {
     [ -f "$l" ] && grep -qs 'hf-\|hyprfrijol' "$l" && run rm "$l"
   done
   have update-desktop-database && run update-desktop-database -q "$HOME/.local/share/applications" 2>/dev/null || true
+  # Menú «HyprFrijol» de Nautilus (enlace de hf-apps extension); las apps instaladas se quedan (hf-apps remove …)
+  l="$HOME/.local/share/nautilus-python/extensions/hyprfrijol.py"
+  [ -L "$l" ] && case "$(readlink "$l")" in */config/nautilus/hyprfrijol.py) run rm "$l"; done_ "menú de Nautilus" ;; esac
   # La entrada de sesión es del sistema: solo se quita si arranca la sesión de ESTE usuario
   local sf
-  for sf in "$SESSION_FILE" /usr/share/wayland-sessions/hypr-liquid.desktop; do   # (el segundo: nombre anterior)
+  for sf in "$SESSION_FILE" "$SAFE_SESSION_FILE" /usr/share/wayland-sessions/hypr-liquid.desktop; do   # (el último: nombre anterior)
     [ -e "$sf" ] || continue
-    if grep -qsE "^Exec=$BIN/h[fl]-session\$" "$sf"; then root rm "$sf"; done_ "entrada de sesión $sf"
+    if grep -qsE "^Exec=$BIN/h[fl]-session( --safe)?\$" "$sf"; then root rm "$sf"; done_ "entrada de sesión $sf"
     else warn "$sf arranca la sesión de otro usuario o carpeta: no la toco"; fi
   done
   if [ -e /etc/greetd/hf-previous-dm ] || grep -qs hyprland-greeter /etc/greetd/config.toml; then
@@ -810,6 +804,7 @@ summary() {
     echo "      [ -z \"\$WAYLAND_DISPLAY\" ] && [ \"\$(tty)\" = /dev/tty1 ] && exec \"\$HOME/.local/bin/hf-session\""
     echo "    O un login visual: ./install.sh --greeter"
   fi
+  echo "  · Qué tiene cada función y qué falta: hf-deps status · añadir una: hf-deps install <función> (p. ej. impresoras)"
   echo "  · Tus ajustes: ~/.config/hyprfrijol/local.lua · Desinstalar: ./install.sh --uninstall"
 }
 
@@ -886,5 +881,32 @@ if [ "$SYSTEM" = 1 ] && [ "$FAMILY" != nixos ]; then system_setup
 elif [ "$FAMILY" != nixos ]; then skip_ "servicios y grupos (--no-system)"; fi
 
 user_install
+
+# ---------- Apps por nivel (install/apps.json → scripts/hf-apps) ----------
+apps_install() {
+  local tiers="$APPS" ans a=()
+  if [ -z "$tiers" ]; then
+    tiers=serie
+    if [ "$YES" = 0 ] && [ "$DRY" = 0 ]; then
+      say "Apps de hyprfrijol por nivel (lista: scripts/hf-apps list):"
+      note "serie          Nautilus, kitty, Chrome, Editor de texto, Loupe, Papers, Showtime/Decibels, File Roller, Calculadora, Discos, Resources, Pika Backup, Bazaar" \
+           "productividad  ONLYOFFICE, Thunderbird, KeePassXC, LocalSend, Parabolic, VS Code" \
+           "destacada      Morrow (notas), Sung (música, se compila), Orchard (Apple Music, beta), Heronite (juegos)" \
+           "creativa       darktable, GIMP, Inkscape, Kdenlive" \
+           "experimental   WordCraft, GridCraft, DeckCraft (ArtCraft, en desarrollo)"
+      printf '%s?%s ¿Qué niveles instalo? (separados por comas; «none» para ninguno) [serie] ' "$C1" "$C0"
+      { read -r ans </dev/tty; } 2>/dev/null || ans=""
+      tiers="${ans:-serie}"; tiers="${tiers// /}"
+    fi
+  fi
+  [ "$tiers" = none ] && { skip_ "apps por nivel (--apps=none)"; return 0; }
+  hdr "Apps ($tiers)"
+  [ "$DRY" = 1 ] && a+=(--dry-run)
+  [ "$YES" = 1 ] && a+=(--yes)
+  if HF_ROOT="$HERE" "$HERE/scripts/hf-apps" install "$tiers" ${a[@]+"${a[@]}"}; then done_ "apps: $tiers (hf-apps)"
+  else warn "Alguna app no se instaló: revisa arriba o usa Ajustes › Aplicaciones"; todo_ "apps: hf-apps install $tiers"; fi
+  return 0
+}
+[ "$DEPS" = 1 ] && apps_install || { [ "$DEPS" = 0 ] && skip_ "apps por nivel (--no-deps)"; }
 HAS_DM="$(current_dm)"; [ "$HAS_DM" = greetd ] && HAS_DM="el login (greetd)"
 summary

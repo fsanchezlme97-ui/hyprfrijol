@@ -14,11 +14,22 @@ import "../ui"
 ColumnLayout {
     id: root
     spacing: 12
-    property var pals: ({})
+    // Paletas del repo + las importadas por el usuario (hf-plugin theme: temas de Omarchy → palettes-user.json)
+    property var basePals: ({})
+    property var userPals: ({})
+    readonly property var pals: Object.assign({}, basePals, userPals)
     FileView {
         path: Paths.root + "/config/themes/palettes.json"
         printErrors: false
-        onLoaded: { try { root.pals = JSON.parse(text()); } catch (e) {} }
+        onLoaded: { try { root.basePals = JSON.parse(text()); } catch (e) {} }
+    }
+    FileView {
+        path: Paths.userDir + "/palettes-user.json"
+        printErrors: false
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: { try { const j = JSON.parse(text()); root.userPals = j && typeof j === "object" ? j : {}; } catch (e) {} }
+        onLoadFailed: root.userPals = {}
     }
     Wallpapers { id: wp }
     // Color de las carpetas que eligió 17-theme-apps.py (el más cercano al acento)
@@ -58,6 +69,7 @@ ColumnLayout {
         if (palGroup === "originales" && g !== "") return false;
         if (palGroup === "pastel" && g !== "pastel") return false;
         if (palGroup === "populares" && g !== "popular") return false;
+        if (palGroup === "omarchy" && g !== "omarchy") return false;
         if (palGroup === "claras" && !(p.light || (p.pair && pals[p.pair]?.light))) return false;
         if (palGroup === "oscuras" && !(!p.light || (p.pair && !pals[p.pair]?.light))) return false;
         return palQuery === "" || norm(p.name).includes(norm(palQuery)) || norm(k).includes(norm(palQuery));
@@ -279,7 +291,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 fill: false
                 h: 28
-                model: [["todas", "Todas"], ["originales", "Originales"], ["populares", "Populares"], ["pastel", "Pastel"], ["oscuras", "Oscuras"], ["claras", "Claras"]]
+                model: [["todas", "Todas"], ["originales", "Originales"], ["populares", "Populares"], ["pastel", "Pastel"], ["oscuras", "Oscuras"], ["claras", "Claras"]].concat(Object.keys(root.userPals).length ? [["omarchy", "Importadas"]] : [])
                 current: root.palGroup
                 onPicked: k => root.palGroup = k
             }

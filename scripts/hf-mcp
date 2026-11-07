@@ -6,7 +6,10 @@
 Herramientas: get_state, set_settings, apply_actions, undo, wallpaper, profile, open_view, workspace, notify y las
 mismas que usa el asistente del panel (hf-ai TOOL_SPECS): list_windows, read_active_window, read_screen,
 notifications, find_files, list_apps, list_settings, system_status, window_action, launch_app, open_url, media,
-volume, brightness, do_not_disturb, caffeine, timer, window_mode, pomodoro, clear_notifications.
+volume, brightness, do_not_disturb, caffeine, timer, window_mode, pomodoro, clear_notifications, list_devices,
+device_action, list_downloads, download, download_control, wallhaven_search, wallhaven_wallpaper, diagnose, check_deps.
+Cada herramienta lleva anotaciones MCP: readOnlyHint (consultas: sin aprobación) o no (cambios: el cliente pide permiso)
+y destructiveHint para lo que no se puede deshacer (cerrar ventanas, expulsar, cancelar descargas).
 Todo pasa por las mismas piezas que el panel: scripts/hf-ai (acciones validadas + deshacer, consultas de solo
 lectura), hf-apply, hf-wallpaper, hf-profile y `qs ipc`. Respeta Ajustes › IA (aiControlShell, aiReadDesktop,
 aiContextCapture). Solo biblioteca estándar.
@@ -140,6 +143,17 @@ TOOLS = [
 TOOLS += [(n, d, sch, (lambda name: (lambda a: hlai.tool_call(name, a)))(n)) for n, d, sch, _k, _b in hlai.TOOL_SPECS]
 BY_NAME = {t[0]: t for t in TOOLS}
 
+# Nivel de aprobación (anotaciones MCP): las de solo lectura no cambian nada (el cliente puede dejarlas pasar sin
+# preguntar); las demás cambian el escritorio y el cliente debe pedir permiso; destructiveHint = sin vuelta atrás.
+READ_ONLY = {"get_state"} | {n for n, _d, _s, k, _b in hlai.TOOL_SPECS if k == "query"}
+DESTRUCTIVE = set(getattr(hlai, "DESTRUCTIVE_TOOLS", set()))
+
+
+def annotations(name):
+    ro = name in READ_ONLY
+    return {"readOnlyHint": ro, "destructiveHint": (not ro) and name in DESTRUCTIVE, "idempotentHint": ro,
+            "openWorldHint": name in ("wallhaven_search", "wallhaven_wallpaper", "download", "open_url")}
+
 
 def handle(msg):
     mid, method, params = msg.get("id"), msg.get("method"), msg.get("params") or {}
@@ -152,7 +166,7 @@ def handle(msg):
     if method == "ping":
         return {}
     if method == "tools/list":
-        return {"tools": [{"name": n, "description": d, "inputSchema": s} for n, d, s, _ in TOOLS]}
+        return {"tools": [{"name": n, "description": d, "inputSchema": s, "annotations": annotations(n)} for n, d, s, _ in TOOLS]}
     if method == "tools/call":
         t = BY_NAME.get(params.get("name"))
         if not t:

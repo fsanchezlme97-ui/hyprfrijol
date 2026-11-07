@@ -129,6 +129,8 @@ def is_light_now(s):
 
 def resolve_palette(s):
     pals = load(ROOT / "config/themes/palettes.json", {})
+    # Temas importados (hf-plugin theme: colors.toml de Omarchy) → ~/.config/hyprfrijol/palettes-user.json, mismo formato
+    pals.update({k: v for k, v in (load(USER / "palettes-user.json", {}) or {}).items() if isinstance(v, dict) and v.get("p")})
     mode = s.get("colorMode", "auto")
     light = is_light_now(s)
     if mode == "mono":

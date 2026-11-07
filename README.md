@@ -35,24 +35,33 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 | Perfiles de actividad con reglas automáticas | `modules/profiles`, `scripts/hf-profile` |
 | Selector de fondos (por monitor, por hora, mono), captura sobre la pantalla congelada (lupa, ventanas, fijar, OCR con cajas, anotación, IA) / grabación, selector de color (HEX · RGB · HSL · OKLCH, historial) | `modules/wallpapers`, `capture`, `colorpicker` |
 | Portapapeles y emojis en Spotlight, agenda (con `.ics`), centro de actualizaciones con punto de restauración | `modules/spotlight`, `agenda`, `updates` |
+| Memorias USB y tarjetas SD (aviso con Abrir/Expulsar, icono en la barra, Ajustes › Almacenamiento), cola de descargas de vídeo, audio, imágenes y archivos (yt-dlp, gallery-dl, aria2c; «descargar <url>» en Spotlight), fondos de Wallhaven, y una IA que enseña qué cambia y pide tu aprobación paso a paso | `scripts/hf-devices`, `hf-download`, `hf-wallhaven` · `modules/devices`, `downloads` |
 | Bloqueo, menú de energía, modo sin distracciones, agente de polkit | `modules/lock`, `power`, `focus`, `polkit` |
 | Aplicación de ajustes, bienvenida, herramientas | `modules/settings`, `welcome`, `tools` |
+| Apps por nivel (de serie, productividad, destacadas, creativa, experimental) con instalación por distro, apps predeterminadas y menú «HyprFrijol» en Nautilus (IA, firmar PDF, OCR, convertir, poner de fondo) | `install/apps.json`, `scripts/hf-apps`, `hf-fileact`, `config/nautilus/` |
 | Login con greetd (Quickshell) | `greeter/` |
+| «Que no se rompa»: modo seguro en el login, copias «buenas» de tus ajustes, diagnóstico copiable y actualización por versiones con vuelta atrás | `scripts/hf-safe`, `hf-doctor`, `hf-update`, `config/hypr/safe.lua` |
+| Carga diferida: Spotlight, centro de control, vista general, capturas y demás paneles solo ocupan memoria mientras se usan (`lazyModules`, Ajustes › Energía y rendimiento) | `components/LazyView.qml`, `modules/Modules.qml` |
+| Plugins de Omarchy (widget de barra, panel, overlay, menú y servicio; se piden permiso al activarlos) y temas `colors.toml` de Omarchy como paletas | `scripts/hf-plugin`, `modules/omarchy`, `quickshell/Commons`, `Ui` |
 
 ## Capturas
 
-Capturas reales del shell a 1920×1080, en una sesión de prueba con los fondos incluidos en `assets/wallpapers/`.
+Capturas reales del shell a 1920×1080 con la configuración por defecto (paleta Oxocarbon, estilo Material) y el fondo «noche» de `assets/wallpapers/`.
 
 | | |
 |---|---|
-| ![Escritorio con la barra y los widgets](docs/capturas/escritorio.webp) | ![Centro de control en tema claro](docs/capturas/centro-de-control.webp) |
-| **Escritorio** · barra en archipiélago, widgets de clima, sistema y agenda; colores tomados del fondo | **Centro de control** · ajustes rápidos, notificaciones y agenda en un solo panel (tema claro) |
-| ![Spotlight con resultados](docs/capturas/spotlight.webp) | ![Ajustes › Apariencia con la paleta Rosé Pine](docs/capturas/ajustes-apariencia.webp) |
-| **Spotlight** · apps, acciones, archivos, calculadora, IA y web desde un solo buscador | **Ajustes › Apariencia** · estilos Aurora, Material, Mica y Suave, y 45 paletas (aquí Rosé Pine) |
-| ![Asistente de IA en el panel lateral](docs/capturas/asistente-ia.webp) | ![Vista general de los espacios de trabajo](docs/capturas/vista-general.webp) |
-| **Asistente de IA** · panel lateral que responde y cambia el escritorio con tu aprobación | **Vista general** · espacios de trabajo con sus ventanas y buscador |
+| ![Escritorio con la barra y los widgets](docs/capturas/escritorio.webp) | ![Centro de control](docs/capturas/centro-de-control.webp) |
+| **Escritorio** · barra arriba en archipiélago y widgets de clima, sistema y notas | **Centro de control** · ajustes rápidos, notificaciones y agenda en un solo panel |
+| ![Spotlight con resultados](docs/capturas/spotlight.webp) | ![Ajustes › Apariencia](docs/capturas/ajustes-apariencia.webp) |
+| **Spotlight** · apps, acciones, archivos, calculadora, IA y web desde un buscador | **Ajustes › Apariencia** · estilos, 45 paletas (aquí Oxocarbon) y acento |
+| ![Asistente de IA en el panel lateral](docs/capturas/asistente-ia.webp) | ![Vista general de los espacios](docs/capturas/vista-general.webp) |
+| **Asistente de IA** · panel lateral que cambia el escritorio con tu aprobación | **Vista general** · espacios de trabajo con sus ventanas y buscador |
 | ![Selector de fondos](docs/capturas/selector-de-fondos.webp) | ![Terminal kitty con los colores del tema](docs/capturas/terminal.webp) |
 | **Selector de fondos** · vista previa al instante, por pantalla o según la hora | **Terminal** · kitty, Qt/KDE, GTK y btop siguen la paleta activa |
+| ![Ajustes › Aplicaciones](docs/capturas/ajustes-aplicaciones.webp) | ![Ajustes › Almacenamiento](docs/capturas/ajustes-almacenamiento.webp) |
+| **Ajustes › Aplicaciones** · centro de aplicaciones por categorías y origen | **Ajustes › Almacenamiento** · unidades extraíbles, discos y descargas |
+| ![Ajustes › Sistema y recuperación](docs/capturas/ajustes-sistema.webp) | ![Ajustes › Plugins de Omarchy](docs/capturas/ajustes-plugins-omarchy.webp) |
+| **Ajustes › Sistema** · puntos de restauración, diagnóstico, actualizaciones y modo seguro | **Ajustes › Plugins de Omarchy** · widgets, paneles y temas de Omarchy |
 
 ## Instalación
 
@@ -79,15 +88,26 @@ cd ~/hyprfrijol
 |---|---|
 | `--dry-run` | solo enseña lo que haría (con `HF_DISTRO=fedora`, `debian`, `void`… simula otra distro) |
 | `--yes` | sin preguntas (acepta lo recomendado) |
-| `--full` | también los opcionales: Bluetooth, KDE Connect, fondos animados, calculadora, firmware, VNC… |
+| `--full` | también los opcionales: máquinas virtuales, contenedores, VPN, escáner, Bluetooth, KDE Connect, fondos animados, calculadora, firmware, VNC… |
 | `--no-deps` | sin instalar paquetes (tú te encargas) |
 | `--no-system` | sin tocar servicios ni grupos |
 | `--no-session` | sin la entrada en el gestor de inicio |
 | `--greeter` / `--greeter-off` | login visual propio con greetd / volver al gestor anterior (se guarda cuál era) |
 | `--uninstall` [`--purge`] | desinstalar [y borrar ajustes, estado y caché] |
 | `--migrate` | pasar una instalación de hypr-liquid (nombre anterior) a hyprfrijol |
+| `--apps=serie,productividad,…` | apps por nivel: `serie` (por defecto), `productividad`, `destacada`, `creativa`, `experimental`, `all`; `--no-apps` ninguna. Sin `--yes` pregunta. Lista: `scripts/hf-apps list` |
 
 Se puede repetir sin miedo: solo hace lo que falta. Al final enseña un resumen de lo instalado, lo saltado y lo que te toca a ti. Las dependencias están en [`install/packages.tsv`](install/packages.tsv) (imprescindibles, recomendadas y opcionales, con el nombre del paquete en cada familia).
+
+Cada dependencia dice qué función la usa (Ajustes › Impresoras, Dictado, Máquinas virtuales…). Para ver qué falta y añadir una función después, sin reinstalar:
+
+```bash
+hf-deps status                 # cada función: lo instalado y lo que falta
+hf-deps install impresoras     # o un id (alsa, vm…), --recommended o --all; --dry-run para ver los comandos
+hf-deps explain lpstat         # qué función usa ese programa y qué paquete lo trae
+```
+
+`hf-doctor` lista las recomendadas que faltan, por función, con su `hf-deps install …`.
 
 ### Por distro
 
@@ -162,7 +182,8 @@ config/
   cava/            onda de audio de la barra
   defaults/        ajustes, colores y plantilla de local.lua por defecto
 install/           packages.tsv (dependencias por distro) y bootstrap.sh (instalación en una línea)
-scripts/           hf-session, hf-apply, hf-wallpaper, hf-profile, hf-lock, hf-capture, hf-updates, hf-ai, hf-mcp, hf-webapp
+scripts/           hf-session, hf-apply, hf-wallpaper, hf-profile, hf-lock, hf-capture, hf-updates, hf-ai, hf-mcp, hf-webapp,
+                   hf-devices, hf-download, hf-wallhaven
 assets/wallpapers/ fondos incluidos
 greeter/           login con greetd
 dev/               try.sh (sesión anidada + captura) y DESARROLLO.md

@@ -9,6 +9,10 @@
 // gris sobre la respuesta) y proponer un plan de varios pasos (ventanas, apps, ajustes, música, temporizadores…):
 // tarjeta con los pasos numerados, Aplicar / Descartar y Deshacer. Los pasos que no se pueden deshacer (cerrar
 // una ventana, borrar avisos) piden confirmación aunque aiConfirm esté apagado.
+// Aprobación: cada paso enseña qué cambia (plan[i].preview de hf-ai, p. ej. «abajo → arriba»); con varios pasos hay una
+// casilla por paso (sel) y solo se aplican los marcados; «Aprobar siempre esta acción» guarda plan[i].kind en
+// aiAlwaysApprove (Ajustes › IA lo revoca) y los planes con todo aprobado siempre se aplican solos (hf-ai: auto),
+// nunca los pasos sin vuelta atrás. La primera vez sale una tarjeta con lo que puede hacer y ejemplos (aiOnboarded).
 // setWindow({address, class, title}): abierto con Super+Ctrl+A (hf-ai summon) → la conversación va sobre esa ventana.
 // Micrófono: si existe scripts/hf-dictate, dicta la pregunta (hf-dictate record; el texto acaba en la entrada).
 // Imágenes (si aiContextCapture): arrastrar archivos / imágenes de la web, Ctrl+V con una imagen en el portapapeles o el
@@ -191,9 +195,10 @@ Item {
                 else {
                     root.push({ role: "ai", text: r.text || (r.actions?.length ? "Puedo hacerlo. Estos son los pasos:" : "…"),
                                 actions: r.actions ?? [], labels: r.labels ?? [], plan: r.plan ?? [], steps: r.steps ?? [],
-                                code: r.code ?? "", state: "" });
-                    // Sin confirmación (Ajustes › IA): se aplica ya y queda el botón Deshacer (salvo pasos sin vuelta atrás)
-                    if (!root.confirmChanges && !r.confirm && (r.actions?.length ?? 0) > 0) root.apply(root.messages.length - 1);
+                                code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto });
+                    // Sin confirmación (Ajustes › IA) o todo «aprobado siempre» (aiAlwaysApprove): se aplica ya y queda
+                    // el botón Deshacer (salvo pasos sin vuelta atrás, que siempre preguntan)
+                    if (((!root.confirmChanges && !r.confirm) || r.auto) && (r.actions?.length ?? 0) > 0) root.apply(root.messages.length - 1);
                 }
             }
         }
@@ -202,10 +207,38 @@ Item {
 
     // ---- aplicar / descartar / deshacer
     property int applyingIdx: -1
+    // Aprobar o rechazar cada paso (casillas del plan): solo se aplican los marcados
+    function selOf(m) { return (m.actions ?? []).map((a, k) => (m.sel ?? [])[k] !== false); }
+    function toggleStep(i, k) { const s = selOf(messages[i]); s[k] = !s[k]; patch(i, { sel: s }); }
     function apply(i) {
+        const sel = selOf(messages[i]);
+        const acts = messages[i].actions.filter((a, k) => sel[k]);
+        if (!acts.length) { discard(i); return; }
         applyingIdx = i;
-        applyProc.command = [Paths.script("hf-ai"), "apply", JSON.stringify(messages[i].actions)];
+        applyProc.command = [Paths.script("hf-ai"), "apply", JSON.stringify(acts)];
         applyProc.running = true;
+    }
+    // «Aprobar siempre para esta acción» (Ajustes › IA › Aprobadas siempre la revoca). Nunca para los pasos sin vuelta atrás.
+    readonly property var always: Settings.get("aiAlwaysApprove", [])
+    function setAlways(kind, on) {
+        if (!kind) return;
+        const l = always.filter(k => k !== kind);
+        Settings.set("aiAlwaysApprove", on ? l.concat([kind]) : l);
+    }
+    readonly property bool onboarded: Settings.get("aiOnboarded", false) === true
+    function finishOnboarding() { if (!onboarded) Settings.set("aiOnboarded", true); }
+    readonly property var examples: [
+        ["Pon la barra arriba y el tema oscuro", false],
+        ["Resume mis notificaciones", false],
+        ["Descarga el audio en mp3 de este vídeo: ", true],
+        ["Busca fondos de montañas en Wallhaven y añade uno a mis fondos", false],
+        ["¿Qué memorias USB hay conectadas? Expulsa la que esté montada", false],
+        ["Temporizador de 10 min para el té", false]
+    ]
+    function useExample(e) {
+        finishOnboarding();
+        if (e[1]) { input.text = e[0]; focusInput(); input.cursorPosition = input.text.length; }
+        else ask(e[0]);
     }
     Process {
         id: applyProc
@@ -475,13 +508,86 @@ Item {
             Layout.fillHeight: true
             clip: true
             contentWidth: width
-            contentHeight: Math.max(height, msgs.implicitHeight + 24)
+            contentHeight: Math.max(height, msgs.implicitHeight + 24, onboard.visible ? onboard.height + 24 : 0)
             boundsBehavior: Flickable.StopAtBounds
             onHeightChanged: Qt.callLater(root.scrollEnd)
 
+            // Primera vez: qué puede hacer y ejemplos (aiOnboarded; «Empezar» o usar un ejemplo lo cierra)
+            Rectangle {
+                id: onboard
+                visible: root.messages.length === 0 && !root.busy && !root.onboarded
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: Math.max(12, (flick.height - height) / 2)
+                width: parent.width - 24
+                height: obCol.implicitHeight + 28
+                radius: Theme.r(12)
+                color: Theme.fill2
+                border.width: 1; border.color: Theme.ov
+                ColumnLayout {
+                    id: obCol
+                    x: 14; y: 14
+                    width: parent.width - 28
+                    spacing: 10
+                    RowLayout {
+                        spacing: 10
+                        Rectangle {
+                            implicitWidth: 34; implicitHeight: 34; radius: Theme.r(10); color: Theme.pc
+                            Icon { anchors.centerIn: parent; name: "ai"; size: 16; color: Theme.pcText }
+                        }
+                        ColumnLayout {
+                            spacing: 0
+                            Txt { text: "Tu asistente del escritorio"; size: 14; weight: Font.DemiBold }
+                            Txt { text: "Esto es lo que puede hacer"; size: 11.5; muted: true }
+                        }
+                    }
+                    Repeater {
+                        model: [
+                            ["sparkle", "Responde, resume y redacta, con el contexto que elijas arriba (ventana, portapapeles, captura)."],
+                            ["sliders", "Cambia el escritorio con palabras: ajustes, ventanas, apps, música, fondos, descargas, memorias USB…"],
+                            ["check", "Nada cambia sin tu aprobación: ves qué pasa (antes → después), eliges qué pasos, y casi todo se deshace."],
+                            ["shield", "Solo mira tus ventanas, avisos o archivos si se lo permites en Ajustes › IA."]
+                        ]
+                        RowLayout {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            spacing: 9
+                            Icon { Layout.alignment: Qt.AlignTop; Layout.topMargin: 1; name: parent.modelData[0]; size: 13; color: Theme.p }
+                            Txt { Layout.fillWidth: true; text: parent.modelData[1]; size: 12; wrapMode: Text.Wrap; elide: Text.ElideNone }
+                        }
+                    }
+                    Txt { Layout.topMargin: 2; text: "Prueba con"; size: 10.5; muted: true; weight: Font.DemiBold }
+                    Repeater {
+                        model: root.examples
+                        Rectangle {
+                            id: ex
+                            required property var modelData
+                            Layout.fillWidth: true
+                            implicitHeight: exT.implicitHeight + 12
+                            radius: Theme.r(7)
+                            color: exMa.containsMouse ? Qt.alpha(Theme.t, 0.07) : "transparent"
+                            border.width: 1; border.color: Theme.ov
+                            Txt {
+                                id: exT
+                                x: 10; y: 6; width: parent.width - 40
+                                text: "«" + ex.modelData[0].replace(/: $/, "…") + "»"
+                                size: 12; wrapMode: Text.Wrap; elide: Text.ElideNone
+                            }
+                            Icon { anchors.right: parent.right; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter; name: ex.modelData[1] ? "edit" : "send"; size: 12; color: Theme.tv }
+                            MouseArea { id: exMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.useExample(ex.modelData) }
+                        }
+                    }
+                    RowLayout {
+                        Layout.topMargin: 2
+                        spacing: 6
+                        SmallBtn { text: "Empezar"; primary: true; onClicked: { root.finishOnboarding(); root.focusInput(); } }
+                        SmallBtn { text: "Ajustes de IA"; onClicked: Shell.open("ajustesapp", "ia") }
+                    }
+                }
+            }
+
             // Vacío
             ColumnLayout {
-                visible: root.messages.length === 0 && !root.busy
+                visible: root.messages.length === 0 && !root.busy && root.onboarded
                 anchors.centerIn: parent
                 width: parent.width - 64
                 spacing: 8
@@ -496,7 +602,7 @@ Item {
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap; elide: Text.ElideNone
                     muted: true; size: 12
-                    text: "Pregunta lo que quieras, pide un comando o cambia el escritorio con palabras. Los cambios se aplican solo si los apruebas."
+                    text: "Pregunta lo que quieras, pide un comando o cambia el escritorio con palabras. Los cambios se aplican solo si los apruebas (o si marcaste «Aprobar siempre» esa acción)."
                 }
             }
 
@@ -608,9 +714,13 @@ Item {
                                             width: parent.width - 20
                                             spacing: 5
                                             Txt {
-                                                visible: (msg.modelData.labels?.length ?? 0) > 1
-                                                text: "Plan · " + (msg.modelData.labels?.length ?? 0) + " pasos"
+                                                width: planCol.width
+                                                text: msg.modelData.state === "" && (msg.modelData.labels?.length ?? 0) > 1
+                                                    ? "Plan · " + msg.modelData.labels.length + " pasos · desmarca los que no quieras"
+                                                    : msg.modelData.state === "" ? "Cambio propuesto · revisa antes de aplicar"
+                                                    : (msg.modelData.labels?.length ?? 0) > 1 ? "Plan · " + msg.modelData.labels.length + " pasos" : "Cambio"
                                                 size: 10.5; muted: true; weight: Font.DemiBold
+                                                wrapMode: Text.Wrap; elide: Text.ElideNone
                                             }
                                             Repeater {
                                                 model: msg.modelData.labels ?? []
@@ -619,20 +729,68 @@ Item {
                                                     required property string modelData
                                                     required property int index
                                                     readonly property var info: (msg.modelData.plan ?? [])[index] ?? {}
+                                                    readonly property bool multi: (msg.modelData.labels?.length ?? 0) > 1
+                                                    readonly property bool pending: msg.modelData.state === ""
+                                                    readonly property bool on: (msg.modelData.sel ?? [])[index] !== false
+                                                    readonly property bool done: msg.modelData.state === "applied" && on
+                                                    readonly property bool isAlways: !!info.kind && root.always.includes(info.kind)
                                                     width: planCol.width
                                                     spacing: 8
+                                                    // Número del paso; con varios pasos y sin aplicar, casilla para aprobarlo o no
                                                     Rectangle {
-                                                        implicitWidth: 18; implicitHeight: 18; radius: 9
-                                                        color: msg.modelData.state === "applied" ? Theme.p : Theme.fill2
+                                                        Layout.alignment: Qt.AlignTop
+                                                        implicitWidth: 18; implicitHeight: 18
+                                                        radius: stepRow.multi && stepRow.pending ? Theme.r(5) : 9
+                                                        color: stepRow.done || (stepRow.multi && stepRow.pending && stepRow.on) ? Theme.p : Theme.fill2
+                                                        border.width: stepRow.multi && stepRow.pending && !stepRow.on ? 1.5 : 0
+                                                        border.color: Theme.tv
                                                         Txt {
                                                             anchors.centerIn: parent
-                                                            text: msg.modelData.state === "applied" ? "✓" : String(stepRow.index + 1)
+                                                            text: stepRow.done || (stepRow.multi && stepRow.pending && stepRow.on) ? "✓"
+                                                                : stepRow.multi && stepRow.pending ? "" : String(stepRow.index + 1)
                                                             size: 10; weight: Font.Bold; tabular: true
-                                                            color: msg.modelData.state === "applied" ? Theme.pText : Theme.t
+                                                            color: stepRow.done || (stepRow.multi && stepRow.pending && stepRow.on) ? Theme.pText : Theme.t
+                                                        }
+                                                        MouseArea {
+                                                            anchors.fill: parent; anchors.margins: -4
+                                                            enabled: stepRow.multi && stepRow.pending
+                                                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                                            onClicked: root.toggleStep(msg.index, stepRow.index)
                                                         }
                                                     }
-                                                    Txt { Layout.fillWidth: true; text: stepRow.modelData; size: 12; wrapMode: Text.Wrap; elide: Text.ElideNone }
+                                                    ColumnLayout {
+                                                        Layout.fillWidth: true
+                                                        spacing: 2
+                                                        Txt {
+                                                            Layout.fillWidth: true
+                                                            text: stepRow.modelData + (!stepRow.on && !stepRow.pending ? " · omitido" : "")
+                                                            size: 12; wrapMode: Text.Wrap; elide: Text.ElideNone
+                                                            opacity: stepRow.on ? 1 : 0.5
+                                                            font.strikeout: !stepRow.on
+                                                        }
+                                                        // Qué cambia: «abajo → arriba», la carpeta, la ventana…
+                                                        Txt {
+                                                            visible: (stepRow.info.preview ?? "") !== "" && stepRow.on
+                                                            Layout.fillWidth: true
+                                                            text: stepRow.info.preview ?? ""
+                                                            size: 11; muted: true; font.family: Theme.mono
+                                                            wrapMode: Text.WrapAnywhere; elide: Text.ElideNone; maximumLineCount: 3
+                                                        }
+                                                        // Aprobar siempre (no para lo que no se puede deshacer)
+                                                        Txt {
+                                                            visible: stepRow.pending && stepRow.on && !stepRow.info.confirm && !!stepRow.info.kind
+                                                            text: stepRow.isAlways ? "✓ Aprobado siempre · quitar" : "Aprobar siempre esta acción"
+                                                            size: 10.5; color: stepRow.isAlways ? Theme.p : Theme.tv
+                                                            font.underline: alwaysMa.containsMouse
+                                                            MouseArea {
+                                                                id: alwaysMa
+                                                                anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                                                onClicked: root.setAlways(stepRow.info.kind, !stepRow.isAlways)
+                                                            }
+                                                        }
+                                                    }
                                                     Rectangle {
+                                                        Layout.alignment: Qt.AlignTop
                                                         visible: stepRow.info.undo === false
                                                         implicitHeight: 16; implicitWidth: nuT.implicitWidth + 10; radius: Theme.r(4)
                                                         color: Qt.alpha(Theme.danger, 0.14)
@@ -646,16 +804,20 @@ Item {
                                         visible: (msg.modelData.labels?.length ?? 0) > 0
                                         spacing: 6
                                         SmallBtn {
+                                            readonly property int n: msg.modelData.labels?.length ?? 0
+                                            readonly property int k: root.selOf(msg.modelData).filter(x => x).length
                                             visible: msg.modelData.state === ""
+                                            opacity: k > 0 ? 1 : 0.5
                                             text: root.applyingIdx === msg.index && applyProc.running ? "Aplicando…"
-                                                : (msg.modelData.labels?.length ?? 0) > 1 ? "Aplicar los " + msg.modelData.labels.length + " pasos" : "Aplicar"
+                                                : n > 1 ? (k === n ? "Aplicar los " + n + " pasos" : k === 0 ? "Ningún paso marcado" : "Aplicar " + k + " de " + n)
+                                                : "Aprobar y aplicar"
                                             primary: true
-                                            onClicked: root.apply(msg.index)
+                                            onClicked: if (k > 0) root.apply(msg.index)
                                         }
-                                        SmallBtn { visible: msg.modelData.state === ""; text: "Descartar"; onClicked: root.discard(msg.index) }
+                                        SmallBtn { visible: msg.modelData.state === ""; text: (msg.modelData.labels?.length ?? 0) > 1 ? "Rechazar todo" : "Rechazar"; onClicked: root.discard(msg.index) }
                                         Txt {
                                             visible: msg.modelData.state !== ""
-                                            text: msg.modelData.state === "applied" ? "✓ Hecho"
+                                            text: msg.modelData.state === "applied" ? (msg.modelData.auto ? "✓ Hecho · aprobado siempre" : "✓ Hecho")
                                                 : msg.modelData.state === "undone" ? "Cambios deshechos" : "Descartado"
                                             size: 12; weight: Font.DemiBold
                                             color: msg.modelData.state === "applied" ? Theme.p : Theme.tv
@@ -745,7 +907,7 @@ Item {
 
         // ---------------------------------------------------- sugerencias
         Flow {
-            visible: !root.busy
+            visible: !root.busy && !onboard.visible
             Layout.fillWidth: true
             Layout.preferredWidth: root.width - 24
             Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.bottomMargin: 8; Layout.topMargin: 4

@@ -243,11 +243,13 @@ ShellRoot {
         }
         hasGamescope = gs;
         const out = [];
-        let liquid = null;
+        let liquid = null, safe = null;
         for (const s of list) {
             if (s.Hidden === "true" || s.NoDisplay === "true" || !s.Exec) continue;
             const exec = s.Exec.replace(/\s%[a-zA-Z]/g, "");
             const desk = s.DesktopNames || s.Name;
+            // Modo seguro (hf-session --safe): al final de la lista, para reparar si el escritorio no arranca
+            if (s.key === "hyprfrijol-seguro") { safe = { key: s.key, name: "HyprFrijol (modo seguro)", sub: "Mínimo, sin shell ni plugins · para reparar", g: "S", tile: "sc", exec: exec, desk: "Hyprland" }; continue; }
             // hypr-liquid: nombre anterior de la sesión (instalaciones sin migrar)
             if (s.key === "hyprfrijol" || s.key === "hypr-liquid") { if (liquid && liquid.key === "hyprfrijol") continue; liquid = { key: s.key, name: "Hyprland", sub: "Este escritorio · Liquid sobrio", g: "H", tile: "p", exec: exec, desk: "Hyprland" }; continue; }
             const isHypr = /^hyprland/i.test(s.key);
@@ -262,6 +264,7 @@ ShellRoot {
                                sub: gs ? "Steam a pantalla completa · gamescope" : "Necesita gamescope (no instalado)",
                                exec: root.cfg.gameCommand || "gamescope -e -f -- steam -gamepadui -steamos3", disabled: !gs && !root.preview });
         }
+        if (safe || root.preview) out.push(safe ?? { key: "hyprfrijol-seguro", name: "HyprFrijol (modo seguro)", sub: "Mínimo, sin shell ni plugins · para reparar", g: "S", tile: "sc", exec: "hf-session --safe", desk: "Hyprland" });
         sessions = out;
         restoreLast();
     }
@@ -290,7 +293,7 @@ ShellRoot {
     function remember(): void {
         if (preview) return;
         const s = Object.assign({}, mem.sessions ?? {});
-        s[user.name] = session.key;
+        if (session.key !== "hyprfrijol-seguro") s[user.name] = session.key;   // el modo seguro no se recuerda: la próxima vez, la sesión normal
         Quickshell.execDetached(["sh", "-c", 'mkdir -p "$(dirname "$1")" && printf "%s" "$2" > "$1"', "sh", memPath,
                                  JSON.stringify({ user: user.name, sessions: s })]);
     }

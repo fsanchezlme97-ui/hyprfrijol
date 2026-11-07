@@ -1,6 +1,6 @@
 // Ajustes › Sistema y recuperación — puntos de restauración (snapper list, solo lectura), kernels instalados,
 // actualizaciones (updatesMode…), copia de /home, exportar/importar tus ajustes (settings.json) y enlace a
-// Apps predeterminadas e inicio.
+// Apps predeterminadas e inicio; Diagnóstico, Actualizaciones de HyprFrijol y Modo seguro (ui/Mantenimiento.qml).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -142,6 +142,8 @@ RowLayout {
                 }
             }
         }
+        // Diagnóstico (hf-doctor), Actualizaciones de HyprFrijol (hf-update) y Modo seguro (hf-safe) → ui/Mantenimiento.qml
+        Mantenimiento { Layout.fillWidth: true }
     }
     ColumnLayout {
         id: right

@@ -28,7 +28,10 @@ PanelWindow {
     property real yOffset: 0                 // ajuste fino para "center"/"top"/"screen"
     property real lift: 0                    // "screen": cuánto por encima del centro (como Spotlight de macOS)
     property real centerHeight: 0            // "screen": altura con la que se centra (0 = la del panel)
-    readonly property bool shown: Shell.view === view
+    // ready: un ciclo después de crearse, para que al cargarlo al abrir (LazyView) se vea la animación de entrada
+    property bool ready: false
+    Component.onCompleted: Qt.callLater(() => win.ready = true)
+    readonly property bool shown: ready && Shell.view === view
     default property alias content: panel.data
     property alias panel: panel
     signal escapePressed()
@@ -116,4 +119,5 @@ PanelWindow {
         Keys.onEscapePressed: { win.escapePressed(); Shell.close(); }
     }
     onShownChanged: if (shown) panel.forceActiveFocus()
+    OpenProbe { name: win.view; shown: win.shown }
 }

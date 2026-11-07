@@ -83,15 +83,12 @@ Overlay {
         input.forceActiveFocus();
         if (m === "apps") Qt.callLater(() => grid.positionViewAtBeginning());
     }
-    IpcHandler {
-        target: "spotlight"
-        function state(): string {
-            return JSON.stringify({ mode: spot.mode, query: spot.query, sel: spot.sel, gsel: spot.gsel, cat: spot.appCat,
-                                    cur: spot.cur?.name ?? "", kind: spot.cur?.kind ?? "", more: spot.moreMode ? spot.moreActions.map(a => a.label) : [],
-                                    moreSel: spot.moreSel, items: spot.mode === "apps" ? spot.gridApps.length : spot.items.length,
-                                    cats: spot.appCats.map(c => c.label + ":" + c.n) });
-        }
-        function apps(): void { Shell.open("spotlight", "mode:apps"); }
+    // IPC "spotlight" (en modules/Modules.qml, siempre cargado): state
+    function ipcState(): string {
+        return JSON.stringify({ mode: spot.mode, query: spot.query, sel: spot.sel, gsel: spot.gsel, cat: spot.appCat,
+                                cur: spot.cur?.name ?? "", kind: spot.cur?.kind ?? "", more: spot.moreMode ? spot.moreActions.map(a => a.label) : [],
+                                moreSel: spot.moreSel, items: spot.mode === "apps" ? spot.gridApps.length : spot.items.length,
+                                cats: spot.appCats.map(c => c.label + ":" + c.n) });
     }
 
     // ---------- Todas las apps ----------
@@ -109,8 +106,13 @@ Overlay {
         const c = String(name ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").charAt(0).toUpperCase();
         return /[A-Z]/.test(c) ? c : "#";
     }
-    readonly property var allApps: apps.slice().sort((a, b) => String(a.name ?? "").localeCompare(String(b.name ?? ""), "es", { sensitivity: "base" }))
+    // Solo en «Todas las apps» (crear el Spotlight al abrirlo no paga la ordenación); orden por una clave sin tildes ni
+    // mayúsculas calculada una vez por app
+    function sortKey(s) { return String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
+    readonly property var allApps: mode !== "apps" ? []
+        : apps.map(e => [sortKey(e.name), e]).sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0).map(x => x[1])
     readonly property var appCats: {
+        if (mode !== "apps") return [];
         const n = {};
         for (const e of allApps) { const c = catOf(e); n[c] = (n[c] ?? 0) + 1; }
         return [{ key: "", label: "Todas", n: allApps.length }].concat(catOrder.filter(c => n[c]).map(c => ({ key: c, label: c, n: n[c] })));
@@ -205,7 +207,12 @@ Overlay {
         return { key: "win:" + addrOf(t), cat: "Ventanas", kind: "window", win: t, g: (c || t.title || "?").charAt(0).toUpperCase(),
                  appIcon: c ? c.toLowerCase() : "", name: t.title || c, sub: c, hint: t.workspace ? "Espacio " + t.workspace.id : "" };
     }
-    function staticItems() { return Cat.WEBAPPS.concat(Cat.ACTIONS).map(it => Object.assign({ kind: "static" }, it)); }
+    // Las web apps «del panel lateral» solo salen si tienen pestaña en el panel (Ajustes › Panel lateral)
+    function staticItems() {
+        const tabs = Settings.get("sidePanelApps", ["ia"]);
+        const web = Cat.WEBAPPS.filter(it => !String(it.act).startsWith("side:") || (Array.isArray(tabs) && tabs.includes(String(it.act).slice(5))));
+        return web.concat(Cat.ACTIONS).map(it => Object.assign({ kind: "static" }, it));
+    }
 
     function clipItem(r, cat) {
         return { key: "clip:" + (r.pinned ? "p" + r.pinIndex : r.id), cat: cat, kind: "clip", clip: r, img: r.img ?? "",
@@ -229,6 +236,33 @@ Overlay {
                       sub: ni ? (ni === 1 ? "con 1 imagen adjunta" : "con " + ni + " imágenes adjuntas") + " · responde en el panel lateral"
                               : "responde en el panel lateral · Ctrl V adjunta una imagen copiada", ask: ask, hint: "↵",
                       det: [["Modelo", "El de Ajustes › IA"], ["Contexto", "Ventana activa + portapapeles"], ["Puede", "Consultar y manejar el escritorio (con Deshacer)"]] }];
+        }
+        // descargar <dirección…> (o pegar una dirección sola): a la cola de descargas (scripts/hf-download)
+        const dlm = /^(descargar|bajar)(\s+|$)(.*)$/i.exec(q);
+        const bareUrl = /^https?:\/\/\S+$/.test(q);
+        if (dlm || bareUrl) {
+            const urls = (dlm ? dlm[3] : q).split(/\s+/).filter(x => /^https?:\/\//.test(x));
+            const host = urls.length ? urls[0].replace(/^https?:\/\/(www\.)?/, "").slice(0, 48) : "";
+            const many = urls.length > 1 ? urls.length + " enlaces" : host;
+            const det = [["Destino", "Vídeos, Música, Imágenes o Descargas según el tipo"], ["Cola", "Indicador de la barra"]];
+            if (!urls.length) return [{ key: "dl-none", cat: "Descargas", kind: "none", g: "↓", icon: "download", name: "Escribe o pega una dirección…",
+                                        sub: "vídeo, música, galerías de imágenes o archivos; varias separadas por espacios" },
+                                      { key: "dl-queue", cat: "Descargas", kind: "dlqueue", g: "↓", icon: "download", name: "Ver la cola de descargas",
+                                        sub: Downloads.active.length ? Downloads.active.length + " activas" : "" }];
+            const out2 = [
+                { key: "dl-auto", cat: "Descargas", kind: "download", g: "↓", icon: "download", name: "Descargar " + many, sub: "elige la herramienta sola (yt-dlp, gallery-dl o aria2c)",
+                  urls: urls, dlType: "auto", hint: "↵", det: det },
+                { key: "dl-audio", cat: "Descargas", kind: "download", g: "♪", icon: "music", name: "Solo el audio (" + Settings.get("downloadsAudioFormat", "mp3") + ")", sub: many,
+                  urls: urls, dlType: "audio", det: det },
+                { key: "dl-video", cat: "Descargas", kind: "download", g: "▶", icon: "camera", name: "Vídeo (" + ({ best: "la mejor calidad" }[Settings.get("downloadsVideoFormat", "best")] ?? Settings.get("downloadsVideoFormat", "best") + "p") + ")", sub: many,
+                  urls: urls, dlType: "video", det: det },
+                { key: "dl-image", cat: "Descargas", kind: "download", g: "▦", icon: "image", name: "Imágenes de la galería", sub: many, urls: urls, dlType: "image", det: det }
+            ];
+            // Dirección sola: abrirla primero y descargarla (las opciones de formato, con «descargar <dirección>»)
+            if (bareUrl && !dlm) return [{ key: "web-open", cat: "Web", kind: "web", g: "!", icon: "globe", name: "Abrir " + host, sub: "en el navegador", url: q, hint: "↵",
+                                           det: [["Abre en", "Tu navegador"]] },
+                                         Object.assign({}, out2[0], { hint: "", sub: "«descargar …» para elegir audio, vídeo o imágenes" })];
+            return out2;
         }
         // ! web
         if (q.startsWith("!")) {
@@ -477,6 +511,8 @@ Overlay {
         case "cmd": if (it.cmd) { Shell.exec(["kitty", "--hold", "sh", "-c", it.cmd]); Shell.close(); } break;
         case "cmdbg": if (it.cmd) { Shell.exec(["sh", "-c", it.cmd]); Shell.close(); } break;
         case "file": Shell.exec(["xdg-open", it.path]); Shell.close(); break;
+        case "download": Downloads.add(it.urls, it.dlType, it.dlType === "audio" ? Settings.get("downloadsAudioFormat", "mp3") : ""); Shell.open("w-descargas"); break;
+        case "dlqueue": Shell.open("w-descargas"); break;
         }
     }
     function runIndex(i) { sel = i; runItem(items[i]); }
@@ -836,7 +872,7 @@ Overlay {
                         Btn {
                             kind: "primary"; h: 32; padX: 16
                             text: spot.cur?.kind === "clip" ? (Clip.autoPaste ? "Pegar  ↵" : "Copiar  ↵")
-                                  : spot.cur?.kind === "calc" ? "Copiar  ↵" : spot.cur?.kind === "window" ? "Ir  ↵" : "Abrir  ↵"
+                                  : spot.cur?.kind === "calc" ? "Copiar  ↵" : spot.cur?.kind === "window" ? "Ir  ↵" : spot.cur?.kind === "download" ? "Descargar  ↵" : "Abrir  ↵"
                             onClicked: spot.runItem(spot.cur)
                         }
                         Btn {

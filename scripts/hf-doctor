@@ -1,0 +1,384 @@
+#!/usr/bin/env bash
+# hf-doctor — diagnóstico de hyprfrijol: un informe que se puede copiar y pegar al pedir ayuda.
+# Solo lee: no cambia nada (ni paquetes, ni ajustes, ni servicios).
+#
+#   hf-doctor                 informe en texto
+#   hf-doctor --json          lo mismo en JSON (para la IA y Ajustes › Sistema › Diagnóstico; queda en ~/.cache/hyprfrijol/doctor.json)
+#   hf-doctor --copy          lo copia al portapapeles (wl-copy) además de imprimirlo
+#   hf-doctor --save [ARCH]   lo guarda (por defecto ~/hyprfrijol-diagnostico-<fecha>.txt) e imprime la ruta
+#   hf-doctor --quick         sin --verify-config ni consulta de paquetes (más rápido)
+#
+# Qué mira: versiones (Hyprland, Quickshell, Qt, distro, kernel, revisión de hyprfrijol), GPU y driver,
+# dependencias que faltan (install/packages.tsv; las recomendadas, por función y con su «hf-deps install …»), servicios (PipeWire, WirePlumber, NetworkManager, portales,
+# polkit, logind/seatd), variables de entorno, últimos errores (qs log, log de Hyprland, journalctl --user),
+# Hyprland --verify-config y fallos típicos (HF_ROOT/HL_ROOT, enlaces hf-*/hl-* rotos, include de kitty…).
+# Nunca incluye secretos: se ocultan claves de API, tokens, correos y tu carpeta personal (→ ~).
+set -uo pipefail
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+SELF_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+ROOT="${HF_ROOT:-$SELF_ROOT}"; [ -f "$ROOT/config/hypr/hyprland.lua" ] || ROOT="$SELF_ROOT"
+USERCFG="$HOME/.config/hyprfrijol"
+STATE="$HOME/.local/state/hyprfrijol"
+MIN_HYPR=0.57 MIN_QS=0.3
+
+MODE=text QUICK=0 COPY=0 SAVE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --json) MODE=json ;; --quick) QUICK=1 ;; --copy) COPY=1 ;;
+    --save) SAVE="$HOME/hyprfrijol-diagnostico-$(date +%Y%m%d-%H%M).txt"; case "${2:-}" in ""|--*) ;; *) SAVE="$2"; shift ;; esac ;;
+    -h|--help) sed -n '2,/^set -uo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
+    *) echo "Opción desconocida: $1 (usa --help)" >&2; exit 1 ;;
+  esac
+  shift
+done
+
+have() { command -v "$1" >/dev/null 2>&1; }
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+CHK="$TMP/checks.tsv"; : > "$CHK"
+SEC=""
+section() { SEC="$1"; }
+# add <estado ok|info|warn|error> <nombre> <detalle>
+add() { printf '%s\t%s\t%s\t%s\n' "$SEC" "$1" "$2" "$(printf '%s' "${3:-}" | tr '\t\n' '  ')" >> "$CHK"; }
+first_line() { head -n1 | sed 's/[[:space:]]*$//'; }
+vge() { [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }   # vge A B → A ≥ B
+in_session() { [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && have hyprctl && timeout 3 hyprctl version >/dev/null 2>&1; }
+strip_ansi() { sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g'; }
+uid="$(id -u)"
+
+# ---------- Versiones ----------
+section "Versiones"
+. /etc/os-release 2>/dev/null || true
+add info "Distro" "${PRETTY_NAME:-desconocida}"
+KR="$(uname -r)"
+if [ -d "/lib/modules/$KR" ] || [ -d "/usr/lib/modules/$KR" ]; then add info "Kernel" "$KR"
+else add warn "Kernel" "$KR sin sus módulos (se actualizó el kernel): reinicia, o fallarán NTFS, USB, VPN…"; fi
+HV="$(Hyprland --version 2>/dev/null | first_line)"
+HVN="$(grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' <<<"$HV" | head -n1)"
+if [ -z "$HVN" ]; then add error "Hyprland" "no instalado (hace falta ≥ $MIN_HYPR)"
+elif vge "$HVN" "$MIN_HYPR"; then add ok "Hyprland" "$HVN"
+else add error "Hyprland" "$HVN (hace falta ≥ $MIN_HYPR: la configuración es Lua)"; fi
+if in_session; then
+  RV="$(hyprctl version -j 2>/dev/null | jq -r '.version // empty' 2>/dev/null)"
+  [ -n "$RV" ] && [ -n "$HVN" ] && [ "$RV" != "$HVN" ] && add warn "Hyprland en marcha" "$RV ≠ instalado $HVN: cierra sesión y vuelve a entrar"
+fi
+QV="$(qs --version 2>/dev/null | first_line)"; QVN="$(grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' <<<"$QV" | head -n1)"
+if [ -z "$QVN" ]; then add error "Quickshell" "no instalado (hace falta ≥ $MIN_QS)"
+elif vge "$QVN" "$MIN_QS"; then add ok "Quickshell" "$QV"
+else add error "Quickshell" "$QV (hace falta ≥ $MIN_QS)"; fi
+QT=""
+for q in qtpaths6 /usr/lib/qt6/bin/qtpaths /usr/lib64/qt6/bin/qtpaths qtpaths-qt6; do have "$q" || [ -x "$q" ] || continue; QT="$("$q" --qt-version 2>/dev/null)" && [ -n "$QT" ] && break; done
+[ -z "$QT" ] && have pacman && QT="$(pacman -Q qt6-base 2>/dev/null | awk '{print $2}')"
+[ -z "$QT" ] && have rpm && QT="$(rpm -q --qf '%{VERSION}' qt6-qtbase 2>/dev/null | grep -v 'not installed')"
+[ -z "$QT" ] && have dpkg-query && QT="$(dpkg-query -W -f='${Version}' libqt6core6t64 2>/dev/null || dpkg-query -W -f='${Version}' libqt6core6 2>/dev/null)"
+add "$([ -n "$QT" ] && echo info || echo warn)" "Qt 6" "${QT:-no encontrado}"
+if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  REV="$(git -C "$ROOT" describe --tags --always --dirty 2>/dev/null)"
+  BR="$(git -C "$ROOT" symbolic-ref --short -q HEAD 2>/dev/null || echo "sin rama")"
+  CD="$(git -C "$ROOT" log -1 --format=%cs 2>/dev/null)"
+  add info "hyprfrijol" "$REV · $BR · $CD · $ROOT"
+  case "$REV" in *-dirty) add info "Cambios locales" "el repo tiene cambios sin guardar (hf-update no actualiza hasta que los guardes)" ;; esac
+else
+  add info "hyprfrijol" "$ROOT (no es un clon de git: no se puede actualizar con hf-update)"
+fi
+add info "Sesión" "$(in_session && echo "dentro de Hyprland" || echo "fuera de Hyprland")$([ "${HF_SAFE:-}" = 1 ] && echo " · MODO SEGURO")$([ -n "${HF_NESTED:-}" ] && echo " · anidada")"
+
+# ---------- GPU ----------
+section "Gráficos"
+gpus=0
+for c in /sys/class/drm/card[0-9]; do
+  [ -e "$c/device" ] || continue
+  gpus=$((gpus + 1))
+  drv="$(basename "$(readlink -f "$c/device/driver" 2>/dev/null)" 2>/dev/null)"
+  slot="$(basename "$(readlink -f "$c/device")")"
+  name=""; have lspci && name="$(lspci -s "$slot" 2>/dev/null | sed -E 's/^[^:]*:[^:]*: //; s/ \(rev.*//')"
+  [ -z "$name" ] && name="$(cat "$c/device/vendor" 2>/dev/null):$(cat "$c/device/device" 2>/dev/null)"
+  case "$drv" in
+    "") add warn "$(basename "$c")" "$name · sin driver del kernel" ;;
+    nvidia)
+      ms="$(cat /sys/module/nvidia_drm/parameters/modeset 2>/dev/null)"
+      if [ "$ms" = Y ]; then add ok "$(basename "$c")" "$name · nvidia (modeset activado)"
+      else nv_nomodeset="$(basename "$c")|$name"; fi ;;
+    nouveau) add warn "$(basename "$c")" "$name · nouveau (funciona, pero lento; mejor el driver de NVIDIA)" ;;
+    *) add ok "$(basename "$c")" "$name · $drv" ;;
+  esac
+done
+if [ -n "${nv_nomodeset:-}" ]; then   # con otra GPU (la que usa Hyprland) es solo un aviso
+  [ "$gpus" -gt 1 ] && st=warn || st=error
+  add "$st" "${nv_nomodeset%%|*}" "${nv_nomodeset#*|} · nvidia sin nvidia_drm.modeset=1 (Hyprland no podrá usar esta tarjeta)"
+fi
+[ "$gpus" = 0 ] && add warn "GPU" "no encuentro tarjetas en /sys/class/drm (¿máquina virtual sin aceleración?)"
+have vulkaninfo || add info "Vulkan" "vulkaninfo no instalado (no hace falta; hf-deps install vulkan-tools)"
+
+# ---------- Dependencias ----------
+section "Dependencias"
+TSV="$ROOT/install/packages.tsv"
+FAMILY=unknown
+fam() { case "$1" in
+  arch|archarm|cachyos|endeavouros|manjaro|manjaro-arm|garuda|artix|arcolinux|archcraft|rebornos) echo arch ;;
+  fedora|nobara|ultramarine|rhel|centos|rocky|almalinux) echo fedora ;;
+  opensuse*|suse|sles|sled) echo suse ;;
+  debian|raspbian|devuan|kali|parrot|ubuntu|pop|linuxmint|elementary|zorin|neon|tuxedo) echo debian ;;
+  void) echo void ;; *) return 1 ;; esac; }
+FAMILY="$(fam "${ID:-}")" || { for w in ${ID_LIKE:-}; do FAMILY="$(fam "$w")" && break; done; } || FAMILY=unknown
+[ -n "$FAMILY" ] || FAMILY=unknown
+installed() { case "$FAMILY" in
+  arch)   pacman -T -- "$1" >/dev/null 2>&1 ;;                       # también vale si otro paquete lo provee
+  fedora|suse) rpm -q --whatprovides -- "$1" >/dev/null 2>&1 ;;
+  debian) dpkg-query -W -f='${Status}' -- "$1" 2>/dev/null | grep -q 'ok installed' ;;
+  void)   xbps-query -- "$1" >/dev/null 2>&1 ;;
+  *) return 0 ;; esac; }
+if [ "$QUICK" = 1 ]; then add info "Paquetes" "no comprobados (--quick)"
+elif [ ! -f "$TSV" ]; then add warn "Paquetes" "no encuentro install/packages.tsv"
+elif [ "$FAMILY" = unknown ]; then add info "Paquetes" "distro ${ID:-?} sin tabla de paquetes: no se comprueban"
+else
+  col=$(case "$FAMILY" in arch) echo 3 ;; fedora) echo 4 ;; suse) echo 5 ;; debian) echo 6 ;; void) echo 7 ;; esac)
+  miss_req=() miss_rec=() nreq=0 nrec=0
+  while IFS=$'\t' read -r id lvl rest; do
+    case "$id" in \#*|"") continue ;; esac
+    [ "$lvl" = required ] || [ "$lvl" = recommended ] || continue
+    pk="$(awk -F'\t' -v c="$col" -v i="$id" '$1 == i {print $c; exit}' "$TSV")"
+    [ -z "$pk" ] || [ "$pk" = - ] && continue
+    m=()
+    IFS=, read -ra list <<<"$pk"
+    for p in "${list[@]}"; do p="${p#aur:}"; installed "$p" || m+=("$p"); done
+    if [ "$lvl" = required ]; then nreq=$((nreq + 1)); [ ${#m[@]} -gt 0 ] && miss_req+=("$id (${m[*]})")
+    else nrec=$((nrec + 1)); [ ${#m[@]} -gt 0 ] && miss_rec+=("$id (${m[*]})"); fi
+  done < "$TSV"
+  if [ ${#miss_req[@]} -gt 0 ]; then add error "Imprescindibles" "faltan ${#miss_req[@]}/$nreq: ${miss_req[*]} → ./install.sh"
+  else add ok "Imprescindibles" "$nreq/$nreq instaladas"; fi
+  # Recomendadas por función, con la orden exacta (hf-deps: también da por bueno lo instalado por otra vía)
+  DJ=""; [ -x "$SELF_ROOT/scripts/hf-deps" ] && DJ="$(HF_ROOT="$ROOT" timeout 20 "$SELF_ROOT/scripts/hf-deps" missing --level recommended --json 2>/dev/null)"
+  if [ -n "$DJ" ] && jq -e '.features' >/dev/null 2>&1 <<<"$DJ"; then
+    n="$(jq -r '[.features[].ids[]] | length' <<<"$DJ")"
+    if [ "$n" -gt 0 ]; then add warn "Recomendadas" "faltan $n/$nrec → hf-deps install --recommended (o por función, abajo)"
+    else add ok "Recomendadas" "$nrec/$nrec instaladas"; fi
+    jq -r '.features[] | [.label, ([.items[] | "\(.id) (\(.missing | join(" ")))"] | join(" · ")), .install] | @tsv' <<<"$DJ" |
+      while IFS=$'\t' read -r label what cmd; do add warn "$label" "falta $what → $cmd"; done
+  elif [ ${#miss_rec[@]} -gt 0 ]; then add warn "Recomendadas" "faltan ${#miss_rec[@]}/$nrec: ${miss_rec[*]}"
+  else add ok "Recomendadas" "$nrec/$nrec instaladas"; fi
+fi
+
+# ---------- Servicios ----------
+section "Servicios"
+SYSD=0; [ -d /run/systemd/system ] && SYSD=1
+user_svc() { # user_svc <unidad> <proceso> <nombre> <estado si falta>
+  if [ "$SYSD" = 1 ] && systemctl --user is-active --quiet "$1" 2>/dev/null; then add ok "$3" "activo ($1)"
+  elif pgrep -u "$uid" -x "$2" >/dev/null 2>&1; then add ok "$3" "en marcha"
+  else add "$4" "$3" "no está en marcha"; fi
+}
+sys_svc() { # sys_svc <unidad> <proceso> <nombre> <estado si falta>
+  if [ "$SYSD" = 1 ] && systemctl is-active --quiet "$1" 2>/dev/null; then add ok "$3" "activo ($1)"
+  elif pgrep -x "$2" >/dev/null 2>&1; then add ok "$3" "en marcha"
+  else add "$4" "$3" "no está en marcha"; fi
+}
+user_svc pipewire.service pipewire PipeWire error
+user_svc wireplumber.service wireplumber WirePlumber error
+user_svc pipewire-pulse.service pipewire-pulse "PipeWire-Pulse" warn
+if [ "$SYSD" = 1 ] && systemctl is-active --quiet NetworkManager 2>/dev/null || pgrep -x NetworkManager >/dev/null; then add ok "NetworkManager" "activo"
+else
+  other=""; for s in systemd-networkd iwd connmand wicked dhcpcd; do pgrep -x "$s" >/dev/null 2>&1 && other="$s" && break; done
+  add warn "NetworkManager" "no está en marcha${other:+ (la red la lleva $other: el panel de red no podrá cambiarla)}"
+fi
+portals=""
+for p in xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk; do
+  pgrep -u "$uid" -f "/$p( |\$)" >/dev/null 2>&1 && portals="$portals $p"
+done
+if in_session; then
+  case "$portals" in *xdg-desktop-portal-hyprland*) add ok "Portales" "${portals# }" ;;
+    *) add warn "Portales" "falta xdg-desktop-portal-hyprland en marcha (capturas y compartir pantalla)${portals:+ · en marcha:$portals}" ;; esac
+else add info "Portales" "${portals:+en marcha:$portals}${portals:-ninguno en marcha (normal fuera de la sesión)}"; fi
+sys_svc polkit.service polkitd "polkit" error
+agent=""
+for a in hyprpolkitagent polkit-gnome-authentication-agent-1 polkit-kde-authentication-agent-1 lxpolkit mate-polkit; do pgrep -u "$uid" -f "$a" >/dev/null 2>&1 && agent="$a" && break; done
+if [ -z "$agent" ] && pgrep -u "$uid" -f "qs -p .*/config/quickshell" >/dev/null 2>&1; then agent="Quickshell (hyprfrijol)"; fi
+if [ -n "$agent" ]; then add ok "Agente de polkit" "$agent"
+elif in_session; then add warn "Agente de polkit" "ninguno: las apps no podrán pedir la contraseña (el shell de hyprfrijol trae uno)"
+else add info "Agente de polkit" "ninguno (normal fuera de la sesión)"; fi
+if [ "$SYSD" = 1 ] && systemctl is-active --quiet systemd-logind 2>/dev/null; then
+  st=""; [ -n "${XDG_SESSION_ID:-}" ] && st="$(loginctl show-session "$XDG_SESSION_ID" -p Type -p Active --value 2>/dev/null | paste -sd' ')"
+  add ok "logind" "systemd-logind${st:+ · sesión $XDG_SESSION_ID: $st}"
+elif pgrep -x elogind-daemon >/dev/null 2>&1 || pgrep -x elogind >/dev/null 2>&1; then add ok "logind" "elogind"
+elif pgrep -x seatd >/dev/null 2>&1; then add ok "logind" "seatd"
+else add error "logind" "ni logind, ni elogind, ni seatd: Hyprland no puede abrir la pantalla"; fi
+pgrep -u "$uid" -x gnome-keyring-d >/dev/null 2>&1 || pgrep -u "$uid" -f gnome-keyring-daemon >/dev/null 2>&1 \
+  && add ok "Llavero" "gnome-keyring en marcha" || add info "Llavero" "gnome-keyring no está en marcha (las contraseñas de Chrome y la IA lo usan)"
+if in_session; then
+  pgrep -u "$uid" -f "qs -p .*/config/quickshell" >/dev/null 2>&1 && add ok "Shell" "Quickshell en marcha" || add error "Shell" "Quickshell no está en marcha (hf-shell restart)"
+fi
+
+# ---------- Entorno ----------
+section "Entorno"
+envv() { printf '%s' "${!1-}"; }
+for v in XDG_SESSION_TYPE XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP WAYLAND_DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS \
+         HF_ROOT HF_SESSION HL_ROOT QT_QPA_PLATFORM QT_QPA_PLATFORMTHEME GDK_BACKEND XCURSOR_THEME LANG; do
+  val="$(envv "$v")"; [ -n "$val" ] || continue
+  case "$v" in DBUS_SESSION_BUS_ADDRESS) val="${val%%,*}" ;; esac
+  add info "$v" "$val"
+done
+if in_session; then
+  [ "${XDG_SESSION_TYPE:-}" = wayland ] || add warn "XDG_SESSION_TYPE" "«${XDG_SESSION_TYPE:-vacía}» (debería ser wayland)"
+  [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] || [ -S "${XDG_RUNTIME_DIR:-/nonexistent}/bus" ] || add error "D-Bus" "sin bus de sesión: notificaciones, portales y llavero no funcionan"
+fi
+[ -n "${XDG_RUNTIME_DIR:-}" ] && [ ! -d "$XDG_RUNTIME_DIR" ] && add error "XDG_RUNTIME_DIR" "apunta a una carpeta que no existe"
+case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) add warn "PATH" "~/.local/bin no está en el PATH (los hf-* solo funcionan dentro de la sesión)" ;; esac
+
+# ---------- Configuración ----------
+section "Configuración"
+verify() { # verify <archivo> <nombre>
+  local out
+  out="$(cd "$TMP" && timeout 40 Hyprland --verify-config --config "$1" 2>&1 | strip_ansi)"
+  if grep -q '^config ok' <<<"$out"; then add ok "$2" "Hyprland --verify-config: config ok"
+  else add error "$2" "$(sed -n '/Config parsing result/,$p' <<<"$out" | grep -v '^=*\s*Config parsing' | grep -v '^\s*$' | head -n 6 | paste -sd'|' -)"; fi
+}
+if [ "$QUICK" = 1 ]; then add info "verify-config" "no comprobado (--quick)"
+elif have Hyprland; then
+  verify "$ROOT/config/hypr/hyprland.lua" "hyprland.lua"
+  [ -f "$ROOT/config/hypr/safe.lua" ] && verify "$ROOT/config/hypr/safe.lua" "safe.lua (modo seguro)"
+fi
+if [ -f "$USERCFG/settings.json" ]; then
+  jq -e 'type == "object"' "$USERCFG/settings.json" >/dev/null 2>&1 && add ok "settings.json" "JSON válido" \
+    || add error "settings.json" "no es JSON válido: hf-safe reset-settings (guarda una copia)"
+else add info "settings.json" "no existe (se usan los valores por defecto)"; fi
+if [ -f "$USERCFG/local.lua" ]; then
+  if cmp -s "$USERCFG/local.lua" "$ROOT/config/defaults/local.lua"; then add ok "local.lua" "plantilla sin cambios"
+  else
+    lc=""; for l in luac luac5.4 luac5.5 luac5.3; do have "$l" && lc="$l" && break; done
+    if [ -n "$lc" ]; then
+      e="$("$lc" -p -o /dev/null "$USERCFG/local.lua" 2>&1)" && add ok "local.lua" "con cambios tuyos · sintaxis correcta" || add error "local.lua" "error de sintaxis: $e (hf-safe disable-local)"
+    else add info "local.lua" "con cambios tuyos (sin luac para comprobar la sintaxis)"; fi
+  fi
+fi
+for f in theme.json settings.lua colors.json; do [ -s "$STATE/$f" ] || add warn "Estado" "falta ~/.local/state/hyprfrijol/$f (ejecuta hf-apply)"; done
+# HF_ROOT / HL_ROOT
+if [ -n "${HF_ROOT:-}" ] && [ ! -f "$HF_ROOT/config/hypr/hyprland.lua" ]; then add error "HF_ROOT" "apunta a $HF_ROOT, que no es un repo de hyprfrijol"; fi
+if [ -n "${HL_ROOT:-}" ]; then
+  if [ ! -d "$HL_ROOT" ]; then add warn "HL_ROOT" "variable antigua que apunta a una carpeta que no existe: quítala (usa HF_ROOT)"
+  elif [ -n "${HF_ROOT:-}" ] && [ "$(readlink -f "$HL_ROOT")" != "$(readlink -f "$HF_ROOT")" ]; then add warn "HL_ROOT" "variable antigua distinta de HF_ROOT: quítala"
+  else add info "HL_ROOT" "variable antigua (hypr-liquid); se puede quitar"; fi
+fi
+# Enlaces de ~/.local/bin
+BIN="$HOME/.local/bin"
+broken=() other=() nl=0 inst=""
+for l in "$BIN"/hf-*; do
+  [ -L "$l" ] || continue; nl=$((nl + 1))
+  t="$(readlink -f "$l" 2>/dev/null)"
+  if [ ! -e "$t" ]; then broken+=("$(basename "$l")"); continue; fi
+  r="$(cd "$(dirname "$t")/.." && pwd)"; [ -z "$inst" ] && inst="$r"
+  [ "$r" != "$inst" ] && other+=("$(basename "$l")")
+done
+if [ "$nl" = 0 ]; then add warn "~/.local/bin" "sin enlaces hf-* (./install.sh los crea)"
+else
+  add info "Instalado desde" "$inst"
+  [ ${#broken[@]} -gt 0 ] && add error "Enlaces rotos" "${broken[*]} (el repo se movió o se borró: ./install.sh)"
+  [ ${#other[@]} -gt 0 ] && add warn "Enlaces mezclados" "${other[*]} apuntan a otra copia del repo"
+  missing=(); for s in "$inst"/scripts/hf-*; do [ -f "$s" ] && [ ! -e "$BIN/$(basename "$s")" ] && missing+=("$(basename "$s")"); done
+  [ ${#missing[@]} -gt 0 ] && add warn "Enlaces que faltan" "${missing[*]} (./install.sh --no-deps los añade)"
+  [ -n "${HF_ROOT:-}" ] && [ "$(readlink -f "$HF_ROOT")" != "$(readlink -f "$inst")" ] && add info "HF_ROOT ≠ instalado" "la sesión usa $HF_ROOT; ~/.local/bin apunta a $inst"
+fi
+stale=(); for l in "$BIN"/hl-*; do [ -L "$l" ] && [ ! -e "$l" ] && stale+=("$(basename "$l")"); done
+[ ${#stale[@]} -gt 0 ] && add warn "Enlaces hl-* antiguos rotos" "${stale[*]} (hf-migrate los rehace)"
+# kitty: include de los colores
+KC="$HOME/.config/kitty/kitty.conf"
+if [ -f "$KC" ]; then
+  bad=()
+  while read -r kw path; do
+    p="${path/#\~/$HOME}"; p="${p//\$\{HOME\}/$HOME}"; p="${p//\$HOME/$HOME}"; case "$p" in /*) ;; *) p="$HOME/.config/kitty/$p" ;; esac
+    [ "$kw" = include ] && [ ! -e "$p" ] && bad+=("$path")
+  done < <(grep -E '^\s*include\s+' "$KC" 2>/dev/null | awk '{print $1, $2}')
+  [ ${#bad[@]} -gt 0 ] && add warn "kitty.conf" "include a archivos que no existen: ${bad[*]} (hf-apply los genera)" || add ok "kitty.conf" "includes correctos"
+fi
+# Entradas de sesión y login
+SF=/usr/share/wayland-sessions/hyprfrijol.desktop
+[ -f "$SF" ] || SF=/usr/share/wayland-sessions/hypr-liquid.desktop   # nombre anterior (sigue valiendo)
+if [ -f "$SF" ]; then
+  ex="$(sed -n 's/^Exec=//p' "$SF" | awk '{print $1}')"
+  [ -x "$ex" ] && add ok "Entrada de sesión" "$(basename "$SF") → $ex" || add error "Entrada de sesión" "hyprfrijol.desktop ejecuta $ex, que no existe (./install.sh)"
+else add info "Entrada de sesión" "no hay hyprfrijol.desktop (arranque con hf-session desde una TTY)"; fi
+[ -f /usr/share/wayland-sessions/hyprfrijol-seguro.desktop ] && add ok "Modo seguro" "entrada «HyprFrijol (modo seguro)» en el login" \
+  || add info "Modo seguro" "sin entrada en el login (./install.sh la crea; también: hf-session --safe desde una TTY)"
+if grep -qs hyprland-greeter /etc/greetd/config.toml; then
+  if [ -f /etc/greetd/quickshell/shell.qml ] && ! cmp -s /etc/greetd/quickshell/shell.qml "$ROOT/greeter/quickshell/shell.qml"; then
+    add info "Login (greetd)" "el login instalado es de otra versión: hf-greeter-sync"
+  else add ok "Login (greetd)" "login de hyprfrijol activo"; fi
+fi
+if [ -d "$STATE/snapshots" ]; then
+  g="$(basename "$(readlink "$STATE/snapshots/good" 2>/dev/null)" 2>/dev/null)"
+  add info "Copias de ajustes" "$(ls -1 "$STATE/snapshots" | grep -cE '^[0-9]{8}-') guardadas${g:+ · última buena $g} (hf-safe list)"
+fi
+if in_session; then
+  pl="$(hyprctl plugin list 2>/dev/null | sed -n 's/^Plugin \(.*\) by .*/\1/p' | paste -sd, -)"
+  [ -n "$pl" ] && add info "Plugins cargados" "$pl"
+fi
+free_mb="$(df -Pm "$HOME" 2>/dev/null | awk 'NR==2{print $4}')"
+[ -n "$free_mb" ] && [ "$free_mb" -lt 2048 ] && add warn "Espacio libre" "solo ${free_mb} MB libres en tu carpeta personal"
+
+# ---------- Errores recientes ----------
+# Últimas líneas, sin repetir: «3× mensaje» en el orden en que aparecieron
+squash() { tail -n 300 | awk '{c[$0]++; if (c[$0] == 1) o[++n] = $0} END {for (i = 1; i <= n; i++) print (c[o[i]] > 1 ? c[o[i]] "× " : "") o[i]}' | tail -n "${1:-12}" | cut -c1-300; }
+LOGS="$TMP/logs"; mkdir -p "$LOGS"
+if have qs; then
+  timeout 6 qs log -p "$ROOT/config/quickshell" 2>/dev/null | strip_ansi | grep -E 'WARN|ERROR|caused by' \
+    | grep -vE 'notification server|Registration will be attempted|placeholder screen' | sed -E 's/^[[:space:]]+//' | squash > "$LOGS/qs"
+fi
+HL="${XDG_RUNTIME_DIR:-/run/user/$uid}/hypr/${HYPRLAND_INSTANCE_SIGNATURE:-none}/hyprland.log"
+[ -f "$HL" ] && strip_ansi < "$HL" | grep -E '^\s*(ERR|CRIT)|\] (ERR|CRIT)|ERR ?\]|CRIT ?\]' | sed -E 's/^[[:space:]]+//' | squash > "$LOGS/hyprland"
+if [ "$SYSD" = 1 ] && have journalctl; then
+  # Solo la primera línea de cada mensaje (los volcados de memoria ocupan cientos) y sin la fecha (para agrupar)
+  journalctl --user -b -p err -n 60 --no-pager -o json 2>/dev/null \
+    | jq -r '"\(.SYSLOG_IDENTIFIER // ._COMM // "?"): \((.MESSAGE | if type == "array" then implode else . end) // "" | split("\n")[0])"' 2>/dev/null | grep -v ': null$' | sed -E 's/[0-9]{4,}/…/g' | squash > "$LOGS/journal"
+fi
+[ -f "$HOME/.cache/hf-session.log" ] && grep -E 'falló|error|Error' "$HOME/.cache/hf-session.log" | squash 8 > "$LOGS/session"
+
+# ---------- Ocultar secretos ----------
+redact() {
+  local h; h="$(printf '%s' "$HOME" | sed 's/[][\.*^$/]/\\&/g')"
+  sed -E \
+    -e "s#$h#~#g" \
+    -e 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<correo>/g' \
+    -e 's/sk-[A-Za-z0-9_-]{16,}/<clave>/g' \
+    -e 's/(gh[pousr]_|github_pat_)[A-Za-z0-9_]{16,}/<token>/g' \
+    -e 's/xox[abpros]-[A-Za-z0-9-]{10,}/<token>/g' \
+    -e 's/AIza[0-9A-Za-z_-]{30,}/<clave>/g' \
+    -e 's/(Bearer|bearer) [A-Za-z0-9._~+\/=-]{12,}/\1 <token>/g' \
+    -e 's/((api[_-]?key|apikey|token|secret|password|passwd|pwd|auth)[A-Za-z_]*["'"'"']?[[:space:]]*[=:][[:space:]]*["'"'"']?)[^[:space:]"'"'"',;}]{4,}/\1<oculto>/Ig' \
+    -e 's#(://[^:/@[:space:]]+:)[^@[:space:]]+@#\1<oculto>@#g' \
+  | { u="$(id -un)"; if [ ${#u} -ge 3 ]; then sed -E "s/(^|[^[:alnum:]_-])$u([^[:alnum:]_-]|\$)/\1<usuario>\2/g"; else cat; fi; }
+}
+redact < "$CHK" > "$CHK.r"
+for f in "$LOGS"/*; do [ -f "$f" ] && redact < "$f" > "$f.r" && mv -f "$f.r" "$f"; done
+
+nok=$(awk -F'\t' '$2=="ok"' "$CHK.r" | wc -l); nwarn=$(awk -F'\t' '$2=="warn"' "$CHK.r" | wc -l); nerr=$(awk -F'\t' '$2=="error"' "$CHK.r" | wc -l)
+NOW="$(date -Iseconds)"
+
+if [ "$MODE" = json ]; then
+  logjson() { [ -s "$LOGS/$1" ] && jq -R . < "$LOGS/$1" | jq -s . || echo '[]'; }
+  jq -R -s --arg now "$NOW" --argjson ok "$nok" --argjson warn "$nwarn" --argjson err "$nerr" \
+     --argjson qs "$(logjson qs)" --argjson hl "$(logjson hyprland)" --argjson jr "$(logjson journal)" --argjson ss "$(logjson session)" '
+    { generated: $now, summary: { ok: $ok, warn: $warn, error: $err },
+      checks: (split("\n") | map(select(length > 0) | split("\t") | { section: .[0], status: .[1], name: .[2], detail: .[3] })),
+      logs: { quickshell: $qs, hyprland: $hl, journal: $jr, session: $ss } }' < "$CHK.r" \
+    | { mkdir -p "$HOME/.cache/hyprfrijol" 2>/dev/null; tee "$HOME/.cache/hyprfrijol/doctor.json" 2>/dev/null || cat; }   # el último, para Ajustes
+  exit 0
+fi
+
+report() {
+  echo "HyprFrijol · diagnóstico · $NOW"
+  echo "Resumen: $nok bien · $nwarn avisos · $nerr errores"
+  local cur="" s st n d m
+  while IFS=$'\t' read -r s st n d; do
+    [ "$s" != "$cur" ] && { echo; echo "## $s"; cur="$s"; }
+    case "$st" in ok) m="✓" ;; warn) m="!" ;; error) m="✗" ;; *) m="·" ;; esac
+    printf '%s %s: %s\n' "$m" "$n" "$d"
+  done < "$CHK.r"
+  local f t
+  for f in qs:"Quickshell (qs log)" hyprland:"Hyprland (hyprland.log)" journal:"journalctl --user (errores de este arranque)" session:"hf-session.log"; do
+    t="${f#*:}"; f="${f%%:*}"
+    [ -s "$LOGS/$f" ] || continue
+    echo; echo "## Últimos errores · $t"; sed 's/^/    /' "$LOGS/$f"
+  done
+}
+OUT="$(report)"
+printf '%s\n' "$OUT"
+[ "$COPY" = 1 ] && have wl-copy && printf '%s\n' "$OUT" | wl-copy && echo "(copiado al portapapeles)" >&2
+if [ -n "$SAVE" ]; then printf '%s\n' "$OUT" > "$SAVE" && echo "Guardado en ${SAVE/#$HOME/\~}" >&2; fi
+exit 0

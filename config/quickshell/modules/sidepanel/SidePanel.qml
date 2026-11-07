@@ -33,6 +33,26 @@ PanelWindow {
     function inBrowser(k) { return k !== "ia" && WebApps.modeOf(k) === "navegador"; }
     readonly property bool browserMode: inBrowser(tab)
     function openInBrowser(k) { Quickshell.execDetached([Paths.script("hf-webapp"), "open", k]); }
+    // El chat (AiChat.qml) se carga la primera vez que se usa la pestaña IA (carga diferida, lazyModules) y se descarga
+    // un rato después de cerrar el panel si no hay conversación ni respuesta en curso (sin aiHistory se perdería).
+    property bool chatHeld: false
+    onShownChanged: if (shown && !web) chatHeld = true
+    onWebChanged: if (shown && !web) chatHeld = true
+    Timer {
+        interval: 60000
+        repeat: true
+        running: Shell.lazyModules && win.chatHeld && (!win.shown || win.web)
+        onTriggered: {
+            const c = chatLoader.item;
+            if (c && (c.busy || c.capturing || c.messages.length || c.pending.length || c.winInfo)) return;
+            win.chatHeld = false;
+            Qt.callLater(() => gc());
+        }
+    }
+    Connections {
+        target: Shell
+        function onPreloadRequested(v) { if (v === "ia") win.chatHeld = true; }   // cursor sobre el botón de la IA
+    }
     readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, handoff: () => {}, setWindow: () => {} })
 
     // ---- pestañas (diseño: SIDE)
@@ -91,6 +111,7 @@ PanelWindow {
     // ======================================================================= apertura
     function handleArg(a) {
         if (typeof a === "string" && a.trim().startsWith("{")) { try { a = JSON.parse(a); } catch (e) {} }
+        if ((a && typeof a === "object") || (typeof a === "string" && a.startsWith("ask:"))) chatHeld = true;   // crea el chat ya
         if (a && typeof a === "object" && a.window) { tab = "ia"; chat.setWindow(a.window); }   // hf-ai summon (Super+Ctrl+A)
         if (a && typeof a === "object" && a.image) { tab = "ia"; chat.attach(String(a.image)); }
         if (a && typeof a === "object" && Array.isArray(a.images)) { tab = "ia"; a.images.forEach(p => chat.attach(String(p))); }
@@ -384,6 +405,8 @@ PanelWindow {
                 visible: !win.web
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                active: win.chatHeld || !Shell.lazyModules
+                asynchronous: !win.shown         // precargado (cursor encima): sin bloquear; al abrir, al momento
                 source: Qt.resolvedUrl("AiChat.qml")
                 onLoaded: item.active = Qt.binding(() => win.shown && !win.web)
             }
@@ -441,6 +464,8 @@ PanelWindow {
             }
         }
     }
+
+    OpenProbe { name: "ia"; shown: win.shown }
 
     IpcHandler {
         target: "sidepanel"

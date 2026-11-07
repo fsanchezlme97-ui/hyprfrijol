@@ -46,10 +46,24 @@ Singleton {
 
     signal opened(string view)
 
+    // Carga diferida (components/LazyView, ajuste lazyModules): los módulos se crean al abrir su vista y se
+    // descargan poco después de cerrarla. preload(v) los va creando en segundo plano (al pasar el cursor por el
+    // botón que los abre), para que la primera apertura no espere.
+    readonly property bool lazyModules: Settings.get("lazyModules", true) !== false
+    signal preloadRequested(string view)
+    function preload(v: string): void {
+        const rd = redirects[v], al = aliases[v];
+        preloadRequested(rd ? rd[0] : al ? al[0] : v);
+    }
+    // Sonda de apertura (HF_PROBE_OPEN=1, components/OpenProbe): hora de la última petición de abrir
+    property real openedAt: 0
+    function stamp(): void { openedAt = Date.now(); }
+
     function open(v: string, a): void {
         const rd = redirects[v];
         if (rd) { v = rd[0]; a = rd[1]; }
         const al = aliases[v];
+        openedAt = Date.now();
         arg = a ?? null;
         section = al ? al[1] : v === "ajustes" ? "ajustes" : "";
         view = al ? al[0] : v;
@@ -98,6 +112,7 @@ Singleton {
         function open(view: string): void { root.open(view); }
         function openWith(view: string, arg: string): void { root.open(view, arg); }
         function close(): void { root.close(); }
+        function preload(view: string): void { root.preload(view); }      // carga diferida: crear la vista en segundo plano
         function current(): string { return root.view; }
         function focus(): void { root.setFocusMode(!root.focusMode); }
     }
@@ -106,7 +121,7 @@ Singleton {
     Variants {
         model: ["spotlight", "ajustes", "ia", "vista", "agenda", "portapapeles", "snap", "energia", "alttab",
                 "fondos", "captura", "perfiles", "widgets", "actualizaciones", "notificaciones",
-                "ajustesapp", "bienvenida", "herramientas", "emojis", "atajos", "musica"]
+                "ajustesapp", "bienvenida", "herramientas", "emojis", "atajos", "musica", "color"]
         GlobalShortcut {
             required property string modelData
             appid: "hf"

@@ -99,6 +99,10 @@ contra este esquema (todo lo demás se descarta) y genera las etiquetas en espa�
 | `focus` | `{"type":"focus","value":true}` | Entrar en modo sin distracciones |
 | `open` | `{"type":"open","value":"fondos"}` | Abrir selector de fondos |
 | `run` | `{"type":"run","command":"journalctl -b -p 3"}` | bloque de código: **Ejecutar (pide confirmación)** / Copiar |
+| `device` | `{"type":"device","op":"eject","dev":"/dev/sdb1"}` (`mount`, `unmount`, `open`, `eject-all`) | Expulsar «KINGSTON» |
+| `download` | `{"type":"download","urls":["https://…"],"kind":"audio","format":"mp3"}` | Descargar el audio (mp3) de youtube.com/… |
+| `download_ctl` | `{"type":"download_ctl","op":"pause","id":"all"}` (`resume`, `cancel`, `retry`) | Pausar todas las descargas |
+| `wallhaven` | `{"type":"wallhaven","op":"add","id":"abc123"}` (`set`) | Añadir el fondo abc123 de Wallhaven a mis fondos |
 
 Claves de `set`: `estilo`, `colorMode`, `palette`, `themeMode`, `barPos`, `barMode`, `animado`,
 `reduceTransparency`, `reduceMotion`, `gapsIn`, `gapsOut`, `pipSize`, `pipCorner`, `deskSort`.
@@ -107,6 +111,17 @@ Claves de `set`: `estilo`, `colorMode`, `palette`, `themeMode`, `barPos`, `barMo
   Antes guarda el estado en `~/.cache/hyprfrijol/undo/<id>.json` (se guardan los 30 últimos).
 - **Deshacer** → `hf-ai undo <id>`: restaura los ajustes tocados, el fondo, el perfil, «no molestar» y el espacio.
 - Los comandos `run` nunca se ejecutan solos: hay que confirmar y se abren en la terminal (`kitty`).
+
+### Aprobación
+
+- La tarjeta del plan enseña **qué cambia** en cada paso (`plan[i].preview`: «abajo → arriba», la ventana, la carpeta…).
+- Con varios pasos, cada uno tiene su **casilla**: se aplican solo los marcados («Aplicar 2 de 3»). «Rechazar todo» no toca nada.
+- **«Aprobar siempre esta acción»** guarda la clave del paso (`plan[i].kind`: `set:barPos`, `download`, `device:mount`…) en
+  `aiAlwaysApprove`. Si todos los pasos de un plan están ahí, `hf-ai` devuelve `auto: true` y el panel lo aplica solo (con
+  Deshacer). Lo que no tiene vuelta atrás (cerrar ventanas, borrar avisos, expulsar, cancelar descargas, comandos) pregunta
+  siempre. Se revoca en Ajustes › IA › «Aprobadas siempre» (`hf-ai approvals` da los nombres).
+- La primera vez, el panel enseña qué puede hacer el asistente y 6 ejemplos (`aiOnboarded`; «Volver a verla» en Ajustes › IA).
+- Consultas de solo lectura nuevas: `devices` (unidades y espacio), `downloads` (la cola) y `wallhaven` (buscar fondos).
 
 ## «Continuar en Claude ↗»
 
@@ -173,7 +188,11 @@ claude mcp add hyprfrijol -- /ruta/a/hyprfrijol/scripts/hf-mcp
 ```
 
 Herramientas: `get_state`, `set_settings`, `apply_actions`, `undo`, `wallpaper`, `profile`, `open_view`,
-`workspace`, `notify`. Stdio JSON-RPC 2.0, solo biblioteca estándar de Python. Las acciones `run` no se
+`workspace`, `notify`, las del asistente (`hf-ai tools`) y, para dispositivos, descargas y Wallhaven: `list_devices`,
+`device_action`, `list_downloads`, `download`, `download_control`, `wallhaven_search`, `wallhaven_wallpaper`.
+Cada una lleva **anotaciones MCP** con su nivel de aprobación: `readOnlyHint: true` en las consultas (el cliente puede
+dejarlas pasar sin preguntar) y `false` en las que cambian algo (el cliente pide permiso); `destructiveHint: true` en
+las que no se pueden deshacer (`window_action`, `clear_notifications`, `device_action`, `download_control`). Stdio JSON-RPC 2.0, solo biblioteca estándar de Python. Las acciones `run` no se
 ejecutan por MCP (el cliente tiene su propia terminal). Cada cambio devuelve un `undo` id.
 
 Prueba rápida:

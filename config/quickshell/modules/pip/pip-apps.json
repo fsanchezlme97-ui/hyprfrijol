@@ -1,0 +1,16 @@
+{
+  "_comment": "Ventanas flotantes que modules/pip/Pip.qml trata como PiP además del PiP de vídeo. Document Picture-in-Picture de Chromium (Meet, Teams, Spotify web…): la ventana tiene la clase del navegador (también si la abre una PWA o una ventana --app), nace flotante y su título es el de la pestaña que la abrió en ese momento, sin el sufijo « - Google Chrome» y sin cambiar después. Regla: clase de «browsers», flotante, title == initialTitle, sin «suffix» ni «exclude», y además o bien otra ventana del mismo proceso se llama igual (con o sin sufijo: la pestaña que la abrió), o bien su título casa con una entrada de «apps». kind: call (videollamada, ajuste pipCalls) · music (reproductor, pipPlayers) · doc (otra página, pipCalls). Las entradas con «class» casan ventanas secundarias de apps de escritorio (secondary: hay otra ventana mayor de la misma app). Los títulos son expresiones regulares (sin distinguir mayúsculas).",
+  "browsers": "^(google-chrome(-beta|-unstable|-canary)?|chromium(-browser)?|brave-browser(-beta|-nightly)?|microsoft-edge(-stable|-beta|-dev|-canary)?|vivaldi(-stable|-snapshot)?|opera(-beta|-developer)?|thorium-browser|helium|cromite|ungoogled-chromium)$",
+  "suffix": "\\s[-–—]\\s(.*\\s[-–—]\\s)?(Google Chrome|Chromium|Brave|Microsoft​?\\s?Edge|Vivaldi|Opera|Thorium|Helium|Cromite)\\b",
+  "exclude": "^(DevTools|Herramientas para desarrolladores)\\b",
+  "apps": [
+    { "name": "Google Meet", "kind": "call", "title": "^Meet\\s[-–—]\\s|Google Meet" },
+    { "name": "Microsoft Teams", "kind": "call", "title": "Microsoft Teams" },
+    { "name": "Zoom", "kind": "call", "title": "^Zoom\\b|Zoom Workplace" },
+    { "name": "Jitsi Meet", "kind": "call", "title": "Jitsi Meet" },
+    { "name": "Whereby", "kind": "call", "title": "Whereby" },
+    { "name": "Spotify", "kind": "music", "title": "Spotify|\\s•\\s" },
+    { "name": "YouTube Music", "kind": "music", "title": "YouTube Music" },
+    { "name": "Spotify", "kind": "music", "class": "^spotify$", "secondary": true }
+  ]
+}

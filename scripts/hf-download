@@ -1,0 +1,697 @@
+#!/usr/bin/env python3
+"""hf-download — cola de descargas de hyprfrijol (vídeo, audio, imágenes y archivos), también en lote.
+
+  hf-download add [opciones] URL…          añade a la cola y arranca el trabajador → {"added":[ids], "skipped":[…]}
+      --type auto|video|audio|image|file    (auto: según la dirección)
+      --format best|1080|720|480|mp3|opus|m4a   vídeo: calidad · audio: formato (yt-dlp)
+      --file lista.txt                       una dirección por línea (# comentarios); «-» = entrada estándar
+      --dest CARPETA                         en vez de la carpeta de su tipo
+  hf-download list [--json]                 la cola
+  hf-download pause|resume|cancel|retry|remove <id|all>
+  hf-download clear                         quita las terminadas, canceladas y con error
+  hf-download open <id>                     abre la carpeta de destino
+  hf-download detect URL                    qué herramienta y tipo usaría → {"tool", "type"}
+  hf-download tools                         qué hay instalado (yt-dlp, gallery-dl, aria2c, ffmpeg)
+  hf-download parse yt-dlp|aria2c|gallery-dl|builtin < salida   (pruebas) progreso leído de una salida grabada
+
+Herramientas: yt-dlp (vídeo y audio de YouTube, Vimeo, TikTok, SoundCloud… y webs con vídeo), gallery-dl (galerías de
+imágenes: Pixiv, DeviantArt, Imgur, Reddit, X…), aria2c (archivos directos; si falta, un descargador propio).
+Carpetas (Ajustes › Almacenamiento › Descargas): downloadsVideoPath, downloadsAudioPath, downloadsImagePath,
+downloadsFilePath ("" = la carpeta XDG: Vídeos, Música, Imágenes, Descargas). downloadsParallel (a la vez),
+downloadsVideoFormat, downloadsAudioFormat, downloadsNotify (aviso al terminar), downloadsHistory (false → las
+terminadas se borran de la lista al acabar).
+Estado: ~/.local/state/hyprfrijol/downloads/queue.json (el shell lo vigila) y logs/<id>.log mientras dura.
+Las direcciones solo se guardan en tu equipo; no se mandan a ningún sitio salvo a la propia web de la descarga.
+"""
+import fcntl, json, os, re, shutil, signal, subprocess, sys, threading, time, pathlib, urllib.request, urllib.parse, urllib.error
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+HOME = pathlib.Path.home()
+ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
+SETTINGS = HOME / ".config/hyprfrijol/settings.json"
+DIR = HOME / ".local/state/hyprfrijol/downloads"
+QUEUE = DIR / "queue.json"
+LOGS = DIR / "logs"
+LOCK = DIR / "queue.lock"
+WLOCK = DIR / "worker.lock"
+SELF = str(pathlib.Path(__file__).resolve())
+ACTIVE = ("queued", "running", "pausing", "canceling")
+FINISHED = ("done", "error", "canceled")
+
+IMG_EXT = {"jpg", "jpeg", "png", "gif", "webp", "avif", "bmp", "svg", "tif", "tiff", "heic", "jxl"}
+VID_EXT = {"mp4", "mkv", "webm", "mov", "avi", "m4v", "wmv", "flv", "ts"}
+AUD_EXT = {"mp3", "flac", "ogg", "opus", "m4a", "wav", "aac", "wma"}
+PAGE_EXT = {"html", "htm", "php", "asp", "aspx", "jsp", "cgi"}
+YTDLP_HOSTS = ("youtube.com", "youtu.be", "youtube-nocookie.com", "vimeo.com", "dailymotion.com", "twitch.tv", "tiktok.com",
+               "facebook.com", "fb.watch", "streamable.com", "rumble.com", "bilibili.com", "nicovideo.jp", "odysee.com",
+               "peertube", "ted.com", "kick.com", "reddit.com/r/", "v.redd.it", "instagram.com/reel")
+AUDIO_HOSTS = ("soundcloud.com", "bandcamp.com", "mixcloud.com", "music.youtube.com", "audiomack.com")
+GALLERY_HOSTS = ("pixiv.net", "deviantart.com", "artstation.com", "danbooru.donmai.us", "gelbooru.com", "imgur.com",
+                 "flickr.com", "pinterest.", "reddit.com/gallery", "tumblr.com", "behance.net", "wallhaven.cc",
+                 "x.com", "twitter.com", "instagram.com", "bsky.app", "e621.net", "kemono.", "furaffinity.net", "zerochan.net")
+
+
+def load(p, d=None):
+    try:
+        return json.loads(pathlib.Path(p).read_text())
+    except Exception:
+        return d
+
+
+def settings():
+    s = dict(load(ROOT / "config/defaults/settings.json", {}) or {})
+    s.update(load(SETTINGS, {}) or {})
+    return s
+
+
+# ---------------------------------------------------------------- cola (archivo JSON con cerrojo)
+class Queue:
+    def __enter__(self):
+        DIR.mkdir(parents=True, exist_ok=True)
+        self.fd = open(LOCK, "a+")
+        fcntl.flock(self.fd, fcntl.LOCK_EX)
+        self.items = (load(QUEUE, {}) or {}).get("items") or []
+        return self
+
+    def __exit__(self, *a):
+        tmp = QUEUE.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"items": self.items, "updated": time.time()}, ensure_ascii=False, indent=1))
+        os.replace(tmp, QUEUE)
+        fcntl.flock(self.fd, fcntl.LOCK_UN)
+        self.fd.close()
+
+    def get(self, iid):
+        return next((x for x in self.items if x["id"] == iid), None)
+
+
+def items():
+    return (load(QUEUE, {}) or {}).get("items") or []
+
+
+def update(iid, **kw):
+    with Queue() as q:
+        it = q.get(iid)
+        if it:
+            it.update(kw)
+        return dict(it) if it else None
+
+
+# ---------------------------------------------------------------- tipo, herramienta y carpeta
+def tools():
+    return {t: bool(shutil.which(t)) for t in ("yt-dlp", "gallery-dl", "aria2c", "ffmpeg")}
+
+
+def _ext(url):
+    path = urllib.parse.urlparse(url).path
+    m = re.search(r"\.([A-Za-z0-9]{1,5})$", path)
+    return m.group(1).lower() if m else ""
+
+
+def detect(url, want="auto"):
+    """(herramienta, tipo). herramienta: yt-dlp | gallery-dl | aria2c | probe (preguntar al servidor al empezar)."""
+    u = url.lower()
+    host_path = re.sub(r"^[a-z]+://(www\.|m\.)?", "", u)
+    ext = _ext(url)
+    if want in ("video", "audio"):
+        if ext in (VID_EXT | AUD_EXT) and not any(h in host_path for h in YTDLP_HOSTS + AUDIO_HOSTS):
+            return "aria2c", want
+        return "yt-dlp", want
+    if want == "image":
+        return ("aria2c", "image") if ext in IMG_EXT else ("gallery-dl", "image")
+    if want == "file":
+        return "aria2c", "file"
+    if ext in IMG_EXT:
+        return "aria2c", "image"
+    if ext in VID_EXT:
+        return "aria2c", "video"
+    if ext in AUD_EXT:
+        return "aria2c", "audio"
+    if any(h in host_path for h in AUDIO_HOSTS):
+        return "yt-dlp", "audio"
+    if any(h in host_path for h in YTDLP_HOSTS):
+        return "yt-dlp", "video"
+    if any(h in host_path for h in GALLERY_HOSTS):
+        return "gallery-dl", "image"
+    if ext and ext not in PAGE_EXT:
+        return "aria2c", "file"
+    return "probe", "file"
+
+
+def probe(url):
+    """Dirección sin pistas: si el servidor da un archivo (no una página), aria2c; si no, yt-dlp (vídeo de la web)."""
+    try:
+        req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "Mozilla/5.0 hyprfrijol"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            ct = (r.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+            disp = r.headers.get("Content-Disposition") or ""
+    except Exception:
+        ct, disp = "", ""
+    if "attachment" in disp.lower() or (ct and not ct.startswith("text/html") and ct != "application/xhtml+xml"):
+        kind = "image" if ct.startswith("image/") else "video" if ct.startswith("video/") else "audio" if ct.startswith("audio/") else "file"
+        return "aria2c", kind
+    return "yt-dlp", "video"
+
+
+def xdg(name, fallback):
+    try:
+        r = subprocess.run(["xdg-user-dir", name], capture_output=True, text=True, timeout=3)
+        p = r.stdout.strip()
+        if p and p != str(HOME):
+            return p
+    except Exception:
+        pass
+    return str(HOME / fallback)
+
+
+def dest_for(kind, s=None):
+    s = s or settings()
+    key, xd, fb = {"video": ("downloadsVideoPath", "VIDEOS", "Vídeos"), "audio": ("downloadsAudioPath", "MUSIC", "Música"),
+                   "image": ("downloadsImagePath", "PICTURES", "Imágenes")}.get(kind, ("downloadsFilePath", "DOWNLOAD", "Descargas"))
+    v = str(s.get(key) or "").strip()
+    return os.path.expanduser(v) if v else xdg(xd, fb)
+
+
+def label(it):
+    t = it.get("title") or ""
+    if t:
+        return t
+    p = urllib.parse.urlparse(it["url"])
+    name = urllib.parse.unquote(p.path.rstrip("/").split("/")[-1]) if p.path.strip("/") else ""
+    return (p.netloc.replace("www.", "") + (" · " + name if name else ""))[:120]
+
+
+# ---------------------------------------------------------------- añadir y controlar
+def new_id():
+    return time.strftime("%y%m%d%H%M%S") + f"{int(time.time() * 1000) % 1000:03d}{os.getpid() % 100:02d}"
+
+
+def read_urls(args, files):
+    urls = list(args)
+    for f in files:
+        txt = sys.stdin.read() if f == "-" else pathlib.Path(os.path.expanduser(f)).read_text(errors="replace")
+        urls += [ln.strip() for ln in txt.splitlines()]
+    out = []
+    for u in urls:
+        u = u.strip().strip("<>\"'")
+        if not u or u.startswith("#"):
+            continue
+        out += re.findall(r"https?://\S+", u) or [u]
+    return out
+
+
+def add(urls, want="auto", fmt="", dest=""):
+    s = settings()
+    added, skipped = [], []
+    with Queue() as q:
+        known = {x["url"] for x in q.items if x["status"] in ACTIVE}
+        for i, u in enumerate(urls):
+            if not re.match(r"^https?://[^\s/$.?#][^\s]*$", u):
+                skipped.append({"url": u, "why": "No es una dirección web"})
+                continue
+            if u in known:
+                skipped.append({"url": u, "why": "Ya está en la cola"})
+                continue
+            tool, kind = detect(u, want)
+            f = fmt or (s.get("downloadsAudioFormat", "mp3") if kind == "audio" else s.get("downloadsVideoFormat", "best") if kind == "video" else "")
+            it = {"id": new_id() + str(i), "url": u, "tool": tool, "type": kind, "want": want, "format": f,
+                  "dest": os.path.expanduser(dest) if dest else (dest_for(kind, s) if tool != "probe" else ""),
+                  "status": "queued", "progress": 0, "done": 0, "total": 0, "speed": 0, "eta": -1, "title": "",
+                  "files": [], "count": 0, "error": "", "added": time.time(), "started": 0, "finished": 0, "pid": 0}
+            it["name"] = label(it)
+            q.items.append(it)
+            known.add(u)
+            added.append(it["id"])
+    if added:
+        ensure_worker()
+    return {"added": added, "skipped": skipped}
+
+
+def select(q, which):
+    return list(q.items) if which == "all" else [x for x in q.items if x["id"] == which or x["id"].startswith(which)]
+
+
+def kill_pid(pid):
+    if pid and pid > 1:
+        try:
+            os.killpg(pid, signal.SIGTERM)
+        except Exception:
+            pass
+
+
+def control(op, which):
+    n = 0
+    alive = worker_alive()
+    with Queue() as q:
+        for it in select(q, which):
+            st = it["status"]
+            if op == "pause" and st in ("queued", "running"):
+                it["status"] = "pausing" if st == "running" and alive else "paused"
+            elif op == "cancel" and st in ("queued", "running", "paused", "pausing"):
+                it["status"] = "canceling" if st == "running" and alive else "canceled"
+                it["finished"] = time.time()
+            elif op in ("resume", "retry") and st in ("paused", "error", "canceled") + (("done",) if op == "retry" else ()):
+                it.update(status="queued", error="", finished=0, speed=0, eta=-1)
+                if op == "retry":
+                    it.update(progress=0, done=0, total=0)
+            elif op == "remove":
+                if st in ("running", "pausing", "canceling"):
+                    kill_pid(it.get("pid"))
+                it["status"] = "_remove"
+            else:
+                continue
+            if not alive and st == "running":
+                kill_pid(it.get("pid"))
+            n += 1
+        q.items = [x for x in q.items if x["status"] != "_remove"]
+    if op in ("resume", "retry") and n:
+        ensure_worker()
+    return {"ok": n > 0, "changed": n}
+
+
+def clear():
+    with Queue() as q:
+        before = len(q.items)
+        q.items = [x for x in q.items if x["status"] not in FINISHED]
+        n = before - len(q.items)
+    for f in LOGS.glob("*.log") if LOGS.is_dir() else []:
+        if not any(x["id"] == f.stem for x in items()):
+            f.unlink(missing_ok=True)
+    return {"ok": True, "removed": n}
+
+
+def open_folder(which):
+    it = next((x for x in items() if x["id"] == which or x["id"].startswith(which)), None)
+    if not it:
+        return {"ok": False, "error": "No está en la cola"}
+    target = it["dest"] or dest_for(it["type"])
+    f = (it.get("files") or [""])[-1]
+    if f and os.path.exists(f):
+        target = os.path.dirname(f)
+    subprocess.Popen(["xdg-open", target], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    return {"ok": True, "folder": target}
+
+
+# ---------------------------------------------------------------- progreso (lectura de la salida de cada herramienta)
+UNITS = {"b": 1, "k": 1024, "m": 1024 ** 2, "g": 1024 ** 3, "t": 1024 ** 4}
+
+
+def size(s):
+    m = re.match(r"([\d.]+)\s*([kmgt]?)i?b?", str(s).strip().lower())
+    return int(float(m.group(1)) * UNITS.get(m.group(2) or "b", 1)) if m else 0
+
+
+def dur(s):
+    s = str(s or "").strip()
+    if not s or s in ("NA", "None", "Unknown"):
+        return -1
+    if re.fullmatch(r"\d+(\.\d+)?", s):
+        return int(float(s))
+    if ":" in s:
+        t = 0
+        for p in s.split(":"):
+            t = t * 60 + int(p or 0)
+        return t
+    t = 0
+    for n, u in re.findall(r"(\d+)([hms])", s):
+        t += int(n) * {"h": 3600, "m": 60, "s": 1}[u]
+    return t
+
+
+def num(x):
+    try:
+        return float(x)
+    except Exception:
+        return None
+
+
+def parse_line(tool, line):
+    """Devuelve un dict con lo que se sabe de esa línea (progress 0..1, done, total, speed, eta, title, file, error)."""
+    line = line.strip()
+    if not line:
+        return {}
+    if tool in ("yt-dlp", "builtin"):
+        m = re.match(r"^HFPROG (\S+) (\S+) (\S+) (\S+) (\S+)", line)
+        if m:
+            done, tot, est, spd, eta = (num(x) for x in m.groups())
+            total = tot or est or 0
+            return {"done": int(done or 0), "total": int(total), "progress": (done or 0) / total if total else -1,
+                    "speed": int(spd or 0), "eta": int(eta) if eta is not None else -1}
+        m = re.match(r"^HFTITLE (.+)$", line)
+        if m:
+            return {"title": m.group(1)}
+        m = re.match(r"^HFFILE (.+)$", line)
+        if m:
+            return {"file": m.group(1)}
+        m = re.match(r"^HFPART (.+)$", line) or re.match(r"^\[download\] Destination: (.+)$", line)
+        if m:
+            return {"part": m.group(1) if line.startswith("HFPART") else m.group(1) + ".part"}
+        # salida normal: [download]  42.3% of ~ 12.34MiB at  1.20MiB/s ETA 00:08 (frag 3/20)
+        m = re.match(r"^\[download\]\s+([\d.]+)% of\s+~?\s*([\d.]+\w+)(?: at\s+([\d.]+\w+)/s)?(?: ETA ([\d:]+|Unknown))?", line)
+        if m:
+            p = float(m.group(1)) / 100
+            total = size(m.group(2))
+            return {"progress": p, "total": total, "done": int(total * p), "speed": size(m.group(3)) if m.group(3) else 0,
+                    "eta": dur(m.group(4))}
+        m = re.match(r"^\[download\] (.+) has already been downloaded", line)
+        if m:
+            return {"file": m.group(1), "progress": 1}
+        if line.startswith("ERROR:"):
+            return {"error": line[6:].strip()}
+        return {}
+    if tool == "aria2c":
+        # [#2089b0 400.0KiB/33.2MiB(1%) CN:1 DL:115.7KiB ETA:4m48s]
+        m = re.search(r"\[#\w+\s+([\d.]+\w+)/([\d.]+\w+)\((\d+)%\)(?:.*?DL:([\d.]+\w+))?(?:.*?ETA:(\w+))?", line)
+        if m:
+            return {"done": size(m.group(1)), "total": size(m.group(2)), "progress": int(m.group(3)) / 100,
+                    "speed": size(m.group(4)) if m.group(4) else 0, "eta": dur(m.group(5)) if m.group(5) else -1}
+        m = re.match(r"^FILE: (/.+)$", line)
+        if m:
+            return {"part": m.group(1).strip() + ".aria2", "part2": m.group(1).strip()}
+        m = re.search(r"Download complete: (.+)$", line)
+        if m:
+            return {"file": m.group(1).strip(), "progress": 1}
+        m = re.search(r"\|(OK|ERR)\s*\|.*?\|(/.+)$", line)
+        if m:
+            return {"file": m.group(2).strip()} if m.group(1) == "OK" else {"error": "aria2c no pudo descargarlo"}
+        m = re.search(r"\[ERROR\].*?(?:errorCode=\d+\s*)?(.*)$", line) or re.search(r"^Exception: \[.*?\] (.*)$", line)
+        if m and "ERROR" in line.upper():
+            return {"error": m.group(1).strip()[:200] or "Error de aria2c"}
+        return {}
+    if tool == "gallery-dl":
+        if line.startswith("# "):              # ya estaba descargado
+            return {"file": line[2:].strip(), "skip": True}
+        if line.startswith("/") or line.startswith("~"):
+            return {"file": line, "count": 1}
+        m = re.match(r"^\[[\w.-]+\]\[error\] (.+)$", line)
+        if m:
+            return {"error": m.group(1)}
+        return {}
+    return {}
+
+
+def cmd_for(it):
+    tool, kind, fmt, dest = it["tool"], it["type"], it.get("format") or "", it["dest"]
+    os.makedirs(dest, exist_ok=True)
+    if tool == "yt-dlp":
+        c = ["yt-dlp", "--newline", "--progress", "--no-colors", "--no-mtime", "-P", dest,
+             "-o", "%(title).150B [%(id)s].%(ext)s",
+             "--progress-template", "download:HFPROG %(progress.downloaded_bytes)s %(progress.total_bytes)s "
+                                    "%(progress.total_bytes_estimate)s %(progress.speed)s %(progress.eta)s",
+             "--print", "before_dl:HFTITLE %(title)s", "--print", "after_move:HFFILE %(filepath)s"]
+        if kind == "audio":
+            c += ["-x", "--audio-format", fmt if fmt in ("mp3", "opus", "m4a", "flac") else "mp3", "--audio-quality", "0"]
+        elif fmt in ("1080", "720", "480", "1440", "2160"):
+            c += ["-f", f"bv*[height<={fmt}]+ba/b[height<={fmt}]"]
+        return c + ["--", it["url"]]
+    if tool == "gallery-dl":
+        return ["gallery-dl", "-d", dest, "--", it["url"]]
+    if tool == "aria2c" and shutil.which("aria2c"):
+        return ["aria2c", "-c", "-x", "4", "-s", "4", "--summary-interval=1", "--console-log-level=warn",
+                "--download-result=full", "--auto-file-renaming=true", "--allow-overwrite=false", "-d", dest, "--", it["url"]]
+    return [sys.executable, SELF, "_fetch", it["url"], dest]
+
+
+# ---------------------------------------------------------------- descargador propio (si falta aria2c)
+def fetch(url, dest):
+    """Descarga simple con reanudación (Range) sobre <nombre>.part; imprime HFTITLE/HFPART/HFPROG/HFFILE."""
+    os.makedirs(dest, exist_ok=True)
+    hdr = {"User-Agent": "Mozilla/5.0 hyprfrijol"}
+    r = urllib.request.urlopen(urllib.request.Request(url, headers=hdr), timeout=30)
+    name = ""
+    m = re.search(r'filename\*?=(?:UTF-8\'\')?"?([^";]+)"?', r.headers.get("Content-Disposition") or "")
+    if m:
+        name = urllib.parse.unquote(m.group(1))
+    name = os.path.basename(name or urllib.parse.unquote(urllib.parse.urlparse(r.url).path.rstrip("/").split("/")[-1])) or "descarga"
+    name = re.sub(r"[\x00-\x1f/\\]", "_", name)[:200]
+    out = os.path.join(dest, name)
+    base, ext = os.path.splitext(out)
+    n = 1
+    while os.path.exists(out):
+        out = f"{base} ({n}){ext}"; n += 1
+    part = out + ".part"
+    total = int(r.headers.get("Content-Length") or 0)
+    done, mode = 0, "wb"
+    have = os.path.getsize(part) if os.path.exists(part) else 0
+    if have and (r.headers.get("Accept-Ranges") or "").lower() == "bytes":
+        r.close()
+        r = urllib.request.urlopen(urllib.request.Request(url, headers={**hdr, "Range": f"bytes={have}-"}), timeout=30)
+        if r.status == 206:
+            done, mode = have, "ab"
+            total = have + int(r.headers.get("Content-Length") or 0)
+    print(f"HFTITLE {os.path.basename(out)}", flush=True)
+    print(f"HFPART {part}", flush=True)
+    t0, last, start = time.time(), 0, done
+    with r, open(part, mode) as f:
+        while True:
+            b = r.read(65536)
+            if not b:
+                break
+            f.write(b)
+            done += len(b)
+            now = time.time()
+            if now - last >= 0.5:
+                last = now
+                spd = (done - start) / max(0.001, now - t0)
+                eta = int((total - done) / spd) if total and spd else "NA"
+                print(f"HFPROG {done} {total or 'NA'} NA {int(spd)} {eta}", flush=True)
+    os.replace(part, out)
+    print(f"HFPROG {done} {total or done} NA 0 0", flush=True)
+    print(f"HFFILE {out}", flush=True)
+
+
+# ---------------------------------------------------------------- trabajador
+def worker_alive():
+    DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = open(WLOCK, "a+")
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        fd.close()
+        return False
+    except BlockingIOError:
+        return True
+
+
+def ensure_worker():
+    if not worker_alive():
+        subprocess.Popen([sys.executable, SELF, "_worker"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+
+
+def notify(title, body, folder=""):
+    if not shutil.which("notify-send"):
+        return
+    def go():
+        try:
+            r = subprocess.run(["notify-send", "-a", "Descargas", "-i", "folder-download"] + (["-A", "open=Abrir carpeta"] if folder else [])
+                               + [title, body], capture_output=True, text=True, timeout=300)
+            if folder and r.stdout.strip() == "open":
+                subprocess.Popen(["xdg-open", folder], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        except Exception:
+            pass
+    threading.Thread(target=go, daemon=True).start()
+
+
+def run_item(it, procs):
+    iid = it["id"]
+    if it["tool"] == "probe":
+        tool, kind = probe(it["url"])
+        if it.get("want") in ("video", "audio", "image", "file"):
+            kind = it["want"]
+        it = update(iid, tool=tool, type=kind, dest=dest_for(kind)) or it
+    if it["tool"] in ("yt-dlp", "gallery-dl") and not shutil.which(it["tool"]):
+        update(iid, status="error", finished=time.time(),
+               error=f"Falta {it['tool']}: instálalo (Ajustes › Aplicaciones o tu gestor de paquetes)")
+        return
+    LOGS.mkdir(parents=True, exist_ok=True)
+    try:
+        cmd = cmd_for(it)
+        tool = it["tool"] if cmd[0] != sys.executable else "builtin"
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                             start_new_session=True, bufsize=0)
+    except Exception as e:
+        update(iid, status="error", error=str(e), finished=time.time())
+        return
+    procs[iid] = p
+    update(iid, status="running", pid=p.pid, started=it.get("started") or time.time(), error="")
+
+    def reader():
+        state = {"files": list(it.get("files") or []), "count": it.get("count") or 0, "parts": list(it.get("parts") or [])}
+        last, err, buf = 0, "", b""
+        with open(LOGS / f"{iid}.log", "ab", buffering=0) as log:
+            while True:
+                ch = p.stdout.read(4096)
+                if not ch:
+                    break
+                log.write(ch)
+                buf += ch
+                parts = re.split(rb"[\r\n]", buf)
+                buf = parts.pop()
+                for raw in parts:
+                    d = parse_line(tool, raw.decode("utf-8", "replace"))
+                    if not d:
+                        continue
+                    if d.get("error"):
+                        err = d["error"]
+                    for k in ("part", "part2"):
+                        pp = d.pop(k, None)
+                        if pp and pp not in state.setdefault("parts", []):
+                            state["parts"].append(pp)
+                    f = d.pop("file", None)
+                    if f and f not in state["files"]:
+                        state["files"].append(f)
+                        if tool == "gallery-dl" and not d.get("skip"):
+                            state["count"] += 1
+                    d.pop("count", None); d.pop("skip", None); d.pop("error", None)
+                    state.update(d)
+                    now = time.time()
+                    if now - last > 0.7:
+                        last = now
+                        update(iid, **{k: v for k, v in state.items()})
+        rc = p.wait()
+        procs.pop(iid, None)
+        cur = next((x for x in items() if x["id"] == iid), None) or {}
+        st = cur.get("status")
+        if st == "pausing":
+            update(iid, **{**state, "status": "paused", "pid": 0, "speed": 0, "eta": -1})
+        elif st == "canceling" or st == "canceled":
+            for pp in state.get("parts") or []:      # lo descargado a medias se borra (lo terminado no)
+                if pp not in state["files"] and (pp.endswith((".part", ".aria2")) or os.path.exists(pp + ".aria2")):
+                    for x in (pp, pp + ".aria2"):
+                        try:
+                            os.unlink(x)
+                        except OSError:
+                            pass
+            update(iid, **{**state, "status": "canceled", "pid": 0, "speed": 0, "eta": -1, "finished": time.time()})
+        elif st is None:
+            return
+        elif rc == 0:
+            if tool == "gallery-dl" and state["files"]:
+                state["count"] = max(state["count"], 1)
+            update(iid, **{**state, "status": "done", "pid": 0, "progress": 1, "speed": 0, "eta": 0, "finished": time.time()})
+            s = settings()
+            folder = os.path.dirname(state["files"][-1]) if state["files"] else cur.get("dest", "")
+            if s.get("downloadsNotify", True) is not False:
+                n = len(state["files"])
+                notify("Descarga terminada", (cur.get("title") or cur.get("name") or cur["url"])
+                       + (f" · {n} archivos" if n > 1 else ""), folder)
+            (LOGS / f"{iid}.log").unlink(missing_ok=True)
+            if s.get("downloadsHistory", True) is False:
+                with Queue() as q:
+                    q.items = [x for x in q.items if x["id"] != iid]
+        else:
+            update(iid, **{**state, "status": "error", "pid": 0, "speed": 0, "eta": -1, "finished": time.time(),
+                           "error": (err or f"{tool} terminó con el código {rc}")[:300]})
+            if settings().get("downloadsNotify", True) is not False:
+                notify("La descarga falló", (cur.get("title") or cur.get("name") or cur["url"]) + "\n" + (err or "")[:120])
+
+    threading.Thread(target=reader, daemon=True).start()
+
+
+def worker():
+    DIR.mkdir(parents=True, exist_ok=True)
+    lk = open(WLOCK, "a+")
+    try:
+        fcntl.flock(lk, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        return
+    procs = {}
+    with Queue() as q:      # lo que quedó a medias (reinicio, cierre de sesión): se reanuda
+        for it in q.items:
+            if it["status"] == "running":
+                it["status"] = "queued"
+            elif it["status"] == "pausing":
+                it["status"] = "paused"
+            elif it["status"] == "canceling":
+                it["status"] = "canceled"
+    idle = 0
+    while True:
+        cur = items()
+        for it in cur:
+            p = procs.get(it["id"])
+            if p and it["status"] in ("pausing", "canceling"):
+                kill_pid(p.pid)
+        par = max(1, min(8, int(settings().get("downloadsParallel", 2) or 2)))
+        running = [x for x in cur if x["id"] in procs]
+        for it in [x for x in cur if x["status"] == "queued"][:max(0, par - len(running))]:
+            run_item(it, procs)
+        if not procs and not any(x["status"] == "queued" for x in items()):
+            idle += 1
+            if idle > 6:
+                break
+        else:
+            idle = 0
+        time.sleep(0.5)
+
+
+# ---------------------------------------------------------------- main
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__); return 0
+    cmd, rest = argv[0], argv[1:]
+    if cmd == "add":
+        want, fmt, dest, files, urls = "auto", "", "", [], []
+        i = 0
+        while i < len(rest):
+            a = rest[i]
+            if a in ("--type", "-t"):
+                want = rest[i + 1]; i += 2
+            elif a in ("--format", "-f"):
+                fmt = rest[i + 1]; i += 2
+            elif a == "--dest":
+                dest = rest[i + 1]; i += 2
+            elif a == "--file":
+                files.append(rest[i + 1]); i += 2
+            else:
+                urls.append(a); i += 1
+        if want not in ("auto", "video", "audio", "image", "file"):
+            want = "auto"
+        out = add(read_urls(urls, files), want, fmt, dest)
+    elif cmd == "list":
+        its = items()
+        if "--json" in rest:
+            print(json.dumps(its, ensure_ascii=False)); return 0
+        for it in its:
+            pr = f"{round(it['progress'] * 100)}%" if it.get("progress", -1) >= 0 else "…"
+            print(f"{it['id']}\t{it['status']}\t{pr}\t{it['tool']}\t{it.get('title') or it['name']}")
+        return 0
+    elif cmd in ("pause", "resume", "cancel", "retry", "remove"):
+        out = control(cmd, rest[0] if rest else "all")
+    elif cmd == "clear":
+        out = clear()
+    elif cmd == "open":
+        out = open_folder(rest[0] if rest else "")
+    elif cmd == "detect":
+        t, k = detect(rest[0] if rest else "", rest[1] if len(rest) > 1 else "auto")
+        out = {"tool": t, "type": k}
+    elif cmd == "tools":
+        out = tools()
+    elif cmd == "parse":
+        tool = rest[0] if rest else "yt-dlp"
+        for ln in re.split(r"[\r\n]", sys.stdin.read()):
+            d = parse_line(tool, ln)
+            if d:
+                print(json.dumps(d, ensure_ascii=False))
+        return 0
+    elif cmd == "_worker":
+        worker(); return 0
+    elif cmd == "_fetch":
+        try:
+            fetch(rest[0], rest[1]); return 0
+        except urllib.error.HTTPError as e:
+            msg = {404: "No existe (404)", 403: "El servidor no deja descargarlo (403)", 401: "Hace falta iniciar sesión (401)",
+                   429: "El servidor limita las descargas (429): reinténtalo en un rato"}.get(e.code, f"Error del servidor ({e.code})")
+            print(f"ERROR: {msg}", flush=True); return 1
+        except urllib.error.URLError as e:
+            print(f"ERROR: Sin conexión con el servidor ({e.reason})", flush=True); return 1
+        except Exception as e:
+            print(f"ERROR: {e}", flush=True); return 1
+    else:
+        print(f"Orden desconocida: {cmd}", file=sys.stderr); return 2
+    print(json.dumps(out, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
