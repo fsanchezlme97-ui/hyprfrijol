@@ -34,6 +34,11 @@ Scope {
     property bool cursor: false
     property bool mic: false
     property bool sysAudio: false
+    // Formato de la grabación (se recuerda: recFormat): "video" (normal, sin límite) · "clip" (vídeo ligero para
+    // compartir, 60 s como mucho) · "gif" (sin audio, 30 s como mucho). Al parar, el archivo queda copiado.
+    property string recFormat: Settings.get("recFormat", "video")
+    onRecFormatChanged: if (Settings.get("recFormat", "video") !== recFormat) Settings.set("recFormat", recFormat)
+    readonly property int recLimit: recFormat === "gif" ? 30 : recFormat === "clip" ? 60 : 0
     property rect sel: Qt.rect(0, 0, 0, 0)        // coordenadas locales (lógicas) de la pantalla
     property rect preset: Qt.rect(0, 0, 0, 0)     // zona pedida por IPC antes de abrir
     property var screenUsed: Shell.screen
@@ -362,8 +367,11 @@ Scope {
         const full = mode === "pantalla" || (sel.width >= capWin.width - 1 && sel.height >= capWin.height - 1);
         const r = full ? fullRect() : sel;
         const args = [hc, "record", full ? scr.name : geom(r, scr)];
-        if (mic) args.push("--mic");
-        if (sysAudio) args.push("--system");
+        if (mic && recFormat !== "gif") args.push("--mic");
+        if (sysAudio && recFormat !== "gif") args.push("--system");
+        if (recFormat === "gif") args.push("--gif");
+        if (recFormat === "clip") args.push("--clip");
+        recLimitNow = recLimit;
         recRect = r; recScreen = scr;
         hiding = true;
         recProc.command = args;
@@ -397,7 +405,14 @@ Scope {
         }
     }
     property int recSecs: 0
-    Timer { interval: 500; repeat: true; running: root.recording; onTriggered: root.recSecs = Math.floor((Date.now() - root.recStart) / 1000) }
+    property int recLimitNow: 0           // límite de la grabación en curso (GIF 30 s, clip 60 s): para sola
+    Timer {
+        interval: 500; repeat: true; running: root.recording
+        onTriggered: {
+            root.recSecs = Math.floor((Date.now() - root.recStart) / 1000);
+            if (root.recLimitNow > 0 && root.recSecs >= root.recLimitNow) root.stopRec();
+        }
+    }
     function mmss(s: int): string { return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }
 
     // ── Ventanas (resalte al pasar y clic = esa ventana) ────────────────
@@ -972,8 +987,12 @@ Scope {
                 Sep {}
                 Opt { visible: root.kind === "foto"; text: "Cursor"; on: root.cursor; onClicked: { root.cursor = !root.cursor; root.refreeze(0); } }
                 Opt { visible: root.kind === "foto"; text: "Retardo 3 s"; icon: "clock"; onClicked: root.refreeze(3000) }
-                Opt { visible: root.kind === "video" && root.stage === "elegir"; text: "Micrófono"; on: root.mic; onClicked: root.mic = !root.mic }
-                Opt { visible: root.kind === "video" && root.stage === "elegir"; text: "Audio del sistema"; on: root.sysAudio; onClicked: root.sysAudio = !root.sysAudio }
+                Opt { visible: root.kind === "video"; text: "Vídeo"; on: root.recFormat === "video"; onClicked: root.recFormat = "video" }
+                Opt { visible: root.kind === "video"; text: "Clip 60 s"; on: root.recFormat === "clip"; onClicked: root.recFormat = "clip" }
+                Opt { visible: root.kind === "video"; text: "GIF 30 s"; on: root.recFormat === "gif"; onClicked: root.recFormat = "gif" }
+                Sep { visible: root.kind === "video" && root.stage === "elegir" && root.recFormat !== "gif" }
+                Opt { visible: root.kind === "video" && root.stage === "elegir" && root.recFormat !== "gif"; text: "Micrófono"; on: root.mic; onClicked: root.mic = !root.mic }
+                Opt { visible: root.kind === "video" && root.stage === "elegir" && root.recFormat !== "gif"; text: "Audio del sistema"; on: root.sysAudio; onClicked: root.sysAudio = !root.sysAudio }
                 IconBtn { icon: "x"; implicitHeight: 30; implicitWidth: 30; onClicked: Shell.close() }
             }
         }
@@ -1003,13 +1022,13 @@ Scope {
                 Act { visible: root.kind === "foto"; iconSvg: root.lensSvg; text: "Lens"; onClicked: root.run("lens") }
                 Btn { visible: root.kind === "foto"; kind: "primary"; h: 32; padX: 12; icon: "ai"; text: "Preguntar a la IA"; onClicked: root.run("ia") }
                 // Vídeo
-                Act { visible: root.kind === "video"; icon: "mic"; text: "Micrófono"; kind: root.mic ? "tonal" : "ghost"; onClicked: root.mic = !root.mic }
-                Act { visible: root.kind === "video"; icon: "volume"; text: "Audio del sistema"; kind: root.sysAudio ? "tonal" : "ghost"; onClicked: root.sysAudio = !root.sysAudio }
+                Act { visible: root.kind === "video" && root.recFormat !== "gif"; icon: "mic"; text: "Micrófono"; kind: root.mic ? "tonal" : "ghost"; onClicked: root.mic = !root.mic }
+                Act { visible: root.kind === "video" && root.recFormat !== "gif"; icon: "volume"; text: "Audio del sistema"; kind: root.sysAudio ? "tonal" : "ghost"; onClicked: root.sysAudio = !root.sysAudio }
                 Rectangle {
                     visible: root.kind === "video"
                     implicitHeight: 32; implicitWidth: recTxt.implicitWidth + 26; radius: Theme.ctl(32)
                     color: "#C2453B"
-                    Txt { id: recTxt; anchors.centerIn: parent; text: "● Grabar"; weight: Font.DemiBold; color: "white" }
+                    Txt { id: recTxt; anchors.centerIn: parent; text: root.recFormat === "gif" ? "● Grabar GIF" : root.recFormat === "clip" ? "● Grabar clip" : "● Grabar"; weight: Font.DemiBold; color: "white" }
                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.run("grabar") }
                 }
                 IconBtn { icon: "x"; implicitHeight: 32; implicitWidth: 32; onClicked: Shell.close() }
@@ -1286,7 +1305,7 @@ Scope {
                 Rectangle { width: 8; height: 8; radius: 4; color: "white"
                     SequentialAnimation on opacity { running: root.recording; loops: Animation.Infinite
                         NumberAnimation { to: 0.25; duration: 600 } NumberAnimation { to: 1; duration: 600 } } }
-                Txt { text: "REC " + root.mmss(root.recSecs); color: "white"; weight: Font.DemiBold; size: 12; tabular: true }
+                Txt { text: (root.recLimitNow === 30 ? "GIF " : "REC ") + root.mmss(root.recSecs) + (root.recLimitNow > 0 ? " / " + root.mmss(root.recLimitNow) : ""); color: "white"; weight: Font.DemiBold; size: 12; tabular: true }
                 Rectangle { implicitWidth: 1; implicitHeight: 14; color: Qt.rgba(1, 1, 1, 0.4) }
                 Txt { text: "■ Detener"; color: "white"; size: 12 }
             }

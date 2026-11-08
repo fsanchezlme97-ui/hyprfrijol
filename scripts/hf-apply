@@ -582,7 +582,10 @@ def hypr_lua(c, S, s):
         "    decoration = {",
         f"        rounding = {0 if focus else S['winRad']},",
         f"        rounding_power = {ROUNDING_POWER.get(s.get('roundingShape', 'auto'), 2.6)},",
-        f"        blur = {{ enabled = {'true' if S['blur'] else 'false'} }},",
+        # Desenfoque de Hyprland en todos los estilos (antes solo SkySoul): el fondo oscurecido de la vista general,
+        # Energía, la bienvenida… se ve esmerilado como en SkySoul. Con paneles opacos (Material, Chroma) no cambia
+        # nada más ni cuesta: solo se desenfoca detrás de lo translúcido. Fuera con «Ahorro» o menos transparencias.
+        f"        blur = {{ enabled = {'false' if focus or s.get('blurQuality') == 'ahorro' or s.get('reduceTransparency') else 'true'} }},",
         f"        inactive_opacity = {0.97 if S['blur'] else 1.0},",
         "    },",
         f"    animations = {{ enabled = {'true' if anim else 'false'} }},",

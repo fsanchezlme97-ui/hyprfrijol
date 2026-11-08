@@ -73,7 +73,7 @@ Las vistas que solo hacen falta abiertas se crean al abrirlas y se destruyen un 
   cerrada, sepáralo.
 - **Depurar**: `lazyModules: false` (Ajustes › Energía y rendimiento › Memoria del escritorio) lo carga todo al
   arrancar, como antes.
-- **Pantalla de carga** (`Splash.qml`): `HF_SPLASH_HOLD=30000 dev/try.sh -w 1` la deja visible para capturarla.
+- **Pantalla de carga** (`Splash.qml`): `HF_SPLASH_HOLD=30000 dev/try.sh -w 1` la fuerza y la deja visible para capturarla (sin eso, solo sale si la carga pasa de 250 ms).
 - **Medir**: `HF_PROBE_OPEN=1` activa `components/OpenProbe.qml`, que escribe en `qs log` líneas como
   `[probe] spotlight visible=40ms frames=24 maxGap=17ms slow=0`. Mide el tiempo desde `Shell.open` hasta el primer
   fotograma y los saltos durante la animación de entrada. La memoria se mide con `/proc/<pid>/smaps_rollup` del `qs`

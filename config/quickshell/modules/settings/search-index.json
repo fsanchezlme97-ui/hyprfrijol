@@ -145,7 +145,7 @@
   {"f": "Energia", "l": "Bajar calidad con batería", "t": "row", "s": "Quita el desenfoque al desconectar el cargador", "g": "Rendimiento del cristal (SkySoul)"},
   {"f": "Energia", "l": "Quitar efectos en juegos", "t": "row", "s": "pantalla completa sin desenfoque ni sombras", "g": "Rendimiento del cristal (SkySoul)"},
   {"f": "Energia", "l": "Ajustar según la GPU", "t": "row", "s": "Detecta equipos modestos y elige solo", "g": "Rendimiento del cristal (SkySoul)"},
-  {"f": "Energia", "l": "Pantalla de carga al entrar", "t": "row", "s": "el logo mientras el fondo y la barra terminan de cargar (1 s o menos)", "g": "Rendimiento del cristal (SkySoul)"},
+  {"f": "Energia", "l": "Pantalla de carga al entrar", "t": "row", "s": "el frijolito y una barrita si el fondo y la barra tardan en cargar", "g": "Rendimiento del cristal (SkySoul)"},
   {"f": "Energia", "l": "Memoria del escritorio", "t": "card"},
   {"f": "Energia", "l": "Cargar los paneles al abrirlos", "t": "row", "s": "Spotlight, centro de control, vista general… solo ocupan memoria mientras se usan. Apágalo solo para depurar", "g": "Memoria del escritorio"},
   {"f": "Energia", "l": "Tapa y botón de encendido", "t": "card"},

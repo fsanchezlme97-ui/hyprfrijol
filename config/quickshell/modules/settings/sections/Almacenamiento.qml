@@ -50,7 +50,9 @@ RowLayout {
         }
     }
     Timer { id: toolsLater; interval: 20000; repeat: true; property int n: 0; onTriggered: { tl.running = false; tl.running = true; if (++n > 9) { stop(); n = 0; } } }
-    function install(pkgs, title): void { Pkg.install(pkgs.map(p => ({ src: "Repos", pkg: p })), title); toolsLater.restart(); }
+    // gallery-dl no está en los repos oficiales de Arch: solo en AUR (con yay/paru)
+    readonly property var aurOnly: ["gallery-dl"]
+    function install(pkgs, title): void { Pkg.install(pkgs.map(p => ({ src: aurOnly.includes(p) ? "AUR" : "Repos", pkg: p })), title); toolsLater.restart(); }
 
     component UsageBar: Rectangle {
         property real used: 0
@@ -180,7 +182,7 @@ RowLayout {
                 muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
             }
             Repeater {
-                model: [["yt-dlp", "yt-dlp", "vídeo y audio"], ["gallery-dl", "gallery-dl", "galerías de imágenes"], ["aria2c", "aria2", "archivos (más rápido)"], ["ffmpeg", "ffmpeg", "convertir a mp3/opus"]]
+                model: [["yt-dlp", "yt-dlp", "vídeo y audio"], ["gallery-dl", "gallery-dl", "álbumes de imágenes (Pinterest, Instagram, Reddit, wallhaven…) · opcional"], ["aria2c", "aria2", "archivos grandes, por varias conexiones · opcional"], ["ffmpeg", "ffmpeg", "convertir a mp3/opus"]]
                 RowLayout {
                     required property var modelData
                     readonly property bool ok: !!root.tools[modelData[0]]

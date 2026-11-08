@@ -20,6 +20,7 @@ Glass {
     property var open: ({})                 // grupo (clave) → desplegado / agrupado a mano
     property string query: ""
     property string appFilter: ""           // clave de app del historial ("" = todas)
+    property string recentFilter: ""        // clave del grupo (app) en Recientes ("" = todas)
     // Al abrir el centro: arg = Shell.arg si se pidió esta sección, si no null
     function reset(a): void {
         win.dndMenu = false;
@@ -27,11 +28,15 @@ Glass {
         win.appFilter = a && typeof a === "object" ? String(a.app ?? "").toLowerCase() : "";
         win.query = "";
         search.text = "";
+        win.recentFilter = "";
     }
     function isOpen(g): bool { return win.open[g.key] !== undefined ? win.open[g.key] : g.items.length < 3; }
     function toggle(g) { const o = Object.assign({}, open); o[g.key] = !isOpen(g); open = o; }
 
     readonly property var groups: Notifs.groupsOf(Notifs.list.values.slice().reverse())
+    // Recientes filtrados por app (si la app filtrada ya no tiene avisos, se ven todas)
+    readonly property var recentApps: groups.map(g => ({ key: g.key, app: g.app, n: g.items.length }))
+    readonly property var shownGroups: recentFilter && groups.some(g => g.key === recentFilter) ? groups.filter(g => g.key === recentFilter) : groups
 
     // Historial filtrado + apps que aparecen en él (para los filtros)
     readonly property var histApps: {
@@ -131,6 +136,13 @@ Glass {
                 }
             }
 
+            AppChips {
+                visible: win.groups.length > 1
+                Layout.fillWidth: true
+                apps: win.recentApps
+                current: win.groups.some(g => g.key === win.recentFilter) ? win.recentFilter : ""
+                onPicked: k => win.recentFilter = k
+            }
             Flickable {
                 id: flick
                 visible: Notifs.count > 0
@@ -146,7 +158,7 @@ Glass {
                     width: flick.width
                     spacing: 12
                     Repeater {
-                        model: win.groups
+                        model: win.shownGroups
                         ColumnLayout {
                             id: grp
                             required property var modelData
@@ -206,8 +218,13 @@ Glass {
                 Rectangle {
                     implicitHeight: 26; implicitWidth: clrT.implicitWidth + 18; radius: Theme.r(6)
                     color: clr.containsMouse ? Theme.fill2 : "transparent"
-                    Txt { id: clrT; anchors.centerIn: parent; text: "Borrar todo"; color: Theme.p }
-                    MouseArea { id: clr; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Notifs.clearAll() }
+                    // con un filtro de app, borra solo los de esa app
+                    readonly property bool some: win.shownGroups.length < win.groups.length
+                    Txt { id: clrT; anchors.centerIn: parent; text: parent.some ? "Borrar estos" : "Borrar todo"; color: Theme.p }
+                    MouseArea {
+                        id: clr; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: parent.some ? Notifs.dismissAll(win.shownGroups.flatMap(g => g.items)) : Notifs.clearAll()
+                    }
                 }
             }
         }
@@ -225,44 +242,13 @@ Glass {
                 placeholder: "Buscar en el historial…"
                 onTextChanged: win.query = text
             }
-            // Filtros por app: una sola fila; si no caben, se desplaza en horizontal (rueda o arrastrar)
-            Flickable {
-                id: chipsFlick
+            // Filtros por app: una sola fila; si no caben, se desplaza en horizontal (AppChips.qml)
+            AppChips {
                 visible: win.histApps.length > 1
                 Layout.fillWidth: true
-                implicitHeight: chipsRow.implicitHeight + (contentWidth > width ? 8 : 0)
-                contentWidth: chipsRow.implicitWidth
-                contentHeight: height
-                flickableDirection: Flickable.HorizontalFlick
-                boundsBehavior: Flickable.StopAtBounds
-                interactive: contentWidth > width
-                clip: true
-                // la rueda vertical también desplaza la fila
-                WheelHandler {
-                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                    enabled: chipsFlick.interactive
-                    onWheel: e => {
-                        const d = e.angleDelta.x !== 0 ? -e.angleDelta.x : -e.angleDelta.y;
-                        chipsFlick.contentX = Math.max(0, Math.min(chipsFlick.contentWidth - chipsFlick.width, chipsFlick.contentX + d * 0.6));
-                    }
-                }
-                ScrollHint { flick: chipsFlick; horizontal: true; inset: 0 }
-                Row {
-                    id: chipsRow
-                    spacing: 5
-                    Repeater {
-                        model: [{ key: "", app: "Todas" }].concat(win.histApps)
-                        Rectangle {
-                            required property var modelData
-                            readonly property bool on: win.appFilter === modelData.key
-                            implicitHeight: 22; implicitWidth: fT.implicitWidth + 16; radius: Theme.ctl(22)
-                            color: on ? Theme.pc : fMa.containsMouse ? Theme.fill2 : "transparent"
-                            border.width: on ? 0 : 1; border.color: Theme.ov
-                            Txt { id: fT; anchors.centerIn: parent; text: parent.modelData.app; size: 11; weight: Font.Medium; color: parent.on ? Theme.pcText : Theme.t }
-                            MouseArea { id: fMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.appFilter = parent.on ? "" : parent.modelData.key }
-                        }
-                    }
-                }
+                apps: win.histApps
+                current: win.appFilter
+                onPicked: k => win.appFilter = k
             }
             Item {   // vacío
                 visible: win.histRows.length === 0

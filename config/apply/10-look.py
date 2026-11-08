@@ -67,7 +67,9 @@ def hypr_lua(s, c):
     if est not in ("flat", "skysoul", "chroma"):
         est = "flat"
     glass = est == "skysoul"
-    if glass and not s.get("reduceTransparency") and not s.get("highContrast"):
+    # El desenfoque (el esmerilado del fondo oscurecido de la vista general) va en todos los estilos; los paneles de
+    # Material y Chroma son opacos, así que solo se nota en los fondos translúcidos
+    if not s.get("reduceTransparency") and not s.get("highContrast"):
         # SkySoul: desenfoque suave que deja intuir las formas y los colores del fondo, algo de vibración para
         # que el color respire detrás del cristal y un poco oscurecido en modo oscuro para que el texto se lea
         # con tanta transparencia (Material y Chroma son sólidos: no lo necesitan)

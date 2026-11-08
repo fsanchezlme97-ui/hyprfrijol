@@ -101,7 +101,7 @@
   "sidePanelApps": [
     "ia"
   ],
-  "sideWidth": 400,
+  "sideWidth": "tercio",
   "sideSide": "izquierda",
   "sidePanelPinned": false,
   "monoFondo": true,
@@ -291,7 +291,7 @@
   "osk": false,
   "dictation": false,
   "dictationModel": "base",
-  "dictationLang": "es",
+  "dictationLang": "es+en",
   "dictationMode": "ptt",
   "dictationEngine": "auto",
   "dictationOutput": "escribir",

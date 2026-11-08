@@ -7,8 +7,10 @@ pragma Singleton
 //                           (modo app del navegador). Sin «mode» guardado: como antes (webappEngine + sidePanelApps)
 //   iconOf(a | clave)       ruta del icono del tema (Papirus) o "" → se dibuja la inicial
 //   byName(nombre)          web app cuyo nombre coincide (el reproductor MPRIS de una web app integrada se llama así)
-//   panelWidth(a, base, monW)  ancho de su pestaña en el panel lateral: «panelWidth» de la web app ("auto" | "panel" |
-//                           px) o el del catálogo (WhatsApp necesita ~760 px CSS); nunca más de la mitad de la pantalla
+//   panelWidth(a, base, monW)  ancho de su pestaña en el panel lateral: «panelWidth» de la web app ("auto" = un tercio
+//                           de la pantalla, como una columna de un mosaico de 3 | "panel" | px); nunca más de la mitad
+//   third(monW)             ese tercio (también el ancho del panel fijado, en todas sus pestañas)
+//   panelZoom               zoom de partida de las web apps del panel (90 %: caben más cosas en la columna)
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -65,15 +67,17 @@ Singleton {
         const s = String(n ?? "").trim().toLowerCase();
         return s ? (list.find(a => String(a.name).toLowerCase() === s) ?? null) : null;
     }
+    readonly property real panelZoom: 0.9
+    function third(monW): real { return Math.round(Math.max(320, ((Number(monW) || 1920) - 16) / 3)); }
     function panelWidth(a, base, monW): real {
         a = find(a);
         if (!a) return base;
         const v = a.panelWidth ?? "auto";
-        const w = v === "panel" ? base : Number(v) > 0 ? Number(v) : Number(preset(a).panelWidth) || base;
+        const w = v === "panel" ? base : Number(v) > 0 ? Number(v) : third(monW);
         const max = Math.max(base, Math.floor((Number(monW) || 1920) * 0.5));
         return Math.round(Math.max(320, Math.min(w, max)));
     }
-    readonly property var widths: [["auto", "Automático"], ["panel", "Como el panel"], [600, "600 px"], [800, "800 px"]]
+    readonly property var widths: [["auto", "Un tercio"], ["panel", "Como el panel"], [600, "600 px"], [800, "800 px"]]
     // Pestaña del panel lateral activada/desactivada (Ajustes › Panel lateral): «panel» al activarla; al quitarla, el
     // modo de antes (sin «mode» → navegador, como siempre)
     function setPanelMode(k, on): void {

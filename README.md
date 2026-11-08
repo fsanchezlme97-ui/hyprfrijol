@@ -227,7 +227,7 @@ Son los mismos que en illogical-impulse (misma tecla, misma función), más los 
 | Super + Ctrl + ← → | Espacio anterior / siguiente |
 | Super + S · Super + Alt + S | Espacio oculto (scratchpad) · enviar ventana ahí |
 | Impr Pant · Shift/Ctrl + Impr Pant | Captura · pantalla completa |
-| Super + Shift + S · X · T · A | Recortar zona · copiar texto (OCR) · traducir · preguntar a la IA |
+| Super + Shift + S · X · T · A | Captura (como Impr Pant: región, ventana, pantalla, grabar o GIF) · copiar texto (OCR) · traducir · preguntar a la IA |
 | Super + Shift + C | Selector de color |
 | Super + Shift + R (o Super + Alt + R) | Grabar; otra vez para parar |
 | Super + Shift + W · Ctrl + Super + T · Super + Ctrl + W | Fondos · fondos · siguiente fondo |

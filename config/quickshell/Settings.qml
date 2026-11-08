@@ -65,8 +65,11 @@ Singleton {
     readonly property bool barSmartHide: barBehavior === "inteligente" && !barAutoHide
     // ¿La barra ocupa sitio ahora? (si no, los paneles llegan al borde)
     readonly property bool barReserves: !barAutoHide && !Shell.barHidden
-    // Distancia del borde de la barra a la que se abren los paneles (diseño: margen + barra + 4)
-    readonly property real barEdge: barReserves ? barOffset + barThickness + 4 : 4
+    // Hueco de los paneles con el borde de la pantalla y con la barra: el mismo que el de las ventanas en mosaico
+    // (gapsOut = gaps_out de Hyprland), para que paneles y ventanas queden alineados
+    readonly property int winGap: Math.max(0, Math.min(24, Math.round(Number(get("gapsOut", 1)) || 0)))
+    // Distancia del borde de la pantalla a la que se abren los paneles en el lado de la barra (margen + barra + hueco)
+    readonly property real barEdge: barReserves ? barOffset + barThickness + winGap : winGap
     // Módulos visibles de la barra (Ajustes › Barra › Módulos visibles). Es un conjunto: el orden lo fija la barra
     // (BarH/BarV: espacios y título · onda · información · utilidades · bandeja · estado y hora)
     readonly property var barModuleList: {

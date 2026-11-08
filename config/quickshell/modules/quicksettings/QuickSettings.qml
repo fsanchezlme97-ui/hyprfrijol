@@ -245,178 +245,285 @@ Overlay {
                         source: "AudioPanel.qml"
                     }
 
-                    // Mosaicos
-                    GridLayout {
+                    // Mosaicos en páginas que se deslizan en horizontal (arrastrar, rueda o los puntos de abajo);
+                    // los desplegables (Wi‑Fi, Bluetooth, ventanas, no molestar, cafeína, teléfono) se abren debajo
+                    Item {
+                        id: pager
                         Layout.fillWidth: true
-                        columns: 2
-                        rowSpacing: 5; columnSpacing: 5
-                        AjusteTile {
-                            Layout.fillWidth: true; Layout.preferredWidth: 10
-                            icon: Net.type === "ethernet" ? "monitor" : "wifi_off"
-                            label: Net.type === "ethernet" ? "Red" : "Wi‑Fi"
-                            active: Net.wifiEnabled || Net.type === "ethernet"
-                            sub: Net.type === "ethernet" ? "Cable conectado" : !Net.wifiEnabled ? "Apagado" : Net.connected ? Net.ssid : "Sin conectar"
-                            expandable: true
-                            expanded: win.expanded === "wifi"
-                            onClicked: Net.setWifi(!Net.wifiEnabled)
-                            onExpand: { win.expanded = win.expanded === "wifi" ? "" : "wifi"; win.pwFor = ""; if (win.expanded) Net.scan(); }
+                        implicitHeight: Math.max(pg1.implicitHeight, pg2.implicitHeight)
+                        property int page: 0
+                        readonly property int pages: 2
+                        function go(i: int): void {
+                            page = Math.max(0, Math.min(pages - 1, i));
+                            snap.to = page * pflick.width;
+                            snap.restart();
                         }
-                        AjusteTile {
-                            Layout.fillWidth: true; Layout.preferredWidth: 10
-                            icon: "bluetooth"; label: "Bluetooth"
-                            available: Bt.available
-                            active: Bt.enabled
-                            sub: !Bt.available ? "No disponible" : !Bt.enabled ? "Apagado"
-                                 : Bt.connected.length === 1 ? (Bt.connected[0].name || "1 dispositivo")
-                                 : Bt.connected.length + " dispositivos"
-                            expandable: Bt.available
-                            expanded: win.expanded === "bt"
-                            onClicked: Bt.setEnabled(!Bt.enabled)
-                            onExpand: win.expanded = win.expanded === "bt" ? "" : "bt"
-                        }
-
-                        // Lista desplegable (ocupa las dos columnas, justo debajo de Wi-Fi/Bluetooth)
-                        Loader {
-                            Layout.columnSpan: 2
-                            Layout.fillWidth: true
-                            active: win.expanded === "wifi" || win.expanded === "bt"
-                            visible: active
-                            sourceComponent: win.expanded === "wifi" ? wifiList : btList
-                        }
-
-                        // Modo de ventanas: clic = siguiente modo general (como Super + Mayús + Espacio); el desplegable
-                        // elige el general o uno solo para este espacio
-                        AjusteTile {
-                            Layout.fillWidth: true; Layout.preferredWidth: 10
-                            icon: WinMode.icons[win.wsMode] ?? "tiles"; label: "Ventanas"
-                            active: win.wsMode !== "flotante"
-                            sub: (WinMode.labels[win.wsMode] ?? "") + (win.wsOverride ? " · solo aquí" : "")
-                            expandable: true
-                            expanded: win.expanded === "ventanas"
-                            onClicked: WinMode.cycle()
-                            onExpand: win.expanded = win.expanded === "ventanas" ? "" : "ventanas"
-                        }
-                        AjusteTile {
-                            Layout.fillWidth: true; Layout.preferredWidth: 10
-                            icon: "focus"; label: "Sin distracciones"
-                            active: Shell.focusMode
-                            sub: Shell.focusMode ? "Activo" : "Super + Z"
-                            onClicked: Shell.setFocusMode(!Shell.focusMode)
-                        }
-                        Loader {
-                            Layout.columnSpan: 2
-                            Layout.fillWidth: true
-                            active: win.expanded === "ventanas"
-                            visible: active
-                            sourceComponent: Rectangle {
-                                radius: Theme.r(6)
-                                color: Theme.fill2
-                                implicitHeight: wmCol.implicitHeight + 16
-                                ColumnLayout {
-                                    id: wmCol
-                                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
-                                    spacing: 6
-                                    Txt { text: "Todos los espacios"; size: 11.5; muted: true }
-                                    AjusteSeg {
-                                        Layout.fillWidth: true
-                                        model: WinMode.modes.map(m => ({ key: m, label: WinMode.labels[m] }))
-                                        current: WinMode.mode
-                                        onPicked: k => WinMode.setMode(k)
-                                    }
-                                    // Elegir el mismo modo que el general quita la excepción
-                                    Txt {
-                                        Layout.fillWidth: true; Layout.topMargin: 2
-                                        text: "Solo el espacio " + win.curWs + (win.wsOverride ? " · hasta cerrar la sesión" : " · como todos")
-                                        size: 11.5; muted: true
-                                    }
-                                    AjusteSeg {
-                                        Layout.fillWidth: true
-                                        model: WinMode.modes.map(m => ({ key: m, label: WinMode.labels[m] }))
-                                        current: win.wsMode
-                                        onPicked: k => WinMode.setWsMode(win.curWs, k)
-                                    }
+                        Flickable {
+                            id: pflick
+                            anchors.fill: parent
+                            contentWidth: width * pager.pages
+                            contentHeight: height
+                            flickableDirection: Flickable.HorizontalFlick
+                            boundsBehavior: Flickable.StopAtBounds
+                            clip: true
+                            onMovementEnded: pager.go(Math.round(contentX / Math.max(1, width) + (horizontalVelocity > 300 ? 0.3 : horizontalVelocity < -300 ? -0.3 : 0)))
+                            onWidthChanged: contentX = pager.page * width
+                            NumberAnimation { id: snap; target: pflick; property: "contentX"; duration: Theme.dur; easing.type: Easing.OutCubic }
+                            Row {
+                                Item {
+                                    width: pflick.width; height: pg1.implicitHeight
+                                    Loader { id: pg1; width: parent.width; sourceComponent: page1C }
+                                }
+                                Item {
+                                    width: pflick.width; height: pg2.implicitHeight
+                                    Loader { id: pg2; width: parent.width; sourceComponent: page2C }
                                 }
                             }
                         }
-                        AjusteTile {
-                            Layout.fillWidth: true; Layout.preferredWidth: 10
-                            icon: "dnd"; label: "No molestar"
-                            active: Notifs.dnd
-                            sub: Notifs.dnd ? (Notifs.dndUntil > 0 ? Notifs.dndLeft.charAt(0).toUpperCase() + Notifs.dndLeft.slice(1) : "Activado") : "Desactivado"
-                            expandable: true
-                            expanded: win.expanded === "dnd"
-                            onClicked: Notifs.setDnd(!Notifs.dnd)
-                            onExpand: win.expanded = win.expanded === "dnd" ? "" : "dnd"
+                        // rueda (horizontal, o vertical con Mayús) cambia de página
+                        WheelHandler {
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                            property real acc: 0
+                            onWheel: e => {
+                                const d = e.angleDelta.x !== 0 ? -e.angleDelta.x : (e.modifiers & Qt.ShiftModifier) ? -e.angleDelta.y : 0;
+                                if (d === 0) { e.accepted = false; return; }
+                                acc += d;
+                                if (Math.abs(acc) >= 120) { pager.go(pager.page + (acc > 0 ? 1 : -1)); acc = 0; }
+                            }
                         }
-                        AjusteTile {
-                            Layout.fillWidth: true; Layout.preferredWidth: 10
-                            icon: "moon"; label: "Luz nocturna"
-                            active: win.nightOn
-                            sub: win.nightOn ? "hyprsunset · " + Settings.get("nightTemp", 4000) + " K" : "Desactivada"
-                            onClicked: win.setNight(!win.nightOn)
-                        }
-                        // Atajos de «no molestar» (1 h, esta noche, mañana…), bajo su mosaico
-                        Loader {
-                            Layout.columnSpan: 2
-                            Layout.fillWidth: true
-                            active: win.expanded === "dnd"
-                            visible: active
-                            sourceComponent: DndPresets { onPicked: win.expanded = "" }
-                        }
-                        AjusteTile {
-                            Layout.fillWidth: true; Layout.preferredWidth: 10
-                            icon: "contrast"; label: "Claro/oscuro auto"
-                            readonly property bool auto: Settings.get("themeMode", "oscuro") === "auto"
-                            active: auto
-                            sub: !auto ? "Manual" : Settings.get("themeSchedule", "horas") === "sol" ? "Según el sol" : "Según la hora"
-                            onClicked: Settings.set("themeMode", auto ? (Theme.light ? "claro" : "oscuro") : "auto")
-                        }
-                        AjusteTile {
-                            Layout.fillWidth: true; Layout.preferredWidth: 10
-                            icon: "monitor"; label: "Escritorio remoto"
-                            available: win.vncAvailable
-                            active: win.vncOn
-                            sub: !win.vncAvailable ? "Instala wayvnc" : win.vncOn ? (win.vncNet ? "Red · con contraseña" : "Solo este equipo") : "Desactivado"
-                            onClicked: win.setVnc(!win.vncOn)
-                        }
-                        // Cafeína (services/Caffeine.qml): sin apagar la pantalla ni suspender por inactividad
-                        AjusteTile {
-                            Layout.fillWidth: true; Layout.preferredWidth: 10
-                            icon: "coffee"; label: "Cafeína"
-                            active: Caffeine.on
-                            sub: Caffeine.on ? (Caffeine.left ? "Quedan " + Caffeine.left : "Pantalla siempre encendida") : "Super + Alt + C"
-                            expandable: true
-                            expanded: win.expanded === "cafe"
-                            onClicked: Caffeine.toggle()
-                            onExpand: win.expanded = win.expanded === "cafe" ? "" : "cafe"
-                        }
-                        // Selector de color (modules/colorpicker): elige un color de la pantalla
-                        AjusteTile {
-                            Layout.fillWidth: true; Layout.preferredWidth: 10
-                            icon: "drop"; label: "Selector de color"
-                            sub: "Super + Mayús + C"
-                            onClicked: Shell.open("color")
-                        }
-                        Loader {
-                            Layout.columnSpan: 2
-                            Layout.fillWidth: true
-                            active: win.expanded === "cafe"
-                            visible: active
-                            sourceComponent: RowLayout {
-                                spacing: 5
-                                Repeater {
-                                    model: [[30, "30 min"], [60, "1 hora"], [120, "2 horas"], [0, "Sin límite"]]
-                                    Btn {
-                                        required property var modelData
-                                        Layout.fillWidth: true
-                                        h: 28; padX: 6; text: modelData[1]
-                                        onClicked: { Caffeine.set(true, modelData[0]); win.expanded = ""; }
+                        Component {
+                            id: page1C
+                            GridLayout {
+                                    width: pflick.width
+                                    columns: 2
+                                    rowSpacing: 5; columnSpacing: 5
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: Net.type === "ethernet" ? "monitor" : "wifi_off"
+                                        label: Net.type === "ethernet" ? "Red" : "Wi‑Fi"
+                                        active: Net.wifiEnabled || Net.type === "ethernet"
+                                        sub: Net.type === "ethernet" ? "Cable conectado" : !Net.wifiEnabled ? "Apagado" : Net.connected ? Net.ssid : "Sin conectar"
+                                        expandable: true
+                                        expanded: win.expanded === "wifi"
+                                        onClicked: Net.setWifi(!Net.wifiEnabled)
+                                        onExpand: { win.expanded = win.expanded === "wifi" ? "" : "wifi"; win.pwFor = ""; if (win.expanded) Net.scan(); }
                                     }
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "bluetooth"; label: "Bluetooth"
+                                        available: Bt.available
+                                        active: Bt.enabled
+                                        sub: !Bt.available ? "No disponible" : !Bt.enabled ? "Apagado"
+                                             : Bt.connected.length === 1 ? (Bt.connected[0].name || "1 dispositivo")
+                                             : Bt.connected.length + " dispositivos"
+                                        expandable: Bt.available
+                                        expanded: win.expanded === "bt"
+                                        onClicked: Bt.setEnabled(!Bt.enabled)
+                                        onExpand: win.expanded = win.expanded === "bt" ? "" : "bt"
+                                    }
+                                    // Modo de ventanas: clic = siguiente modo general (como Super + Mayús + Espacio); el desplegable
+                                    // elige el general o uno solo para este espacio
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: WinMode.icons[win.wsMode] ?? "tiles"; label: "Ventanas"
+                                        active: win.wsMode !== "flotante"
+                                        sub: (WinMode.labels[win.wsMode] ?? "") + (win.wsOverride ? " · solo aquí" : "")
+                                        expandable: true
+                                        expanded: win.expanded === "ventanas"
+                                        onClicked: WinMode.cycle()
+                                        onExpand: win.expanded = win.expanded === "ventanas" ? "" : "ventanas"
+                                    }
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "focus"; label: "Sin distracciones"
+                                        active: Shell.focusMode
+                                        sub: Shell.focusMode ? "Activo" : "Super + Z"
+                                        onClicked: Shell.setFocusMode(!Shell.focusMode)
+                                    }
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "dnd"; label: "No molestar"
+                                        active: Notifs.dnd
+                                        sub: Notifs.dnd ? (Notifs.dndUntil > 0 ? Notifs.dndLeft.charAt(0).toUpperCase() + Notifs.dndLeft.slice(1) : "Activado") : "Desactivado"
+                                        expandable: true
+                                        expanded: win.expanded === "dnd"
+                                        onClicked: Notifs.setDnd(!Notifs.dnd)
+                                        onExpand: win.expanded = win.expanded === "dnd" ? "" : "dnd"
+                                    }
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "moon"; label: "Luz nocturna"
+                                        active: win.nightOn
+                                        sub: win.nightOn ? "hyprsunset · " + Settings.get("nightTemp", 4000) + " K" : "Desactivada"
+                                        onClicked: win.setNight(!win.nightOn)
+                                    }
+                                }
+                        }
+                        Component {
+                            id: page2C
+                            GridLayout {
+                                    width: pflick.width
+                                    columns: 2
+                                    rowSpacing: 5; columnSpacing: 5
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "contrast"; label: "Claro/oscuro auto"
+                                        readonly property bool auto: Settings.get("themeMode", "oscuro") === "auto"
+                                        active: auto
+                                        sub: !auto ? "Manual" : Settings.get("themeSchedule", "horas") === "sol" ? "Según el sol" : "Según la hora"
+                                        onClicked: Settings.set("themeMode", auto ? (Theme.light ? "claro" : "oscuro") : "auto")
+                                    }
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "monitor"; label: "Escritorio remoto"
+                                        available: win.vncAvailable
+                                        active: win.vncOn
+                                        sub: !win.vncAvailable ? "Instala wayvnc" : win.vncOn ? (win.vncNet ? "Red · con contraseña" : "Solo este equipo") : "Desactivado"
+                                        onClicked: win.setVnc(!win.vncOn)
+                                    }
+                                    // Cafeína (services/Caffeine.qml): sin apagar la pantalla ni suspender por inactividad
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "coffee"; label: "Cafeína"
+                                        active: Caffeine.on
+                                        sub: Caffeine.on ? (Caffeine.left ? "Quedan " + Caffeine.left : "Pantalla siempre encendida") : "Super + Alt + C"
+                                        expandable: true
+                                        expanded: win.expanded === "cafe"
+                                        onClicked: Caffeine.toggle()
+                                        onExpand: win.expanded = win.expanded === "cafe" ? "" : "cafe"
+                                    }
+                                    // Selector de color (modules/colorpicker): elige un color de la pantalla
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "drop"; label: "Selector de color"
+                                        sub: "Super + Mayús + C"
+                                        onClicked: Shell.open("color")
+                                    }
+                                    // Teléfono (Valent o KDE Connect, hf-phone): clic abre la app; el desplegable, sonar y enviar archivo
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "phone"
+                                        label: win.phone ? win.phone.name : win.phoneBackend === "kdeconnect" ? "KDE Connect" : "Teléfono"
+                                        available: win.phoneBackend !== ""
+                                        active: win.phone !== null
+                                        sub: win.phoneBackend === "" ? "Instala Valent"
+                                            : win.phone ? (win.phone.battery ? "Batería " + win.phone.battery.percentage + " %" + (win.phone.battery.charging ? " · cargando" : "") : "Conectado")
+                                            : win.phoneRunning ? "Ningún móvil enlazado" : "Valent no está en marcha"
+                                        expandable: win.phone !== null
+                                        expanded: win.expanded === "phone"
+                                        onClicked: { Shell.close(); Quickshell.execDetached([Paths.script("hf-phone"), "open"].concat(win.phone ? [win.phone.id] : [])); }
+                                        onExpand: win.expanded = win.expanded === "phone" ? "" : "phone"
+                                    }
+                                    // Duplicar la pantalla del móvil con scrcpy (adb por USB o Wi‑Fi)
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "monitor"; label: "Duplicar móvil"
+                                        active: win.scrcpyOk && win.adbState === "device"
+                                        sub: !win.scrcpyOk ? "Instalar scrcpy"
+                                            : ({ device: "Listo · clic para abrir", unauthorized: "Acepta la depuración USB",
+                                                 offline: "El móvil no responde a adb" })[win.adbState] ?? "Conecta el móvil por USB"
+                                        onClicked: {
+                                            if (!win.scrcpyOk) { const t = Pkg.tool("scrcpy"); if (t) { Pkg.install([t], "Instalar scrcpy"); Shell.close(); } }
+                                            else if (win.adbState === "device") { Shell.close(); Shell.exec(["scrcpy", "--window-title", win.phone?.name || "Android"]); }
+                                            else adbCheck.running = true;
+                                        }
+                                    }
+                                }
+                        }
+                    }
+                    // puntos de página
+                    Row {
+                        Layout.alignment: Qt.AlignHCenter
+                        spacing: 6
+                        Repeater {
+                            model: pager.pages
+                            Rectangle {
+                                required property int index
+                                width: pager.page === index ? 16 : 6; height: 6; radius: 3
+                                color: pager.page === index ? Theme.t : Qt.alpha(Theme.t, 0.3)
+                                Behavior on width { NumberAnimation { duration: Theme.dur } }
+                                MouseArea { anchors.fill: parent; anchors.margins: -5; cursorShape: Qt.PointingHandCursor; onClicked: pager.go(parent.index) }
+                            }
+                        }
+                    }
+                    // Lista desplegable (ocupa las dos columnas, justo debajo de Wi-Fi/Bluetooth)
+                    Loader {
+                        Layout.fillWidth: true
+                        active: win.expanded === "wifi" || win.expanded === "bt"
+                        visible: active
+                        sourceComponent: win.expanded === "wifi" ? wifiList : btList
+                    }
+                    Loader {
+                        Layout.fillWidth: true
+                        active: win.expanded === "ventanas"
+                        visible: active
+                        sourceComponent: Rectangle {
+                            radius: Theme.r(6)
+                            color: Theme.fill2
+                            implicitHeight: wmCol.implicitHeight + 16
+                            ColumnLayout {
+                                id: wmCol
+                                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
+                                spacing: 6
+                                Txt { text: "Todos los espacios"; size: 11.5; muted: true }
+                                AjusteSeg {
+                                    Layout.fillWidth: true
+                                    model: WinMode.modes.map(m => ({ key: m, label: WinMode.labels[m] }))
+                                    current: WinMode.mode
+                                    onPicked: k => WinMode.setMode(k)
+                                }
+                                // Elegir el mismo modo que el general quita la excepción
+                                Txt {
+                                    Layout.fillWidth: true; Layout.topMargin: 2
+                                    text: "Solo el espacio " + win.curWs + (win.wsOverride ? " · hasta cerrar la sesión" : " · como todos")
+                                    size: 11.5; muted: true
+                                }
+                                AjusteSeg {
+                                    Layout.fillWidth: true
+                                    model: WinMode.modes.map(m => ({ key: m, label: WinMode.labels[m] }))
+                                    current: win.wsMode
+                                    onPicked: k => WinMode.setWsMode(win.curWs, k)
                                 }
                             }
                         }
                     }
-
+                    // Atajos de «no molestar» (1 h, esta noche, mañana…), bajo su mosaico
+                    Loader {
+                        Layout.fillWidth: true
+                        active: win.expanded === "dnd"
+                        visible: active
+                        sourceComponent: DndPresets { onPicked: win.expanded = "" }
+                    }
+                    Loader {
+                        Layout.fillWidth: true
+                        active: win.expanded === "cafe"
+                        visible: active
+                        sourceComponent: RowLayout {
+                            spacing: 5
+                            Repeater {
+                                model: [[30, "30 min"], [60, "1 hora"], [120, "2 horas"], [0, "Sin límite"]]
+                                Btn {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    h: 28; padX: 6; text: modelData[1]
+                                    onClicked: { Caffeine.set(true, modelData[0]); win.expanded = ""; }
+                                }
+                            }
+                        }
+                    }
+                    // Acciones del móvil enlazado (desplegable del mosaico Teléfono)
+                    Loader {
+                        Layout.fillWidth: true
+                        active: win.expanded === "phone" && win.phone !== null
+                        visible: active
+                        sourceComponent: RowLayout {
+                            spacing: 5
+                            Btn { Layout.fillWidth: true; h: 28; padX: 6; icon: "bell"; text: "Hacer sonar"
+                                  onClicked: Quickshell.execDetached([Paths.script("hf-phone"), "ring", win.phone.id]) }
+                            Btn { Layout.fillWidth: true; h: 28; padX: 6; icon: "upload"; text: "Enviar archivo"
+                                  onClicked: { Shell.close(); Quickshell.execDetached([Paths.script("hf-phone"), "share", win.phone.id]); } }
+                        }
+                    }
                     // Modo de energía
                     ColumnLayout {
                         Layout.fillWidth: true
@@ -433,109 +540,19 @@ Overlay {
                 }
             }
 
-            // ═══ Teléfono (Valent · scrcpy) ═══
-            Glass {
-                id: phoneCard
-                kind: "panel"
-                visible: win.phoneBackend !== "" || win.adbState !== ""
-                Layout.fillWidth: true
-                Layout.preferredHeight: phoneCol.implicitHeight + 20
-                ColumnLayout {
-                    id: phoneCol
-                    anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 12; rightMargin: 12 }
-                    spacing: 8
-                    RowLayout {
-                        visible: win.phoneBackend !== ""
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 34
-                        spacing: 12
-                        Rectangle {
-                            implicitWidth: 30; implicitHeight: 30; radius: Theme.r(5); color: Theme.fill2
-                            Icon { anchors.centerIn: parent; name: "phone"; size: 15 }
-                        }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 0
-                            Txt { Layout.fillWidth: true; weight: Font.DemiBold; elide: Text.ElideRight
-                                text: win.phone ? win.phone.name + " · conectado" : win.phoneBackend === "kdeconnect" ? "KDE Connect" : "Valent" }
-                            Txt {
-                                Layout.fillWidth: true; size: 11.5; muted: true; elide: Text.ElideRight
-                                text: win.phone ? (win.phone.battery ? "Batería " + win.phone.battery.percentage + " %" + (win.phone.battery.charging ? " · cargando" : "")
-                                                                     : "Portapapeles y notificaciones compartidos")
-                                    : win.phoneRunning ? "Ningún móvil conectado · abre Valent para enlazarlo" : "Valent no está en marcha"
-                            }
-                        }
-                        IconBtn {
-                            visible: win.phone !== null
-                            implicitWidth: 26; implicitHeight: 26; radius: 13
-                            icon: "bell"; iconSize: 13; tooltip: "Hacer sonar el móvil"
-                            onClicked: Quickshell.execDetached([Paths.script("hf-phone"), "ring", win.phone.id])
-                        }
-                        IconBtn {
-                            implicitWidth: 26; implicitHeight: 26; radius: 13
-                            icon: "external"; iconSize: 13; tooltip: win.phoneBackend === "kdeconnect" ? "Abrir KDE Connect" : "Abrir Valent"
-                            onClicked: { Shell.close(); Quickshell.execDetached([Paths.script("hf-phone"), "open"].concat(win.phone ? [win.phone.id] : [])); }
-                        }
-                        Rectangle {
-                            visible: win.phone !== null
-                            implicitHeight: 26; implicitWidth: sendTxt.implicitWidth + 22; radius: 13
-                            color: sendMa.containsMouse ? Theme.fill2 : "transparent"
-                            border.width: 1; border.color: Theme.ov
-                            Txt { id: sendTxt; anchors.centerIn: parent; text: "Enviar archivo" }
-                            MouseArea {
-                                id: sendMa
-                                anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    Shell.close();
-                                    Quickshell.execDetached([Paths.script("hf-phone"), "share", win.phone.id]);
-                                }
-                            }
-                        }
-                    }
-                    // Duplicar pantalla con scrcpy (por adb: USB o Wi‑Fi)
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 12
-                        Rectangle {
-                            implicitWidth: 30; implicitHeight: 30; radius: Theme.r(5); color: Theme.fill2
-                            Icon { anchors.centerIn: parent; name: "monitor"; size: 15 }
-                        }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 0
-                            Txt { Layout.fillWidth: true; weight: Font.DemiBold; text: "Duplicar pantalla (scrcpy)" }
-                            Txt {
-                                Layout.fillWidth: true; size: 11.5; muted: true; elide: Text.ElideRight
-                                text: !win.scrcpyOk ? "Ve y controla el móvil desde el PC"
-                                    : ({ device: "Android por adb · listo", unauthorized: "Acepta la depuración USB en el móvil",
-                                         offline: "El móvil no responde a adb" })[win.adbState] ?? "Conecta el móvil por USB con la depuración USB"
-                            }
-                        }
-                        Btn {
-                            h: 26; padX: 11; textSize: 12
-                            kind: win.scrcpyOk && win.adbState === "device" ? "primary" : "outline"
-                            text: !win.scrcpyOk ? "Instalar" : win.adbState === "device" ? "Abrir" : "Comprobar"
-                            onClicked: {
-                                if (!win.scrcpyOk) { const t = Pkg.tool("scrcpy"); if (t) { Pkg.install([t], "Instalar scrcpy"); Shell.close(); } }
-                                else if (win.adbState === "device") { Shell.close(); Shell.exec(["scrcpy", "--window-title", win.phone?.name || "Android"]); }
-                                else adbCheck.running = true;
-                            }
-                        }
-                    }
-                }
-            }
-
             // ═══ Notificaciones (el sitio que sobre) ═══
-            // Nunca más alta que el hueco bajo los ajustes rápidos: con muchos avisos, la lista se desplaza dentro
-            // en lugar de salirse por debajo de la pantalla (la agenda sigue debajo, desplazando la columna)
-            readonly property real notifRoom: flick.height - mainCard.height - (phoneCard.visible ? phoneCard.height + spacing : 0) - spacing
+            // Ocupa solo el hueco entre los ajustes rápidos y la agenda: con muchos avisos se desplazan las listas de
+            // Recientes e Historial por dentro y el resto del centro (ajustes, agenda) queda fijo y a la vista.
+            // (La columna entera solo se desplaza si ni con el mínimo de 180 px cabe todo: pantallas muy bajas.)
+            readonly property real notifRoom: flick.height - mainCard.height
+                - (agenda.visible ? agenda.implicitHeight + spacing : 0) - spacing
             NotifCenter {
                 id: notif
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.minimumHeight: Math.min(implicitHeight, 260)
-                Layout.maximumHeight: Math.max(260, col.notifRoom)
-                Layout.preferredHeight: Math.min(implicitHeight, Math.max(260, col.notifRoom))
+                Layout.minimumHeight: Math.min(implicitHeight, 180)
+                Layout.maximumHeight: Math.max(180, col.notifRoom)
+                Layout.preferredHeight: Math.min(implicitHeight, Math.max(180, col.notifRoom))
             }
 
             // ═══ Agenda ═══

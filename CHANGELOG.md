@@ -3,6 +3,70 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.5] — 2026-11-08
+
+- **Imágenes del portapapeles de vuelta**: si habías copiado texto desde Chrome (que lo guarda en UTF-16), la lista
+  del historial tenía bytes nulos y `grep` la tomaba por binaria: no salía ninguna miniatura. Esos textos también se
+  ven ya bien (antes «h t t p s : / /…»).
+- **Filtros por app también en Recientes**: la misma fila que el historial, con cuántos avisos tiene cada app y
+  desplazamiento horizontal si no caben; «Borrar estos» borra solo los de la app elegida.
+- **Gato bongo con los dibujos del Bongo Cat de VS Code** ([kitgore/BongoCat](https://github.com/kitgore/BongoCat),
+  licencia MIT, en `config/quickshell/assets/bongocat`): el gato de línea tumbado, en el color del texto del tema, que
+  baja la pata izquierda o derecha al escribir. Calcado con trazos lisos (`bar/bongo.js`; la fuente original se veía
+  ondulada a tamaño de icono) y del tamaño de los iconos de la bandeja.
+- **Pantalla de carga como la de KDE**: solo el frijolito y una barrita fina que se va llenando, y solo cuando hace
+  falta: si el fondo está listo en menos de un cuarto de segundo, no aparece.
+- **Super + flechas respeta el mosaico**: cada pulsación lee el estado real de las ventanas (`hyprctl`) y, si hay
+  una vecina en esa dirección, se intercambia con ella; si no, la ventana se recoloca en su hueco (arriba/abajo o
+  izquierda/derecha de su vecina), así una ventana a media pantalla pasa a ser un cuarto arriba a la izquierda.
+  ↑ ya no maximiza encima de las demás (maximizar sigue en Super + D, y cualquier flecha lo deshace); pulsar hacia
+  un lado en el que ya está no hace nada. Las apps que flotan siempre (Nautilus, visores…) entran en el mosaico en
+  ese lado con la primera flecha, en vez de quedarse encima de las demás (Super + Alt + Espacio las vuelve a soltar).
+  En el modo flotante las flechas recorren mitades y cuartos (← y luego ↑ = cuarto de arriba a la izquierda).
+- **Panel lateral en columnas**: las web apps del panel miden un tercio de la pantalla (una columna de un mosaico de 3,
+  en vez de 560–800 px) y se abren al 90 % de zoom. Fijado, el panel ocupa siempre ese tercio, también en la pestaña
+  del asistente: el mosaico queda en tres columnas y las demás ventanas se reparten y se mueven en los otros dos
+  tercios. «Ancho en el panel» de cada web app sigue permitiendo 600/800 px o el del panel.
+- **Paneles alineados con las ventanas**: el panel lateral (también fijado), el centro de control, las
+  notificaciones y el resto de paneles dejan con el borde de la pantalla y con la barra el mismo hueco que las
+  ventanas en mosaico (gaps_out), y entre el panel fijado y la ventana vecina el mismo que entre dos ventanas.
+- **Asistente más ancho y con respuestas ricas**: mide lo mismo que las web apps (un tercio; Ajustes › Panel lateral ›
+  Ancho). Las respuestas se dibujan con formato: bloques de comandos y código con «Copiar», gráficos de barras, líneas
+  o sectores (bloque `hf-chart` que el modelo usa cuando aporta o se lo pides) e imágenes.
+- **Centro de control sin desplazar todo**: los avisos ocupan el hueco entre los ajustes rápidos y la agenda; con
+  muchos solo se desplazan las listas de Recientes e Historial y la agenda queda a la vista.
+- **Dictado más preciso y rápido, en español e inglés**:
+  - Motor nuevo **Parakeet v3** (NVIDIA, con onnx-asr; `hf-dictate install-parakeet` o el botón de Ajustes › Dictado):
+    entiende español, inglés y 23 idiomas más sin elegir, puntúa solo y en CPU tarda ~0,3 s por frase (whisper small
+    ~2 s). En «Automático» se usa si está instalado.
+  - Antes el automático usaba Vosk, que fallaba mucho y no entendía inglés: ahora va Parakeet → whisper → Vosk.
+  - whisper: idioma «Español + inglés» (por defecto; cada frase en el idioma que oye, sin traducir), contexto de audio
+    a la medida de la frase y búsqueda en haz: ~2 s por frase en CPU (antes ~3 s) y menos errores.
+  - GPU: con `ggml-vulkan` instalado se mide una vez la GPU frente a la CPU y se usa la más rápida (con algunas
+    tarjetas y versiones de ggml-vulkan la GPU va varias veces más lenta). `dictationGpu`: auto | si | no.
+- **Centro de control en páginas**: los mosaicos se deslizan en horizontal (rueda, Mayús + rueda o arrastrando, con
+  puntitos de página). En la segunda página: claro/oscuro, escritorio remoto, cafeína, selector de color y dos
+  mosaicos nuevos, **Teléfono** (Valent: abrir, hacer sonar, enviar archivo) y **Duplicar móvil** (scrcpy: instalar,
+  abrir, comprobar). La tarjeta del teléfono ya no ocupa sitio abajo.
+- **Super + Mayús + S hace lo mismo que Impr Pant**: abre la herramienta de captura (región, ventana, pantalla o
+  grabar) en vez de recortar directamente.
+- **Grabar un GIF o un clip corto**: en la barra de grabación se elige Vídeo, Clip (hasta 60 s, MP4 ligero) o GIF
+  (hasta 30 s, 15 fps, ≤ 960 px). Al terminar se copia el archivo para pegarlo en un chat y el aviso ofrece abrirlo o
+  abrir la carpeta. Para enseñar rápido algo que falla.
+- **Desenfoque en todos los estilos**: el desenfoque del fondo de SkySoul (selector de espacios, paneles, barra)
+  ahora también en Material y Chroma. Se quita con Calidad del desenfoque › Ahorro, modo concentración o Reducir
+  transparencia.
+- **Web apps más rápidas y sin pantallazo negro**: nacen escondidas, se precargan las del panel al abrirlo la primera
+  vez y Chromium ya no congela las que no se ven (por eso YouTube tardaba y al volver se veía negro un momento).
+- **Asistente con historial y documentos**:
+  - Botón del reloj en la cabecera: todas las conversaciones guardadas con título, fecha y nº de mensajes, buscador
+    (también dentro del texto), abrir para seguirla, borrar y «Nueva».
+  - Arrastrar y soltar (o el clip) también documentos: PDF, texto, Markdown, código, CSV, DOCX/ODT… El asistente lee
+    su texto (hasta 8 por mensaje); se ven como etiquetas en el mensaje y con un clic se abren.
+  - Bajo cada respuesta: Copiar y, en la última, «Otra respuesta». Los gráficos usan marcas redondas en el eje.
+- **Instalar gallery-dl ya funciona**: no está en los repos oficiales de Arch y se intentaba con pacman; ahora va por
+  AUR (yay/paru). Ajustes › Almacenamiento explica para qué sirve cada herramienta de descarga.
+
 ## [0.8.4] — 2026-11-08
 
 - **Entrar es ~2,5 s más rápido**: el login esperaba a que pasaran sus cuatro mensajes («Comprobando…»,

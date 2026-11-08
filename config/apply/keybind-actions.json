@@ -32,6 +32,7 @@
   "Organizar ventanas": "hl.dsp.global(\"hf:snap\")",
   "Cambiar de ventana": "hl.dsp.global(\"hf:alttab\")",
   "Captura": "hl.dsp.global(\"hf:captura\")",
+  "Captura (como Impr Pant)": "hl.dsp.global(\"hf:captura\")",
   "Modo sin distracciones": "hl.dsp.global(\"hf:enfoque\")",
   "Menú de apagado": "hl.dsp.global(\"hf:energia\")",
   "Widgets": "hl.dsp.global(\"hf:widgets\")",

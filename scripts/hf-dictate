@@ -3,7 +3,9 @@
 mientras hablas y escribe cada frase en la ventana con foco en cuanto haces una pausa. El dictado NUNCA usa IA (ni la
 limpieza de antes, dictationAI, retirada): el asistente solo recibe las órdenes de voz que hf-voice no entiende.
 
-Motor (dictationEngine; «auto» = Vosk si está instalado con su modelo, si no whisper.cpp):
+Motor (dictationEngine; «auto» = Parakeet si está instalado; si no whisper.cpp con su modelo; si no Vosk):
+  parakeet    NVIDIA Parakeet TDT v3 (onnx-asr, CPU): español, inglés y 23 idiomas más sin elegir, con puntuación,
+              ~0,3 s por frase; texto provisional cada 0,4 s.
   vosk        tiempo real: Vosk reconoce mientras llega el audio (palabra a palabra) y cierra la frase él solo en las
               pausas; cada frase se escribe al momento. Sin puntuación propia: mayúscula y punto por frase.
   whisper.cpp más preciso, por frases: whisper-server residente (se descarga tras dictationKeepLoaded s sin uso; usa
@@ -28,12 +30,13 @@ Motor (dictationEngine; «auto» = Vosk si está instalado con su modelo, si no 
   hf-dictate output "<texto>"    lo escribe / pega / copia según dictationOutput
   hf-dictate download <modelo>   tiny|base|small|medium|turbo (whisper, Hugging Face) o vosk-model-small-es-0.42 …
                                  (alphacephei.com) → {"ev":"progress","pct":…}; --tty: barra de progreso en la terminal
+  hf-dictate install-parakeet [--tty]  motor Parakeet v3 (el más rápido y preciso en CPU): venv con onnx-asr y modelo
   hf-dictate install-vosk        (solo si tu distro no trae python-vosk) venv con pip en …/whisper/vosk-venv; lo pides tú
   hf-dictate manage              menú de la terminal para descargar y borrar modelos (Ajustes › Dictado lo abre)
   hf-dictate delete <modelo>
   hf-dictate last                último texto dictado
 
-Ajustes (settings.json): dictationModel tiny|base|small|medium|turbo (base) · dictationLang es|auto|en|… (es) ·
+Ajustes (settings.json): dictationModel tiny|base|small|medium|turbo (base) · dictationLang es+en|es|auto|en|… (es+en: español e inglés) ·
   dictationMode ptt|toggle|continuo · dictationEngine auto|whisper.cpp|vosk|hibrido|faster-whisper ·
   dictationOutput escribir|pegar|portapapeles · dictationPunct (puntuación y mayúsculas) · dictationLive (texto
   provisional) · dictationPauseMs (silencio que cierra una frase, 700) · dictationSilenceSec (continuo: para tras
@@ -182,6 +185,46 @@ def install_vosk():
     print("Vosk instalado. Falta un modelo en español: hf-dictate download vosk-model-small-es-0.42")
     return 0
 
+# ---- Parakeet (NVIDIA parakeet-tdt-0.6b-v3, int8, con onnx-asr): 25 idiomas europeos (español e inglés juntos, sin
+# elegir), puntúa solo y en CPU tarda ~0,3 s por frase (whisper small ~2 s). Va en un entorno de Python propio
+# (…/whisper/parakeet-venv) y el modelo en …/whisper/parakeet (~670 MB); lo instala `hf-dictate install-parakeet`.
+PARAKEET_MODEL = "nemo-parakeet-tdt-0.6b-v3"
+PARAKEET_DIR = DATA / "parakeet"
+PARAKEET_VENV = DATA / "parakeet-venv"
+
+def parakeet_python():
+    py = PARAKEET_VENV / "bin/python"
+    return str(py) if py.exists() else ""
+
+def parakeet_ready():
+    return bool(parakeet_python()) and (PARAKEET_DIR / "ok").exists()
+
+PARAKEET_FETCH = ("import os,sys,onnx_asr\nm=onnx_asr.load_model(sys.argv[1],quantization='int8')\n"
+                  "print(m.recognize(__import__('numpy').zeros(16000,dtype='float32')))\n")
+
+def install_parakeet(tty=False):
+    """Instalación pedida por el usuario: venv con onnx-asr (uv si está; si no, venv + pip) y descarga del modelo."""
+    say = (lambda m: print(m, flush=True)) if tty else (lambda m: emit("progress", msg=m))
+    DATA.mkdir(parents=True, exist_ok=True); PARAKEET_DIR.mkdir(parents=True, exist_ok=True)
+    say(f"Creando el entorno de Python en {PARAKEET_VENV} (onnx-asr y onnxruntime desde PyPI)…")
+    uv = shutil.which("uv")
+    if uv:
+        ok = subprocess.run([uv, "venv", "-q", "--allow-existing", "--python", "3.12", str(PARAKEET_VENV)]).returncode == 0 and \
+             subprocess.run([uv, "pip", "install", "-q", "--python", str(PARAKEET_VENV / "bin/python"), "onnx-asr[cpu,hub]"]).returncode == 0
+    else:
+        ok = subprocess.run([sys.executable, "-m", "venv", str(PARAKEET_VENV)]).returncode == 0 and \
+             subprocess.run([str(PARAKEET_VENV / "bin/pip"), "install", "-q", "onnx-asr[cpu,hub]"]).returncode == 0
+    if not ok:
+        say("No se pudo crear el entorno (¿falta python-virtualenv o uv?)"); return 1
+    say("Descargando el modelo Parakeet v3 (~670 MB)…")
+    env = dict(os.environ, HF_HOME=str(PARAKEET_DIR / "hf"))
+    r = subprocess.run([parakeet_python(), "-I", "-c", PARAKEET_FETCH, PARAKEET_MODEL], env=env)
+    if r.returncode != 0:
+        say("No se pudo descargar el modelo"); return 1
+    (PARAKEET_DIR / "ok").write_text(PARAKEET_MODEL)
+    say("Parakeet listo: el dictado lo usa en «Automático».")
+    return 0
+
 def model_path(name):
     return DATA / MODELS.get(name, (0, "", f"ggml-{name}.bin"))[2]
 
@@ -204,6 +247,59 @@ def gpu_backends():
                 out.append(lab)
     return out
 
+def _gpu_sig():
+    sig = []
+    for d in ("/usr/lib/ggml", "/usr/lib64/ggml", "/usr/local/lib/ggml", "/usr/lib", "/usr/lib64"):
+        for n in ("libggml-vulkan.so", "libggml-cuda.so", "libggml-hip.so", "libggml.so"):
+            f = pathlib.Path(d) / n
+            if f.exists():
+                sig.append(f"{f}:{int(f.stat().st_mtime)}")
+    return "|".join(sig)
+
+def _encode_ms(model, gpu):
+    """Tiempo de codificar 2 s de audio con whisper-cli (ms) o None."""
+    if not whisper_bin():
+        return None
+    with tempfile.NamedTemporaryFile(prefix="hf-gpu-", suffix=".wav", delete=False) as f:
+        f.write(wav_bytes(bytes(array.array("h", [int(800 * math.sin(i / 7.0)) for i in range(RATE * 2)])))); wav = f.name
+    try:
+        r = subprocess.run([whisper_bin(), "-m", str(model_path(model)), "-f", wav, "-l", "es", "-nt", "-t", threads(),
+                            "-ac", "512"] + ([] if gpu else ["-ng"]), capture_output=True, text=True, timeout=120)
+        m = re.search(r"encode time =\s*([\d.]+) ms", r.stderr)
+        return float(m.group(1)) if m else None
+    except Exception:
+        return None
+    finally:
+        os.unlink(wav)
+
+def use_gpu(model, s=None, measure=True):
+    """¿whisper usa la GPU? dictationGpu: auto (por defecto) | si | no. En «auto» se mide una vez por modelo y por versión
+    de ggml lo que tarda la GPU frente a la CPU y se usa la más rápida (con algunas GPU y versiones de ggml-vulkan la
+    GPU va varias veces más lenta que la CPU). Se guarda en …/whisper/gpu-check.json."""
+    s = s or settings()
+    want = str(s.get("dictationGpu") or "auto")
+    if not gpu_backends() or want == "no":
+        return False
+    if want == "si":
+        return True
+    f = DATA / "gpu-check.json"
+    data = load(f, {}) or {}
+    key = model + "@" + _gpu_sig()
+    if key in data:
+        return bool(data[key].get("gpu"))
+    if not measure or not model_installed(model):
+        return True
+    g, c = _encode_ms(model, True), _encode_ms(model, False)
+    if g is None and c is None:
+        return True                     # no se pudo medir: como siempre (whisper elige la GPU)
+    ok = g is not None and (c is None or g < c * 0.85)
+    data[key] = {"gpu": ok, "gpuMs": g, "cpuMs": c, "t": int(time.time())}
+    try:
+        DATA.mkdir(parents=True, exist_ok=True); f.write_text(json.dumps(data, indent=1))
+    except Exception:
+        pass
+    return ok
+
 ORDER = ["tiny", "base", "small", "turbo", "medium"]
 
 def live_model(s):
@@ -214,23 +310,27 @@ def live_model(s):
     if want != "auto":
         return want if model_installed(want) else m
     if ORDER.index(m) >= ORDER.index("small") if m in ORDER else False:
-        if not gpu_backends():
+        if not use_gpu(m, s, measure=False):
             for c in ("base", "tiny"):
                 if model_installed(c):
                     return c
     return m
 
 def engine(s):
-    """motor efectivo: whisper.cpp | vosk | hibrido | faster-whisper | ""."""
+    """motor efectivo: parakeet | whisper.cpp | vosk | hibrido | faster-whisper | ""."""
     want = s.get("dictationEngine") or "auto"
     wm = s.get("dictationModel") or "base"
     vm = s.get("dictationVoskModel") or "vosk-model-small-es-0.42"
     has_w = bool(whisper_bin() or server_bin())
     has_v = vosk_ok() and vosk_installed(vm)
+    if want in ("parakeet", "auto") and parakeet_ready():
+        return "parakeet"         # el más rápido y preciso en CPU (español e inglés sin elegir)
     if want == "hibrido" and has_w and has_v:
         return "hibrido"
-    if want in ("vosk", "auto") and has_v:
-        return "vosk"             # tiempo real de verdad: es lo que se usa si está instalado
+    if want == "vosk" and has_v:
+        return "vosk"
+    # automático: whisper si su modelo está (mucho más preciso, entiende inglés y puntúa; con el contexto de audio a
+    # la medida tarda ~1 s por frase en CPU); Vosk solo si no hay modelo de whisper
     if want in ("auto", "whisper.cpp", "hibrido") and has_w and (model_installed(wm) or want != "auto" or not has_v):
         return "whisper.cpp"
     if want in ("auto", "vosk", "hibrido") and has_v:
@@ -280,7 +380,8 @@ def status():
             "model": m, "modelOk": model_ok, "models": models, "voskModel": vm, "voskModels": vmodels, "dir": str(DATA),
             "recorder": recorder(), "typer": typer(), "clipboard": bool(shutil.which("wl-copy")),
             "ready": bool(eng and model_ok and recorder()), "recording": running_pid() > 0, "family": fam,
-            "gpu": gpu_backends(), "loaded": loaded, "loadedModels": [m for m, _ in srv], "liveModel": live_model(s),
+            "parakeet": parakeet_ready(), "parakeetEnv": bool(parakeet_python()),
+            "gpu": gpu_backends(), "gpuUsed": use_gpu(m, s, measure=False), "loaded": loaded, "loadedModels": [m for m, _ in srv], "liveModel": live_model(s),
             "ytdlp": bool(shutil.which("yt-dlp")),
             # paquetes que ofrece instalar Ajustes › Dictado (Arch: todo en los repos oficiales)
             "pkgs": {"engine": "whisper-cpp" if fam == "arch" else "", "gpu": "ggml-vulkan" if fam == "arch" else "",
@@ -315,7 +416,7 @@ def server_daemon(model, lang, idle):
     port = free_port()
     log = open(RUNTIME / f"hf-dictate-server-{model}.log", "w")
     child = subprocess.Popen([server_bin(), "-m", str(model_path(model)), "-l", lang, "-t", threads(), "--host", "127.0.0.1",
-                              "--port", str(port), "-nt", "-sns"], stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+                              "--port", str(port), "-nt", "-sns"] + ([] if use_gpu(model) else ["-ng"]), stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
     def bye(*_):
         try:
             child.terminate(); child.wait(3)
@@ -384,9 +485,28 @@ def wav_bytes(pcm):
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(RATE); w.writeframes(bytes(pcm))
     return b.getvalue()
 
-def server_infer(port, pcm, lang, prompt=""):
+def audio_ctx(pcm):
+    """Contexto de audio del codificador según lo que dura la frase (whisper procesa siempre 30 s si no: 1500).
+    50 posiciones por segundo + margen; frases de unos segundos van 3–4 veces más rápido en CPU sin perder precisión."""
+    sec = len(pcm) / 2 / RATE
+    if sec >= 24:
+        return 0
+    return max(512, min(1500, int(math.ceil((sec * 50 * 1.5 + 128) / 64) * 64)))
+
+def langs_of(lang):
+    """dictationLang → (idioma con el que se empieza, idiomas permitidos o None). «es+en»: español e inglés."""
+    lang = (lang or "es").strip().lower()
+    if "+" in lang:
+        ls = [x for x in lang.split("+") if x]
+        return (ls[0] if ls else "es"), tuple(ls or ["es"])
+    return lang, None
+
+def server_infer(port, pcm, lang, prompt="", detail=False, beam=5):
+    """Texto de la frase (o {text, lang, prob} con detail). Búsqueda en haz (5; lo provisional, voraz: beam=-1) y
+    contexto de audio a la medida."""
     bd = uuid.uuid4().hex
-    fields = {"response_format": "json", "temperature": "0.0", "language": lang}
+    fields = {"response_format": "verbose_json" if detail else "json", "temperature": "0.0", "language": lang,
+              "beam_size": str(beam), "audio_ctx": str(audio_ctx(pcm))}
     if prompt:
         fields["prompt"] = prompt
     body = b"".join(f"--{bd}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n{v}\r\n".encode() for k, v in fields.items())
@@ -397,7 +517,13 @@ def server_infer(port, pcm, lang, prompt=""):
     touch_used()
     if r.get("error"):
         raise RuntimeError("whisper-server: " + str(r["error"])[:160])
+    if detail:
+        dl = str(r.get("detected_language") or "").lower()
+        return {"text": r.get("text", ""), "lang": WLANG.get(dl, dl[:2]), "prob": float(r.get("detected_language_probability") or 0)}
     return r.get("text", "")
+
+WLANG = {"spanish": "es", "english": "en", "catalan": "ca", "galician": "gl", "basque": "eu", "portuguese": "pt",
+         "french": "fr", "italian": "it", "german": "de"}
 
 # ---------------------------------------------------------------- motores (una sesión)
 class WhisperEngine:
@@ -405,7 +531,8 @@ class WhisperEngine:
     name = "whisper.cpp"
     def __init__(self, s, model=None):
         self.model = model or s.get("dictationModel") or "base"
-        self.lang = s.get("dictationLang") or "es"
+        # «es+en»: cada frase en el idioma de la anterior; si whisper oye el otro, se repite en ese (solo en el cambio)
+        self.lang, self.allowed = langs_of(s.get("dictationLang") or "es+en")
         self.idle = max(30, int(s.get("dictationKeepLoaded") or 600))
         self.port = 0
         if not model_installed(self.model) and not model_path(self.model).exists():
@@ -413,18 +540,32 @@ class WhisperEngine:
     def start(self):
         if server_bin():
             self.port = server_ensure(self.model, self.lang, self.idle)
-    def transcribe(self, pcm, prompt=""):
+    def infer(self, pcm, prompt, final):
+        beam = 5 if final else -1
+        if not self.allowed:
+            return server_infer(self.port, pcm, self.lang, prompt, beam=beam)
+        r = server_infer(self.port, pcm, self.lang, prompt, detail=True, beam=beam)
+        if r["lang"] in self.allowed and r["lang"] != self.lang and r["prob"] >= (0.5 if final else 0.6):
+            # cambió de idioma. Lo provisional ya lo detecta mientras hablas, así la frase final suele salir a la
+            # primera en el idioma bueno; si no, se repite en el que oye. Las siguientes siguen en ese.
+            self.lang = r["lang"]
+            self.switched = True
+            if final:
+                return server_infer(self.port, pcm, self.lang, prompt, beam=beam)
+        return r["text"]
+    def transcribe(self, pcm, prompt="", final=True):
         if self.port:
             try:
-                return server_infer(self.port, pcm, self.lang, prompt)
+                return self.infer(pcm, prompt, final)
             except Exception:
                 self.port = server_ensure(self.model, self.lang, self.idle)
                 if self.port:
-                    return server_infer(self.port, pcm, self.lang, prompt)
+                    return self.infer(pcm, prompt, final)
         with tempfile.NamedTemporaryFile(prefix="hf-dictate-", suffix=".wav", delete=False) as f:
             f.write(wav_bytes(pcm)); wav = f.name
         try:
-            cmd = [whisper_bin(), "-m", str(model_path(self.model)), "-f", wav, "-l", self.lang, "-nt", "-np", "-t", threads()]
+            cmd = [whisper_bin(), "-m", str(model_path(self.model)), "-f", wav, "-l", "auto" if self.allowed else self.lang,
+                   "-nt", "-np", "-t", threads(), "-ac", str(audio_ctx(pcm))] + ([] if use_gpu(self.model, measure=False) else ["-ng"])
             if prompt:
                 cmd += ["--prompt", prompt]
             r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -445,19 +586,51 @@ class FasterWhisperEngine:
             "initial_prompt=j.get('prompt') or None)\n print(json.dumps({'text':' '.join(x.text.strip() for x in seg)}),flush=True)\n")
     def __init__(self, s):
         self.model = s.get("dictationModel") or "base"
-        self.lang = s.get("dictationLang") or "es"
+        l, allowed = langs_of(s.get("dictationLang") or "es+en")
+        self.lang = "auto" if allowed else l
         self.p = None
         self.lock = threading.Lock()
     def start(self):
         self.p = subprocess.Popen([fw_python(), "-c", self.CODE, self.model, self.lang, str(DATA / "faster-whisper")],
                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
         self.p.stdout.readline()
-    def transcribe(self, pcm, prompt=""):
+    def transcribe(self, pcm, prompt="", final=True):
         with tempfile.NamedTemporaryFile(prefix="hf-dictate-", suffix=".wav", delete=False) as f:
             f.write(wav_bytes(pcm)); wav = f.name
         try:
             with self.lock:
                 self.p.stdin.write(json.dumps({"wav": wav, "prompt": prompt}) + "\n"); self.p.stdin.flush()
+                return json.loads(self.p.stdout.readline() or "{}").get("text", "")
+        finally:
+            os.unlink(wav)
+    def close(self):
+        if self.p:
+            self.p.kill()
+
+class ParakeetEngine:
+    """Parakeet v3 (onnx-asr) en un proceso Python residente durante la sesión: ~0,3 s por frase en CPU."""
+    name = "parakeet"
+    CODE = ("import sys,json,wave,numpy as np,onnx_asr\n"
+            "m=onnx_asr.load_model(sys.argv[1],quantization='int8')\nprint('{}',flush=True)\n"
+            "for l in sys.stdin:\n j=json.loads(l)\n w=wave.open(j['wav'])\n"
+            " a=np.frombuffer(w.readframes(w.getnframes()),dtype=np.int16).astype(np.float32)/32768\n"
+            " print(json.dumps({'text':m.recognize(a)}),flush=True)\n")
+    def __init__(self, s):
+        self.model = "parakeet-v3"
+        self.p = None
+        self.lock = threading.Lock()
+    def start(self):
+        env = dict(os.environ, HF_HOME=str(PARAKEET_DIR / "hf"), HF_HUB_OFFLINE="1", OMP_NUM_THREADS=threads())
+        self.p = subprocess.Popen([parakeet_python(), "-I", "-c", self.CODE, PARAKEET_MODEL], env=env,
+                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        if not self.p.stdout.readline():
+            raise RuntimeError("Parakeet no arrancó: reinstálalo con «hf-dictate install-parakeet»")
+    def transcribe(self, pcm, prompt="", final=True):
+        with tempfile.NamedTemporaryFile(prefix="hf-dictate-", suffix=".wav", delete=False) as f:
+            f.write(wav_bytes(pcm)); wav = f.name
+        try:
+            with self.lock:
+                self.p.stdin.write(json.dumps({"wav": wav}) + "\n"); self.p.stdin.flush()
                 return json.loads(self.p.stdout.readline() or "{}").get("text", "")
         finally:
             os.unlink(wav)
@@ -502,7 +675,7 @@ class VoskEngine:
         self.done = ""
         self.rec.Reset()
         return vosk_punct(t)
-    def transcribe(self, pcm, prompt=""):
+    def transcribe(self, pcm, prompt="", final=True):
         import vosk
         r = vosk.KaldiRecognizer(self.vmodel, RATE)
         r.AcceptWaveform(bytes(pcm))
@@ -682,6 +855,8 @@ class Session:
         self.busy = False
         self.partial_busy = False
         self.live_eng = None
+        # texto provisional cada 0,6 s con GPU; sin GPU cada 1,2 s, para que no le quite CPU a la frase final
+        self.partial_every = 0.6 if use_gpu(self.s.get("dictationModel") or "base", self.s, measure=False) else 1.2
         self.typed = ""            # lo ya entregado (escrito / copiado)
         self.pending = []          # trozos que esperan a «release»
         self.hows = []
@@ -705,6 +880,9 @@ class Session:
             self.eng = self.vosk
         elif e == "faster-whisper":
             self.eng = FasterWhisperEngine(self.s)
+        elif e == "parakeet":
+            self.eng = ParakeetEngine(self.s)
+            self.partial_every = 0.4                    # es tan rápido que lo provisional puede ir más a menudo
         else:
             self.eng = WhisperEngine(self.s)
             lm = live_model(self.s)
@@ -773,7 +951,12 @@ class Session:
         if self.live_eng is self.vosk or not self.live or self.errors:
             return
         try:
-            t = clean_out(self.live_eng.transcribe(pcm, self.prompt()))
+            same = hasattr(self.live_eng, "allowed") and hasattr(self.eng, "allowed")
+            if same:
+                self.live_eng.lang = self.eng.lang       # lo provisional, en el idioma que se está hablando
+            t = clean_out(self.live_eng.transcribe(pcm, self.prompt(), final=False))
+            if same:
+                self.eng.lang = self.live_eng.lang       # y si oyó el otro idioma, la frase final ya va en ese
         except Exception:
             return
         if pid == self.phrase_id and t and not hallucination(t, len(pcm) / 2 / RATE):
@@ -1070,7 +1253,9 @@ class Session:
                     break                            # una orden = una frase
                 continue
             # lo provisional: cada 0,6 s de voz nueva si el motor está libre
-            if self.live and not self.vosk and time.time() - last_partial > 0.6 and plen > 0.5:
+            # (no si ya empieza una pausa: la frase va a cerrarse y el provisional solo retrasaría el texto final)
+            if self.live and not self.vosk and time.time() - last_partial > self.partial_every and plen > 0.5 \
+                    and silence_frames * FRAME_S < 0.15:
                 with self.cv:
                     if self.partial_free():
                         self.partial_job = (self.phrase_id, bytes(phrase))
@@ -1119,7 +1304,7 @@ def wake_split(text, s):
 def transcribe_file(wav, s=None):
     s = s or settings()
     e = engine(s)
-    eng = VoskEngine(s) if e == "vosk" else FasterWhisperEngine(s) if e == "faster-whisper" else WhisperEngine(s)
+    eng = VoskEngine(s) if e == "vosk" else FasterWhisperEngine(s) if e == "faster-whisper" else ParakeetEngine(s) if e == "parakeet" else WhisperEngine(s)
     eng.start()
     try:
         return clean_out(eng.transcribe(file_pcm(wav), (s.get("dictationPrompt") or "").strip()))
@@ -1281,7 +1466,7 @@ def main(argv):
         server_stop(keep=(m, lm))
         out = {}
         for mm in dict.fromkeys((m, lm)):
-            port = server_ensure(mm, s.get("dictationLang") or "es", max(30, int(s.get("dictationKeepLoaded") or 600)))
+            port = server_ensure(mm, langs_of(s.get("dictationLang") or "es+en")[0], max(30, int(s.get("dictationKeepLoaded") or 600)))
             out[mm] = {"ok": bool(port), **(load(SRVFILE(mm), {}) or {})}
         print(json.dumps(out)); return
     if cmd == "unload":
@@ -1299,6 +1484,8 @@ def main(argv):
         sys.exit(max(download(n, tty="--tty" in flags) for n in names))
     if cmd == "install-vosk":
         sys.exit(install_vosk())
+    if cmd == "install-parakeet":
+        sys.exit(install_parakeet(tty="--tty" in flags))
     if cmd == "manage":
         sys.exit(manage())
     if cmd == "delete":

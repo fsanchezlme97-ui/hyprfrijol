@@ -160,7 +160,7 @@ ColumnLayout {
                 readonly property string kb: String(modelData.keybind ?? "")
                 // Zoom guardado por web (Ctrl +/− en la ventana o aquí); si no hay, el de Ajustes
                 FileView { id: zoomFile; path: Paths.home + "/.local/share/hyprfrijol/webapps/" + row.modelData.key + "/zoom"; watchChanges: true; printErrors: false; onFileChanged: reload() }
-                readonly property real zoomNow: parseFloat(zoomFile.text()) > 0 ? parseFloat(zoomFile.text()) : (modelData.zoom ?? 1)
+                readonly property real zoomNow: parseFloat(zoomFile.text()) > 0 ? parseFloat(zoomFile.text()) : (modelData.zoom ?? (mode === "panel" ? WebApps.panelZoom : 1))
                 readonly property string conflict: kb && root.usedKeys[kb.toUpperCase()] && !String(root.usedKeys[kb.toUpperCase()]).includes(modelData.name) ? root.usedKeys[kb.toUpperCase()] : ""
                 Layout.fillWidth: true
                 spacing: 0
@@ -280,7 +280,7 @@ ColumnLayout {
                             Item { Layout.fillWidth: true }
                             Txt {
                                 muted: true; size: 11
-                                text: (row.modelData.panelWidth ?? "auto") === "auto" && row.preset.panelWidth ? "≈ " + row.preset.panelWidth + " px" : ""
+                                text: (row.modelData.panelWidth ?? "auto") === "auto" ? "≈ " + WebApps.third(Shell.primaryScreen?.width ?? 1920) + " px" : ""
                             }
                         }
                         RowLayout {

@@ -135,7 +135,10 @@ start() {   # start <clave> <panel|ventana>
   TEMA="$(field "$CFG" tema)"; TEMA="${TEMA:-sistema}"
   LIGHT="$(jq -r '.light // false' "$STATE/theme.json" 2>/dev/null || echo false)"
   case "$TEMA" in oscuro) DARK=0 ;; claro) DARK=1 ;; web) DARK="" ;; *) [ "$LIGHT" = true ] && DARK=1 || DARK=0 ;; esac
-  FLAGS="${QTWEBENGINE_CHROMIUM_FLAGS:-}"
+  # Que Chromium no congele ni descarte lo que pinta cuando la ventana está escondida (el panel guarda las web apps en
+  # un espacio especial): sin esto, al volver a una pestaña se veía negro un momento. Rasterizado en la GPU: YouTube
+  # y las webs pesadas cargan y se desplazan más fluidas.
+  FLAGS="${QTWEBENGINE_CHROMIUM_FLAGS:-} --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling --enable-gpu-rasterization --ignore-gpu-blocklist"
   [ -n "$DARK" ] && FLAGS="$FLAGS --blink-settings=preferredColorScheme=$DARK"
   echo "$MODE" > "$RUN/$K.mode"
   (

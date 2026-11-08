@@ -208,6 +208,19 @@ devices (memorias USB, tarjetas SD y discos, con su espacio) · downloads (la co
 wallhaven {"query":"montañas","sorting":"toplist"|"random"} (buscar fondos en wallhaven.cc).
 Usa una consulta solo si la necesitas de verdad; después responde (con hf-actions si hay que cambiar algo)."""
 
+# Formato de las respuestas (el panel lo dibuja: Markdown, bloques de código con «Copiar», gráficos e imágenes)
+FORMAT_DOC = """
+Formato: Markdown (listas, **negritas**, tablas cortas). Los comandos o código para que el usuario los copie, en un
+bloque con su lenguaje (```bash … ```), uno por bloque y sin el prompt «$». Si hay datos numéricos que se entienden
+mejor en un gráfico (comparar, evolución, reparto) o el usuario lo pide, añade un bloque
+```hf-chart
+{"type":"bar","title":"…","labels":["a","b"],"series":[{"name":"…","values":[1,2]}],"unit":"GB"}
+```
+(type: bar | line | pie; pie usa solo la primera serie; números, no texto). Para enseñar una imagen escribe en una
+línea sola ![descripción](https://… o /ruta/local.png); solo direcciones reales que conozcas (por ejemplo las que
+devuelve una consulta), nunca inventadas. No uses gráficos ni imágenes si no aportan.
+"""
+
 SYSTEM_BASE = """Eres el asistente de hyprfrijol, un escritorio Hyprland en Linux. Respondes en español, breve y claro
 (2–5 frases salvo que pidan más). Puedes explicar, resumir, redactar, ayudar con la terminal y MANEJAR el escritorio.
 Si el usuario pide hacer algo en el escritorio (ventanas, apps, ajustes, música, volumen, temporizadores…), NO digas que
@@ -219,7 +232,7 @@ con SOLO acciones del esquema, en el orden en que deben hacerse. El usuario ver�
 deshacerlo); tú no las ejecutas. Para comandos de terminal usa la acción "run" (se ejecuta solo si el usuario confirma).
 No inventes claves, valores ni ventanas: si no sabes qué hay abierto o qué clave usar, consulta primero.
 Si nada del esquema sirve, explica cómo hacerlo a mano.
-"""
+""" + FORMAT_DOC
 
 def allowed(s=None):
     """(puede cambiar el shell, puede proponer comandos) según Ajustes › IA."""
@@ -240,7 +253,7 @@ def system_prompt(s=None):
         return ("Eres el asistente de hyprfrijol, un escritorio Hyprland en Linux. Respondes en español, breve y claro "
                 "(2–5 frases salvo que pidan más). Puedes explicar, resumir y redactar. No propongas cambios al "
                 "escritorio ni comandos para ejecutar: el usuario los ha desactivado; si los pide, explica cómo hacerlo a mano."
-                + ("\n\n" + read if read else ""))
+                + FORMAT_DOC + ("\n\n" + read if read else ""))
     doc = SCHEMA_DOC
     if not term:
         doc = doc.replace('\n- {"type":"run","command":"…"}               comando de terminal; el usuario debe confirmarlo antes', "")
@@ -251,7 +264,7 @@ def system_prompt(s=None):
     return SYSTEM_BASE.split("Si el usuario pide hacer algo")[0] + (
         "No puedes cambiar el escritorio (desactivado por el usuario); si lo piden, explica cómo hacerlo a mano.\n"
         "Para comandos de terminal útiles añade AL FINAL un bloque\n```hf-actions\n[{\"type\":\"run\",\"command\":\"…\"}]\n```\n"
-        "que solo se ejecuta si el usuario lo confirma." + ("\n\n" + read if read else ""))
+        "que solo se ejecuta si el usuario lo confirma." + FORMAT_DOC + ("\n\n" + read if read else ""))
 
 SYSTEM = SYSTEM_BASE + SCHEMA_DOC   # compatibilidad (hf-mcp y otros)
 
@@ -1282,9 +1295,10 @@ def portal_pick():
         bus.signal_subscribe("org.freedesktop.portal.Desktop", "org.freedesktop.portal.Request", "Response", handle,
                              None, Gio.DBusSignalFlags.NONE, on_resp)
         opts = {"handle_token": GLib.Variant("s", token), "multiple": GLib.Variant("b", True), "modal": GLib.Variant("b", True),
-                "filters": GLib.Variant("a(sa(us))", [("Imágenes", [(1, "image/*")]), ("Todos los archivos", [(0, "*")])])}
+                "filters": GLib.Variant("a(sa(us))", [("Imágenes", [(1, "image/*")]), ("Todos los archivos", [(0, "*")]),
+                                                              ("Documentos", [(1, "application/pdf"), (1, "text/*"), (0, "*.docx"), (0, "*.odt")])])}
         bus.call_sync("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop", "org.freedesktop.portal.FileChooser",
-                      "OpenFile", GLib.Variant("(ssa{sv})", ("", "Adjuntar imágenes", opts)), None, Gio.DBusCallFlags.NONE, 5000, None)
+                      "OpenFile", GLib.Variant("(ssa{sv})", ("", "Adjuntar imágenes o documentos", opts)), None, Gio.DBusCallFlags.NONE, 5000, None)
         GLib.timeout_add_seconds(900, loop.quit)
         loop.run()
         if "code" not in res:
@@ -1300,9 +1314,10 @@ def pick_images():
         return got
     pics = os.path.isdir(HOME / "Imágenes") and str(HOME / "Imágenes") or str(HOME)
     if shutil.which("zenity"):
-        out = run(["zenity", "--file-selection", "--multiple", "--separator=\n", "--title=Adjuntar imágenes", f"--filename={pics}/",
+        out = run(["zenity", "--file-selection", "--multiple", "--separator=\n", "--title=Adjuntar imágenes o documentos", f"--filename={pics}/",
                    "--file-filter=Imágenes | *.png *.jpg *.jpeg *.webp *.gif *.bmp *.tif *.tiff *.avif *.svg *.PNG *.JPG *.JPEG",
-                   "--file-filter=Todos los archivos | *"], timeout=900)
+                   "--file-filter=Todos los archivos | *",
+                   "--file-filter=Documentos | *.pdf *.txt *.md *.docx *.odt *.csv *.json *.log *.py *.js *.qml *.sh *.lua *.html"], timeout=900)
         return [l for l in out.split("\n") if l]
     raise AIError("No encuentro un selector de archivos (portal o zenity).")
 
@@ -1324,8 +1339,11 @@ def do_attach(src, mime=""):
         else:
             got = _uri_paths(src) or [src]
         good = [str(pathlib.Path(p).resolve()) for p in got if is_image(p)]
-        err = None if good or not got else "Eso no es una imagen."
-        return {"images": list(dict.fromkeys(good)), "error": err}
+        # lo que no es imagen pero es un archivo local (PDF, texto, código…) va como documento: su texto se lee al preguntar
+        docs = [] if src in ("clipboard", "-") or re.match(r"https?://", src) else \
+            [str(pathlib.Path(p).resolve()) for p in got if not is_image(p) and pathlib.Path(p).is_file()]
+        err = None if good or docs or not got else "Eso no es una imagen ni un documento."
+        return {"images": list(dict.fromkeys(good)), "files": list(dict.fromkeys(docs)), "error": err}
     except AIError as e:
         return {"images": [], "error": str(e)}
     except Exception as e:
@@ -1400,9 +1418,58 @@ def message_images(msgs, ctx, s):
         m["_dropped"] = len(paths) - len(keep)
     return msgs, total
 
+# ---------------------------------------------------------------- documentos adjuntos
+# El panel manda {"role":"user","text":…,"files":[ruta…]} con lo que se arrastra o se elige que no es una imagen: su
+# texto va dentro del mensaje (PDF con pdftotext, DOCX/ODT/EPUB con pandoc o leyendo el XML, el resto como texto).
+DOC_MAX = 24000          # caracteres por archivo
+DOCS_MAX = 60000         # en total por mensaje
+
+def read_doc(path):
+    """Texto de un documento (o None si no se puede leer / es binario)."""
+    p = pathlib.Path(path)
+    if not p.is_file():
+        return None
+    ext = p.suffix.lower()
+    try:
+        if ext == ".pdf":
+            return run(["pdftotext", "-layout", "-l", "40", str(p), "-"], timeout=30) if shutil.which("pdftotext") else None
+        if ext in (".docx", ".odt", ".epub", ".rtf", ".pptx", ".odp"):
+            if shutil.which("pandoc") and ext != ".pptx" and ext != ".odp":
+                return run(["pandoc", "-t", "plain", "--wrap=none", str(p)], timeout=30)
+            import zipfile as zf
+            with zf.ZipFile(p) as z:
+                names = [n for n in z.namelist() if re.search(r"(word/document|content|ppt/slides/slide\d+)\.xml$", n)]
+                xml = " ".join(z.read(n).decode("utf-8", "ignore") for n in sorted(names))
+            return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", xml)).strip()
+        raw = p.read_bytes()[:DOC_MAX * 4]
+        if b"\x00" in raw[:4096]:
+            return None
+        return raw.decode("utf-8", "replace")
+    except Exception:
+        return None
+
+def docs_text(m):
+    files = [f for f in (m.get("files") or []) if isinstance(f, str)]
+    if not files:
+        return ""
+    out, total = [], 0
+    for f in files[:8]:
+        name = pathlib.Path(f).name
+        t = read_doc(f)
+        if t is None:
+            out.append(f"[Archivo adjunto «{name}»: no se pudo leer su texto]")
+            continue
+        t = t.strip()[:max(0, min(DOC_MAX, DOCS_MAX - total))]
+        total += len(t)
+        out.append(f"[Archivo adjunto «{name}»]\n```\n{t}\n```")
+    return "\n\n".join(out)
+
 def msg_text(m):
-    """Texto de un mensaje con una marca de sus imágenes (para todos los proveedores)."""
+    """Texto de un mensaje con una marca de sus imágenes y el texto de sus documentos (para todos los proveedores)."""
     t = str(m.get("text", ""))
+    d = docs_text(m)
+    if d:
+        t = (t + "\n\n" if t.strip() else "") + d
     paths = m.get("_paths") if "_paths" in m else [p for p in (m.get("images") or []) if isinstance(p, str)]
     n = len(paths or []) + int(m.get("_dropped") or 0)
     if not n:
@@ -2110,8 +2177,10 @@ def main(argv):
         for src in (rest or ["clipboard"]):
             r = do_attach(src)
             out["images"] += [p for p in r["images"] if p not in out["images"]]
+            out.setdefault("files", [])
+            out["files"] += [p for p in r.get("files", []) if p not in out["files"]]
             out["error"] = out["error"] or r["error"]
-        if out["images"]:
+        if out["images"] or out.get("files"):
             out["error"] = None
     elif cmd == "capture":
         out = {"text": capture_text(arg or None)}

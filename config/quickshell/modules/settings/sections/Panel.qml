@@ -65,7 +65,7 @@ ColumnLayout {
             Button { kind: "link"; text: "+ Añadir una web app"; onClicked: settingsSection("webapps") }
             LabeledRow {
                 label: "Ancho"; labelWidth: 60
-                Seg { model: [[360, "Estrecho 360"], [400, "Normal 400"], [480, "Ancho 480"]]; current: Settings.get("sideWidth", 400); onPicked: k => Settings.set("sideWidth", k) }
+                Seg { model: [["tercio", "Un tercio"], [400, "400 px"], [480, "480 px"]]; current: Settings.get("sideWidth", "tercio"); onPicked: k => Settings.set("sideWidth", k) }
             }
             LabeledRow {
                 label: "Lado"; labelWidth: 60
@@ -73,7 +73,7 @@ ColumnLayout {
             }
             SwRow {
                 label: "Fijar el panel"
-                sub: "parte del mosaico: las ventanas se apartan y sigue abierto en todos los espacios (pantalla principal)"
+                sub: "parte del mosaico: ocupa un tercio de la pantalla y las demás ventanas se reparten el resto; sigue abierto en todos los espacios (pantalla principal)"
                 key: "sidePanelPinned"
                 onToggled: v => { if (v) Shell.sideHidden = false; }
             }

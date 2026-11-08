@@ -47,7 +47,8 @@ Window {
     readonly property string layout: String(cfg.layout || "escritorio")
     readonly property bool mobile: layout === "movil" && compact
     readonly property real minW: mobile ? 0 : Number(cfg.minWidth || 0)
-    property real userZoom: Math.max(0.3, Math.min(3, Number(cfg.zoom || 1)))
+    // en el panel lateral se parte del 90 % (la columna es estrecha); en ventana propia, del 100 %
+    property real userZoom: Math.max(0.3, Math.min(3, Number(cfg.zoom || (mode === "panel" ? 0.9 : 1))))
     // Zoom efectivo: el del usuario, salvo que deje la página más estrecha que minWidth (px CSS = ancho / zoom)
     readonly property real effZoom: Math.max(0.25, minW > 0 ? Math.min(userZoom, width / minW) : userZoom)
     // Zoom por web guardado en el perfil (sobrevive a cerrar la app y manda sobre el de Ajustes)

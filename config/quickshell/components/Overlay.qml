@@ -24,7 +24,7 @@ PanelWindow {
     property bool dim: false                 // oscurecer el fondo (vista general, energía…)
     property bool closeOnOutside: true
     property bool grabKeyboard: true
-    property real margin: 4
+    property real margin: Settings.winGap   // como las ventanas (gaps_out)
     property real yOffset: 0                 // ajuste fino para "center"/"top"/"screen"
     property real lift: 0                    // "screen": cuánto por encima del centro (como Spotlight de macOS)
     property real centerHeight: 0            // "screen": altura con la que se centra (0 = la del panel)

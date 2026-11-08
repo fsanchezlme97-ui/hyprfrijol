@@ -180,37 +180,110 @@ Overlay {
     onWarmChanged: if (shown && !target) target = HyprClients.activeAddress
 
     // Atajos de teclado globales (Super + flechas)
-    // Super + flechas. En un espacio en mosaico la ventana se queda en el mosaico: ← → la cambian de sitio con la
-    // vecina (y si flotaba por un acople anterior, vuelve al mosaico), ↑ la maximiza dentro del mosaico y ↓ deshace
-    // eso. Antes la sacaba a flotante con media pantalla y perdía su sitio. En un espacio flotante, acopla a zonas.
-    function tiledHere(c): bool { return !!c && !WinMode.isFloat(c.workspace?.id ?? 0) && !WinMode.isFloatApp(c.class); }
+    // Super + flechas. En un espacio en mosaico la ventana nunca sale del mosaico ni tapa a otra:
+    //   · si hay una ventana en esa dirección, se cambian de sitio (mismo tamaño);
+    //   · si no, se reorganiza la división de su hueco: ↑/↓ las apila (esta arriba o abajo, la vecina en la otra
+    //     mitad) y ←/→ las pone lado a lado; así una ventana a media pantalla pasa a un cuarto, arriba o abajo.
+    //   · ↓ también quita el maximizado (Super + D) y una ventana que flotaba por un acople anterior vuelve al mosaico.
+    // En un espacio flotante (o una app que siempre flota) acopla a zonas, como antes.
+    // En mosaico salvo en un espacio flotante. Las apps que flotan siempre (Nautilus, visores…) también entran: una
+    // flecha las mete en el mosaico, en ese lado, en vez de dejarlas encima de las demás.
+    function tiledHere(c): bool { return !!c && !WinMode.isFloat(c.workspace?.id ?? 0); }
+    // Espacio flotante: rejilla de mitades y cuartos. ← → ↑ ↓ se mueven por ella (← y luego ↑ = cuarto de arriba a la
+    // izquierda); ↓ en pantalla completa o sin acoplar la devuelve a su tamaño.
+    readonly property var grid: ({
+        F: [0, 0, 1, 1], L: [0, 0, .5, 1], R: [.5, 0, .5, 1],
+        TL: [0, 0, .5, .5], TR: [.5, 0, .5, .5], BL: [0, .5, .5, .5], BR: [.5, .5, .5, .5]
+    })
+    readonly property var gridMoves: ({
+        l: { F: "L", L: "L", R: "L", TL: "TL", TR: "TL", BL: "BL", BR: "BL", "": "L" },
+        r: { F: "R", L: "R", R: "R", TL: "TR", TR: "TR", BL: "BR", BR: "BR", "": "R" },
+        u: { F: "F", L: "TL", R: "TR", TL: "TL", TR: "TR", BL: "L", BR: "R", "": "F" },
+        d: { F: "", L: "BL", R: "BR", TL: "L", TR: "R", BL: "BL", BR: "BR", "": "" }
+    })
+    function gridZone(c): string {
+        const mon = HyprClients.monitorById(c.monitor) ?? HyprClients.focusedMonitor;
+        if (!mon || !c.floating) return "";
+        for (const k in grid) {
+            const r = zoneRect(mon, grid[k]);
+            if (Math.abs(r.x - c.at[0]) < 14 && Math.abs(r.y - c.at[1]) < 14 && Math.abs(r.w - c.size[0]) < 14 && Math.abs(r.h - c.size[1]) < 14) return k;
+        }
+        return "";
+    }
+    // ¿Hay otra ventana en mosaico pegada a este lado? (bordes a menos de 40 px y que se solapen en el otro eje)
+    function neighbor(c, dir: string, list): var {
+        const L = c.at[0], T = c.at[1], R = L + c.size[0], B = T + c.size[1], tol = 40;
+        return (list ?? HyprClients.clients).find(o => {
+            if (o.address === c.address || o.floating || (o.workspace?.id ?? -1) !== (c.workspace?.id ?? -2) || o.hidden) return false;
+            const l = o.at[0], t = o.at[1], r = l + o.size[0], b = t + o.size[1];
+            const hOver = Math.min(R, r) - Math.max(L, l) > 20, vOver = Math.min(B, b) - Math.max(T, t) > 20;
+            if (dir === "l") return vOver && Math.abs(r - L) < tol;
+            if (dir === "r") return vOver && Math.abs(l - R) < tol;
+            if (dir === "u") return hOver && Math.abs(b - T) < tol;
+            return hOver && Math.abs(t - B) < tol;
+        }) ?? null;
+    }
+    // Posiciones al momento de pulsar (la lista de HyprClients llega con algo de retraso tras abrir o mover ventanas)
     function arrow(dir: string, z): void {
-        const a = HyprClients.activeAddress, c = HyprClients.client(a);
-        if (!c) return;
+        fresh.dir = dir; fresh.zone = z;
+        fresh.running = false; fresh.running = true;
+    }
+    Process {
+        id: fresh
+        property string dir: ""
+        property var zone: null
+        command: ["sh", "-c", "printf '{\"clients\":'; hyprctl clients -j; printf ',\"active\":'; hyprctl activewindow -j | grep -q address && hyprctl activewindow -j || printf '{}'; printf '}'"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let d = {};
+                try { d = JSON.parse(text); } catch (e) { return; }
+                win.arrowWith(fresh.dir, fresh.zone, d.clients ?? [], d.active ?? {});
+            }
+        }
+    }
+    function arrowWith(dir: string, z, list, c): void {
+        if (!c || !c.address) return;
+        const a = c.address;
         if (!tiledHere(c)) {
-            if (dir === "d") unsnap(a); else putWindow(a, z);
+            const to = gridMoves[dir][gridZone(c)];
+            if (to) putWindow(a, grid[to]); else unsnap(a);
             return;
         }
         const w = 'window = "address:' + a + '"';
         const maxed = ((c.fullscreen ?? 0) & 1) !== 0;
-        if (dir === "u") {
-            if (c.floating) Shell.dispatch('hl.dsp.window.float({ action = "disable", ' + w + ' })');
-            if (!maxed) Shell.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })');
-        } else if (dir === "d") {
-            if (maxed) Shell.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })');
-            else if (c.floating) Shell.dispatch('hl.dsp.window.float({ action = "disable", ' + w + ' })');
+        if (maxed) {   // maximizada (Super + D): cualquier flecha la devuelve a su hueco
+            Shell.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })');
+            HyprClients.refresh();
+            return;
+        }
+        if (c.floating) {   // flotante (app que flota siempre o acoplada antes): entra en el mosaico, en ese lado
+            const g = Object.assign({}, prevGeom); delete g[HyprClients.norm(a)]; prevGeom = g;
+            Shell.dispatch('hl.dsp.window.float({ action = "disable", ' + w + ' })');
+            if (dir !== "d" && list.some(o => o.address !== a && !o.floating && !o.hidden && (o.workspace?.id ?? -1) === (c.workspace?.id ?? -2)))
+                Shell.dispatch('hl.dsp.window.move({ direction = "' + dir + '" })');
+            HyprClients.refresh();
+            return;
+        }
+        if (neighbor(c, dir, list)) {
+            Shell.dispatch('hl.dsp.window.move({ direction = "' + dir + '" })');
         } else {
-            if (maxed) Shell.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })');
-            if (c.floating) {   // acoplada antes (flotante): de vuelta a su sitio en el mosaico
-                const g = Object.assign({}, prevGeom); delete g[HyprClients.norm(a)]; prevGeom = g;
-                Shell.dispatch('hl.dsp.window.float({ action = "disable", ' + w + ' })');
-            } else Shell.dispatch('hl.dsp.window.move({ direction = "' + dir + '" })');
+            // Sin vecina en esa dirección: cambia la división de su hueco. Tras «togglesplit», la primera ventana del
+            // par (la de la izquierda o la de arriba) queda arriba o a la izquierda; «swapsplit» las intercambia.
+            const vertical = dir === "u" || dir === "d";
+            // ya apilada en ese eje (↑ y tiene una debajo; ← y tiene una a la derecha): ya está en ese lado
+            if (neighbor(c, ({ u: "d", d: "u", l: "r", r: "l" })[dir], list)) return;
+            const first = vertical ? !!neighbor(c, "r", list) : !!neighbor(c, "d", list);    // es la primera del par
+            const second = vertical ? !!neighbor(c, "l", list) : !!neighbor(c, "u", list);
+            if (!first && !second) return;                                       // sola: ocupa todo
+            const wantFirst = dir === "u" || dir === "l";
+            Shell.dispatch('hl.dsp.layout("togglesplit")');
+            if ((first && !wantFirst) || (!first && wantFirst)) Shell.dispatch('hl.dsp.layout("swapsplit")');
         }
         HyprClients.refresh();
     }
     GlobalShortcut { appid: "hf"; name: "snapleft"; description: "HyprFrijol: a la izquierda (mosaico) / acoplar a la izquierda"; onPressed: win.arrow("l", [0, 0, .5, 1]) }
     GlobalShortcut { appid: "hf"; name: "snapright"; description: "HyprFrijol: a la derecha (mosaico) / acoplar a la derecha"; onPressed: win.arrow("r", [.5, 0, .5, 1]) }
-    GlobalShortcut { appid: "hf"; name: "snapup"; description: "HyprFrijol: maximizar / ocupar toda el área"; onPressed: win.arrow("u", [0, 0, 1, 1]) }
+    GlobalShortcut { appid: "hf"; name: "snapup"; description: "HyprFrijol: arriba (mosaico) / ocupar toda el área"; onPressed: win.arrow("u", [0, 0, 1, 1]) }
     GlobalShortcut { appid: "hf"; name: "snapdown"; description: "HyprFrijol: restaurar la ventana"; onPressed: win.arrow("d", null) }
 
     MouseArea { anchors.fill: parent; onClicked: Shell.close() }

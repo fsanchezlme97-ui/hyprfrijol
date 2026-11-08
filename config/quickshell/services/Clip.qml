@@ -116,7 +116,8 @@ Singleton {
                 for (const line of text.split("\n")) {
                     const tab = line.indexOf("\t");
                     if (tab < 0) continue;
-                    const id = line.slice(0, tab), t = line.slice(tab + 1);
+                    // los textos en UTF-16 (Chrome) traen un byte nulo entre letras: se quitan para mostrarlos
+                    const id = line.slice(0, tab), t = line.slice(tab + 1).replace(/\u0000/g, "");
                     const c = root.classify(t);
                     // img se rellena cuando la miniatura ya está en disco (thumbs)
                     out.push({ id, line, text: c.kind === "imagen" ? "Imagen " + id : t, kind: c.kind, meta: c.meta,
@@ -128,11 +129,13 @@ Singleton {
             }
         }
     }
-    // Miniaturas de las imágenes del historial (se decodifican una vez a ~/.cache/hyprfrijol/clip/); imprime los ids listos
+    // Miniaturas de las imágenes del historial (se decodifican una vez a ~/.cache/hyprfrijol/clip/); imprime los ids listos.
+    // grep -a: Chrome guarda algunos textos en UTF-16 (con bytes nulos) y, sin -a, grep tomaba la lista entera por
+    // binaria y no devolvía ninguna imagen (el portapapeles se quedaba sin miniaturas).
     property var thumbIds: ({})
     Process {
         id: thumbs
-        command: ["sh", "-c", 'mkdir -p "$1"; cliphist list | grep -P "^\\d+\\t\\[\\[ binary data" | head -n 60 | while IFS= read -r l; do id="${l%%\t*}"; [ -s "$1/$id.png" ] || printf "%s" "$l" | cliphist decode > "$1/$id.png"; [ -s "$1/$id.png" ] && echo "$id"; done', "sh", root.imgCache]
+        command: ["sh", "-c", 'mkdir -p "$1"; cliphist list | grep -a -P "^\\d+\\t\\[\\[ binary data" | head -n 60 | while IFS= read -r l; do id="${l%%\t*}"; [ -s "$1/$id.png" ] || printf "%s" "$l" | cliphist decode > "$1/$id.png"; [ -s "$1/$id.png" ] && echo "$id"; done', "sh", root.imgCache]
         stdout: StdioCollector {
             onStreamFinished: {
                 const ids = {};

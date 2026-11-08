@@ -14,9 +14,12 @@
 #   hf-capture save ARCHIVO                lo copia a ~/Imágenes/Capturas → imprime la ruta final
 #   hf-capture copy ARCHIVO                imagen al portapapeles
 #   hf-capture ocr ARCHIVO                 texto de la imagen (tesseract spa+eng) → portapapeles e imprime
-#   hf-capture record "X,Y WxH"|DP-1 [--mic] [--system]
+#   hf-capture record "X,Y WxH"|DP-1 [--mic] [--system] [--gif] [--clip]
 #                                          empieza a grabar (wf-recorder) en ~/Vídeos/Grabaciones
-#   hf-capture stop                        termina la grabación → imprime la ruta
+#                                          --gif: al parar se convierte en GIF (15 fps, máx. 960 px de ancho, sin audio)
+#                                          --clip: vídeo ligero para compartir (720p como mucho, 30 fps, H.264)
+#   hf-capture stop                        termina la grabación → imprime la ruta (el archivo queda copiado como
+#                                          archivo en el portapapeles: se pega en chats y en el gestor de archivos)
 #   hf-capture status                      "recording RUTA INICIO" o "idle"
 set -uo pipefail
 
@@ -126,18 +129,23 @@ case "${1:-}" in
   record)
     [ -f "$RUN/record.pid" ] && kill -0 "$(cat "$RUN/record.pid")" 2>/dev/null && { echo "Ya se está grabando" >&2; exit 1; }
     mkdir -p "$VIDS"
-    out="$VIDS/Grabacion_$(stamp).mp4"
     target="$2"; shift 2
     args=()
     case "$target" in *,*\ *x*) args+=(-g "$target") ;; *) args+=(-o "$target") ;; esac
-    mic=0; sys=0
-    for a in "$@"; do case $a in --mic) mic=1;; --system) sys=1;; esac; done
+    mic=0; sys=0; gif=0; clip=0
+    for a in "$@"; do case $a in --mic) mic=1;; --system) sys=1;; --gif) gif=1;; --clip) clip=1;; esac; done
+    out="$VIDS/Grabacion_$(stamp).mp4"; final="$out"
+    if [ "$gif" = 1 ]; then
+      final="$VIDS/Grabacion_$(stamp).gif"; out="$TMPD/rec-$(stamp).mp4"; mic=0; sys=0
+    elif [ "$clip" = 1 ]; then
+      final="$VIDS/Clip_$(stamp).mp4"; out="$TMPD/rec-$(stamp).mp4"
+    fi
     # wf-recorder graba una sola fuente: con las dos, se usa el audio del sistema
     if [ "$sys" = 1 ]; then args+=("--audio=$(pactl get-default-sink 2>/dev/null).monitor")
     elif [ "$mic" = 1 ]; then args+=("--audio=$(pactl get-default-source 2>/dev/null)"); fi
     setsid wf-recorder "${args[@]}" -f "$out" >"$RUN/record.log" 2>&1 < /dev/null &
     echo $! > "$RUN/record.pid"
-    printf '%s\n%s\n' "$out" "$(date +%s)" > "$RUN/record.info"
+    printf '%s\n%s\n%s\n' "$out" "$(date +%s)" "$final" > "$RUN/record.info"
     sleep 0.4
     kill -0 "$(cat "$RUN/record.pid")" 2>/dev/null || { rm -f "$RUN/record.pid" "$RUN/record.info"; cat "$RUN/record.log" >&2; exit 1; }
     echo "$out" ;;
@@ -145,13 +153,25 @@ case "${1:-}" in
     [ -f "$RUN/record.pid" ] || { echo "No se está grabando" >&2; exit 1; }
     pid="$(cat "$RUN/record.pid")"
     out="$(head -n1 "$RUN/record.info" 2>/dev/null)"
+    final="$(sed -n 3p "$RUN/record.info" 2>/dev/null)"; [ -n "$final" ] || final="$out"
     kill -INT "$pid" 2>/dev/null
     for _ in $(seq 50); do kill -0 "$pid" 2>/dev/null || break; sleep 0.1; done
     rm -f "$RUN/record.pid" "$RUN/record.info"
+    # GIF / clip: se convierte la grabación temporal (paleta propia para que el GIF se vea nítido y pese poco)
+    if [ -s "$out" ] && [ "$final" != "$out" ]; then
+      case "$final" in
+        *.gif) ffmpeg -y -loglevel error -i "$out" -vf "fps=15,scale='min(960,iw)':-2:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" -loop 0 "$final" ;;
+        *) ffmpeg -y -loglevel error -i "$out" -vf "fps=30,scale='min(1280,iw)':-2" -c:v libx264 -preset veryfast -crf 26 -pix_fmt yuv420p -c:a aac -b:a 96k -movflags +faststart "$final" ;;
+      esac
+      if [ -s "$final" ]; then rm -f "$out"; out="$final"; fi
+    fi
     if [ -s "$out" ]; then
+      command -v wl-copy >/dev/null && printf 'file://%s\n' "$out" | wl-copy -t text/uri-list
       thumb="$TMPD/rec-thumb.png"
       ffmpeg -y -loglevel error -sseof -0.5 -i "$out" -frames:v 1 "$thumb" 2>/dev/null || thumb=""
-      notify ${thumb:+-i "$thumb"} "Grabación guardada" "$(basename "$out") · en $VIDS"
+      size="$(du -h "$out" | cut -f1)"
+      ( act="$(notify-send -a Captura ${thumb:+-i "$thumb"} -A abrir=Abrir -A carpeta="Abrir carpeta" "Grabación guardada · $size" "$(basename "$out") · copiada para pegar en un chat" 2>/dev/null)"
+        case "$act" in abrir) xdg-open "$out" ;; carpeta) xdg-open "$(dirname "$out")" ;; esac ) >/dev/null 2>&1 &
       echo "$out"
     else
       notify "La grabación falló" "Mira $RUN/record.log"; exit 1

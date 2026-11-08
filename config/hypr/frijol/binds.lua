@@ -75,7 +75,7 @@ b("CTRL + " .. mod .. " + R", exec(HF.root .. "/scripts/hf-shell restart"),
 b("PRINT",                hl.dsp.global("hf:captura"),          { description = "Captura" })
 b("SHIFT + PRINT",        exec(S .. "/hf-capture screen"),      { description = "Captura de pantalla" })
 b("CTRL + PRINT",         exec(S .. "/hf-capture screen"))
-b(mod .. " + SHIFT + S",  exec(S .. "/hf-capture region"),      { description = "Recortar zona" })
+b(mod .. " + SHIFT + S",  hl.dsp.global("hf:captura"),          { description = "Captura (como Impr Pant)" })
 b(mod .. " + SHIFT + X",  exec(S .. "/hf-capture region-ocr"),  { description = "Copiar texto de una zona (OCR)" })
 b(mod .. " + SHIFT + T",  exec(S .. "/hf-capture region-translate"), { description = "Traducir una zona" })
 b(mod .. " + SHIFT + A",  exec(S .. "/hf-capture region-ai"),   { description = "Preguntar a la IA por una zona" })

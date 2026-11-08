@@ -38,6 +38,10 @@ Item {
     property string captureText: ""
     // Imágenes que se mandarán con el próximo mensaje (rutas locales)
     property var pending: []
+    // Documentos (PDF, texto, código, DOCX…) que se mandarán con el próximo mensaje: hf-ai lee su texto
+    property var pendingDocs: []
+    readonly property int maxDocs: 8
+    property bool showHistory: false        // lista de conversaciones guardadas (botón del reloj en la cabecera)
     readonly property int maxImages: 6
     readonly property bool allowCapture: Settings.get("aiContextCapture", true) !== false
     readonly property bool confirmChanges: Settings.get("aiConfirm", true) !== false
@@ -53,7 +57,7 @@ Item {
         : ["Resume mis notificaciones", "Temporizador de 10 min para el té", "Pon la barra arriba y el fondo lago", "Cierra las ventanas de Firefox"]
 
     function focusInput() { input.forceActiveFocus(); }
-    function clear() { messages = []; notice = null; busy = false; chatProc.running = false; input.text = ""; pending = []; captureText = ""; historyFile = ""; winInfo = null; focusInput(); }
+    function clear() { messages = []; notice = null; busy = false; chatProc.running = false; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; focusInput(); }
     function setWindow(w) { if (w && w.address) { winInfo = w; useWindow = true; } Qt.callLater(focusInput); }
     function patch(i, p) { const m = messages.slice(); m[i] = Object.assign({}, m[i], p); messages = m; }
     function push(m) { messages = [...messages, m]; Qt.callLater(scrollEnd); }
@@ -67,15 +71,20 @@ Item {
     function payload() {
         return JSON.stringify({ messages: messages.filter(m => !m.error && !m.local)
                                     .map(m => Object.assign({ role: m.role, text: String(m.text).slice(0, 6000) },
-                                                            m.images?.length ? { images: m.images } : {})),
+                                                            m.images?.length ? { images: m.images } : {},
+                                                            m.files?.length ? { files: m.files } : {})),
                                 context: context() });
     }
 
     function ask(text) {
         text = String(text ?? "").trim();
-        if ((text === "" && !pending.length) || busy) return;
-        push(pending.length ? { role: "user", text: text, images: pending } : { role: "user", text: text });
-        pending = [];
+        if ((text === "" && !pending.length && !pendingDocs.length) || busy) return;
+        const m = { role: "user", text: text };
+        if (pending.length) m.images = pending;
+        if (pendingDocs.length) m.files = pendingDocs;
+        push(m);
+        pending = []; pendingDocs = [];
+        showHistory = false;
         input.text = "";
         send();
     }
@@ -83,12 +92,21 @@ Item {
     // ---- imágenes adjuntas
     readonly property var imgRe: /\.(png|jpe?g|webp|gif|bmp|tiff?|avif|heic|heif|jxl|svg|ico)$/i
     function addImages(list) {
+        if (!allowCapture) { if ((list ?? []).length) note("Adjuntar imágenes está desactivado en Ajustes › IA."); return; }
         const p = pending.slice();
         for (const x of list ?? []) if (x && !p.includes(String(x))) p.push(String(x));
         if (p.length > maxImages) note("Como mucho " + maxImages + " imágenes por mensaje.");
         pending = p.slice(0, maxImages);
     }
     function removeImage(i) { const p = pending.slice(); p.splice(i, 1); pending = p; }
+    function addDocs(list) {
+        const p = pendingDocs.slice();
+        for (const x of list ?? []) if (x && !p.includes(String(x))) p.push(String(x));
+        if (p.length > maxDocs) note("Como mucho " + maxDocs + " documentos por mensaje.");
+        pendingDocs = p.slice(0, maxDocs);
+    }
+    function removeDoc(i) { const p = pendingDocs.slice(); p.splice(i, 1); pendingDocs = p; }
+    function baseName(f) { return String(f).split("/").pop(); }
     function note(t) { push({ role: "ai", text: t, local: true }); }
     // Ruta local, file://…, https://… (Captura › «Preguntar a la IA», Spotlight, arrastres)
     function attach(src) {
@@ -96,6 +114,7 @@ Item {
         src = String(src);
         const local = src.startsWith("file://") ? decodeURIComponent(src.slice(7).replace(/^[^/]*/, "")) : src;
         if (local.startsWith("/") && imgRe.test(local)) addImages([local]);
+        else if (local.startsWith("/") && /\.[A-Za-z0-9]{1,6}$/.test(local)) addDocs([local]);
         else attachFrom([src]);
     }
     function attachFrom(srcs) {
@@ -107,7 +126,8 @@ Item {
         let r = {};
         try { r = JSON.parse(text); } catch (e) { r = { error: "No pude adjuntar la imagen" }; }
         if (r.images?.length) addImages(r.images);
-        else if (r.error) note(r.error);
+        if (r.files?.length) addDocs(r.files);
+        if (!r.images?.length && !r.files?.length && r.error) note(r.error);
         if (!Shell.view) Shell.open("ia", "ia");   // el selector de archivos pudo cerrar el panel
         Qt.callLater(focusInput);
     }
@@ -158,7 +178,7 @@ Item {
         const files = urls.filter(u => u.startsWith("file://")).map(u => decodeURIComponent(u.slice(7).replace(/^[^/]*/, "")));
         const fmts = d.formats ?? [];
         const imgFmt = fmts.find(f => String(f).startsWith("image/"));
-        if (files.length) { addImages(files.filter(f => imgRe.test(f))); const other = files.filter(f => !imgRe.test(f)); if (other.length) attachFrom(other); }
+        if (files.length) { addImages(files.filter(f => imgRe.test(f))); addDocs(files.filter(f => !imgRe.test(f))); }
         else if (imgFmt && typeof d.getDataAsArrayBuffer === "function" && !rawProc.running) {
             rawB64 = b64(d.getDataAsArrayBuffer(imgFmt));
             rawProc.running = true;
@@ -167,7 +187,8 @@ Item {
             const web = m ? [m[1].replace(/&amp;/g, "&")] : urls.filter(u => /^https?:/.test(u)).slice(0, maxImages);
             if (web.length) attachFrom(web);
             else if (d.hasText && /^(https?:\/\/|file:\/\/|\/)/.test(d.text.trim())) attachFrom([d.text.trim()]);
-            else note("Eso no parece una imagen.");
+            else if (d.hasText && d.text.trim() !== "") { input.insert(input.cursorPosition, d.text); }
+            else note("Eso no parece una imagen ni un archivo.");
         }
         d.accept(Qt.CopyAction);
         focusInput();
@@ -179,6 +200,19 @@ Item {
         chatProc.running = true;
         Qt.callLater(scrollEnd);
     }
+    // Otra respuesta para la última pregunta (quita la respuesta y lo que vino con ella)
+    function regenerate() {
+        if (busy) return;
+        let i = messages.length - 1;
+        while (i >= 0 && messages[i].role !== "user") i--;
+        if (i < 0) return;
+        messages = messages.slice(0, i + 1);
+        send();
+    }
+    property string toastText: ""
+    property int toastIdx: -1
+    function toast(t, i) { toastText = t; toastIdx = i; toastT.restart(); }
+    Timer { id: toastT; interval: 1400; onTriggered: root.toastText = "" }
     function retry() {
         if (messages.length && messages[messages.length - 1].error) messages = messages.slice(0, -1);
         send();
@@ -350,13 +384,75 @@ Item {
             if (!msgs.length) return;
             if (root.historyFile === "") root.historyFile = root.historyDir + "/" + Qt.formatDateTime(new Date(), "yyyy-MM-dd_HH-mm-ss") + ".json";
             histWriter.command = ["sh", "-c", 'mkdir -p "$(dirname "$1")" && printf "%s" "$2" > "$1"', "sh", root.historyFile,
-                                  JSON.stringify({ messages: msgs.map(m => ({ role: m.role, text: m.text, images: m.images ?? [], labels: m.labels ?? [], plan: m.plan ?? [],
+                                  JSON.stringify({ messages: msgs.map(m => ({ role: m.role, text: m.text, images: m.images ?? [], files: m.files ?? [], labels: m.labels ?? [], plan: m.plan ?? [],
                                                                               steps: m.steps ?? [], code: m.code ?? "",
                                                                               state: m.state ?? "", error: !!m.error })) }, null, 1)];
             histWriter.running = true;
         }
     }
-    Process { id: histWriter }
+    Process { id: histWriter; onExited: if (root.showHistory) root.loadHistory() }
+    // Lista de conversaciones guardadas: [{ file, t (epoch), title, n, text (para buscar) }]
+    property var histList: []
+    property string histQuery: ""
+    readonly property var histShown: {
+        const q = histQuery.trim().toLowerCase();
+        return q === "" ? histList : histList.filter(h => h.title.toLowerCase().includes(q) || h.text.includes(q));
+    }
+    function toggleHistory() { showHistory = !showHistory; if (showHistory) { histQuery = ""; loadHistory(); } else focusInput(); }
+    function loadHistory() { histLister.running = false; histLister.running = true; }
+    Process {
+        id: histLister
+        command: ["python3", "-c", `
+import json, os, sys, glob
+out = []
+for f in glob.glob(os.path.join(sys.argv[1], "*.json")):
+    try:
+        d = json.load(open(f)); ms = [m for m in d.get("messages", []) if not m.get("error")]
+    except Exception:
+        continue
+    if not ms: continue
+    us = [str(m.get("text", "")) for m in ms if m.get("role") == "user"]
+    first = next((u for u in us if u.strip()), "") or ("Imagen" if any(m.get("images") for m in ms) else "Conversación")
+    out.append({"file": f, "t": os.path.getmtime(f), "title": " ".join(first.split())[:90], "n": len(ms),
+                "text": " ".join(str(m.get("text", "")) for m in ms).lower()[:4000]})
+out.sort(key=lambda h: -h["t"])
+print(json.dumps(out[:300]))
+`, root.historyDir]
+        stdout: StdioCollector { onStreamFinished: { try { root.histList = JSON.parse(text); } catch (e) { root.histList = []; } } }
+    }
+    function openHistory(h) {
+        histOpener.target = h.file;
+        histOpener.running = true;
+    }
+    Process {
+        id: histOpener
+        property string target: ""
+        command: ["cat", target]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const d = JSON.parse(text);
+                    root.busy = false; chatProc.running = false; root.notice = null;
+                    root.historyFile = histOpener.target;
+                    root.messages = (d.messages ?? []).map(m => Object.assign({ actions: [] }, m, { state: m.state || (m.labels?.length ? "discarded" : "") }));
+                    root.showHistory = false;
+                    Qt.callLater(root.scrollEnd);
+                    Qt.callLater(root.focusInput);
+                } catch (e) { root.note("No pude abrir esa conversación."); root.showHistory = false; }
+            }
+        }
+    }
+    function deleteHistory(h) {
+        Quickshell.execDetached(["rm", "-f", h.file]);
+        histList = histList.filter(x => x.file !== h.file);
+        if (h.file === historyFile) clear();
+    }
+    function histWhen(t) {
+        const d = new Date(t * 1000), now = new Date();
+        const days = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+        return days === 0 ? "Hoy · " + Qt.formatTime(d, "HH:mm") : days === 1 ? "Ayer · " + Qt.formatTime(d, "HH:mm")
+             : days < 7 ? Qt.formatDate(d, "dddd") : Qt.formatDate(d, "d MMM yyyy");
+    }
     // Al cargar: recupera la última conversación (si es de hoy)
     Process {
         running: root.keepHistory
@@ -419,6 +515,40 @@ Item {
             color: Qt.alpha(Theme.bg, xMa.containsMouse ? 0.95 : 0.78)
             Icon { anchors.centerIn: parent; name: "x"; size: 9; color: Theme.t }
             MouseArea { id: xMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: th.remove() }
+        }
+    }
+    // Documento adjunto (nombre con icono; × para quitarlo si `removable`; clic → lo abre)
+    component DocChip: Rectangle {
+        id: dc
+        property string path: ""
+        property bool removable: false
+        property color fg: Theme.t
+        signal remove()
+        implicitHeight: 26
+        implicitWidth: Math.min(220, dcRow.implicitWidth + 16)
+        radius: Theme.r(7)
+        color: Qt.alpha(Theme.t, dcMa.containsMouse ? 0.10 : 0.06)
+        border.width: 1; border.color: Theme.ov
+        Row {
+            id: dcRow
+            anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
+            spacing: 5
+            Icon { anchors.verticalCenter: parent.verticalCenter; name: "file"; size: 12; color: dc.fg }
+            Txt {
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(implicitWidth, 220 - 16 - 17 - (dc.removable ? 20 : 0))
+                text: root.baseName(dc.path); size: 11.5; color: dc.fg; elide: Text.ElideMiddle
+            }
+            Item { visible: dc.removable; width: 15; height: 15 }
+        }
+        MouseArea { id: dcMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Qt.openUrlExternally("file://" + dc.path) }
+        Rectangle {
+            visible: dc.removable
+            anchors { right: parent.right; rightMargin: 5; verticalCenter: parent.verticalCenter }
+            width: 16; height: 16; radius: 8
+            color: dxMa.containsMouse ? Qt.alpha(Theme.t, 0.16) : "transparent"
+            Icon { anchors.centerIn: parent; name: "x"; size: 8; color: Theme.t }
+            MouseArea { id: dxMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: dc.remove() }
         }
     }
     component SmallBtn: Rectangle {
@@ -504,6 +634,7 @@ Item {
         // ---------------------------------------------------- conversación
         Flickable {
             id: flick
+            visible: !root.showHistory
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
@@ -621,12 +752,35 @@ Item {
                         required property int index
                         readonly property bool mine: modelData.role === "user"
                         width: msgs.width
-                        height: bubble.height
+                        // respuestas: Copiar · Regenerar (la última) debajo de la burbuja, al pasar el cursor
+                        readonly property bool hasActs: !msg.mine && !msg.modelData.local && !msg.modelData.error && (msg.modelData.text ?? "") !== ""
+                        readonly property bool isLast: msg.index === root.messages.length - 1
+                        height: bubble.height + (hasActs ? 26 : 0)
+                        HoverHandler { id: msgHover }
+                        Row {
+                            visible: msg.hasActs
+                            anchors { left: parent.left; top: bubble.bottom; topMargin: 3; leftMargin: 2 }
+                            spacing: 2
+                            opacity: msgHover.hovered || msg.isLast ? 1 : 0
+                            Behavior on opacity { NumberAnimation { duration: 140 } }
+                            IconBtn {
+                                icon: "copy"; iconSize: 12; fg: Theme.tv; implicitWidth: 24; implicitHeight: 22
+                                tooltip: "Copiar la respuesta"
+                                onClicked: { Quickshell.execDetached(["wl-copy", "--", String(msg.modelData.text)]); root.toast("Copiada", msg.index); }
+                            }
+                            IconBtn {
+                                visible: msg.isLast && !root.busy
+                                icon: "refresh"; iconSize: 12; fg: Theme.tv; implicitWidth: 24; implicitHeight: 22
+                                tooltip: "Otra respuesta"
+                                onClicked: root.regenerate()
+                            }
+                            Txt { id: copiedTxt; anchors.verticalCenter: parent.verticalCenter; visible: root.toastText !== "" && root.toastIdx === msg.index; text: root.toastText; size: 10.5; muted: true; leftPadding: 4 }
+                        }
 
                         Rectangle {
                             id: bubble
                             anchors.right: msg.mine ? parent.right : undefined
-                            width: Math.min(msg.width * (msg.mine ? 0.85 : 0.92), Math.max(body.implicitWidth, extra.implicitWidth, stepsCol.implicitWidth, imgFlow.wantW) + 24)
+                            width: Math.min(msg.width * (msg.mine ? 0.85 : 0.92), Math.max(body.implicitWidth, rich.visible && rich.wide ? 10000 : 0, extra.implicitWidth, stepsCol.implicitWidth, imgFlow.wantW) + 24)
                             height: inner.implicitHeight + 20
                             color: msg.mine ? Theme.pc : Theme.fill2
                             border.width: msg.modelData.error ? 1 : 0
@@ -677,9 +831,25 @@ Item {
                                         }
                                     }
                                 }
+                                Flow {
+                                    visible: (msg.modelData.files ?? []).length > 0
+                                    Layout.fillWidth: true
+                                    spacing: 6
+                                    Repeater {
+                                        model: msg.modelData.files ?? []
+                                        DocChip { required property string modelData; path: modelData; fg: msg.mine ? Theme.pcText : Theme.t }
+                                    }
+                                }
+                                // Respuesta del asistente con formato (AiRich: comandos con «Copiar», gráficos, imágenes)
+                                AiRich {
+                                    id: rich
+                                    visible: !msg.mine && !msg.modelData.error && (msg.modelData.text ?? "") !== ""
+                                    Layout.fillWidth: true
+                                    text: visible ? msg.modelData.text : ""
+                                }
                                 Text {
                                     id: body
-                                    visible: text !== ""
+                                    visible: text !== "" && (msg.mine || !!msg.modelData.error)
                                     Layout.fillWidth: true
                                     text: msg.modelData.text
                                     textFormat: msg.mine ? Text.PlainText : Text.MarkdownText
@@ -907,7 +1077,7 @@ Item {
 
         // ---------------------------------------------------- sugerencias
         Flow {
-            visible: !root.busy && !onboard.visible
+            visible: !root.busy && !onboard.visible && !root.showHistory
             Layout.fillWidth: true
             Layout.preferredWidth: root.width - 24
             Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.bottomMargin: 8; Layout.topMargin: 4
@@ -928,9 +1098,94 @@ Item {
             }
         }
 
+        // ---------------------------------------------------- historial de conversaciones
+        ColumnLayout {
+            visible: root.showHistory
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 8
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.topMargin: 10
+                spacing: 8
+                Txt { text: "Conversaciones"; size: 14; weight: Font.DemiBold }
+                Txt { text: root.histList.length ? String(root.histList.length) : ""; size: 11.5; muted: true }
+                Item { Layout.fillWidth: true }
+                SmallBtn { text: "Nueva"; primary: true; onClicked: root.clear() }
+                IconBtn { icon: "x"; iconSize: 12; fg: Theme.tv; implicitWidth: 26; implicitHeight: 26; onClicked: root.toggleHistory() }
+            }
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.leftMargin: 12; Layout.rightMargin: 12
+                implicitHeight: 32
+                radius: Theme.r(6)
+                color: Theme.fill2
+                Icon { id: hsIcon; anchors.left: parent.left; anchors.leftMargin: 10; anchors.verticalCenter: parent.verticalCenter; name: "search"; size: 12; color: Theme.tv }
+                TextInput {
+                    id: histSearch
+                    anchors { left: hsIcon.right; right: parent.right; leftMargin: 8; rightMargin: 10; verticalCenter: parent.verticalCenter }
+                    color: Theme.t; selectionColor: Theme.pc; selectedTextColor: Theme.pcText
+                    font.family: Theme.font; font.pixelSize: Theme.px(12.5)
+                    clip: true
+                    text: root.histQuery
+                    onTextEdited: root.histQuery = text
+                    Keys.onEscapePressed: root.toggleHistory()
+                    onAccepted: if (root.histShown.length) root.openHistory(root.histShown[0])
+                    Txt { anchors.fill: parent; visible: histSearch.text === ""; text: "Buscar en las conversaciones…"; muted: true }
+                }
+            }
+            onVisibleChanged: if (visible) Qt.callLater(() => histSearch.forceActiveFocus())
+            ListView {
+                id: histView
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.leftMargin: 12; Layout.rightMargin: 12
+                clip: true
+                spacing: 2
+                boundsBehavior: Flickable.StopAtBounds
+                model: root.histShown
+                Txt {
+                    anchors.centerIn: parent
+                    visible: histView.count === 0 && !histLister.running
+                    text: root.histQuery.trim() !== "" ? "Nada coincide con «" + root.histQuery.trim() + "»"
+                        : root.keepHistory ? "Aún no hay conversaciones guardadas" : "El historial está desactivado (Ajustes › IA)"
+                    muted: true
+                }
+                delegate: Rectangle {
+                    id: hrow
+                    required property var modelData
+                    readonly property bool current: modelData.file === root.historyFile
+                    width: ListView.view.width
+                    height: hcol.implicitHeight + 14
+                    radius: Theme.r(8)
+                    color: current ? Theme.pc : hMa.containsMouse ? Theme.fill2 : "transparent"
+                    MouseArea { id: hMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openHistory(hrow.modelData) }
+                    ColumnLayout {
+                        id: hcol
+                        anchors { left: parent.left; right: delBtn.left; verticalCenter: parent.verticalCenter; leftMargin: 10; rightMargin: 6 }
+                        spacing: 1
+                        Txt { Layout.fillWidth: true; text: hrow.modelData.title; size: 12.5; weight: Font.Medium; color: hrow.current ? Theme.pcText : Theme.t }
+                        Txt {
+                            Layout.fillWidth: true
+                            text: root.histWhen(hrow.modelData.t) + " · " + hrow.modelData.n + (hrow.modelData.n === 1 ? " mensaje" : " mensajes")
+                            size: 10.5; muted: !hrow.current; color: hrow.current ? Qt.alpha(Theme.pcText, 0.75) : Theme.tv
+                        }
+                    }
+                    IconBtn {
+                        id: delBtn
+                        opacity: hMa.containsMouse || hrow.current ? 1 : 0.4
+                        anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
+                        icon: "trash"; iconSize: 12; fg: Theme.tv; implicitWidth: 26; implicitHeight: 26
+                        tooltip: "Borrar esta conversación"
+                        onClicked: root.deleteHistory(hrow.modelData)
+                    }
+                }
+            }
+        }
+
         // ---------------------------------------------------- imágenes para el próximo mensaje
         Flow {
-            visible: root.pending.length > 0 || attachProc.running && !attachProc.paste || rawProc.running
+            visible: root.pending.length > 0 || root.pendingDocs.length > 0 || attachProc.running && !attachProc.paste || rawProc.running
             Layout.fillWidth: true
             Layout.preferredWidth: root.width - 24
             Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.bottomMargin: 8
@@ -944,6 +1199,15 @@ Item {
                     path: modelData
                     removable: true
                     onRemove: root.removeImage(index)
+                }
+            }
+            Repeater {
+                model: root.pendingDocs
+                Item {
+                    required property string modelData
+                    required property int index
+                    width: dch.width; height: root.pending.length ? 54 : 26
+                    DocChip { id: dch; anchors.verticalCenter: parent.verticalCenter; path: parent.modelData; removable: true; onRemove: root.removeDoc(parent.index) }
                 }
             }
             Rectangle {   // adjuntando…
@@ -989,7 +1253,7 @@ Item {
                     anchors.fill: parent
                     visible: input.text === "" && !input.preeditText
                     text: root.dictating ? (root.dictStage === "rec" ? "Escuchando… (pulsa el micrófono para terminar)" : "Transcribiendo…")
-                        : root.busy ? "Pensando…" : root.pending.length ? "Pregunta sobre la imagen…" : root.winInfo ? "Pregunta sobre esta ventana o pide algo…" : "Pregunta o pide algo al escritorio…"
+                        : root.busy ? "Pensando…" : root.pending.length ? "Pregunta sobre la imagen…" : root.pendingDocs.length ? "Pregunta sobre el documento…" : root.winInfo ? "Pregunta sobre esta ventana o pide algo…" : "Pregunta o pide algo al escritorio…"
                     muted: true
                 }
             }
@@ -1013,7 +1277,7 @@ Item {
                 anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
                 width: 30; height: 30; radius: Theme.r(7)
                 color: Theme.p
-                opacity: (input.text.trim() !== "" || root.pending.length) && !root.busy ? 1 : 0.55
+                opacity: (input.text.trim() !== "" || root.pending.length || root.pendingDocs.length) && !root.busy ? 1 : 0.55
                 Icon { anchors.centerIn: parent; name: "arrow_right"; color: Theme.pText; size: 14 }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.ask(input.text) }
             }
@@ -1024,7 +1288,6 @@ Item {
     DropArea {
         id: dropArea
         anchors.fill: parent
-        enabled: root.allowCapture
         onEntered: d => d.accept(Qt.CopyAction)
         onDropped: d => root.dropped(d)
     }
@@ -1041,10 +1304,10 @@ Item {
             Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 44; height: 44; radius: Theme.r(12); color: Theme.pc
-                Icon { anchors.centerIn: parent; name: "image"; size: 20; color: Theme.pcText }
+                Icon { anchors.centerIn: parent; name: "file"; size: 20; color: Theme.pcText }
             }
-            Txt { anchors.horizontalCenter: parent.horizontalCenter; text: "Suelta para adjuntar la imagen"; size: 13; weight: Font.DemiBold }
-            Txt { anchors.horizontalCenter: parent.horizontalCenter; text: "Archivos, imágenes de la web o capturas"; size: 11.5; muted: true }
+            Txt { anchors.horizontalCenter: parent.horizontalCenter; text: "Suelta para adjuntarlo"; size: 13; weight: Font.DemiBold }
+            Txt { anchors.horizontalCenter: parent.horizontalCenter; text: "Imágenes, PDF, documentos, código o texto"; size: 11.5; muted: true }
         }
     }
 }

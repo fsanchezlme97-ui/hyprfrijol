@@ -97,8 +97,29 @@ PanelWindow {
     // El chat (AiChat.qml) se carga la primera vez que se usa la pestaña IA (carga diferida, lazyModules) y se descarga
     // un rato después de cerrar el panel si no hay conversación ni respuesta en curso (sin aiHistory se perdería).
     property bool chatHeld: false
+    // Precarga (webappPreload, por defecto sí): la primera vez que se abre el panel se arrancan en segundo plano las
+    // demás web apps de sus pestañas (nacen escondidas, regla hf-webapps), así al cambiar de pestaña ya están listas
+    property bool preloaded: false
+    Timer {
+        id: preloadT
+        interval: 1500; repeat: true
+        property var queue: []
+        onTriggered: {
+            const k = queue.shift();
+            if (k && !win.webClient(k) && !win.starting[k] && !win.inBrowser(k))
+                Quickshell.execDetached([Paths.script("hf-webapp"), "start", k]);
+            if (!queue.length) stop();
+        }
+    }
+    function preload(): void {
+        if (preloaded || Settings.get("webappPreload", true) === false) return;
+        preloaded = true;
+        preloadT.queue = webKeys.filter(k => k !== tab);
+        if (preloadT.queue.length) preloadT.start();
+    }
     onShownChanged: {
         Shell.sideShown = shown;
+        if (shown) Qt.callLater(preload);
         if (shown && !web) chatHeld = true;
         if (!shown) autoPip(tab);
         dock.reconcile();
@@ -119,7 +140,7 @@ PanelWindow {
         target: Shell
         function onPreloadRequested(v) { if (v === "ia") win.chatHeld = true; }   // cursor sobre el botón de la IA
     }
-    readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, handoff: () => {}, setWindow: () => {} })
+    readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, toggleHistory: () => {}, showHistory: false, handoff: () => {}, setWindow: () => {} })
 
     // ---- pestañas (diseño: SIDE)
     readonly property var builtinTones: ({ wa: "pc", yt: "ter", pin: "sc" })
@@ -151,14 +172,22 @@ PanelWindow {
 
     // ---- márgenes como Overlay (respetan la barra)
     readonly property string barPos: Settings.get("barPos", "abajo")
-    readonly property real barEdge: Shell.focusMode ? 4 : Math.max(4, Settings.barEdge)
-    readonly property real mT: barPos === "arriba" ? barEdge : 4
-    readonly property real mB: barPos === "abajo" ? barEdge : 4
+    // mismos huecos que las ventanas en mosaico (Settings.winGap = gaps_out): fijado, queda alineado con ellas
+    readonly property real gap: Settings.winGap
+    readonly property real barEdge: Shell.focusMode ? gap : Math.max(gap, Settings.barEdge)
+    readonly property real mT: barPos === "arriba" ? barEdge : gap
+    readonly property real mB: barPos === "abajo" ? barEdge : gap
     readonly property bool onLeft: Settings.get("sideSide", "derecha") === "izquierda"
-    readonly property real mR: (onLeft ? barPos === "izquierda" : barPos === "derecha") ? barEdge : 4     // margen del lado del panel
-    readonly property real baseW: Math.max(320, Math.min(720, Number(Settings.get("sideWidth", 400)) || 400))
-    // Cada web app tiene su ancho (WebApps.panelWidth): WhatsApp de escritorio no cabe en 400 px sin encogerse
-    readonly property real panelW: web ? WebApps.panelWidth(tab, baseW, screen?.width ?? 1920) : baseW
+    readonly property real mR: (onLeft ? barPos === "izquierda" : barPos === "derecha") ? barEdge : gap     // margen del lado del panel
+    // Ancho del asistente (sideWidth): "tercio" (por defecto, el mismo que las web apps) o px
+    readonly property var sideWidthPref: Settings.get("sideWidth", "tercio")
+    readonly property real baseW: sideWidthPref === "tercio" || !(Number(sideWidthPref) > 0)
+        ? WebApps.third(screen?.width ?? 1920) : Math.max(320, Math.min(720, Number(sideWidthPref)))
+    // Cada web app tiene su ancho (WebApps.panelWidth: por defecto un tercio de la pantalla, una columna de un mosaico
+    // de 3). Fijado, el panel mide siempre ese tercio en todas las pestañas: el reparto del mosaico no salta al cambiar
+    // de pestaña y las demás ventanas se reparten los otros dos tercios.
+    readonly property real panelW: pinActive ? WebApps.third(screen?.width ?? 1920)
+        : web ? WebApps.panelWidth(tab, baseW, screen?.width ?? 1920) : baseW
     onPanelWChanged: Shell.sideW = panelW
     Component.onCompleted: { Shell.sideW = panelW; Shell.sidePinned = pinActive; Shell.sideShown = shown; }
     // Franja reservada (fijado): lo que ocupa el panel desde el borde menos lo que ya reserva la barra en ese lado
@@ -174,7 +203,9 @@ PanelWindow {
         }
         return Settings.barThickness + Settings.barOffset;
     }
-    readonly property int zoneW: Math.max(0, Math.round(mR + panelW - barSideReserve))
+    // + lo que falta para que entre el panel y la ventana vecina haya el mismo hueco que entre dos ventanas (2 × gaps_in)
+    readonly property real innerFix: Math.max(0, 2 * (Number(Settings.get("gapsIn", 1)) || 0) - gap)
+    readonly property int zoneW: Math.max(0, Math.round(mR + panelW + innerFix - barSideReserve))
     readonly property real headH: 40
 
     screen: pinActive ? pinScreen : Shell.screen
@@ -445,6 +476,14 @@ PanelWindow {
                         icon: "plus"; iconSize: 13; fg: Theme.tv
                         implicitWidth: 26; implicitHeight: 26
                         onClicked: { win.select("ia"); chat.clear(); }
+                    }
+                    IconBtn {
+                        visible: win.tab === "ia"
+                        icon: "clock"; iconSize: 13; fg: Theme.tv
+                        implicitWidth: 26; implicitHeight: 26
+                        active: chat.showHistory
+                        tooltip: "Conversaciones anteriores"
+                        onClicked: chat.toggleHistory()
                     }
                     Item { Layout.fillWidth: true }
                     IconBtn {
