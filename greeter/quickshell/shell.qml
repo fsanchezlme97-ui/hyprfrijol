@@ -2,7 +2,11 @@
 //
 // Lo ejecuta greetd dentro de un Hyprland mínimo (greeter/hyprland-greeter.lua) como el usuario «greeter»,
 // así que es AUTÓNOMO: no lee nada del repo ni del $HOME de nadie. Todo lo que necesita está en esta carpeta
-// (/etc/greetd/quickshell): shell.qml, Landscape.qml, palettes.json y, opcionalmente, greeter.json y wallpaper.*
+// (/etc/greetd/quickshell): shell.qml, Landscape.qml, VideoBackdrop.qml, palettes.json y, opcionalmente, greeter.json y wallpaper.*
+// live/ (opcional, propiedad del usuario para que hf-greeter-sync la actualice sin contraseña cada vez que cambias de fondo
+// o de foto): live/greeter.json (manda sobre greeter.json), live/wallpaper.jpg, live/wallpaper.mp4, live/avatars/<usuario>
+//   wallpaperVideo: vídeo de fondo en bucle y sin sonido (necesita QtMultimedia: qt6-multimedia + qt6-multimedia-ffmpeg;
+//                   si falta, o con «Reducir movimiento», se queda la imagen fija «wallpaper»)
 //
 //   greeter.json (opcional):
 //     { "palette": "atardecer", "scene": "amanecer", "wallpaper": "/etc/greetd/quickshell/wallpaper.jpg",
@@ -34,12 +38,15 @@ ShellRoot {
 
     // ───────────── Modo y configuración ─────────────
     readonly property bool preview: Quickshell.env("HF_GREETER_PREVIEW") === "1" || !Greetd.available
-    property var cfg: ({})
+    property var cfgBase: ({})
+    property var cfgLive: ({})
+    readonly property var cfg: Object.assign({}, cfgBase, cfgLive)
     readonly property string paletteKey: Quickshell.env("HF_GREETER_PALETTE") || cfg.palette || "atardecer"
     readonly property string sceneKey: Quickshell.env("HF_GREETER_SCENE") || cfg.scene || (th.light ? "bruma" : "amanecer")
     // Tema copiado de la sesión del usuario (hf-greeter-sync). HF_GREETER_PALETTE lo ignora para probar paletas.
     readonly property var theme: !Quickshell.env("HF_GREETER_PALETTE") && cfg.theme && cfg.theme.c ? cfg.theme : null
     readonly property string wallpaper: Quickshell.env("HF_GREETER_WALLPAPER") ?? cfg.wallpaper ?? ""
+    readonly property string wallVideo: Quickshell.env("HF_GREETER_VIDEO") ?? cfg.wallpaperVideo ?? ""
     property var palettes: ({})
     readonly property var palette: palettes[paletteKey] ?? palettes.atardecer ?? fallbackPalette
     readonly property var fallbackPalette: ({ bg: "#14151B", s1: "#1C1D24", s3: "#272832", s4: "#31323D", p: "#EDBFA5", onP: "#4A2414",
@@ -55,7 +62,13 @@ ShellRoot {
         path: Quickshell.env("HF_GREETER_CONFIG") || Quickshell.shellPath("greeter.json")
         blockLoading: true
         printErrors: false
-        onLoaded: { try { root.cfg = JSON.parse(text()); } catch (e) { console.warn("greeter.json:", e); } }
+        onLoaded: { try { root.cfgBase = JSON.parse(text()); } catch (e) { console.warn("greeter.json:", e); } }
+    }
+    FileView {
+        path: Quickshell.env("HF_GREETER_CONFIG") ? "" : Quickshell.shellPath("live/greeter.json")
+        blockLoading: true
+        printErrors: false
+        onLoaded: { try { root.cfgLive = JSON.parse(text()); } catch (e) { console.warn("live/greeter.json:", e); } }
     }
 
     // ───────────── Tema ─────────────
@@ -75,8 +88,8 @@ ShellRoot {
         readonly property string estilo: {
             // «liquid» ya no se ofrece en el shell: un theme.json antiguo con liquid pasa a Aurora
             const e = Quickshell.env("HF_GREETER_ESTILO") || tm?.S?.estilo || "aurora";
-            // Mica y Suave (estilos del shell) se muestran con su pariente más cercano: tonal y flat
-            const m = ({ mica: "tonal", suave: "flat" })[e] ?? e;
+            // SkySoul y Chroma (estilos del shell) se muestran con su pariente más cercano del login: aurora y flat
+            const m = ({ skysoul: "aurora", mica: "flat", chroma: "flat", suave: "flat", soft: "flat" })[e] ?? e;
             return ["liquid", "flat", "tonal", "aurora"].includes(m) ? m : "aurora";
         }
         // Solo se usan los tokens si son de este estilo (HF_GREETER_ESTILO puede forzar otro)
@@ -787,6 +800,17 @@ ShellRoot {
                     sourceSize: Qt.size(win.width, win.height)
                     visible: status === Image.Ready
                 }
+                // Vídeo en bucle por encima de la imagen fija (que sirve de póster mientras arranca). En un archivo
+                // aparte: si QtMultimedia no está instalado, el Loader falla sin romper el login y queda la imagen.
+                Loader {
+                    id: wallVid
+                    anchors.fill: parent
+                    active: root.wallVideo !== "" && !th.reduceMotion
+                    source: "VideoBackdrop.qml"
+                    onLoaded: item.source = root.wallVideo
+                    opacity: item?.ready ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: 600 } }
+                }
             }
             MultiEffect {
                 id: blurred
@@ -974,7 +998,15 @@ ShellRoot {
                                     id: face
                                     anchors.fill: parent
                                     anchors.margins: 1
-                                    source: root.otherUser || root.preview || !root.user.name ? "" : "file:///var/lib/AccountsService/icons/" + root.user.name
+                                    // Primero la copia de hf-greeter-sync (el greeter no puede leer ~/.face), luego AccountsService
+                                    readonly property string uname: root.otherUser || !root.user.name ? "" : root.user.name
+                                    property int alt: 0
+                                    onUnameChanged: alt = 0
+                                    onStatusChanged: if (status === Image.Error && alt < 1) alt++
+                                    source: !uname ? "" : alt === 0 ? "file://" + Quickshell.shellPath("live/avatars/" + uname)
+                                          : root.preview ? "" : "file:///var/lib/AccountsService/icons/" + uname
+                                    sourceSize: Qt.size(192, 192)
+                                    cache: false
                                     fillMode: Image.PreserveAspectCrop
                                     visible: status === Image.Ready
                                     layer.enabled: visible

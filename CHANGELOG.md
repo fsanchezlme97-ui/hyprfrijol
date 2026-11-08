@@ -3,6 +3,49 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.3] — 2026-11-08
+
+- **Login arreglado**: la sesión ya no vuelve al login nada más entrar. greetd (con `source_profile`) unía los
+  argumentos de `sh -c`; ahora la sesión se lanza en palabras sueltas.
+- **Tu foto en el login**: `hf-greeter-sync` copia `~/.face` al login, porque el greeter no puede leer tu carpeta personal.
+- **El login con tu mismo fondo, también en movimiento**: si tu fondo es un vídeo, el login lo reproduce en bucle y
+  sin sonido (una copia ligera; necesita `qt6-multimedia` y `qt6-multimedia-ffmpeg`; si no están, se ve un fotograma).
+  La carpeta `/etc/greetd/quickshell/live` pasa a ser tuya: después de la primera sincronización, el login se pone al
+  día solo al cambiar de fondo, de tema o de foto, sin pedir contraseña.
+- **Fondo en vídeo más fiable**: un vigilante relanza mpvpaper si se cierra (por ejemplo, cuando una pantalla se
+  enciende y se apaga al iniciar sesión) y, si no hay manera, vuelve a la imagen fija en lugar de dejar el escritorio
+  en negro. `hf-wallpaper` solo cierra el reproductor de su propia sesión.
+- **Movimiento del fondo**: activarlo o quitarlo en Ajustes › Fondos se aplica al momento.
+- **Cambiar de un fondo en vídeo a otro sin pantallazo negro**: el reproductor anterior sigue hasta que el nuevo ya
+  pinta y, mientras tanto, se ve el primer fotograma del nuevo (antes se cerraba primero y a veces el escritorio se
+  quedaba en negro hasta otro clic).
+- **El selector de fondos (Super+Mayús+W) enseña los vídeos en movimiento**: al pararte en uno se reproduce en
+  grande, en bucle y sin sonido (necesita `qt6-multimedia-ffmpeg`; sin él, la imagen fija de siempre).
+- **La pantalla de bloqueo también se mueve** con un fondo en vídeo (quieta con «Reducir movimiento» o, si así está
+  en Ajustes › Fondos, con batería).
+- **El escritorio ya no se queda en negro con un fondo en vídeo** al iniciar sesión: la capa del fondo nacía opaca y
+  Quickshell no la dejaba volverse transparente después.
+- **Cambiar de estilo ya no cambia tu redondeo**: el estilo solo cambia el material (colores, transparencia, bordes,
+  brillos); los radios, las píldoras y las esquinas los decide Ajustes › Apariencia › Redondeo, igual en todos.
+- **Estilos renovados**: ahora hay tres, Material, **SkySoul** y **Chroma**.
+  - **SkySoul** (antes *Aurora*): el orden de Material hecho de cristal. Muy transparente sobre un desenfoque muy
+    amplio, esmerilado más claro arriba, un resplandor suave del acento que se desliza despacio por los paneles
+    abiertos (se para con «Reducir movimiento») y bordes de dos trazos: un filo exterior oscuro casi invisible que lo
+    separa de cualquier fondo y un filo interior de luz que da grosor al cristal.
+  - **Chroma** (sustituye a *Mica*), como los Nothing Phone: negro puro, gris carbón, títulos y reloj con letra de
+    puntos (Doto, incluida en `config/quickshell/assets/fonts`, licencia OFL), espacios de trabajo como puntos Glyph,
+    deslizadores y anillos de puntos, lo activo en blanco y el rojo solo para lo importante. Usa su propia paleta.
+  - SkySoul de verdad translúcido: Ajustes, Herramientas y Firmar nacían opacos en Material y se quedaban negros
+    al pasar a SkySoul; y el desenfoque, más fino y luminoso, deja intuir el fondo en vez de un gris plano.
+  - Chroma: el aviso de volumen y brillo es una barra de puntos, en rojo si está silenciado.
+  - Bordes de SkySoul suaves: el borde de las ventanas es un filo de luz casi transparente (antes una línea del
+    color del acento); los paneles y las islas de la barra ya no tienen contorno oscuro, solo un filo de luz que
+    se desvanece hacia abajo, y la sombra es tan tenue que no se transparenta por el cristal.
+  - **Las apps GTK cambian con el estilo** (con «Aplicar a las apps»): en SkySoul, Nautilus, Loupe y compañía son
+    de cristal desenfocado; en Chroma, negro Nothing con lo activo en blanco, filos de 1 px y títulos con Doto
+    (se enlaza en `~/.local/share/fonts/hyprfrijol`). Las apps abiertas lo toman al volver a abrirlas.
+  - Se retira *Suave*. Quien tenía Aurora pasa a SkySoul, Mica a Chroma y Suave a Material, sin hacer nada.
+
 ## [0.8.2] — 2026-11-07
 
 - **Dictado sin IA y en tiempo real con Vosk**: si está Vosk (`python-vosk` + `vosk-api`, ahora recomendado), cada

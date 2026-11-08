@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
-# hf-greeter-sync — copia tu aspecto actual (paleta, estilo, tipografía y fondo) al login de hyprfrijol (greetd).
+# hf-greeter-sync — copia tu aspecto actual (paleta, estilo, tipografía, fondo y foto) al login de hyprfrijol (greetd).
 #
 # El login lo ejecuta greetd como el usuario «greeter», que no puede leer tu $HOME; por eso hay que copiarle
-# el tema ya resuelto. Lee ~/.local/state/hyprfrijol/theme.json (lo genera hf-apply) y el fondo actual
-# (~/.local/state/hyprfrijol/current-wallpaper; de un vídeo saca un fotograma con ffmpeg) y lo deja todo en
-# /etc/greetd/quickshell junto con el greeter de esta copia del repo (greeter/quickshell/*.qml, palettes.json).
-# Pide permisos una sola vez (pkexec en una sesión gráfica; si no, sudo).
+# el tema ya resuelto. Lee ~/.local/state/hyprfrijol/theme.json (lo genera hf-apply), el fondo actual
+# (wallpaper-path: una imagen, o un vídeo → fotograma fijo + copia ligera en bucle sin sonido) y tu foto (~/.face).
+# Instala el greeter de esta copia del repo (greeter/quickshell/*.qml, palettes.json) en /etc/greetd/quickshell con
+# permisos (pkexec en una sesión gráfica; si no, sudo) y crea ahí la carpeta live/, que es TUYA: el fondo, la foto
+# y el tema van en ella, así que las siguientes veces (--auto, que lanzan hf-wallpaper y Ajustes › Usuarios) no
+# hace falta contraseña.
 #
-#   hf-greeter-sync             sincroniza (los cambios se ven en el próximo inicio de sesión)
+#   hf-greeter-sync             sincroniza todo (los cambios se ven en el próximo inicio de sesión)
+#   hf-greeter-sync --auto      solo live/ (fondo, foto, tema), sin pedir nada; si aún no existe live/, no hace nada
 #   hf-greeter-sync --dry-run   prepara los archivos en una carpeta temporal y muestra lo que haría
-#   hf-greeter-sync --print     solo imprime el greeter.json que generaría
+#   hf-greeter-sync --print     solo imprime el live/greeter.json que generaría
+#
+# Ajustes: greeterMotion = false deja quieto el fondo del login (también wallpaperMotion = false o «Reducir movimiento»).
 #
 # Variables: HF_GREETER_DEST (por defecto /etc/greetd/quickshell) · HF_PRIV (pkexec|sudo|none, fuerza el método)
 set -euo pipefail
@@ -18,6 +23,7 @@ for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v
 ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
 STATE="$HOME/.local/state/hyprfrijol"
 DEST="${HF_GREETER_DEST:-/etc/greetd/quickshell}"
+LIVE="$DEST/live"
 SRC="$ROOT/greeter/quickshell"
 MAXW=2560
 
@@ -25,13 +31,14 @@ MODE=apply
 for a in "$@"; do
   case "$a" in
     --dry-run) MODE=dry ;;
+    --auto)    MODE=auto ;;
     --print)   MODE=print ;;
-    -h|--help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Opción desconocida: $a (usa --help)" >&2; exit 1 ;;
   esac
 done
 
-say()  { [ "$MODE" = print ] || printf '\033[1;36m▸\033[0m %s\n' "$*"; }
+say()  { [ "$MODE" = print ] || [ "$MODE" = auto ] || printf '\033[1;36m▸\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!\033[0m %s\n' "$*" >&2; }
 command -v jq >/dev/null || { warn "Falta jq"; exit 1; }
 
@@ -47,12 +54,22 @@ else
   THEME_JSON=null
 fi
 
+# ---------- Ajustes ----------
+setting() {   # setting <clave> <por defecto>  (settings.json del usuario sobre config/defaults)
+  local v="" f files=()
+  for f in "$ROOT/config/defaults/settings.json" "$HOME/.config/hyprfrijol/settings.json"; do [ -s "$f" ] && files+=("$f"); done
+  [ "${#files[@]}" -gt 0 ] && v="$(jq -nr --arg k "$1" '[inputs] | (.[0] // {}) + (.[1] // {}) | if has($k) and .[$k] != null then .[$k] | tostring else empty end' "${files[@]}" 2>/dev/null)"
+  printf '%s' "${v:-$2}"
+}
+
 # ---------- Fondo ----------
-# Origen: el enlace current-wallpaper (o wallpaper-path). Una carpeta de Wallpaper Engine → su preview.
+# Origen: wallpaper-path (el archivo real: imagen, vídeo o carpeta de Wallpaper Engine) o current-wallpaper.
 wall_src() {
   local w=""
-  [ -e "$STATE/current-wallpaper" ] && w="$(readlink -f "$STATE/current-wallpaper")"
-  [ -z "$w" ] && [ -s "$STATE/wallpaper-path" ] && w="$(head -n1 "$STATE/wallpaper-path")"
+  [ -s "$STATE/wallpaper-path" ] && w="$(head -n1 "$STATE/wallpaper-path")"
+  if [ -z "$w" ] || [ ! -e "$w" ]; then
+    w=""; [ -e "$STATE/current-wallpaper" ] && w="$(readlink -f "$STATE/current-wallpaper")"
+  fi
   if [ -n "$w" ] && [ -d "$w" ]; then
     local p; for p in "$w"/preview.{jpg,jpeg,png,webp,gif}; do [ -f "$p" ] && { w="$p"; break; }; done
     [ -d "$w" ] && w=""
@@ -60,29 +77,106 @@ wall_src() {
   [ -n "$w" ] && [ -f "$w" ] && [ -r "$w" ] && printf '%s' "$w"
   return 0
 }
-is_video() { case "${1,,}" in *.mp4|*.webm|*.mkv|*.mov|*.avi|*.m4v|*.ogv) return 0 ;; esac; return 1; }
+is_video() { case "${1,,}" in *.mp4|*.webm|*.mkv|*.mov|*.avi|*.m4v|*.ogv|*.gif) return 0 ;; esac; return 1; }
 
 WALL="$(wall_src)"
-WALL_OK=0
-if [ -n "$WALL" ]; then
-  if is_video "$WALL"; then command -v ffmpeg >/dev/null && WALL_OK=1
-  else WALL_OK=1; fi
-fi
+MOTION=1
+if [ -f "$STATE/reduce-motion" ] || [ "$(setting wallpaperMotion true)" = false ] || [ "$(setting greeterMotion true)" = false ]; then MOTION=0; fi
 
-# Construye greeter.json: conserva lo que ya hubiera (gameCommand, layouts, scene…) y pone el tema y el fondo
-build_json() { # $1 = ruta del fondo en el destino ("" = conservar la que hubiera)
+# Foto: ~/.face (Ajustes › Usuarios) o la de AccountsService si se puede leer
+face_src() {
+  local f
+  for f in "$HOME/.face" "$HOME/.face.icon" "/var/lib/AccountsService/icons/${USER:-$(id -un)}"; do
+    [ -f "$f" ] && [ -r "$f" ] && [ -s "$f" ] && { readlink -f "$f"; return 0; }
+  done
+  return 0
+}
+FACE="$(face_src)"
+
+# live/greeter.json (manda sobre el greeter.json de la carpeta; conserva lo que ya tuviera)
+build_live_json() { # $1 = fondo fijo · $2 = vídeo ("" = sin vídeo)
   local base='{}'
-  [ -r "$DEST/greeter.json" ] && jq -e 'type == "object"' "$DEST/greeter.json" >/dev/null 2>&1 && base="$(jq -c . "$DEST/greeter.json")"
-  jq -n --argjson base "$base" --argjson theme "$THEME_JSON" --arg wall "$1" --arg user "${USER:-$(id -un)}" \
+  [ -r "$LIVE/greeter.json" ] && jq -e 'type == "object"' "$LIVE/greeter.json" >/dev/null 2>&1 && base="$(jq -c . "$LIVE/greeter.json")"
+  jq -n --argjson base "$base" --argjson theme "$THEME_JSON" --arg wall "$1" --arg vid "$2" --arg user "${USER:-$(id -un)}" \
         --arg when "$(date -Iseconds)" '
-    $base
+    ($base | del(.wallpaperVideo))
     + (if $theme != null then { theme: $theme } else {} end)
     + (if $wall != "" then { wallpaper: $wall } else {} end)
+    + (if $vid != "" then { wallpaperVideo: $vid } else {} end)
     + { defaultUser: ($base.defaultUser // $user), synced: $when }'
 }
 
+# Prepara en $1 (carpeta) lo de live/: wallpaper.jpg, wallpaper.mp4, avatars/<usuario>, greeter.json.
+# $2 = carpeta donde ya está live/ (para no volver a convertir el mismo fondo) · las rutas del json apuntan a $LIVE.
+make_live() {
+  local out="$1" have="$2" stamp="" img="" vid="" same=0 u="${USER:-$(id -un)}"
+  mkdir -p "$out/avatars"; chmod 755 "$out" "$out/avatars"
+  if [ -n "$WALL" ]; then
+    stamp="$(stat -Lc '%n %s %Y' -- "$WALL" 2>/dev/null) $MAXW"
+    [ "$(cat "$have/wallpaper.src" 2>/dev/null)" = "$stamp" ] && same=1
+    if [ "$same" = 1 ] && [ -s "$have/wallpaper.jpg" ]; then
+      [ "$have" = "$out" ] || cp -f "$have/wallpaper.jpg" "$out/"
+    elif is_video "$WALL"; then
+      if command -v ffmpeg >/dev/null; then
+        ffmpeg -loglevel error -y -ss 1 -i "$WALL" -frames:v 1 -vf "scale='min($MAXW,iw)':-2" -q:v 3 "$out/wallpaper.tmp.jpg" </dev/null 2>/dev/null \
+          || ffmpeg -loglevel error -y -i "$WALL" -frames:v 1 -vf "scale='min($MAXW,iw)':-2" -q:v 3 "$out/wallpaper.tmp.jpg" </dev/null 2>/dev/null || true
+      fi
+    elif command -v magick >/dev/null; then
+      magick "${WALL}[0]" -auto-orient -resize "${MAXW}x>" -strip -quality 90 "jpg:$out/wallpaper.tmp.jpg" 2>/dev/null || true
+    elif command -v ffmpeg >/dev/null; then
+      ffmpeg -loglevel error -y -i "$WALL" -frames:v 1 -vf "scale='min($MAXW,iw)':-2" -q:v 2 "$out/wallpaper.tmp.jpg" </dev/null 2>/dev/null || true
+    else
+      case "${WALL,,}" in *.jpg|*.jpeg) cp "$WALL" "$out/wallpaper.tmp.jpg" ;; esac
+    fi
+    [ -s "$out/wallpaper.tmp.jpg" ] && mv -f "$out/wallpaper.tmp.jpg" "$out/wallpaper.jpg"
+    rm -f "$out/wallpaper.tmp.jpg"
+    [ -s "$out/wallpaper.jpg" ] && { img="$LIVE/wallpaper.jpg"; say "Fondo: $WALL"; }
+
+    # Vídeo: copia ligera (≤1920 px, 30 fps, sin sonido, como mucho 2 min) para que el login arranque rápido
+    if is_video "$WALL" && [ "$MOTION" = 1 ] && command -v ffmpeg >/dev/null; then
+      if [ "$same" = 1 ] && [ -s "$have/wallpaper.mp4" ]; then
+        [ "$have" = "$out" ] || cp -f "$have/wallpaper.mp4" "$out/"
+      else
+        say "Preparando el vídeo para el login (unos segundos)…"
+        nice -n 10 ffmpeg -loglevel error -y -i "$WALL" -an -t 120 -vf "scale='min(1920,iw)':-2,fps=30" \
+          -c:v libx264 -preset veryfast -crf 26 -pix_fmt yuv420p -movflags +faststart "$out/wallpaper.tmp.mp4" </dev/null 2>/dev/null \
+          && mv -f "$out/wallpaper.tmp.mp4" "$out/wallpaper.mp4"
+        rm -f "$out/wallpaper.tmp.mp4"
+      fi
+      [ -s "$out/wallpaper.mp4" ] && vid="$LIVE/wallpaper.mp4"
+    fi
+    [ -z "$vid" ] && rm -f "$out/wallpaper.mp4"
+    [ -n "$img" ] && printf '%s' "$stamp" > "$out/wallpaper.src"
+  fi
+  [ -z "$img" ] && [ -s "$have/wallpaper.jpg" ] && img="$LIVE/wallpaper.jpg"   # se conserva el que hubiera
+
+  # Foto (256×256)
+  if [ -n "$FACE" ]; then
+    if command -v magick >/dev/null; then
+      magick "${FACE}[0]" -auto-orient -thumbnail '256x256^' -gravity center -extent 256x256 "png:$out/avatars/.$u.tmp" 2>/dev/null \
+        || cp -f "$FACE" "$out/avatars/.$u.tmp"
+    else cp -f "$FACE" "$out/avatars/.$u.tmp"; fi
+    mv -f "$out/avatars/.$u.tmp" "$out/avatars/$u" && say "Foto: $FACE"
+  else
+    rm -f "$out/avatars/$u"
+  fi
+
+  build_live_json "$img" "$vid" > "$out/greeter.json.tmp" && mv -f "$out/greeter.json.tmp" "$out/greeter.json"
+  find "$out" -type f -exec chmod 644 {} +
+}
+
 if [ "$MODE" = print ]; then
-  build_json "$([ "$WALL_OK" = 1 ] && echo "$DEST/wallpaper.jpg")"
+  build_live_json "$([ -n "$WALL" ] && echo "$LIVE/wallpaper.jpg")" "$(is_video "$WALL" && [ "$MOTION" = 1 ] && echo "$LIVE/wallpaper.mp4")"
+  exit 0
+fi
+
+# --auto: solo live/ si ya es tuya; nunca pide contraseña (lo llaman hf-wallpaper y Ajustes › Usuarios)
+if [ "$MODE" = auto ]; then
+  [ -d "$LIVE" ] && [ -w "$LIVE" ] || exit 0
+  # Nunca desde una sesión de prueba (anidada o con un HOME falso): pisaría tu login con el fondo de la prueba
+  [ -z "${HF_NESTED:-}" ] && [ "$HOME" = "$(getent passwd "$(id -un)" | cut -d: -f6)" ] || exit 0
+  exec 9>"${XDG_RUNTIME_DIR:-/tmp}/hf-greeter-sync.lock"; flock 9   # dos cambios seguidos: uno detrás del otro
+  make_live "$LIVE" "$LIVE"
   exit 0
 fi
 
@@ -93,42 +187,25 @@ else
 fi
 chmod 755 "$STAGE"
 
-# Fondo → JPEG de como mucho 2560 px de ancho (más ligero de cargar en el login)
-WALL_DEST=""
-if [ "$WALL_OK" = 1 ]; then
-  out="$STAGE/wallpaper.jpg"
-  if is_video "$WALL"; then
-    ffmpeg -loglevel error -y -ss 1 -i "$WALL" -frames:v 1 -vf "scale='min($MAXW,iw)':-2" -q:v 3 "$out" </dev/null 2>/dev/null \
-      || ffmpeg -loglevel error -y -i "$WALL" -frames:v 1 -vf "scale='min($MAXW,iw)':-2" -q:v 3 "$out" </dev/null 2>/dev/null || true
-  elif command -v magick >/dev/null; then
-    magick "${WALL}[0]" -auto-orient -resize "${MAXW}x>" -strip -quality 90 "$out" 2>/dev/null || true
-  elif command -v ffmpeg >/dev/null; then
-    ffmpeg -loglevel error -y -i "$WALL" -frames:v 1 -vf "scale='min($MAXW,iw)':-2" -q:v 2 "$out" </dev/null 2>/dev/null || true
-  else
-    case "${WALL,,}" in *.jpg|*.jpeg) cp "$WALL" "$out" ;; esac
-  fi
-  if [ -s "$out" ]; then
-    chmod 644 "$out"; WALL_DEST="$DEST/wallpaper.jpg"
-    say "Fondo: $WALL"
-  else
-    rm -f "$out"; warn "No pude convertir el fondo ($WALL); se conserva el que tuviera el login."
-  fi
-else
-  say "Sin fondo que copiar (o es un vídeo y falta ffmpeg): se conserva el que tuviera el login."
-fi
-
-build_json "$WALL_DEST" > "$STAGE/greeter.json"
 for f in "$SRC"/*.qml "$SRC/palettes.json"; do [ -f "$f" ] && install -m644 "$f" "$STAGE/"; done
+# greeter.json de la carpeta: conserva sus ajustes (gameCommand, layouts, scene…); tema, fondo y foto van en live/
+base='{}'
+[ -r "$DEST/greeter.json" ] && jq -e 'type == "object"' "$DEST/greeter.json" >/dev/null 2>&1 && base="$(jq -c . "$DEST/greeter.json")"
+jq -n --argjson base "$base" --arg user "${USER:-$(id -un)}" \
+  '$base | del(.theme, .wallpaper, .wallpaperVideo) + { defaultUser: ($base.defaultUser // $user) }' > "$STAGE/greeter.json"
 chmod 644 "$STAGE"/*
-[ "$THEME_JSON" != null ] && say "Tema: $(jq -r '"\(.paletteName // .paletteKey // "?") · \(.S.estilo // "aurora") · \(if .light then "claro" else "oscuro" end)"' <<<"$THEME_JSON")"
+[ "$THEME_JSON" != null ] && say "Tema: $(jq -r '"\(.paletteName // .paletteKey // "?") · \(.S.estilo // "flat") · \(if .light then "claro" else "oscuro" end)"' <<<"$THEME_JSON")"
 
-# Un solo paso con permisos: copia todo lo preparado al destino
-cat > "$STAGE/.install.sh" <<EOF
-#!/bin/sh
-set -e
-install -d -m755 '$DEST'
-for f in '$STAGE'/*; do install -m644 "\$f" '$DEST/'; done
-EOF
+# Un solo paso con permisos: copia el greeter y crea live/ a tu nombre (el fondo viejo de la raíz se quita)
+U_NAME="$(id -un)"; U_GROUP="$(id -gn)"
+{
+  echo '#!/bin/sh'
+  echo 'set -e'
+  echo "install -d -m755 '$DEST'"
+  echo "for f in '$STAGE'/*; do [ -f \"\$f\" ] && install -m644 \"\$f\" '$DEST/'; done"
+  echo "install -d -m755 -o '$U_NAME' -g '$U_GROUP' '$LIVE'"
+  echo "rm -f '$DEST/wallpaper.jpg'"
+} > "$STAGE/.install.sh"
 chmod 755 "$STAGE/.install.sh"
 
 PRIV="${HF_PRIV:-}"
@@ -146,12 +223,21 @@ case "$PRIV" in
 esac
 
 if [ "$MODE" = dry ]; then
+  make_live "$STAGE/live" "$LIVE"
   say "[dry-run] Archivos preparados en $STAGE:"
-  (cd "$STAGE" && ls -l --time-style=+ -- * | sed 's/^/    /')
+  (cd "$STAGE" && ls -lR --time-style=+ | sed 's/^/    /')
   say "[dry-run] Ejecutaría: ${CMD[*]}"
   sed 's/^/    /' "$STAGE/.install.sh"
   exit 0
 fi
 
 "${CMD[@]}" || { warn "No se copió nada (permiso denegado o error)."; exit 1; }
+if [ -d "$LIVE" ] && [ -w "$LIVE" ]; then
+  make_live "$LIVE" "$LIVE"
+else
+  warn "No puedo escribir en $LIVE: el fondo, la foto y el tema no se copiaron."
+fi
+if [ -s "$LIVE/wallpaper.mp4" ] && [ ! -d /usr/lib/qt6/qml/QtMultimedia ]; then
+  warn "Para ver el fondo en movimiento en el login instala: sudo pacman -S --needed qt6-multimedia qt6-multimedia-ffmpeg"
+fi
 say "Login sincronizado en $DEST. Lo verás la próxima vez que se muestre (al cerrar sesión o reiniciar)."

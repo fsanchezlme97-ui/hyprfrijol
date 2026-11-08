@@ -1,4 +1,4 @@
-// Ajustes › Apariencia — fondo, estilo visual (Material / Aurora / Mica / Suave), color (automático / paleta /
+// Ajustes › Apariencia — fondo, estilo visual (Material / SkySoul / Chroma), color (automático / paleta /
 // pastel / monocromo), movimiento (animPreset + animSpeed), ventanas (shadows, activeBorder),
 // modo claro/oscuro (a mano, a unas horas lightFrom/lightTo o según el sol: themeSchedule + services/Sun.qml),
 // tipografía (fontFamily, fontScale), esquinas, espacio entre ventanas, escala y efectos.
@@ -54,7 +54,8 @@ ColumnLayout {
         onExited: code => root.qtReady = code === 0
     }
 
-    readonly property string estilo: Settings.get("estilo", "aurora")
+    // Nombres de antes: aurora → skysoul, mica → chroma, suave/soft (retirado) → flat
+    readonly property string estilo: ({ aurora: "skysoul", mica: "chroma", suave: "flat", soft: "flat" })[Settings.get("estilo", "flat")] ?? Settings.get("estilo", "flat")
     readonly property string colorMode: Settings.get("colorMode", "auto")
     readonly property string themeMode: Settings.get("themeMode", "oscuro")
     readonly property string paletteKey: Settings.get("palette", "grafito")
@@ -148,7 +149,7 @@ ColumnLayout {
             LabeledRow {
                 label: "Estilo"; labelWidth: 70
                 Seg {
-                    model: [["flat", "Material"], ["aurora", "Aurora"], ["mica", "Mica"], ["suave", "Suave"]]
+                    model: [["flat", "Material"], ["skysoul", "SkySoul"], ["chroma", "Chroma"]]
                     current: root.estilo
                     onPicked: k => Confirm.change("Estilo visual", { estilo: k })
                 }
@@ -157,10 +158,10 @@ ColumnLayout {
                 Layout.fillWidth: true
                 Layout.leftMargin: 80
                 muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-                text: root.estilo === "flat" ? "Material 3 como Android: superficies sólidas teñidas por el color de acento, sin bordes y con elevación por tono. Lo más ligero."
-                    : root.estilo === "mica" ? "Como Windows 11: material translúcido que toma el color del fondo muy desenfocado, capas sutiles con trazo de 1 px, la selección marcada con una pastilla del acento y esquinas discretas."
-                    : root.estilo === "suave" ? "Mate, suave y de poco contraste: tintes pastel del acento, sin bordes, muy redondeado, controles en píldora y sombras amplias y difusas. Ligero."
-                    : "Vidrio esmerilado con una aurora de color: resplandores del acento y del color terciario, borde luminoso y brillo interior. Usa algo más de GPU."
+                text: (root.estilo === "flat" ? "Material 3 como Android: superficies sólidas teñidas por el color de acento, sin bordes y con elevación por tono. Lo más ligero."
+                    : root.estilo === "chroma" ? "Como los Nothing Phone: negro puro, gris carbón, títulos, reloj y espacios de trabajo con puntos, deslizadores y anillos de puntos, lo activo en blanco y el rojo solo para lo importante. Usa su propia paleta."
+                    : "El orden de Material hecho de cristal: muy transparente y muy desenfocado, esmerilado arriba, un resplandor suave del acento y bordes de dos trazos (filo exterior y filo interior de luz). Usa algo más de GPU.")
+                    + " Al cambiar de estilo se mantienen tu redondeo, esquinas y huecos."
             }
             LabeledRow {
                 label: "Color"; labelWidth: 70

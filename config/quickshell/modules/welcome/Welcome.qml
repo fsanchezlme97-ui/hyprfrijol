@@ -260,16 +260,15 @@ Scope {
                 columnSpacing: 10
                 rowSpacing: 10
                 Repeater {
-                    model: [["aurora", "Aurora", "Vidrio esmerilado con un toque de color"], ["flat", "Material", "Sólido y ligero, como Android"],
-                            ["mica", "Mica", "Casi opaco y sobrio, como Windows 11"], ["suave", "Suave", "Tarjetas pastel con sombras difusas"]]
+                    model: [["skysoul", "SkySoul", "Material de cristal: transparente y desenfocado"], ["flat", "Material", "Sólido y ligero, como Android"],
+                            ["chroma", "Chroma", "Negro, puntos y rojo, como Nothing"]]
                     Rectangle {
                         required property var modelData
-                        readonly property bool on: Settings.get("estilo", "aurora") === modelData[0]
+                        readonly property bool on: (({ aurora: "skysoul", mica: "chroma", suave: "flat", soft: "flat" })[Settings.get("estilo", "flat")] ?? Settings.get("estilo", "flat")) === modelData[0]
                         Layout.fillWidth: true
                         implicitHeight: 70
                         radius: Theme.r(8)
-                        color: modelData[0] === "aurora" ? Qt.alpha(Theme.s1, 0.35) : modelData[0] === "mica" ? Qt.alpha(Theme.s1, 0.8)
-                             : modelData[0] === "suave" ? Qt.tint(Theme.s3, Qt.alpha(Theme.p, 0.12)) : Theme.s3
+                        color: modelData[0] === "skysoul" ? Qt.alpha(Theme.s1, 0.35) : modelData[0] === "chroma" ? (Theme.light ? "#FFFFFF" : "#000000") : Theme.s3
                         border.width: on ? 2 : 1
                         border.color: on ? Theme.p : Theme.ov
                         ColumnLayout {
@@ -438,7 +437,7 @@ Scope {
             Repeater {
                 model: [
                     ["Idioma", root.localeLabel(root.lang)],
-                    ["Estilo", ({ aurora: "Aurora", flat: "Material", mica: "Mica", suave: "Suave", tonal: "Sólido" })[Settings.get("estilo", "aurora")] ?? "Aurora"],
+                    ["Estilo", ({ skysoul: "SkySoul", aurora: "SkySoul", flat: "Material", chroma: "Chroma", mica: "Chroma", soft: "Material", suave: "Material", tonal: "Sólido" })[Settings.get("estilo", "flat")] ?? "Material"],
                     ["Color", Settings.get("colorMode", "auto") === "auto" ? "Automático (del fondo)" : Settings.get("colorMode", "auto") === "mono" ? "Monocromo" : Theme.paletteName],
                     ["Barra", Settings.get("barPos", "abajo") === "izquierda" ? "Lateral" : (Settings.get("barMode", "fija") === "fija" ? "Fija " : "Flotante ") + Settings.get("barPos", "abajo")],
                     ["Archivos", ({ nautilus: "Nautilus", dolphin: "Dolphin", yazi: "Yazi" })[root.fm]],

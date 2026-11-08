@@ -54,14 +54,27 @@ first_frame() {   # first_frame <vídeo> <salida> [alto]
   command -v magick >/dev/null && magick "$1[0]" ${3:+-thumbnail "x$3"} "$2" 2>/dev/null
 }
 # Para el reproductor del fondo animado de ESTA sesión (no los de otras sesiones gráficas ni de otros usuarios)
-stop_motion() {
-  local p w
-  for p in $(cat "$STATE/motion.pid" 2>/dev/null); do kill "$p" 2>/dev/null || true; done
-  rm -f "$STATE/motion.pid"
+stop_motion() {   # stop_motion [pid que se conserva …]  (el reproductor nuevo, al cambiar de vídeo a vídeo)
+  local p w keep=" $* "
+  # Primero el vigilante (si no, relanzaría el reproductor que se va a cerrar)
+  # Solo si el pid sigue siendo nuestro (tras reiniciar, el número guardado puede ser ya otro programa) y de esta
+  # sesión de Hyprland (una sesión de prueba con el mismo HOME no debe cerrar el fondo de la de verdad)
+  ours() { # ours <pid> <patrón de la línea de órdenes>
+    tr '\0' ' ' < "/proc/$1/cmdline" 2>/dev/null | grep -qE "$2" || return 1
+    [ "$(tr '\0' '\n' < "/proc/$1/environ" 2>/dev/null | sed -n 's/^HYPRLAND_INSTANCE_SIGNATURE=//p')" = "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]
+  }
+  for p in ${OLD_WATCH-$(cat "$STATE/motion.watch" 2>/dev/null)}; do
+    [[ "$keep" == *" $p "* ]] || { ours "$p" 'hf-wallpaper _motion' && kill "$p" 2>/dev/null || true; }
+  done
+  for p in ${OLD_PID-$(cat "$STATE/motion.pid" 2>/dev/null)}; do
+    [[ "$keep" == *" $p "* ]] || { ours "$p" '^(mpvpaper|linux-wallpaperengine)|/(mpvpaper|linux-wallpaperengine) ' && kill "$p" 2>/dev/null || true; }
+  done
+  [ -n "${keep// /}" ] || rm -f "$STATE/motion.watch" "$STATE/motion.pid"
   # Los lanzados por versiones anteriores (sin pid guardado): solo los de nuestra pantalla Wayland
   for p in $(pgrep -u "$(id -u)" -x mpvpaper 2>/dev/null; pgrep -u "$(id -u)" -f '^linux-wallpaperengine ' 2>/dev/null); do
     # Misma instancia de Hyprland (la firma es única; WAYLAND_DISPLAY se repite en sesiones anidadas/de prueba)
     w="$(tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null | sed -n 's/^HYPRLAND_INSTANCE_SIGNATURE=//p')"
+    [[ "$keep" == *" $p "* ]] && continue
     [ -n "$w" ] && [ "$w" = "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && kill "$p" 2>/dev/null || true
   done
 }
@@ -186,6 +199,27 @@ case "${1:-next}" in
            [ "${#MISS[@]}" -gt 0 ] && printf '%s\0' "${MISS[@]}" | xargs -0 -r -P "$(nproc 2>/dev/null || echo 4)" -n1 "$0" _gline
            exit 0 ;;
   _gline)  thumb_of "$2" >/dev/null; gallery_line "$2"; exit 0 ;;
+  # Vigilante del fondo en vídeo: mpvpaper se cierra si desaparece una pantalla (al entrar, una salida que se enciende
+  # un instante y se apaga; el monitor que se desconecta al ahorrar energía…). Con vídeo el shell no pinta la imagen,
+  # así que sin reproductor el escritorio se quedaría negro: se relanza y, si no hay manera, se vuelve a la imagen fija.
+  _motion) F="$2"; FPS="$3"; fails=0; first=1
+           while :; do
+             [ "$first" = 1 ] || sleep 2
+             first=0
+             [ "$(current)" = "$F" ] || exit 0                     # ya hay otro fondo
+             setsid mpvpaper -o "no-audio loop panscan=1.0 hwdec=auto-safe vf=fps=$FPS" '*' "$F" >/dev/null 2>&1 &
+             MP=$!; echo "$MP" > "$STATE/motion.pid"; started=$SECONDS
+             wait "$MP" 2>/dev/null || true
+             [ "$(cat "$STATE/motion.pid" 2>/dev/null)" = "$MP" ] || exit 0   # lo cerró hf-wallpaper (otro fondo, sin movimiento)
+             [ $((SECONDS - started)) -ge 30 ] && fails=0
+             fails=$((fails + 1))
+             if [ "$fails" -ge 5 ]; then
+               rm -f "$STATE/motion.pid" "$STATE/motion.watch"
+               write_json '.video = false | .changed = now'
+               echo "mpvpaper se cerró $fails veces seguidas: queda la imagen fija" >&2
+               exit 1
+             fi
+           done ;;
   _thumb)  thumb_of "$2" >/dev/null; exit 0 ;;
   vthumbs) mkdir -p "$THUMBS"; while IFS= read -r f; do is_motion "$f" && printf '%s\t%s\n' "$f" "$(thumb_of "$f")"; done < <(list all); exit 0 ;;
   thumb)   mkdir -p "$THUMBS"; thumb_of "$(readlink -f "$2")"; echo; exit 0 ;;
@@ -220,39 +254,61 @@ NO_MOTION=0; [ -f "$STATE/reduce-motion" ] && NO_MOTION=1
 [ "$(setting wallpaperMotion true)" = false ] && NO_MOTION=1
 FPS="$(setting wallpaperFps 30)"; case "$FPS" in ''|*[!0-9]*) FPS=30 ;; esac
 
-stop_motion
-IMG="$FILE"; VIDEO=false
+# Sin hueco negro al cambiar: el reproductor anterior sigue hasta que el nuevo ya pinta, y mientras tanto el shell
+# enseña la imagen (o el primer fotograma) del nuevo. Con vídeo la capa del shell es transparente, así que cerrar
+# mpvpaper antes de tener el siguiente dejaba el escritorio en negro (y a veces el clic siguiente no lo arreglaba).
+OLD_WATCH="$(cat "$STATE/motion.watch" 2>/dev/null || true)"; OLD_PID="$(cat "$STATE/motion.pid" 2>/dev/null || true)"
+IMG="$FILE"; VIDEO=false; MOTION=""
 if is_scene "$FILE"; then
   IMG="$(scene_preview "$FILE")"
   [ -n "$IMG" ] || { echo "La escena $FILE no tiene imagen de vista previa" >&2; exit 1; }
   case "${IMG,,}" in *.gif|*.mp4|*.webm) ffmpeg -y -loglevel error -i "$IMG" -frames:v 1 "$STATE/video-frame.png" && IMG="$STATE/video-frame.png" ;; esac
-  if [ "$NO_MOTION" = 0 ] && [ "$(setting wallpaperMotionKind video)" = escena ] && command -v linux-wallpaperengine >/dev/null; then
-    ARGS=(--silent --fps "$FPS")
-    while read -r MON; do ARGS+=(--screen-root "$MON"); done < <(hyprctl monitors -j 2>/dev/null | jq -r '.[].name')
-    setsid linux-wallpaperengine "${ARGS[@]}" --bg "$FILE" >/dev/null 2>&1 &
-    echo $! > "$STATE/motion.pid"
-    VIDEO=true
-  fi
-else
-  if is_motion "$FILE"; then
-    IMG="$STATE/video-frame.png"
-    first_frame "$FILE" "$IMG"
-    if [ "$NO_MOTION" = 0 ] && command -v mpvpaper >/dev/null; then
-      # sin sonido, en bucle, recortado a la pantalla; hwdec si hay; el shell lo pausa (SIGSTOP) según wallpaperPauseOn
-      setsid mpvpaper -o "no-audio loop panscan=1.0 hwdec=auto-safe vf=fps=$FPS" '*' "$FILE" >/dev/null 2>&1 &
-      echo $! > "$STATE/motion.pid"
-      VIDEO=true
-    elif [ "$NO_MOTION" = 0 ]; then
-      echo "Para que se mueva instala mpvpaper (Ajustes › Fondos de pantalla); de momento queda quieto." >&2
-    fi
+  [ "$NO_MOTION" = 0 ] && [ "$(setting wallpaperMotionKind video)" = escena ] && command -v linux-wallpaperengine >/dev/null && MOTION=escena
+elif is_motion "$FILE"; then
+  IMG="$STATE/video-frame.png"
+  first_frame "$FILE" "$IMG"
+  if [ "$NO_MOTION" = 0 ] && command -v mpvpaper >/dev/null; then MOTION=video
+  elif [ "$NO_MOTION" = 0 ]; then
+    echo "Para que se mueva instala mpvpaper (Ajustes › Fondos de pantalla); de momento queda quieto." >&2
   fi
 fi
 
 printf '%s\n' "$FILE" > "$STATE/wallpaper-path"
 ln -sf "$IMG" "$STATE/current-wallpaper"      # lo usan hyprlock y el login
-# Quickshell vigila este archivo y hace el fundido ("monitors" = fondos por pantalla, se conservan)
-write_json --arg image "$IMG" --argjson video "$VIDEO" --argjson fade "$FADE" \
-  '.image = $image | .video = $video | .fadeMs = $fade | .changed = now'
+# Quickshell vigila este archivo y hace el fundido ("monitors" = fondos por pantalla, se conservan). Primero la
+# imagen fija (o el primer fotograma), con el shell opaco
+write_json --arg image "$IMG" --argjson fade "$FADE" '.image = $image | .video = false | .fadeMs = $fade | .changed = now'
+
+if [ -z "$MOTION" ]; then
+  stop_motion
+else
+  NEW=""
+  if [ "$MOTION" = escena ]; then
+    ARGS=(--silent --fps "$FPS")
+    while read -r MON; do ARGS+=(--screen-root "$MON"); done < <(hyprctl monitors -j 2>/dev/null | jq -r '.[].name')
+    setsid linux-wallpaperengine "${ARGS[@]}" --bg "$FILE" >/dev/null 2>&1 &
+    NEW=$!; echo "$NEW" > "$STATE/motion.pid"; KEEP="$NEW"
+  else
+    # sin sonido, en bucle, recortado a la pantalla; hwdec si hay; el shell lo pausa (SIGSTOP) según wallpaperPauseOn.
+    # Lo lanza el vigilante (_motion), que guarda el pid de mpvpaper en motion.pid y lo relanza si se cae.
+    setsid "$0" _motion "$FILE" "$FPS" >/dev/null 2>&1 &
+    W=$!; echo "$W" > "$STATE/motion.watch"; KEEP="$W"
+  fi
+  # Esperar (hasta 8 s) a que el reproductor nuevo tenga su capa en pantalla y un momento para el primer cuadro
+  for _ in $(seq 80); do
+    NEW="$(cat "$STATE/motion.pid" 2>/dev/null || true)"
+    if [ -n "$NEW" ] && [ "$NEW" != "$OLD_PID" ] \
+       && hyprctl layers -j 2>/dev/null | jq -e --argjson p "$NEW" '[.[] | .levels[][] | select(.pid == $p)] | length > 0' >/dev/null 2>&1; then
+      sleep 0.35; break
+    fi
+    sleep 0.1
+  done
+  write_json '.video = true | .changed = now'
+  # Ahora sí, fuera el anterior
+  NEW="$(cat "$STATE/motion.pid" 2>/dev/null || true)"
+  stop_motion $KEEP $NEW
+  VIDEO=true
+fi
 
 # Colores
 if command -v matugen >/dev/null; then
@@ -264,5 +320,8 @@ if command -v matugen >/dev/null; then
   fi
 fi
 "$ROOT/scripts/hf-apply" || true   # tema → Quickshell, Hyprland, hyprlock, kitty, GTK
+
+# El login muestra el mismo fondo (y tu foto y tu tema): copia en segundo plano, sin pedir contraseña
+[ -x "$ROOT/scripts/hf-greeter-sync" ] && { setsid "$ROOT/scripts/hf-greeter-sync" --auto >/dev/null 2>&1 & } || true
 
 case "${1:-}" in restore|hora) ;; *) [ -n "${HF_QUIET:-}" ] || { command -v notify-send >/dev/null && notify-send -a "Fondos" -i "$IMG" "Fondo cambiado" "$(basename "$FILE")" || true; } ;; esac

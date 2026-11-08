@@ -119,6 +119,9 @@ Scope {
             minimumSize: Qt.size(980, 600)
             visible: true
             color: Theme.glassy ? Theme.winSolid : Theme.s1   // igual que Ajustes (Theme.winSolid)
+            // Con alfa siempre: una ventana creada opaca (en Material) no puede volverse transparente después
+            // (al pasar a SkySoul se quedaba negra)
+            surfaceFormat.opaque: false
             onVisibleChanged: if (!visible) root.open = false
             Shortcut { sequence: "Ctrl+W"; onActivated: root.open = false }
             Shortcut { sequence: "Ctrl+F"; onActivated: search.focusInput() }

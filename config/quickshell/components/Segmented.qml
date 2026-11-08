@@ -26,8 +26,8 @@ Rectangle {
         width: root.sel ? root.sel.width : 0
         height: row.height
         radius: Theme.ctl(height)
-        color: root.material ? Theme.pc : Theme.glassy ? Qt.alpha("#FFFFFF", Theme.light ? 0.85 : 0.16) : Theme.light ? "#FFFFFF" : Theme.s1
-        border.width: Theme.glassy ? 1 : 0
+        color: Theme.segThumb
+        border.width: Theme.glassy || Theme.chroma ? 1 : 0
         border.color: Theme.border
         Behavior on x { NumberAnimation { duration: Theme.dur + 80; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }
         Behavior on width { NumberAnimation { duration: Theme.dur + 80; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }
@@ -50,7 +50,7 @@ Rectangle {
                     id: lbl
                     anchors.centerIn: parent
                     text: parent.modelData.label
-                    color: parent.on ? (root.material ? Theme.pcText : Theme.t) : Theme.tv
+                    color: parent.on ? Theme.segText : Theme.tv
                     weight: parent.on ? Font.DemiBold : Font.Medium
                     Behavior on color { ColorAnimation { duration: Theme.dur } }
                 }

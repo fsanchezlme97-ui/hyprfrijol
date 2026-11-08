@@ -8,11 +8,12 @@ Es **autónomo**: greetd lo ejecuta como el usuario `greeter`, que no puede leer
 
 ```bash
 ./install.sh --greeter      # instala y activa el login (ya sincroniza tu tema al final)
-hf-greeter-sync             # después de cambiar de paleta, estilo o fondo: vuelve a copiarlos al login
+hf-greeter-sync             # instala el greeter de esta copia y crea live/ a tu nombre (pide la contraseña)
+hf-greeter-sync --auto      # solo fondo, foto y tema en live/, sin contraseña (lo lanzan hf-wallpaper, hf-apply y Ajustes › Usuarios)
 hf-greeter-sync --dry-run   # prepara los archivos en una carpeta temporal y enseña lo que haría
-hf-greeter-sync --print     # solo imprime el greeter.json que generaría
+hf-greeter-sync --print     # solo imprime el live/greeter.json que generaría
 ```
-`hf-greeter-sync` (también `./install.sh --greeter-sync`) copia a `/etc/greetd/quickshell/` tu tema resuelto (`~/.local/state/hyprfrijol/theme.json`: colores, estilo Liquid/Material/Tonal/Aurora, tipografía, reducir movimiento), tu fondo actual (reducido a 2560 px; de un vídeo, un fotograma) y la versión del greeter de esta copia del repo. Pide la contraseña una sola vez (pkexec o sudo).
+`hf-greeter-sync` (también `./install.sh --greeter-sync`) instala en `/etc/greetd/quickshell/` la versión del greeter de esta copia del repo y crea `/etc/greetd/quickshell/live/`, que es tuya. Ahí copia tu tema resuelto (`~/.local/state/hyprfrijol/theme.json`: colores, estilo, tipografía, reducir movimiento), tu fondo actual (reducido a 2560 px; si es un vídeo, un fotograma y una copia ligera en bucle y sin sonido) y tu foto (`~/.face`, 256 px). Pide la contraseña solo la primera vez; después el login se mantiene al día solo cada vez que cambias de fondo, de tema o de foto. Para ver el vídeo en el login hace falta QtMultimedia (`qt6-multimedia` y `qt6-multimedia-ffmpeg`); sin él, o con «Reducir movimiento» o `greeterMotion: false`, se queda la imagen fija.
 El login **no se actualiza solo**: los cambios se ven tras volver a sincronizar, la próxima vez que aparezca (al cerrar sesión o reiniciar). La primera vez que lo activas, **reinicia** para pasar de tu gestor anterior a greetd (no reinicies greetd desde tu sesión: la cerraría).
 
 ## Probarlo sin instalar nada
@@ -22,7 +23,7 @@ HF_GREETER_PREVIEW=1 qs -p greeter/quickshell                         # cortina 
 HF_GREETER_PREVIEW=1 HF_GREETER_OPEN=1 HF_GREETER_PALETTE=claro qs -p greeter/quickshell
 HF_GREETER_PREVIEW=1 HF_GREETER_OPEN=1 HF_GREETER_MENU=sesion HF_GREETER_SCENE=lago qs -p greeter/quickshell
 hf-greeter-sync --print > /tmp/g.json && HF_GREETER_PREVIEW=1 HF_GREETER_CONFIG=/tmp/g.json qs -p greeter/quickshell   # con tu tema
-HF_GREETER_PREVIEW=1 HF_GREETER_ESTILO=flat qs -p greeter/quickshell   # forzar estilo: flat (Material) · aurora
+HF_GREETER_PREVIEW=1 HF_GREETER_ESTILO=flat qs -p greeter/quickshell   # forzar estilo: flat (Material) · aurora (= SkySoul del shell)
 ```
 En vista previa no se inicia nada: la contraseña `error` simula un fallo y cualquier otra simula el inicio (imprime el comando). Mejor dentro de un Hyprland anidado (`dev/try.sh -k`), porque ocupa toda la pantalla (Esc vuelve a la cortina).
 

@@ -295,8 +295,36 @@ ROUNDING_POWER = {"circular": 2.0, "continua": 3.0, "squircle": 4.0}
 # La base es sobria (esquinas poco redondeadas); «Redondo»/«Máximo» las suavizan.
 ROUNDNESS = {"recto": 0.35, "sobrio": 0.7, "auto": 1.0, "suave": 1.0, "redondo": 1.5, "maximo": 2.2}
 
-# Estilos visuales (Ajustes › Apariencia › Estilo). «tonal» es interno (Aurora/Mica con menos transparencia).
-STYLES = ("flat", "aurora", "mica", "suave")
+# Estilos visuales (Ajustes › Apariencia › Estilo). «tonal» es interno (SkySoul con menos transparencia).
+# El estilo solo cambia el material (colores, transparencia, bordes, brillos); la geometría (radios, píldoras,
+# huecos, esquinas de las ventanas) es la de Ajustes › Apariencia › Redondeo, igual en todos.
+STYLES = ("flat", "skysoul", "chroma")
+# Nombres de antes: Aurora (y liquid) → SkySoul · Mica → Chroma · Suave/Soft (retirado) → Material
+STYLE_ALIAS = {"aurora": "skysoul", "liquid": "skysoul", "tonal": "skysoul", "mica": "chroma",
+               "suave": "flat", "soft": "flat"}
+
+def norm_style(e):
+    e = STYLE_ALIAS.get(e, e)
+    return e if e in STYLES else "flat"
+
+# Geometría común (px, antes de multiplicar por el redondeo elegido)
+GEOMETRY = dict(barRad=6, panelRad=10, winRad=8, ctlRad=6, roundK=1.0)
+
+# Chroma (Nothing Phone / tableros de puntos): tarjetas carbón sobre casi negro, texto blanco roto, números con
+# tipografía de puntos y un rojo anaranjado como único color (alertas, marcas, «en vivo»)
+CHROMA_RED = "#EE4A2E"
+def chroma_colors(c):
+    if c.get("light"):
+        m = dict(bg="#E7E6E3", s1="#F6F6F4", s3="#ECEBE8", s4="#E0DFDB", p="#D93A20", onP="#FFFFFF",
+                 pc="#F7D9D2", onPc="#5A1408", sc="#E4E3DF", onSc="#141414", ter="#D93A20",
+                 t="#141414", tv="#66655F", o="#9A9993", ov="#D3D2CD")
+    else:
+        m = dict(bg="#000000", s1="#0A0A0A", s3="#1B1B1B", s4="#262626", p=CHROMA_RED, onP="#FFFFFF",
+                 pc="#3A1C16", onPc="#FFB8A8", sc="#1E1E1E", onSc="#F2F2F2", ter=CHROMA_RED,
+                 t="#F2F2F2", tv="#8E8E8E", o="#5E5E5E", ov="#262626")
+    c = dict(c); c.update(m); c["name"] = "Carbón"
+    return c
+
 
 # Sombras (Ajustes › Apariencia › Ventanas › Sombras): opacidad, radio y desplazamiento relativos al estilo
 SHADOWS = {
@@ -378,8 +406,8 @@ def motion_shell(s, estilo):
     m = dict(MOTION[p]["shell"])
     for key in ("dur", "durIn", "durOut"):
         m[key] = round(m[key] / k)
-    if m.get("easeIn") is None:   # «equilibrado»: Aurora con rebote, el resto «emphasized»
-        m["easeIn"] = [0.34, 1.36, 0.64, 1, 1, 1] if estilo == "aurora" else m["ease"]
+    if m.get("easeIn") is None:   # «equilibrado»: SkySoul con rebote, el resto «emphasized»
+        m["easeIn"] = [0.34, 1.36, 0.64, 1, 1, 1] if estilo == "skysoul" else m["ease"]
     m.update(preset=p, speed=k)
     return m
 
@@ -404,42 +432,47 @@ def style_tokens(c, s):
     """Tokens de estilo (los del diseño, objeto S):
       flat    «Material»: superficies tonales sólidas teñidas por el color de acento (Material 3 / Android),
               sin bordes, elevación por tono, controles rectos con esquinas pequeñas
-      aurora  vidrio esmerilado teñido con un resplandor de color (primario → terciario) y borde luminoso
-      mica    Windows 11: material casi opaco sobre el fondo muy desenfocado, tarjetas translúcidas en capas,
-              bordes de 1 px y sombras suaves; controles casi rectos
-      suave   superficies mates de poco contraste con tintes pastel, sin bordes, muy redondeadas, controles en
-              píldora, sombra amplia y difusa y el estado activo en el contenedor primario
+      skysoul la estructura de Material hecha de cristal: muy transparente sobre un desenfoque muy amplio,
+              esmerilado más claro arriba, resplandor del acento y borde de dos trazos (Glass.qml)
+      chroma  Nothing Phone: negro puro, gris carbón, letra de puntos, lo activo en blanco y el rojo de acento
       tonal   (solo con «Reducir transparencia» o «Alto contraste») superficies tonales con borde fino
     card/cardBorder: tarjetas de la app de Ajustes · shBlur/shY/shBigBlur/shBigY/shSpread: sombra de los paneles.
-    winSolid: fondo de las ventanas grandes (Ajustes, Centro de aplicaciones): en Aurora más opaco que «win»
+    winSolid: fondo de las ventanas grandes (Ajustes, Centro de aplicaciones): en SkySoul más opaco que «win»
     para que lo de detrás (widgets, ventanas) no se transparente; en los demás estilos es sólido.
     Radios: barRad/panelRad/winRad/ctlRad en px; roundK multiplica los radios fijos de los módulos (Theme.r)."""
     LT = bool(c.get("light"))
-    estilo = s.get("estilo", "aurora")
-    if estilo not in STYLES:
-        estilo = "aurora"            # «liquid» y «tonal» ya no se ofrecen: pasan a Aurora
+    estilo = norm_style(s.get("estilo", "flat"))
     high = bool(s.get("highContrast"))
-    if estilo in ("aurora", "mica") and (s.get("reduceTransparency") or high):
+    if estilo == "skysoul" and (s.get("reduceTransparency") or high):
         estilo = "tonal"
     W, K = "#FFFFFF", "#000000"
     none = argb(W, 0)
-    if estilo == "aurora":
-        # Vidrio con aurora: resplandores de color (primario arriba-izquierda, terciario abajo-derecha y un velo
-        # del contenedor primario en medio, Glass.qml), borde especular teñido y brillo interior
+    if estilo == "skysoul":
+        # SkySoul: la estructura y el orden de Material, pero de cristal. Muy transparente sobre un desenfoque muy
+        # amplio (10-look.py), con un esmerilado más claro arriba (sheen), un resplandor suave entre el acento y
+        # el terciario que se desliza despacio (tint), y un borde de dos trazos: filo exterior oscuro casi
+        # invisible (edge) + filo interior de luz brillante arriba (rimTop → border → rimBottom). Los rellenos
+        # (bg2) son capas de cristal más claras; lo elegido en los segmentos, una cápsula sólida en contraste.
+        base = mix(c["s1"], W, .55) if LT else mix(c["s1"], c["p"], .04)
         S = dict(
-            estilo="aurora", blur=True, pill=False,
-            # barra y paneles con el mismo vidrio (antes la barra era más transparente y se veía de otro color)
-            bg=argb(mix(c["s1"], c["p"], .14), .68 if LT else .58), bgPanel=argb(mix(c["s1"], c["p"], .14), .68 if LT else .58),
-            bgPopup=argb(mix(c["s1"], c["p"], .16), .78 if LT else .68), bg2=argb(mix(c["s3"], c["p"], .20), .62 if LT else .55),
-            border=argb(c["p"], .28 if LT else .20), borderWidth=1,
-            highlight=argb(W, .55 if LT else .16), glow=argb(c["p"], .16),
-            rimTop=argb(c["p"], .70 if LT else .60), rimBottom=argb(c["ter"], .40 if LT else .32),
-            sheen=argb(W, .22 if LT else .07), tint=argb(c["p"], .34 if LT else .30), tint2=argb(c["ter"], .30 if LT else .26),
-            tint3=argb(mix(c["p"], c["ter"], .5), .14 if LT else .12),
-            shadow=argb(K, .10 if LT else .26), shadowBig=argb(mix(K, c["p"], .25), .20 if LT else .42),
-            win=argb(mix(c["s1"], c["p"], .08), .82 if LT else .76), winBorder=argb(c["p"], .45),
-            winSolid=argb(mix(c["s1"], c["p"], .08), .95 if LT else .90),
-            barRad=7, panelRad=10, winRad=8, ctlRad=6, roundK=1.0)
+            estilo="skysoul", blur=True, pill=False,
+            # la barra algo más velada: está siempre sobre el fondo y su texto tiene que leerse en cualquiera
+            # en claro, el cristal blanco necesita algo más de cuerpo: sobre zonas oscuras del fondo se volvía gris
+            bg=argb(base, .68 if LT else .50), bgPanel=argb(base, .60 if LT else .34),
+            bgPopup=argb(base, .70 if LT else .44), bg2=argb(W, .50 if LT else .075),
+            border=argb(W, .22 if LT else .06), borderWidth=1,
+            highlight=none, glow=none,
+            rimTop=argb(W, .55 if LT else .10), rimBottom=argb(W, 0),
+            edge=none,   # sin filo oscuro: sobre fondos claros o de colores se leía como un contorno
+            sheen=argb(W, .32 if LT else .055), tint=argb(mix(c["p"], c["ter"], .4), .16 if LT else .10),
+            tint2=none, tint3=none, rimInner=none,
+            # sombras muy tenues: el cristal es translúcido y la sombra se transparentaba como una franja oscura
+            # en el borde (y por encima de 0,2 Hyprland la desenfocaba con él)
+            shadow=argb(K, .05 if LT else .12), shadowBig=argb(K, .08 if LT else .18),
+            win=argb(base, .66 if LT else .48), winBorder=argb(W, .5 if LT else .10),
+            winSolid=argb(mix(c["s1"], W, .4) if LT else c["s1"], .62 if LT else .46),
+            card=argb(W, .38 if LT else .05), cardBorder=1,
+            shBlur=40, shY=14, shBigBlur=70, shBigY=26, shSpread=0)
     elif estilo == "tonal":
         S = dict(
             estilo="tonal", blur=False, pill=False,
@@ -447,49 +480,23 @@ def style_tokens(c, s):
             border=argb(c["ov"], 1), borderWidth=1, highlight=none, glow=none,
             rimTop=none, rimBottom=none, sheen=none, tint=none, tint2=none,
             shadow=argb(K, .2), shadowBig=argb(K, .35),
-            win=argb(c["s1"], 1), winSolid=argb(c["s1"], 1), winBorder=argb(c["ov"], 1), barRad=6, panelRad=9, winRad=6, ctlRad=6, roundK=1.0)
-    elif estilo == "mica":
-        # Mica (Windows 11): material translúcido que toma el color del fondo de pantalla muy desenfocado (Hyprland
-        # desenfoca detrás; aquí una capa neutra apenas teñida del acento), capas «sutiles» blancas al 4–6 % con
-        # trazo de 1 px más claro arriba que abajo (elevación), sombras suaves, esquinas de 8 px y controles de 4 px.
-        # La selección lleva la pastilla del acento a la izquierda (Theme.selPill).
-        base = mix(c["s1"], c["p"], .025)
+            win=argb(c["s1"], 1), winSolid=argb(c["s1"], 1), winBorder=argb(c["ov"], 1))
+    elif estilo == "chroma":
+        # Chroma (Nothing OS): negro puro, paneles casi negros con un trazo de 1 px apenas visible, mosaicos y
+        # tarjetas gris carbón, títulos con letra de puntos, etiquetas monoespaciadas, lo activo en blanco y el
+        # rojo para lo importante; los deslizadores llevan la pista de puntos (SliderBar.qml)
         S = dict(
-            estilo="mica", blur=True, pill=False,
-            # barra, paneles y menús del mismo material (solo cambia la opacidad de los menús)
-            bg=argb(base, .82 if LT else .76), bgPanel=argb(base, .82 if LT else .76),
-            bgPopup=argb(base, .90 if LT else .86),
-            bg2=argb(W, .66) if LT else argb(W, .06),
-            border=argb(K, .08) if LT else argb(W, .08), borderWidth=1,
+            estilo="chroma", blur=False, pill=False,
+            bg=argb(c["s1"], 1), bgPanel=argb(c["s1"], 1), bgPopup=argb(c["s1"], 1),
+            bg2=argb(c["s3"], 1),
+            border=argb(c["ov"], 1), borderWidth=1,
             highlight=none, glow=none, sheen=none, tint=none, tint2=none, tint3=none,
-            rimTop=argb(W, .95) if LT else argb(W, .14), rimBottom=argb(K, .12) if LT else argb(W, .04),
-            shadow=argb(K, .14 if LT else .34), shadowBig=argb(K, .20 if LT else .48),
-            win=argb(base, .88 if LT else .84), winSolid=argb(base, .97 if LT else .95),
-            winBorder=argb(K, .10) if LT else argb(W, .10),
-            card=argb(W, .70) if LT else argb(W, .045), cardBorder=1,
-            barRad=6, panelRad=8, winRad=8, ctlRad=4, roundK=0.85,
-            shBlur=24, shY=8, shBigBlur=48, shBigY=16, shSpread=0)
-    elif estilo == "suave":
-        # Suave: superficies sólidas, mates y de poco contraste, teñidas de pastel del acento; sin bordes, esquinas
-        # muy redondeadas, controles en píldora, sombras amplias y difusas del color del acento, un degradado
-        # vertical muy leve (más claro arriba, como arcilla) y el estado activo en el contenedor primario (pastel)
-        # Una sola superficie para la barra, los paneles, los menús y las ventanas (antes la barra iba en s1 y los
-        # paneles en s3: el centro de control se veía de otro color que la barra)
-        sur = mix(mix(c["s1"], c["s3"], .5), c["p"], .13 if LT else .09)
-        pan = sur
-        S = dict(
-            estilo="suave", blur=False, pill=True,
-            bg=argb(sur, 1), bgPanel=argb(pan, 1),
-            bgPopup=argb(pan, 1),
-            bg2=argb(mix(pan, c["p"], .14 if LT else .10), 1) if LT else argb(mix(mix(c["s3"], c["s4"], .5), c["p"], .14), 1),
-            border=argb(c["ov"], .3), borderWidth=0, highlight=none, glow=none,
-            rimTop=none, rimBottom=none, tint=none, tint2=none, tint3=none,
-            sheen=argb(W, .35 if LT else .045),
-            shadow=argb(mix(K, c["p"], .4), .12 if LT else .30), shadowBig=argb(mix(K, c["p"], .4), .18 if LT else .42),
-            win=argb(sur, 1), winSolid=argb(sur, 1), winBorder=argb(mix(c["ov"], c["p"], .3), .6),
-            card=argb(mix(c["s3"], c["p"], .14 if LT else .09), 1), cardBorder=0,
-            barRad=14, panelRad=18, winRad=14, ctlRad=12, roundK=1.6,
-            shBlur=40, shY=12, shBigBlur=64, shBigY=20, shSpread=-2)
+            rimTop=none, rimBottom=none,
+            accent2=argb(c["ter"], 1),
+            shadow=argb(K, .14 if LT else .5), shadowBig=argb(K, .22 if LT else .6),
+            win=argb(c["bg"], 1), winSolid=argb(c["bg"], 1), winBorder=argb(c["ov"], 1),
+            card=argb(mix(c["s1"], c["s3"], .55), 1), cardBorder=0,
+            shBlur=24, shY=8, shBigBlur=48, shBigY=16, shSpread=-2)
     else:
         # Material 3: superficies con un ligero tinte del color primario y niveles de contenedor por tono
         # La barra, los paneles (centro de control, notificaciones, OSD, Spotlight…) y las ventanas del shell usan
@@ -503,9 +510,10 @@ def style_tokens(c, s):
             border=argb(c["ov"], .5), borderWidth=0, highlight=none, glow=none,
             rimTop=none, rimBottom=none, sheen=none, tint=none, tint2=none,
             shadow=argb(K, .12 if LT else .30), shadowBig=argb(K, .20 if LT else .45),
-            win=argb(sur, 1), winSolid=argb(sur, 1), winBorder=argb(c["ov"], 1), barRad=6, panelRad=10, winRad=8, ctlRad=6, roundK=1.0)
+            win=argb(sur, 1), winSolid=argb(sur, 1), winBorder=argb(c["ov"], 1))
+    S.update(GEOMETRY)
     # Sombras de los paneles del shell (Glass): radio/desplazamiento del estilo y «Sombras» de Apariencia
-    base_sh = {"flat": (14, 3, 52, 18, -2), "aurora": (26, 8, 52, 18, 0), "tonal": (20, 6, 48, 16, 0)}.get(estilo)
+    base_sh = {"flat": (14, 3, 52, 18, -2), "tonal": (20, 6, 48, 16, 0)}.get(estilo)
     if base_sh:
         S.update(shBlur=base_sh[0], shY=base_sh[1], shBigBlur=base_sh[2], shBigY=base_sh[3], shSpread=base_sh[4])
     sk = SHADOWS.get(s.get("shadows", "suaves"), SHADOWS["suaves"])
@@ -518,15 +526,17 @@ def style_tokens(c, s):
         S[key] = round(S[key] * sk["y"])
     S["shadows"] = s.get("shadows", "suaves") if s.get("shadows") in SHADOWS else "suaves"
     S.setdefault("tint3", none)
+    S.setdefault("rimInner", none)
+    S.setdefault("edge", none)
     S.setdefault("card", None)
     if S["card"] is None:
-        S["card"] = S["bg2"] if estilo == "aurora" else argb(c["s3"], 1)
-        S["cardBorder"] = 1 if estilo == "aurora" else 0
+        S["card"] = S["bg2"] if estilo == "skysoul" else argb(c["s3"], 1)
+        S["cardBorder"] = 1 if estilo == "skysoul" else 0
     k = ROUNDNESS.get(s.get("roundness", "auto"), 1.0)
     for key in ("barRad", "panelRad", "winRad", "ctlRad"):
         S[key] = max(0, round(S[key] * k))
     S["roundK"] = round(S["roundK"] * k, 3)
-    S["pill"] = k >= 2.0 or (estilo == "suave" and k >= 0.7)
+    S["pill"] = k >= 2.0
     if high:   # también Material: bordes de verdad en lugar de solo tono
         S["borderWidth"] = max(S["borderWidth"], 1)
         S["border"] = argb(c["o"], 1)
@@ -548,8 +558,14 @@ def active_border(c, S, s):
     if mode == "color":
         return 2, '{ colors = { "%s", "%s" }, angle = 45 }' % (rgba_hypr(c["p"], .95), rgba_hypr(c.get("ter", c["p"]), .85)), \
             '"%s"' % rgba_hypr(c["ov"], .7)
-    # sutil / brillo: el acento mezclado con el contorno, con poca opacidad
-    return 1, '"%s"' % rgba_hypr(mix(c["p"], c["ov"], .25), .55 if LT else .45), '"%s"' % soft_in
+    # sutil / brillo: el acento mezclado con el contorno, con poca opacidad (Chroma: gris neutro, el rojo no se
+    # gasta en los bordes)
+    if S.get("estilo") == "skysoul" and S.get("blur"):
+        # SkySoul: un filo de luz casi transparente, como el borde del cristal (una línea de color cortaba)
+        W = "#FFFFFF"
+        return 1, '"%s"' % rgba_hypr(W, .42 if LT else .10), '"%s"' % rgba_hypr(W, .28 if LT else .05)
+    ink = c["o"] if S.get("estilo") == "chroma" else c["p"]
+    return 1, '"%s"' % rgba_hypr(mix(ink, c["ov"], .25), .55 if LT else .45), '"%s"' % soft_in
 
 def hypr_lua(c, S, s):
     focus = bool(s.get("_focus"))
@@ -639,14 +655,72 @@ def kitty_conf(c, S):
         f"background_opacity {op}", "",
     ])
 
-def gtk_css(c):
-    return "\n".join([
+def _css(h, a=1.0):
+    r, g, b = hex_rgb(h)
+    return "rgba(%d, %d, %d, %s)" % (r, g, b, round(a, 3))
+
+def gtk_css(c, S=None, s=None):
+    """Colores de GTK 3/4 y, encima, el material del estilo, para que las apps vayan a juego con la shell:
+       SkySoul  ventanas de cristal (Hyprland las desenfoca), capas más claras, bordes de luz muy tenues
+       Chroma   negro y carbón, lo activo en blanco, el rojo para los enlaces y avisos, filos de 1 px, títulos Doto
+       Material superficies tonales sólidas (lo de siempre)"""
+    out = [
         "/* GENERADO por hf-apply · @import url(\"file://%s\"); en ~/.config/gtk-4.0/gtk.css */" % (STATE / "gtk-colors.css"),
         f"@define-color accent_color {c['p']};", f"@define-color accent_bg_color {c['p']};",
         f"@define-color accent_fg_color {c['onP']};", f"@define-color window_bg_color {c['s1']};",
         f"@define-color window_fg_color {c['t']};", f"@define-color view_bg_color {c['s3']};",
         f"@define-color headerbar_bg_color {c['s3']};", f"@define-color card_bg_color {c['s4']};", "",
-    ])
+    ]
+    S, s = S or {}, s or {}
+    est, LT = S.get("estilo"), bool(c.get("light"))
+    if est == "skysoul" and S.get("blur"):
+        W = "#FFFFFF"
+        win = mix(c["s1"], W, .4) if LT else c["s1"]
+        out += [
+            "/* SkySoul: cristal */",
+            f"@define-color window_bg_color {_css(win, .66 if LT else .52)};",
+            f"@define-color view_bg_color {_css(W, .30) if LT else _css(c['s1'], .22)};",
+            f"@define-color headerbar_bg_color {_css(W, .18 if LT else .025)};",
+            "@define-color headerbar_backdrop_color @headerbar_bg_color;",
+            f"@define-color headerbar_shade_color {_css(W, .45) if LT else _css(W, .05)};",
+            f"@define-color sidebar_bg_color {_css(W, .22 if LT else .035)};",
+            "@define-color sidebar_backdrop_color @sidebar_bg_color;",
+            f"@define-color sidebar_shade_color {_css(W, .4) if LT else _css(W, .05)};",
+            f"@define-color sidebar_border_color {_css(W, .4) if LT else _css(W, .05)};",
+            f"@define-color secondary_sidebar_bg_color {_css(W, .16 if LT else .02)};",
+            "@define-color secondary_sidebar_backdrop_color @secondary_sidebar_bg_color;",
+            f"@define-color card_bg_color {_css(W, .42 if LT else .055)};",
+            f"@define-color card_shade_color {_css(W, .5) if LT else _css(W, .06)};",
+            f"@define-color thumbnail_bg_color {_css(W, .4 if LT else .06)};",
+            f"@define-color popover_bg_color {_css(win, .86 if LT else .80)};",
+            f"@define-color dialog_bg_color {_css(win, .86 if LT else .78)};",
+            f"@define-color borders {_css(W, .45) if LT else _css(W, .07)};",
+            f"@define-color shade_color {_css('#000000', .05 if LT else .18)};",
+            "window.background, window.background.csd { background-color: @window_bg_color; }",
+            "headerbar, .top-bar, .bottom-bar, toolbarview > .top-bar headerbar { box-shadow: none; }",
+            "separator { background-color: @borders; }",
+            "",
+        ]
+    elif est == "chroma":
+        out += [
+            "/* Chroma (Nothing): lo activo en blanco, el rojo solo para enlaces y avisos */",
+            f"@define-color accent_bg_color {c['t']};", f"@define-color accent_fg_color {c['bg']};",
+            f"@define-color accent_color {c['p']};",
+            f"@define-color window_bg_color {c['bg']};", f"@define-color view_bg_color {c['bg']};",
+            f"@define-color headerbar_bg_color {c['bg']};", "@define-color headerbar_backdrop_color @headerbar_bg_color;",
+            f"@define-color headerbar_shade_color {c['ov']};",
+            f"@define-color sidebar_bg_color {c['s1']};", "@define-color sidebar_backdrop_color @sidebar_bg_color;",
+            f"@define-color sidebar_border_color {c['ov']};",
+            f"@define-color secondary_sidebar_bg_color {c['s1']};",
+            f"@define-color card_bg_color {c['s1']};", f"@define-color card_shade_color {c['ov']};",
+            f"@define-color popover_bg_color {c['s1']};", f"@define-color dialog_bg_color {c['s1']};",
+            f"@define-color borders {c['ov']};", f"@define-color destructive_bg_color {c['p']};",
+            "@define-color destructive_color @accent_color;",
+            ".title-1, .title-2, .title-3, .large-title { font-family: \"Doto\", monospace; font-weight: 800; }",
+            ".card, .boxed-list, list.boxed-list { box-shadow: 0 0 0 1px @borders; }",
+            "",
+        ]
+    return "\n".join(out)
 
 def real_home():
     """¿Es HOME el del usuario? Con un HOME de prueba no se recargan apps de la sesión real (kitty, Dolphin…)."""
@@ -681,11 +755,14 @@ def main(argv):
     s = settings()
     key, c = resolve_palette(s)
     c = apply_accent(c, s)
-    if s.get("estilo") == "suave" and c.get("light"):
-        # Suave marca la selección y lo activo con el contenedor primario: en claro, algo más de color para que
-        # se distinga de las tarjetas pastel
-        c["pc"] = mix(c["pc"], c["p"], .35)
+    # Chroma trae su propia paleta (Nothing): la del usuario no se usa con él
+    est = norm_style(s.get("estilo", "flat"))
+    if est == "chroma":
+        c = chroma_colors(c)
     c = fix_contrast(c, bool(s.get("highContrast")))
+    if est == "chroma" and not s.get("highContrast"):
+        # Su paleta ya está ajustada a mano: el ajuste de contraste aguaba el rojo
+        c = chroma_colors(c)
     c["ansi"] = ansi_colors(c)   # 16 colores del terminal (kitty, btop, KDE): los de la paleta o armónicos
     S = style_tokens(c, s)
     theme = {
@@ -697,13 +774,17 @@ def main(argv):
     }
     if "--print" in argv:
         print(json.dumps(theme, indent=2)); return
-    write_if_changed(STATE / "theme.json", json.dumps(theme, indent=2) + "\n")
+    theme_changed = write_if_changed(STATE / "theme.json", json.dumps(theme, indent=2) + "\n")
     hypr_changed = write_if_changed(STATE / "settings.lua", hypr_lua(c, S, s))
     write_if_changed(STATE / "hyprlock-colors.conf", hyprlock_conf(c))
     kitty_changed = write_if_changed(STATE / "kitty-colors.conf", kitty_conf(c, S))
-    write_if_changed(STATE / "gtk-colors.css", gtk_css(c))
+    write_if_changed(STATE / "gtk-colors.css", gtk_css(c, S, s))
     if "--no-reload" in argv:
         return
+    # El login usa tu tema: copia en segundo plano, sin contraseña (solo si /etc/greetd/quickshell/live ya es tuya)
+    if theme_changed and real_home() and (ROOT / "scripts/hf-greeter-sync").exists():
+        subprocess.Popen([str(ROOT / "scripts/hf-greeter-sync"), "--auto"], stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
     if hypr_changed and os.environ.get("HF_SESSION"):
         subprocess.run(["hyprctl", "reload", "config-only"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     # kitty: solo con el HOME de verdad (con un HOME de prueba, p. ej. dev/try.sh, no tocar tus terminales)

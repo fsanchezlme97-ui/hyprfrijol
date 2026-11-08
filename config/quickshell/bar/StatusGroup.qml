@@ -64,7 +64,7 @@ Rectangle {
             visible: root.showClock
             spacing: 7
             Txt { text: Time.shortDate; muted: true }
-            Txt { text: Time.hhmm; weight: Font.DemiBold; tabular: true }
+            Txt { text: Time.hhmm; weight: Font.DemiBold; tabular: true; display: Theme.chroma; size: Theme.chroma ? 15 : 12.5 }   // Chroma: reloj de puntos
             Txt { visible: Time.ampm !== ""; text: Time.ampm; size: 11; muted: true; Layout.leftMargin: -3 }
         }
     }

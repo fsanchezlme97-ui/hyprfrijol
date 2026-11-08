@@ -1,12 +1,11 @@
 // Superficie con los tokens del estilo activo. El desenfoque lo pone Hyprland (layer_rule blur sobre el espacio
 // de nombres "hf-…" de la ventana); aquí se dibuja todo lo demás:
-//   Aurora  vidrio esmerilado con una aurora de color: resplandores radiales del primario (arriba-izquierda),
-//           del terciario (abajo-derecha) y un velo de la mezcla en medio, borde especular teñido y brillo
-//   Flat    Material 3: superficie tonal sólida, sin borde, elevación con sombra corta
-//   Mica    Windows 11: material translúcido (Hyprland desenfoca mucho detrás) con trazo de elevación de 1 px
-//           (más claro arriba que abajo) y sombra suave
-//   Suave   superficie sólida con tinte pastel, sin borde, un degradado vertical muy leve y sombra difusa
-//   Tonal   (interno: Aurora con «Reducir transparencia») superficie tonal sólida con borde fino
+//   Flat     Material 3: superficie tonal sólida, sin borde, elevación con sombra corta
+//   SkySoul  la estructura de Material hecha de cristal: muy transparente y muy desenfocado, con un esmerilado
+//            más claro arriba, un resplandor suave del acento que se desliza despacio y un filo de luz muy tenue,
+//            más visible arriba y que se desvanece hacia abajo, sin contorno oscuro, como las ventanas de macOS
+//   Chroma   Nothing Phone: negro puro, trazo fino de 1 px, sin brillos
+//   Tonal    (interno: SkySoul con «Reducir transparencia») superficie tonal sólida con borde fino
 //   Glass { kind: "panel" }   kinds: "bar" (S.bg), "panel" (S.bgPanel), "popup" (S.bgPopup), "fill" (S.bg2)
 import QtQuick
 import QtQuick.Shapes
@@ -22,11 +21,12 @@ Item {
     property color color: kind === "bar" ? Theme.glass : kind === "popup" ? Theme.glassPopup
                         : kind === "fill" ? Theme.fill2 : Theme.glassPanel
     property bool showBorder: kind !== "fill"
-    // Detalles del vidrio (brillo, borde especular, tinte). Se pueden apagar en superficies pequeñas.
+    // Detalles del cristal (esmerilado, resplandor, bordes). Se pueden apagar en superficies pequeñas.
     property bool effects: kind !== "fill"
     default property alias content: inner.data
 
     readonly property real rr: Math.min(radius, width / 2, height / 2)
+    readonly property bool glass: Theme.glassy && root.effects && root.width > 2 && root.height > 2
 
     RectangularShadow {
         visible: root.shadow && (root.big ? Theme.shadowBig.a : Theme.shadow.a) > 0
@@ -43,89 +43,71 @@ Item {
         anchors.fill: parent
         radius: root.rr
         color: root.color
-        // Aurora y Mica: el borde lo dibuja el trazo con degradado de abajo
-        border.width: root.showBorder && !(root.effects && (Theme.glassy || Theme.mica)) ? Theme.borderWidth : 0
+        // SkySoul: el borde lo dibujan los dos trazos de abajo
+        border.width: root.showBorder && !root.glass ? Theme.borderWidth : 0
         border.color: Theme.border
         Behavior on color { ColorAnimation { duration: Theme.dur } }
     }
 
+    // Resplandor del acento que se desliza despacio por los paneles abiertos (el cristal se siente vivo).
+    // Nunca en la barra (siempre visible); se para con «Reducir movimiento» o sin animaciones.
     Shape {
-        id: fx
-        visible: root.effects && (Theme.glassy || Theme.mica || Theme.suave) && root.width > 2 && root.height > 2
+        id: flow
+        visible: root.glass && root.kind !== "bar" && Theme.tint.a > 0 && root.width > 40 && root.height > 40
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
-        // Tamaño de los resplandores: proporcional, pero sin pasar de un halo razonable en paneles grandes
-        readonly property real glowR: Math.max(60, Math.min(Math.max(width, height) * 0.75, 420))
-
-        // Aurora: resplandor del primario arriba a la izquierda…
+        property real ph: 0.25
+        NumberAnimation on ph { from: 0; to: 1; duration: 22000; loops: Animation.Infinite; running: flow.visible && root.visible && !Theme.still }
+        readonly property real cx: width * (0.2 + 0.6 * (0.5 - 0.5 * Math.cos(ph * 2 * Math.PI)))
+        readonly property real cy: height * (0.25 + 0.4 * (0.5 - 0.5 * Math.sin(ph * 2 * Math.PI)))
         ShapePath {
             strokeWidth: -1
             fillGradient: RadialGradient {
-                centerX: fx.width * 0.08; centerY: 0; centerRadius: fx.glowR
+                centerX: flow.cx; centerY: flow.cy
+                centerRadius: Math.max(70, Math.min(Math.min(flow.width, flow.height) * 0.7, 300))
                 focalX: centerX; focalY: centerY
                 GradientStop { position: 0.0; color: Theme.tint }
-                GradientStop { position: 0.55; color: Qt.alpha(Theme.tint, Theme.tint.a * 0.35) }
+                GradientStop { position: 0.5; color: Qt.alpha(Theme.tint, Theme.tint.a * 0.35) }
                 GradientStop { position: 1.0; color: Qt.alpha(Theme.tint, 0) }
             }
-            PathRectangle { x: 0; y: 0; width: fx.width; height: fx.height; radius: root.rr }
+            PathRectangle { x: 0; y: 0; width: flow.width; height: flow.height; radius: root.rr }
         }
-        // …del terciario abajo a la derecha…
-        ShapePath {
-            strokeWidth: -1
-            fillGradient: RadialGradient {
-                centerX: fx.width * 0.95; centerY: fx.height; centerRadius: fx.glowR * 0.9
-                focalX: centerX; focalY: centerY
-                GradientStop { position: 0.0; color: Theme.tint2 }
-                GradientStop { position: 0.55; color: Qt.alpha(Theme.tint2, Theme.tint2.a * 0.3) }
-                GradientStop { position: 1.0; color: Qt.alpha(Theme.tint2, 0) }
-            }
-            PathRectangle { x: 0; y: 0; width: fx.width; height: fx.height; radius: root.rr }
-        }
-        // …y una banda de la mezcla cruzando en diagonal (la «cortina» de la aurora)
+    }
+    Shape {
+        id: fx
+        visible: root.glass
+        anchors.fill: parent
+        preferredRendererType: Shape.CurveRenderer
+
+        // Esmerilado: el cristal algo más claro arriba, que se apaga hacia la mitad
         ShapePath {
             strokeWidth: -1
             fillGradient: LinearGradient {
-                x1: 0; y1: fx.height; x2: fx.width; y2: 0
-                GradientStop { position: 0.25; color: Qt.alpha(Theme.tint3, 0) }
-                GradientStop { position: 0.5; color: Theme.tint3 }
-                GradientStop { position: 0.75; color: Qt.alpha(Theme.tint3, 0) }
-            }
-            PathRectangle { x: 0; y: 0; width: fx.width; height: fx.height; radius: root.rr }
-        }
-        // Brillo interior: luz que entra por arriba y se apaga hacia el centro (en Suave, todo el alto: arcilla)
-        ShapePath {
-            strokeWidth: -1
-            fillGradient: LinearGradient {
-                x1: 0; y1: 0; x2: 0; y2: Theme.suave ? fx.height : Math.min(fx.height, 90)
+                x1: 0; y1: 0; x2: 0; y2: fx.height * 0.65
                 GradientStop { position: 0.0; color: Theme.sheen }
                 GradientStop { position: 1.0; color: Qt.alpha(Theme.sheen, 0) }
             }
             PathRectangle { x: 0; y: 0; width: fx.width; height: fx.height; radius: root.rr }
         }
-        // Borde: especular teñido (Aurora) o trazo de elevación neutro (Mica)
+        // Filo exterior: un trazo oscuro casi invisible que recorta el cristal sobre fondos claros
         ShapePath {
             fillColor: "transparent"
-            strokeWidth: root.showBorder && !Theme.suave ? 1 : 0
-            strokeGradient: LinearGradient {
-                x1: 0; y1: 0; x2: Theme.mica ? 0 : fx.width * 0.55; y2: Theme.mica ? Math.min(fx.height, 28) : fx.height
-                GradientStop { position: 0.0; color: Theme.rimTop }
-                GradientStop { position: 0.35; color: Theme.border }
-                GradientStop { position: 1.0; color: Theme.rimBottom }
-            }
+            strokeWidth: root.showBorder && Theme.edge.a > 0 ? 1 : 0
+            strokeColor: Theme.edge
             PathRectangle { x: 0.5; y: 0.5; width: fx.width - 1; height: fx.height - 1; radius: Math.max(0, root.rr - 0.5) }
         }
-    }
-    // Línea de luz justo bajo el borde superior (el «labio» del vidrio)
-    Rectangle {
-        visible: root.effects && Theme.glassy && root.showBorder && root.height > 20
-        anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: root.rr * 0.9; rightMargin: root.rr * 0.9; topMargin: 1 }
-        height: 1
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: Qt.alpha(Theme.highlight, 0) }
-            GradientStop { position: 0.3; color: Theme.highlight }
-            GradientStop { position: 0.7; color: Qt.alpha(Theme.highlight, Theme.highlight.a * 0.4) }
-            GradientStop { position: 1.0; color: Qt.alpha(Theme.highlight, 0) }
+        // Filo interior de luz: brillante arriba, tenue en los lados y casi nada abajo (el grosor del cristal)
+        ShapePath {
+            fillColor: "transparent"
+            strokeWidth: root.showBorder ? 1 : 0
+            strokeGradient: LinearGradient {
+                x1: 0; y1: 0; x2: 0; y2: fx.height
+                GradientStop { position: 0.0; color: Theme.rimTop }
+                GradientStop { position: Math.min(0.45, 40 / Math.max(1, fx.height)); color: Qt.alpha(Theme.border, Theme.border.a * 0.5) }
+                GradientStop { position: 1.0; color: Theme.rimBottom }
+            }
+            // En el mismo filo del cristal (sin hueco entre el borde y la luz, que se leía como una línea)
+            PathRectangle { x: 0.5; y: 0.5; width: Math.max(0, fx.width - 1); height: Math.max(0, fx.height - 1); radius: Math.max(0, root.rr - 0.5) }
         }
     }
     Item { id: inner; anchors.fill: parent }

@@ -25,7 +25,7 @@ Todo vive en `config/quickshell/`. Cada vista del diseño es un módulo en `modu
 | Pantalla | Vista (`Shell.view`) | Módulo | Por debajo |
 |---|---|---|---|
 | Barra (abajo / arriba / lateral, fija / flotante) | — | `bar/` | `Quickshell.Hyprland`, cava, `SystemTray` |
-| Colores automáticos / elegir / mono · Aurora / Flat (Material) · claro / oscuro / auto | — | `Theme.qml`, `scripts/hf-apply` | matugen, `config/themes/palettes.json` |
+| Colores automáticos / elegir / mono · Material / SkySoul / Chroma · claro / oscuro / auto | — | `Theme.qml`, `scripts/hf-apply` | matugen, `config/themes/palettes.json` |
 | Spotlight | `spotlight` | `modules/spotlight` | `DesktopEntries`, `fd`, `qalc` |
 | Ajustes rápidos | `ajustes` | `modules/quicksettings` | nmcli, `Bluetooth`, `UPower`, `PowerProfiles`, hyprsunset |
 | Notificaciones y OSD | `notificaciones` | `Notifs.qml`, `modules/notifications`, `modules/osd` | `NotificationServer`, `Pipewire` |

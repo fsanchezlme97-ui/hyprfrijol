@@ -69,10 +69,12 @@ RowLayout {
         command: ["sh", "-c", "f=$(zenity --file-selection --title='Elige tu foto' --file-filter='Imágenes | *.png *.jpg *.jpeg *.webp *.gif *.bmp' 2>/dev/null) || exit 1; [ -f \"$f\" ] || exit 1; "
             + "if command -v magick >/dev/null; then magick \"$f\"'[0]' -auto-orient -thumbnail '256x256^' -gravity center -extent 256x256 png:\"$HOME/.face\"; else cp -f \"$f\" \"$HOME/.face\"; fi; "
             + "ln -sf .face \"$HOME/.face.icon\"; busctl --system call --allow-interactive-authorization org.freedesktop.Accounts \"/org/freedesktop/Accounts/User$(id -u)\" org.freedesktop.Accounts.User SetIconFile s \"$HOME/.face\" >/dev/null 2>&1; echo ok"]
+        // Al terminar, la foto se copia también al login (hf-greeter-sync --auto, sin contraseña)
+        onExited: code => { if (code === 0) Quickshell.execDetached([Paths.script("hf-greeter-sync"), "--auto"]); }
         stdout: StdioCollector { onStreamFinished: if (text.includes("ok")) { root.faceTick++; later.restart(); } }
     }
     function removeFace() {
-        Quickshell.execDetached(["sh", "-c", "rm -f \"$HOME/.face\" \"$HOME/.face.icon\"; busctl --system call --allow-interactive-authorization org.freedesktop.Accounts \"/org/freedesktop/Accounts/User$(id -u)\" org.freedesktop.Accounts.User SetIconFile s ''"]);
+        Quickshell.execDetached(["sh", "-c", "rm -f \"$HOME/.face\" \"$HOME/.face.icon\"; busctl --system call --allow-interactive-authorization org.freedesktop.Accounts \"/org/freedesktop/Accounts/User$(id -u)\" org.freedesktop.Accounts.User SetIconFile s ''; exec \"$1\" --auto", "sh", Paths.script("hf-greeter-sync")]);
         faceTick++; later.restart();
     }
     function setAutoLogin(on) {

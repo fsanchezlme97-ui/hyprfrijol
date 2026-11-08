@@ -57,6 +57,9 @@ Scope {
             minimumSize: Qt.size(Math.min(900, implicitWidth), Math.min(560, implicitHeight))
             visible: true
             color: Theme.blur ? Theme.winSolid : Theme.s1
+            // Con alfa siempre: una ventana creada opaca (en Material) no puede volverse transparente después
+            // (al pasar a SkySoul se quedaba negra)
+            surfaceFormat.opaque: false
             onVisibleChanged: if (!visible) root.open = false
 
             readonly property string cmd: Paths.script("hf-sign")
@@ -206,7 +209,7 @@ Scope {
                 Rectangle {
                     Layout.preferredWidth: 290
                     Layout.fillHeight: true
-                    color: Theme.glassy ? Qt.alpha(Theme.bg, 0.35) : Theme.mica ? Qt.alpha(Theme.bg, 0.5) : Theme.bg
+                    color: Theme.glassy ? Qt.alpha(Theme.bg, 0.12) : Theme.bg
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: 16

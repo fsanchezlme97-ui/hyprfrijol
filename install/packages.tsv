@@ -202,3 +202,4 @@ aria2	optional	aria2	aria2	aria2	aria2	aria2	descargas de archivos más rápidas
 gamescope	optional	gamescope	gamescope	gamescope	gamescope	gamescope	Modo juego (Steam) en Spotlight y en el login (gamescope)	juegos	gamescope
 # — Login visual (greeter)
 greetd	greeter	greetd	greetd	greetd	greetd	greetd	login visual (--greeter)	login	greetd
+qtmultimedia	greeter	qt6-multimedia,qt6-multimedia-ffmpeg	qt6-qtmultimedia	qt6-multimedia	qml6-module-qtmultimedia	qt6-multimedia	fondo en movimiento (vídeo) en el login visual	login	

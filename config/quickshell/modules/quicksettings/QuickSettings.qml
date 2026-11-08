@@ -831,7 +831,7 @@ Overlay {
                     Layout.fillHeight: true
                     Layout.preferredWidth: 10
                     radius: root.itemRadius
-                    color: sel ? (Theme.tonalSel ? Theme.pc : Theme.glassy ? Qt.alpha("#FFFFFF", Theme.light ? 0.85 : 0.16) : Theme.light ? "#FFFFFF" : Theme.s1) : hov.hovered ? Qt.alpha(Theme.s1, 0.35) : "transparent"
+                    color: sel ? Theme.segThumb : hov.hovered ? Qt.alpha(Theme.s1, 0.35) : "transparent"
                     Behavior on color { ColorAnimation { duration: Theme.dur } }
                     HoverHandler { id: hov }
                     Txt {
@@ -840,7 +840,7 @@ Overlay {
                         horizontalAlignment: Text.AlignHCenter
                         text: parent.modelData.label
                         weight: Font.DemiBold
-                        color: parent.sel ? (Theme.tonalSel ? Theme.pcText : Theme.t) : Theme.tv
+                        color: parent.sel ? Theme.segText : Theme.tv
                     }
                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.picked(parent.modelData.key) }
                 }

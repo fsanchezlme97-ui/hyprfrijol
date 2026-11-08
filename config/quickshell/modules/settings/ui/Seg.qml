@@ -38,7 +38,7 @@ Rectangle {
                 Layout.fillHeight: true
                 implicitWidth: lbl.implicitWidth + 24
                 radius: root.pill || Theme.pill ? height / 2 : Theme.r(5)
-                color: on ? (Theme.tonalSel ? Theme.pc : Theme.selBg) : ma.containsMouse ? Qt.alpha(Theme.t, 0.05) : "transparent"
+                color: on ? Theme.segThumb : ma.containsMouse ? Qt.alpha(Theme.t, 0.05) : "transparent"
                 Behavior on color { ColorAnimation { duration: Theme.dur } }
                 Rectangle {   // separador entre segmentos
                     visible: seg.index > 0 && !seg.on && root.current !== root.items[seg.index - 1]?.key && !root.pill && !Theme.pill
@@ -51,7 +51,7 @@ Rectangle {
                     horizontalAlignment: Text.AlignHCenter
                     text: seg.modelData.label
                     size: root.textSize
-                    color: seg.on ? (Theme.tonalSel ? Theme.pcText : Theme.selText) : Theme.t
+                    color: seg.on ? Theme.segText : Theme.t
                     weight: Font.DemiBold
                 }
                 MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.picked(seg.modelData.key) }

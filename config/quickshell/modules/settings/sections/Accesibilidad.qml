@@ -36,7 +36,7 @@ ColumnLayout {
     readonly property bool hcOn: Settings.get("highContrast", false) && Settings.get("reduceTransparency", false)
     readonly property bool bigTextOn: Settings.get("fontScale", 1) >= 1.25
 
-    // Preajustes de un clic (sirven igual con Material y con Aurora)
+    // Preajustes de un clic (sirven igual con todos los estilos)
     Section {
         Layout.fillWidth: true
         title: "Preajustes"
@@ -77,7 +77,7 @@ ColumnLayout {
                 onToggled: v => { Settings.set("screenReader", v); Quickshell.execDetached(["sh", "-c", v ? "setsid orca --replace >/dev/null 2>&1 &" : "pkill -x orca"]); root.orcaOn = v; }
             }
             SwRow { label: "Alto contraste"; sub: "texto a 7:1, bordes marcados y sin vidrio"; key: "highContrast" }
-            SwRow { label: "Reducir transparencia"; sub: Settings.get("highContrast", false) ? "ya incluido en alto contraste" : "el vidrio de Aurora pasa a superficies sólidas"; key: "reduceTransparency" }
+            SwRow { label: "Reducir transparencia"; sub: Settings.get("highContrast", false) ? "ya incluido en alto contraste" : "el cristal de SkySoul pasa a superficies sólidas"; key: "reduceTransparency" }
             SwRow { label: "Reducir movimiento"; sub: "sin fondos animados ni rebotes"; key: "reduceMotion" }
             SwRow {
                 label: "Lupa"; sub: "Super + + y Super + − · sigue al cursor"

@@ -21,6 +21,18 @@ Canvas {
         g.reset();
         const r = Math.min(width, height) / 2 - lineWidth / 2, cx = width / 2, cy = height / 2;
         if (r <= 0) return;
+        const v0 = Math.max(0, Math.min(1, value));
+        if (Theme.chroma) {
+            // Chroma: anillo de puntos (Nothing); los recorridos, del color; el resto, tenues
+            const n = Math.max(10, Math.round(2 * Math.PI * r / Math.max(2.6, lineWidth * 2.2)));
+            const dr = Math.max(0.7, lineWidth * 0.55);
+            for (let i = 0; i < n; i++) {
+                const a = -Math.PI / 2 + i / n * 2 * Math.PI;
+                g.fillStyle = i < Math.round(v0 * n) ? color : track;
+                g.beginPath(); g.arc(cx + r * Math.cos(a), cy + r * Math.sin(a), dr, 0, 2 * Math.PI); g.fill();
+            }
+            return;
+        }
         g.lineWidth = lineWidth;
         g.lineCap = "round";
         g.strokeStyle = track;

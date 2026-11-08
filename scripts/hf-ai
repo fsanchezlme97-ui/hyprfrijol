@@ -82,7 +82,7 @@ def run(cmd, timeout=10, input=None):
 # Esquema fijo: el modelo solo puede proponer estas acciones. Cada una tiene etiqueta en español y, casi
 # todas, forma de deshacerse (do_apply guarda el estado anterior; do_undo lo restaura en orden inverso).
 SET_KEYS = {
-    "estilo": ("Estilo", {"flat": "Material", "aurora": "Aurora", "mica": "Mica", "suave": "Suave"}),
+    "estilo": ("Estilo", {"flat": "Material", "skysoul": "SkySoul", "chroma": "Chroma"}),
     "colorMode": ("Color", {"auto": "Automático (del fondo)", "elegir": "Paleta elegida", "mono": "Monocromo"}),
     "palette": ("Paleta", {"grafito": "Grafito", "pizarra": "Pizarra", "claro": "Claro", "lavanda": "Lavanda",
                            "verde": "Verde", "ambar": "Ámbar", "azul": "Azul", "rosa": "Rosa pastel",
@@ -156,7 +156,7 @@ def settable(k, d=None):
     return isinstance(v, (bool, int, float, str)) or (isinstance(v, list) and all(isinstance(x, str) for x in v))
 
 SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden: puedes encadenar varios pasos):
-- {"type":"set","key":K,"value":V}  ajustes del escritorio. Claves principales: estilo (flat|aurora|mica|suave),
+- {"type":"set","key":K,"value":V}  ajustes del escritorio. Claves principales: estilo (flat|skysoul|chroma),
   colorMode (auto|elegir|mono), palette (grafito|pizarra|claro|lavanda|verde|ambar|azul|rosa|menta|lila|melocoton|cielo;
   implica colorMode "elegir"), themeMode (oscuro|claro|auto), animPreset (fluido|equilibrado|rapido|minimo|ninguno),
   shadows (ninguna|suaves|marcadas), activeBorder (sutil|color|brillo|ninguno), barPos (abajo|arriba|izquierda),

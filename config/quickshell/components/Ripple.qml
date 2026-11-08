@@ -1,4 +1,4 @@
-// Onda al pulsar (Material 3). Solo con el estilo Material; en Aurora no se dibuja.
+// Onda al pulsar (Material 3). Solo con el estilo Material; en SkySoul y Chroma no se dibuja.
 //   Ripple { id: rip; anchors.fill: parent; radius: parent.radius; color: fg }
 //   MouseArea { onPressed: m => rip.burst(m.x, m.y) }
 import QtQuick

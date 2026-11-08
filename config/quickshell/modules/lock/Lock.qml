@@ -27,6 +27,20 @@ Scope {
     property bool hasFprint: false
     property bool caps: false
     property bool hasFace: false
+    // Fondo en vídeo puesto ahora (hf-wallpaper: wallpaper.json «video» + wallpaper-path). Quieto con «Reducir
+    // movimiento» y, si así se pidió en Ajustes › Fondos, con batería (como en el escritorio)
+    readonly property string wallVideo: {
+        const p = (wallPath.text() || "").trim();
+        if (!wallJson.video || !/\.(mp4|webm|mkv|mov|gif)$/i.test(p) || Theme.still) return "";
+        const on = Settings.get("wallpaperPauseOn", ["fullscreen", "bateria", "juego"]);
+        if (Battery.onBattery && Array.isArray(on) && on.includes("bateria")) return "";
+        return p;
+    }
+    FileView { id: wallPath; path: Paths.state + "/wallpaper-path"; watchChanges: true; printErrors: false; onFileChanged: reload() }
+    FileView {
+        path: Paths.state + "/wallpaper.json"; watchChanges: true; printErrors: false; onFileChanged: reload()
+        JsonAdapter { id: wallJson; property bool video: false }
+    }
     // El reloj grande usa peso 300: si Inter no está instalada, una familia con «Light» real
     readonly property string clockFont: Qt.fontFamilies().includes(Theme.font) ? Theme.font : "Noto Sans"
     readonly property bool forceScene: tryMode === "scene" || tryMode === "error"
@@ -139,6 +153,13 @@ Scope {
                     cache: false
                     sourceSize: Qt.size(surface.width, surface.height)
                     visible: status === Image.Ready
+                }
+                // Fondo en movimiento: el mismo vídeo que en el escritorio (mpvpaper queda debajo del bloqueo)
+                Loader {
+                    anchors.fill: parent
+                    active: root.wallVideo !== "" && wall.visible
+                    source: Qt.resolvedUrl("../../components/VideoLoop.qml")
+                    onLoaded: item.source = Qt.binding(() => root.wallVideo)
                 }
                 // Velo suave para que el texto se lea sobre cualquier fondo
                 Rectangle {

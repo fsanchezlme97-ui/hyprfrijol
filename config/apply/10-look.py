@@ -61,22 +61,24 @@ def hypr_lua(s, c):
         order = ["ahorro", "equilibrada", "alta"]
         if cap and order.index(cap) < order.index(q):
             q = cap
-    est = s.get("estilo", "aurora")
-    if est not in ("flat", "aurora", "mica", "suave"):
-        est = "aurora"
-    glass = est in ("aurora", "mica")
+    est = s.get("estilo", "flat")
+    est = {"aurora": "skysoul", "liquid": "skysoul", "tonal": "skysoul", "mica": "chroma",
+           "suave": "flat", "soft": "flat"}.get(est, est)
+    if est not in ("flat", "skysoul", "chroma"):
+        est = "flat"
+    glass = est == "skysoul"
     if glass and not s.get("reduceTransparency") and not s.get("highContrast"):
-        # Aurora: desenfoque amplio con algo de vibración y oscurecido para que el texto se lea.
-        # Mica: más amplio y apagado (el fondo apenas se intuye detrás del material casi opaco)
+        # SkySoul: desenfoque suave que deja intuir las formas y los colores del fondo, algo de vibración para
+        # que el color respire detrás del cristal y un poco oscurecido en modo oscuro para que el texto se lea
+        # con tanta transparencia (Material y Chroma son sólidos: no lo necesitan)
         if q == "ahorro":
             deco.append("blur = { enabled = false }")
-        elif est == "mica":
-            deco.append("blur = { size = %d, passes = %d, vibrancy = 0.1, vibrancy_darkness = 0.0, contrast = 0.9, brightness = 0.8, noise = 0.02 }"
-                        % ((14, 4) if q == "alta" else (12, 3)))
-        elif q == "alta":
-            deco.append("blur = { size = 10, passes = 4, vibrancy = 0.35, vibrancy_darkness = 0.25, contrast = 1.05, brightness = 0.85, noise = 0.014 }")
         else:
-            deco.append("blur = { size = 8, passes = 3, vibrancy = 0.3, vibrancy_darkness = 0.2, contrast = 1.0, brightness = 0.88, noise = 0.014 }")
+            # Moderado a propósito: con un radio muy grande el fondo se vuelve un gris uniforme y el cristal no se
+            # nota; así se intuyen las formas y los colores de detrás
+            size, passes = (7, 3) if q == "alta" else (6, 2)
+            deco.append("blur = { size = %d, passes = %d, vibrancy = 0.35, vibrancy_darkness = 0.2, contrast = 0.95, brightness = %s, noise = 0.01 }"
+                        % (size, passes, "1.05" if c.get("light") else "0.9"))
     deco.append(_shadow(s, c, est))
     filt = s.get("colorFilter", "ninguno")
     if filt and filt != "ninguno":

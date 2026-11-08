@@ -21,7 +21,7 @@ Scope {
     property string section: Quickshell.env("HF_SETTINGS_SECTION") || "apariencia"
 
     readonly property var nav: [
-        { key: "apariencia", label: "Apariencia", icon: "palette", file: "Apariencia", sub: "matugen · hf-apply · settings.lua", kw: "tema color estilo aurora material flat vidrio paleta monocromo claro oscuro automático según la hora fondo esquinas redondeo forma squircle espacio gaps escala interfaz tipografía fuente letra tamaño del texto animaciones gtk qt" },
+        { key: "apariencia", label: "Apariencia", icon: "palette", file: "Apariencia", sub: "matugen · hf-apply · settings.lua", kw: "tema color estilo skysoul aurora chroma nothing material flat vidrio paleta monocromo claro oscuro automático según la hora fondo esquinas redondeo forma squircle espacio gaps escala interfaz tipografía fuente letra tamaño del texto animaciones gtk qt" },
         { key: "fondos", label: "Fondos de pantalla", icon: "image", file: "Fondos", sub: "hf-wallpaper · mpvpaper · matugen", kw: "fondo wallpaper video animado movimiento escenas cambio automático cada orden al azar según la hora colección transición fps wallhaven buscar descargar fondos internet caché clave api" },
         { key: "barra", label: "Barra", icon: "layout", file: "Barra", sub: "quickshell · bar/", kw: "barra posición arriba abajo izquierda derecha forma fija flotante isla tamaño altura grosor módulos reloj ocultar automáticamente ocultación inteligente esquivar ventanas comportamiento avisos emergentes osd onda audio título transparente" },
         { key: "escritorio", label: "Escritorio y gestos", icon: "grid", file: "Escritorio", sub: "hyprland · general:layout · gestures", kw: "modo de ventanas flotantes flotante mosaico escritorio clásico iconos del escritorio archivos carpeta widgets dock minimizar maximizar ocultación inteligente esquivar ocultar automáticamente numeración japonesa romana arábiga puntos kanji 1 9 esquinas calientes gestos touchpad mosaico dwindle master scrolling desplazamiento columnas cinta ancho de columna enfocar cursor acoplar espacios de trabajo nombres iconos emoji clima ciudad impresora 3d" },
@@ -177,8 +177,11 @@ Scope {
                 interval: 260
                 onTriggered: { win.maxed = true; Shell.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "set" })'); }
             }
-            // Aurora/Mica: ventana translúcida (Hyprland la desenfoca); el resto, sólida
+            // SkySoul: ventana translúcida (Hyprland la desenfoca); el resto, sólida
             color: Theme.blur ? Theme.winSolid : Theme.s1
+            // Con alfa siempre: una ventana creada opaca (en Material) no puede volverse transparente después
+            // (al pasar a SkySoul se quedaba negra)
+            surfaceFormat.opaque: false
             onVisibleChanged: if (!visible) root.open = false
 
             OpenProbe { name: "ajustesapp"; shown: true }
@@ -194,7 +197,7 @@ Scope {
                 Rectangle {
                     Layout.preferredWidth: 252
                     Layout.fillHeight: true
-                    color: Theme.glassy ? Qt.alpha(Theme.bg, 0.35) : Theme.mica ? Qt.alpha(Theme.bg, 0.5) : Theme.bg
+                    color: Theme.glassy ? Qt.alpha(Theme.bg, 0.12) : Theme.bg
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: 10
@@ -319,12 +322,12 @@ Scope {
                                     radius: Theme.r(5)
                                     color: it.on ? Theme.selBg : ma.containsMouse ? Qt.alpha(Theme.t, 0.05) : "transparent"
                                     Behavior on color { ColorAnimation { duration: 160 } }
-                                    // Mica: pastilla del acento a la izquierda de la sección elegida (Windows 11)
+                                    // Chroma: marca roja a la izquierda de la sección elegida (Nothing)
                                     Rectangle {
                                         visible: Theme.selPill && it.on
                                         x: 0; anchors.verticalCenter: parent.verticalCenter
                                         width: 3; height: 16; radius: 1.5
-                                        color: Theme.p
+                                        color: Theme.selPillColor
                                     }
                                     RowLayout {
                                         anchors.fill: parent

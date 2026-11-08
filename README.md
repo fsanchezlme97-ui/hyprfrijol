@@ -7,7 +7,7 @@
 
 # HyprFrijol
 
-Rice/shell propio para **Hyprland**, hecho desde cero, con dos estilos sobrios: *Aurora* (vidrio translúcido) y *Material* (Material 3, sólido); tono empresarial y minimalista, y varios agregados: Spotlight, panel flotante con IA + WhatsApp + YouTube + Pinterest, PiP mínimo, selector de fondos, widgets, centro de actualizaciones con punto de restauración, captura/grabación y login propio.
+Rice/shell propio para **Hyprland**, hecho desde cero, con tres estilos: *Material* (Material 3, sólido), *SkySoul* (Material de cristal, transparente y desenfocado) y *Chroma* (al estilo Nothing Phone); tono empresarial y minimalista, y varios agregados: Spotlight, panel flotante con IA + WhatsApp + YouTube + Pinterest, PiP mínimo, selector de fondos, widgets, centro de actualizaciones con punto de restauración, captura/grabación y login propio.
 
 Pensado para correr en **cualquier distro que tenga Hyprland 0.57 o posterior** (Arch y derivadas, Fedora, openSUSE Tumbleweed, Debian testing, Ubuntu, Void, Gentoo, NixOS), también en una instalación mínima o de servidor **sin escritorio**: el instalador pone lo que falta. No depende de GNOME, KDE ni de GDM.
 
@@ -33,7 +33,7 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 |---|---|
 | Hyprland en Lua, validado con `Hyprland --verify-config` | `config/hypr/frijol/` |
 | Sesión aparte y modo de prueba en ventana (`hf-session --nested`) | `scripts/hf-session` |
-| Colores del fondo (matugen) o paletas del diseño, estilos Aurora (vidrio) / Material (tipo Android), claro / oscuro / auto, redondeo ajustable | `scripts/hf-apply`, `config/themes/` |
+| Colores del fondo (matugen) o paletas del diseño, estilos Material (tipo Android) / SkySoul (cristal) / Chroma (tipo Nothing), claro / oscuro / auto, redondeo ajustable | `scripts/hf-apply`, `config/themes/` |
 | Barra abajo / arriba / izquierda, fija o flotante | `quickshell/bar/` |
 | Spotlight (apps, archivos, calculadora, comandos, ventanas) | `modules/spotlight` |
 | Ajustes rápidos, notificaciones con respuesta, OSD | `modules/quicksettings`, `notifications`, `osd` |

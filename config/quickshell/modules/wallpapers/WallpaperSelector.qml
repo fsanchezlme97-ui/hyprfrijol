@@ -181,6 +181,19 @@ Overlay {
             onRequested: probe.previewAsked()
             onShownReady: hi => { if (!hi) probe.previewReady(); }
         }
+        // Fondo en vídeo: se reproduce encima de su fotograma cuando te paras en él (un momento de espera para no
+        // abrir un decodificador por cada paso al recorrer la lista)
+        Loader {
+            id: videoPrev
+            anchors.fill: parent
+            property string want: win.cur && win.cur.video ? win.cur.path : ""
+            property string src: ""
+            onWantChanged: { src = ""; if (want !== "") videoDelay.restart(); }
+            Timer { id: videoDelay; interval: 350; onTriggered: videoPrev.src = videoPrev.want }
+            active: src !== "" && !Theme.still
+            source: Qt.resolvedUrl("../../components/VideoLoop.qml")
+            onLoaded: item.source = Qt.binding(() => videoPrev.src)
+        }
         // Velo de abajo para que se lea lo de encima (colores del tema: vale en claro y en oscuro)
         Rectangle {
             anchors { left: parent.left; right: parent.right; bottom: parent.bottom }

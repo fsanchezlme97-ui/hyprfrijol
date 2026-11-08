@@ -28,7 +28,16 @@ Rectangle {
             Layout.fillWidth: true
             Layout.minimumHeight: 22
             spacing: 8
-            Txt { text: root.title; size: 15; weight: Font.DemiBold; Layout.fillWidth: true }
+            // Chroma: título en mayúsculas con letra de puntos (Nothing OS); el resto, título de 15 px
+            Txt {
+                text: Theme.capsLabels ? root.title.toUpperCase() : root.title
+                size: Theme.chroma ? 15 : Theme.capsLabels ? 11 : 15
+                display: Theme.chroma
+                weight: Theme.capsLabels ? Font.Medium : Font.DemiBold
+                font.family: Theme.chroma ? Theme.displayFont : Theme.capsLabels ? Theme.labelFont : Theme.font
+                font.letterSpacing: Theme.capsLabels ? Theme.labelSpacing : -0.07
+                Layout.fillWidth: true
+            }
             Row { id: rightSlot; spacing: 8 }
         }
     }

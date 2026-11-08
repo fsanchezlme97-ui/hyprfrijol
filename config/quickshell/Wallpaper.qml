@@ -24,6 +24,9 @@ PanelWindow {
     // Con vídeo (mpvpaper, también en la capa Background) esta ventana debe ser transparente: al reiniciar el shell
     // se crea por encima de mpvpaper y, con color opaco, taparía el fondo en movimiento.
     color: wp.video && win.ownImage === "" ? "transparent" : Theme.bg
+    // Sin esto, una ventana que nace opaca (al arrancar, antes de leer wallpaper.json) ya no puede volverse
+    // transparente: el escritorio se quedaba negro con el vídeo detrás.
+    surfaceFormat.opaque: false
 
     property bool showA: true
     readonly property string outName: screen?.name ?? ""
