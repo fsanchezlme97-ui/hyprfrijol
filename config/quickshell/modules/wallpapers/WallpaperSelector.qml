@@ -371,9 +371,15 @@ Overlay {
                 Sep { visible: Quickshell.screens.length > 1 }
                 Btn { kind: "ghost"; icon: "shuffle"; text: "Aleatorio"; onClicked: win.random() }
                 Btn {
+                    // Estado visible y efecto al momento (antes solo cambiaba el ajuste y el fondo se quedaba quieto
+                    // en el siguiente arranque sin que se notara por qué)
                     readonly property bool on: Settings.get("wallpaperMotion", true) !== false
-                    kind: on ? "tonal" : "ghost"; icon: "play"; text: "Movimiento"
-                    onClicked: Settings.set("wallpaperMotion", !on)
+                    kind: on ? "tonal" : "ghost"; icon: on ? "play" : "pause"
+                    text: on ? "En movimiento" : "Fondo quieto"
+                    onClicked: {
+                        Settings.set("wallpaperMotion", !on);
+                        Quickshell.execDetached(["sh", "-c", 'sleep 0.6; exec "$1" restore', "sh", Paths.script("hf-wallpaper")]);
+                    }
                 }
                 Btn {
                     readonly property bool on: Settings.get("wallpaperHora", false) === true

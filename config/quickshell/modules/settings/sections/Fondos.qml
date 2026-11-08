@@ -122,7 +122,7 @@ ColumnLayout {
             Section {
                 Layout.fillWidth: true
                 title: "Fondos en movimiento"
-                headerRight: Sw { checked: Settings.get("wallpaperMotion", true) && !Settings.get("reduceMotion", false); onToggled: v => Settings.set("wallpaperMotion", v) }
+                headerRight: Sw { checked: Settings.get("wallpaperMotion", true) && !Settings.get("reduceMotion", false); onToggled: v => { Settings.set("wallpaperMotion", v); Quickshell.execDetached(["sh", "-c", 'sleep 0.6; exec "$1" restore', "sh", Paths.script("hf-wallpaper")]); } }
                 Seg {
                     Layout.fillWidth: true
                     model: [["video", "Vídeo"], ["escena", "Escenas"]]

@@ -425,7 +425,9 @@ ShellRoot {
     function launch(): void {
         const s = session;
         const env = ["XDG_SESSION_TYPE=wayland", "XDG_CURRENT_DESKTOP=" + (s.desk || s.name), "XDG_SESSION_DESKTOP=" + s.key];
-        const cmd = ["sh", "-c", "exec " + s.exec];
+        // greetd (source_profile = true) une los argumentos con espacios: «sh -c exec …» se rompía y la sesión
+        // volvía al login en ~20 ms. En palabras sueltas sirve igual con el envoltorio de greetd y sin él.
+        const cmd = s.exec.trim().split(/\s+/);
         if (preview) {
             console.info("[greeter] (vista previa) iniciaría:", JSON.stringify(cmd), "como", loginName(), "env", JSON.stringify(env));
             resetPreview.restart();
