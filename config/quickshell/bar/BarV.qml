@@ -44,7 +44,7 @@ Item {
         PomodoroChip { visible: Settings.barHas("pomodoro"); Layout.alignment: Qt.AlignHCenter; vertical: true }
         CaffeineChip { visible: Settings.barHas("cafeina"); Layout.alignment: Qt.AlignHCenter; vertical: true }
         IconBtn { visible: Settings.barHas("portapapeles"); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26; icon: "clipboard"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // Spotlight en modo portapapeles
-        IconBtn { visible: Settings.barHas("ia"); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26; icon: "ai"; preload: "ia"; active: Shell.view === "ia"; onClicked: Shell.toggle("ia") }
+        IconBtn { visible: Settings.barHas("ia"); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26; icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") }
         IconBtn { visible: Settings.barHas("ajustes"); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26; icon: "gear"; onClicked: Shell.open("ajustesapp") }   // Ajustes (tuerca)
         OmarchySlot { barWindow: root.barWindow; vertical: true; place: Settings.get("omarchyBarSlot", "derecha"); Layout.alignment: Qt.AlignHCenter }   // plugins de Omarchy
         Tray { barWindow: root.barWindow; vertical: true; visible: Settings.get("barTray", true) && any; Layout.alignment: Qt.AlignHCenter }

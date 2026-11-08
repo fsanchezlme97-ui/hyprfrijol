@@ -1,4 +1,4 @@
-// Ajustes › Panel lateral y PiP — pestañas del panel (sidePanelApps), ancho y lado; PiP: esquina, tamaño,
+// Ajustes › Panel lateral y PiP — pestañas del panel (sidePanelApps), ancho, lado y fijado (sidePanelPinned); PiP: esquina, tamaño,
 // margen, opacidad (config/apply/pip.py genera la window_rule); también las miniventanas de llamadas
 // (pipCalls) y reproductores (pipPlayers), ver modules/pip/pip-apps.json.
 import QtQuick
@@ -70,6 +70,12 @@ ColumnLayout {
             LabeledRow {
                 label: "Lado"; labelWidth: 60
                 Seg { model: [["derecha", "Derecha"], ["izquierda", "Izquierda"]]; current: Settings.get("sideSide", "derecha"); onPicked: k => Settings.set("sideSide", k) }
+            }
+            SwRow {
+                label: "Fijar el panel"
+                sub: "parte del mosaico: las ventanas se apartan y sigue abierto en todos los espacios (pantalla principal)"
+                key: "sidePanelPinned"
+                onToggled: v => { if (v) Shell.sideHidden = false; }
             }
         }
         Section {

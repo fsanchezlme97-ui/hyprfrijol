@@ -41,7 +41,7 @@ Red, Sonido, Energía, Sistema y recuperación, Accesibilidad y Acerca del siste
   claves que escribe esa sección (`keys` del índice: `Settings.set("k")`, `key: "k"`, `setMany`/`Confirm.change`
   con `{ k: … }`). Pide confirmación y se puede deshacer.
 - **Exportar / importar** (Sistema › Tus ajustes, `services/SettingsIO.qml`): exporta una copia de
-  `settings.json` (diálogo de zenity/kdialog; sin ellos, `~/Documentos/hyprfrijol-ajustes-<fecha>.json`).
+  `settings.json` (diálogo de zenity; sin él, `~/Documentos/hyprfrijol-ajustes-<fecha>.json`).
   Importar valida el JSON (un objeto, claves válidas y del tipo de su valor por defecto; el resto se ignora),
   lo mezcla con los actuales y lo aplica con «¿Se ve bien?».
 - IPC (pruebas): `ipc call settings search <texto>` · `results <texto>` · `goto <sección> "<etiqueta>"` ·
@@ -56,7 +56,7 @@ Red, Sonido, Energía, Sistema y recuperación, Accesibilidad y Acerca del siste
 | 10-look.py | `rounding` (null = según el estilo), `blurQuality`, `blurAuto`, `colorFilter` (shaders/), `highContrast`; desenfoque según `estilo` (Mica: más amplio y apagado); sombras según `shadows` y `activeBorder` (`brillo`) |
 | 20-input.py | `kbLayouts`, `kbSwitch`, `kbRepeat*`, `numlock`, `capsEscape`, `focusOnHover`, touchpad, gestos 3/4 dedos |
 | 30-layout.py | `windowMode` + `layout` → `general:layout` (dwindle / master, o scrolling en desplazamiento), `scrollColumnWidth`, `scrollFocusFit`, `scrollOneFull`, `snapEdges` |
-| 35-windows.py | `windowMode` (regla `hf-float-all` del modo flotante) |
+| 35-windows.py | `windowMode` (regla `hf-float-all` del modo flotante), `floatApps` + `floatAppsSize` (reglas `hf-float-apps` / `hf-float-apps-compact`) |
 | 40-monitors.py | `monitors` {salida: {mode, position, scale, vrr, disabled, mirror}} |
 | 50-rules.py | ventanas Ajustes/Herramientas flotantes; sin efectos a pantalla completa (`gameNoFx`) |
 | 60-binds.py | `keybinds` {descripción: {from, to}} (acciones en `keybind-actions.json`), atajos de `webapps`, `overAmplify`, lupa (`magnifier`: sustituye la lupa básica de binds.lua) |
@@ -78,6 +78,12 @@ Vista `herramientas` (argumento `<id>` la preselecciona, `cat:<clave>` abre una 
 `ipc call tools open|select <id>|search <texto>|source <id> <fuente>|close`. Catálogo en `config/tools/catalog.json`
 (125 apps, categorías y paquetes; flags: s recomendada, n nueva, a alfa, p preview, x XWayland, t terminal, w web).
 La lógica es una sola, `services/Pkg.qml`, que usan la tienda, la Bienvenida y Ajustes › Aplicaciones.
+Ajustes › Aplicaciones › «Instaladas en este equipo» (`ui/InstalledApps.qml` → `hf-apps installed --json`) lista
+todas las apps con lanzador: paquete que las trae (`pacman -Qo` / `rpm -qf` / `dpkg -S` / `xbps-query -o`; AUR con
+`pacman -Qm`), Flatpak (usuario o sistema) o AppImage de hyprfrijol, con búsqueda y «Desinstalar» (la orden se abre en
+la terminal con `Pkg.runInTerminal`, donde el gestor pide contraseña y confirmación). Protegidas, sin botón: los niveles
+`required`/`base` de `install/packages.tsv`, Hyprland, Quickshell, kernel, firmware, systemd, el gestor de paquetes,
+portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si otros paquetes dependen de él (Arch).
 
 - **Fuentes por app** (`pkgs`): `pacman` (repos oficiales de Arch), `aur`, `dnf` (+ `dnfRepo`: `rpmfusion-free`,
   `rpmfusion-nonfree` o `copr:usuario/proyecto`), `apt`, `zypper`, `flatpak` (ID de Flathub), `appimage` (página de
@@ -125,6 +131,8 @@ La lógica es una sola, `services/Pkg.qml`, que usan la tienda, la Bienvenida y 
 | Clave | Valores | Qué hace |
 |---|---|---|
 | `windowMode` | `mosaico` (por defecto) · `desplazamiento` · `flotante` | `mosaico`: las ventanas se reparten la pantalla con el diseño `layout` (sin dock salvo `dockInTiling`). `desplazamiento`: columnas en una cinta que se desplaza (diseño `scrolling` nativo de Hyprland 0.57). `flotante`: escritorio clásico, todas las ventanas flotan (regla `hf-float-all`) y hay dock en todos los espacios. El antiguo `mixto` se lee como `mosaico` y `layout = scrolling` con `mosaico` como `desplazamiento`; `floatWorkspace` ya no se usa |
+| `floatApps` | lista de clases de ventana (Nautilus, Loupe, mpv, Celluloid, Showtime, Decibels, Calculadora, File Roller…) | «Apps en ventana flotante» (`ui/FloatApps.qml`): estas apps se abren flotando al centro en vez de en el mosaico (`float` + `center` + `size`; sin distinguir mayúsculas). Interruptores por grupo (Archivos, Imágenes, Audio, Vídeo, Calculadora, Comprimidos), × para quitar una y un buscador entre las ventanas abiertas y las apps instaladas (clase = `StartupWMClass` o id del .desktop). Calculadoras y reproductores de audio pequeños flotan con su propio tamaño (`hf-float-apps-compact`). WinMode no las devuelve al mosaico al salir del modo flotante |
+| `floatAppsSize` | `0.65` (0.5 · 0.65 · 0.8) | ancho de esas ventanas respecto a la pantalla (el alto, +7 %) |
 | `layout` | `dwindle` (por defecto) · `master` | diseño del modo mosaico (el antiguo `scrolling` es ahora el modo desplazamiento; al elegir otro modo vuelve a `dwindle`) |
 | `scrollColumnWidth` | `0.5` (0.333 · 0.5 · 0.667 · 1.0) | ancho de una columna nueva (`scrolling:column_width`) |
 | `scrollFocusFit` | `ajustar` (por defecto) · `centrar` | al enfocar una columna se trae justo a la vista o se centra (`scrolling:focus_fit_method` 1 / 0) |
@@ -188,7 +196,7 @@ La lógica es una sola, `services/Pkg.qml`, que usan la tienda, la Bienvenida y 
 | Bluetooth | `Quickshell.Bluetooth` (`services/Bt.qml`: `paired`, `discovered`, `iconFor`, `kindText`); nombre con `bluetoothctl system-alias`; si el dispositivo pide PIN/código, `bluetoothctl --agent KeyboardDisplay pair` en una terminal; enviar archivo con `bluetooth-sendto`/`blueman-sendto`. Sin adaptador: estado de `bluetooth.service`, rfkill, instalar BlueZ | — |
 | Impresoras y escáneres | `lpstat`/`lpoptions` (predeterminada por usuario con `lpoptions -d`), `lp` (página de prueba), `cancel`, `pkexec cupsenable/cupsdisable/lpadmin -x`, `system-config-printer` o http://localhost:631, `scanimage -L`, `simple-scan`; instalación de cups, cups-pdf, gutenprint, hplip, nss-mdns, sane… con `Pkg.commands` en terminal | — |
 | Usuarios | AccountsService por `busctl` (`SetRealName`, `SetIconFile`), `~/.face` (recortada a 256 px con ImageMagick), `passwd`/`useradd`/`passwd` en terminal, `pkexec gpasswd -a/-d … wheel`, `pkexec userdel [-r]`; inicio automático = bloque `[initial_session]` de `/etc/greetd/config.toml` (copia en `config.toml.antes-autologin`) | — |
-| Fecha, hora e idioma | `timedatectl` (`set-ntp`, `set-timezone`, `set-time`, `set-local-rtc`), `localectl set-locale`, `~/.config/locale.conf` (LANG + LC_TIME/NUMERIC/MONETARY/MEASUREMENT/PAPER), añadir idioma = descomentar `/etc/locale.gen` + `locale-gen` (pkexec) | `clock24` (true; `Time.hhmm`/`Time.ampm`/`Time.fmt()`/`Time.fmtHM()`), `weekStart` (1 lunes · 0 domingo · 6 sábado; calendario de la agenda), `worldClocks` |
+| Fecha, hora e idioma | `timedatectl` (`set-ntp`, `set-timezone`, `set-time`, `set-local-rtc`), `localectl set-locale`, `~/.config/locale.conf` (LANG + LC_TIME/NUMERIC/MONETARY/MEASUREMENT/PAPER), añadir idioma = descomentar `/etc/locale.gen` + `locale-gen` (pkexec) | `clock24` (true; `Time.hhmm`/`Time.ampm`/`Time.fmt()`/`Time.fmtHM()`), `weekStart` (1 lunes · 0 domingo · 6 sábado; calendario de la agenda), `worldClocks`, `calendarCollapsed` (false; botón ⌃ de la cabecera del calendario: solo la semana del día elegido, ‹ › pasan de semana) |
 | Privacidad y seguridad | apps que usan micrófono/cámara/pantalla (enlaces de `pw-dump` + `/proc/*/fd` → `/dev/video*`, cada 3 s); borrar recientes (`recently-used.xbel`), `cliphist wipe`, uso de Spotlight (conserva fijados; Spotlight relee el archivo), papelera, miniaturas; `gsettings org.gnome.system.location enabled` y `org.gnome.desktop.privacy remember-recent-files`; estado de cifrado/arranque seguro/TPM/cortafuegos (el interruptor del cortafuegos está en Red) | `idleLock`, `lockOnSuspend` (true; `85-idle.py` quita `before_sleep_cmd`), `notifyLock`, `weatherIpLocation` (true; si es false y no hay ciudad fija, `Weather` no consulta ipapi/ipinfo) |
 
 Componente nuevo: `modules/settings/ui/ConfirmButton.qml` (acción destructiva en dos clics, en `Theme.danger`).
@@ -208,13 +216,11 @@ bloqueadas, quita de los emergentes los de apps sin emergentes y suena con `canb
 | `notifySound` / `notifySoundName` | `false` / `"message-new-instant"` | sonido del tema freedesktop al mostrarse un aviso (no con «no molestar» ni `suppress-sound`) |
 | `notifyLock` | `true` | número de avisos en la pantalla de bloqueo (nunca el contenido) |
 | `notifyApps` | `{}` | `{"<app en minúsculas>": {"allow": false, "popups": false, "sound": false}}` (solo se guardan los `false`); los urgentes siempre salen |
-| `notifyFavorites` | lista | ★ en la lista: pasan con «no molestar» si el perfil usa «solo favoritos» |
 
 Atajos de «no molestar» (flecha del mosaico en los ajustes rápidos y del botón en el centro de notificaciones,
 `modules/notifications/DndPresets.qml`): durante 1 h · hasta esta noche (20:00) · hasta mañana (08:00) · hasta
 que lo desactive, con el tiempo que queda (`Notifs.dndLeft`). `Notifs.dndPreset(k)` / `setDndUntil(on, ms)`; la
-hora de fin (epoch en ms) se guarda dentro de `~/.local/state/hyprfrijol/dnd` (vacío = sin fin; `hf-profile`
-lo deja vacío) y un temporizador lo apaga al llegar, también tras reiniciar el shell.
+hora de fin (epoch en ms) se guarda dentro de `~/.local/state/hyprfrijol/dnd` (vacío = sin fin) y un temporizador lo apaga al llegar, también tras reiniciar el shell.
 IPC: `notifs dndPreset 1h|noche|manana|siempre|off`, `notifs dndFor <min>`, `notifs dndLeft`.
 
 Apps que han avisado: `~/.local/state/hyprfrijol/notify-apps.json` (`{clave: {name, entry, icon, last, count}}`); «Olvidar» la quita.
@@ -249,6 +255,10 @@ dock por defecto empieza por Nautilus, Editor de texto y Calculadora, y el catá
 «Apps básicas» (Editor de texto, Calculadora, Loupe, Papers, Showtime, Decibels, Amberol, File Roller, Baobab,
 Monitor del sistema, Boxes, Conexiones) con las de KDE como alternativa («alt. a …»: Kate, KCalc, Gwenview,
 Haruna, Ark, Filelight; Dolphin y Okular siguen en sus categorías).
+Nada depende de KDE: el tema de Qt es qt6ct (`QT_QPA_PLATFORMTHEME=qt6ct` en env.lua; el de Plasma solo si no hay
+qt6ct), los selectores de archivos son el portal de GTK o zenity (`scripts/hf-pickfile`), y el móvil va con Valent
+(`scripts/hf-phone`: D-Bus `ca.andyholmes.Valent`, dispositivos, batería, enviar archivos, hacerlo sonar; kdeconnect-cli
+solo si no hay Valent). Las apps de KDE siguen como alternativas en los selectores.
 
 ## VPN, escritorio remoto y máquinas virtuales (`scripts/hf-vpn`, `hf-remote`, `hf-vm`)
 
@@ -257,15 +267,46 @@ instalaciones y lo que necesita `sudo` se abren en una terminal (`Pkg.runInTermi
 
 - **Red › VPN** (`sections/Red.qml`): cualquier VPN de NetworkManager. Lista con conectar/desconectar, editar
   (`nm-connection-editor --edit`, o `nmtui`) y eliminar; «Importar archivo…» (.ovpn, .conf de WireGuard, .pcf…
-  con zenity/kdialog → `nmcli connection import`); «Añadir VPN» por tipo (WireGuard, OpenVPN, Cisco AnyConnect,
+  con zenity → `nmcli connection import`); «Añadir VPN» por tipo (WireGuard, OpenVPN, Cisco AnyConnect,
   GlobalProtect, Fortinet, Juniper/Pulse, L2TP/IPsec, IKEv2/strongSwan, PPTP, SSTP, Cisco VPNC) con el estado de su
   plugin (`/usr/lib/NetworkManager/VPN/*.name`), botón «Instalar» y un formulario rápido (nombre, servidor,
   usuario) o el editor avanzado. **VPN en malla**: Tailscale y ZeroTier (instalar, activar servicio, conectar,
   unirse a una red).
+- **VPN de empresa: FortiGate (FortiClient SSL VPN) y GlobalProtect (Palo Alto)** (`ui/VpnCorpForm.qml`). El formulario
+  pide servidor/portal, usuario (opcional), autenticación (`password` · `saml` = SSO en el navegador · `cert`), el aviso
+  «Pide código 2FA/OTP» y el **programa** («Automático» elige el mejor instalado; `hf-vpn backends <tipo>`):
+
+  | Caso | Automático | Cómo conecta |
+  |---|---|---|
+  | FortiGate, contraseña/2FA/certificado | NM fortisslvpn › NM OpenConnect (`--protocol=fortinet`) › openfortivpn | NetworkManager, sin sudo |
+  | FortiGate, SSO | NM OpenConnect › openfortivpn | como tu usuario: se abre `https://<gw>/remote/saml/start?redirect=1`, `hf-vpn` escucha la vuelta en `127.0.0.1:8020` (como FortiClient con «navegador externo» y `openfortivpn --saml-login`), pide `SVPNCOOKIE` a `/remote/saml/auth_id` y NM levanta el túnel con la cookie (`nmcli connection up … passwd-file`). Con `openfortivpn-webview` instalado, el SSO va en su ventana (sirve aunque el FortiGate no redirija a 8020) |
+  | GlobalProtect, contraseña/2FA/certificado | NM OpenConnect (`--protocol=gp`) › gpclient | NetworkManager, sin sudo |
+  | GlobalProtect, SSO | NM OpenConnect + gpclient › gpclient | `gpclient connect --cookie-only --browser` (yuezk, GPL-3; sin root en ese modo) y NM con la cookie. Sin gpclient, la ventana web de NetworkManager-openconnect ≥ 1.2.10 si hay agente (nm-applet) |
+  | openfortivpn / gpclient «directos» | solo si no hay NM | en una terminal con `sudo` (pppd/tun y DNS global, sin DNS dividido) |
+
+  **Agente de secretos**: hyprfrijol no trae uno. Si hay uno gráfico en marcha (nm-applet, GNOME, Plasma) NetworkManager
+  pide en él contraseña, código y certificado. Si no, `hf-vpn up` abre una terminal: `openconnect --authenticate`
+  (contraseña, 2FA y aceptar el certificado) y luego NM con la cookie, o `nmcli --ask connection up` (fortisslvpn).
+  **Certificado**: antes de conectar se comprueba el del servidor (openssl); si no lo firma una autoridad conocida, la
+  fila muestra la huella `pin-sha256` y «Confiar y conectar» (`hf-vpn trust`: se guarda y se pasa como `gwcert`, o como
+  `trusted-cert` a fortisslvpn). **Estado** (`hf-vpn list`): `status` connected/connecting/error y `msg` con un error en
+  español (certificado, SSO sin terminar en 5 min, servidor que no responde, portal equivocado, credenciales). Lo propio
+  de hyprfrijol va en `~/.config/hyprfrijol/vpn.json` (auth, programa, certificado de confianza) y el estado en
+  `$XDG_RUNTIME_DIR/hf-vpn/`. **Clientes oficiales**: FortiClient VPN (`forticlient`, `/opt/forticlient`) y GlobalProtect
+  (`globalprotect launch-ui`, `PanGPUI`) salen en la lista con «Abrir» si están; no se toca su configuración.
+  **Importar**: una copia `.conf` (XML sin cifrar) de FortiClient crea sus SSL VPN (servidor, usuario si no va cifrado,
+  SSO); las `.sconf` cifradas y las IPsec no. **Instalar**: `hf-vpn install fortinet|gp` (paquetes en `hf-vpn pkgs`,
+  filas `vpn-fortinet`, `vpn-fortinet-sso` y `vpn-globalprotect` de packages.tsv; gpclient: PPA/COPR de yuezk).
+  **Sin servidor real** no se ha probado el túnel: sí el flujo con un `nmcli` y un FortiGate falsos
+  (`HF_VPN_NMCLI`, `HF_VPN_BROWSER`, `HF_VPN_FAKE_HAVE`, `HF_VPN_FAKE_CERT`, `--dry-run`, `hf-vpn cmdline`).
 - **Escritorio remoto** (`sections/Remoto.qml`): conexiones guardadas en `remoteHosts`
   (`[{name, proto: rdp|vnc|ssh|spice, host, port, user, domain, opts: {fullscreen, dynamicRes, sound, clipboard,
-  drives, gateway}}]`), conexión rápida por URL y clientes (FreeRDP 3 — `sdl-freerdp3` › `xfreerdp3` —, Remmina,
-  Conexiones, TigerVNC; `remoteClient`: `auto|freerdp|remmina|connections`). Las contraseñas nunca van a
+  drives, multimon, gateway}}]`), conexión rápida por URL y clientes. `remoteClient`: `auto|remmina|freerdp|connections`;
+  «Automático» = Remmina (recomendado para Windows: RD Gateway, varias pantallas, carpetas, impresoras, sonido, NLA; se le
+  pasa un perfil `~/.local/share/hyprfrijol/remmina/<nombre>.remmina` con puerta de enlace, `multimon`, portapapeles,
+  sonido y carpeta, conservando la contraseña que guarde Remmina) › FreeRDP 3 (`sdl-freerdp3` › `wlfreerdp3` ›
+  `xfreerdp3`: el más rápido, sin interfaz; se usa primero si hay contraseña en el llavero) › Conexiones (la más sencilla,
+  sin puerta de enlace: avisa si la conexión la necesita). TigerVNC es solo VNC. `HF_REMOTE_DRY_RUN=1` imprime la orden. Las contraseñas nunca van a
   settings.json: el cliente las pide o se guardan en el llavero (`secret-tool`, servicio `hyprfrijol-remote`) y
   se pasan a FreeRDP por stdin (`/args-from:stdin`). **Compartir**: VNC con wayvnc (`vncListen`, `vncPort`,
   `vncOutput`; `vncListen` = `"127.0.0.1"` por defecto). Sin contraseña wayvnc nunca escucha en la red: `hf-remote
@@ -283,6 +324,8 @@ instalaciones y lo que necesita `sudo` se abren en una terminal (`Pkg.runInTermi
 ```sh
 scripts/hf-vpn list | plugins | mesh | up|down|delete|edit <uuid|nombre> | import [archivo] [tipo]
 scripts/hf-vpn add <tipo> <nombre> <servidor> [usuario] | create <tipo> | install <tipo|editor|tailscale|zerotier>
+scripts/hf-vpn add fortinet|gp <nombre> <servidor> [usuario] --auth password|saml|cert [--otp] [--backend …] [--cert f] [--realm r]
+scripts/hf-vpn backends fortinet|gp | cmdline <vpn> | trust <vpn> | official | open-official forticlient|globalprotect   (--dry-run)
 scripts/hf-remote list | clients | connect <nombre|rdp://usuario@equipo> | secret set|clear <nombre>
 scripts/hf-remote server status|start|stop|auth [usuario]|noauth
 scripts/hf-vm status | list | start|shutdown|destroy|console <vm> [uri] | install cockpit|virtmanager|boxes|viewer|containers|boxbuddy
@@ -317,9 +360,8 @@ agrupadas por la sección de Ajustes que las cambia. Los controles leen el mismo
 | Escritorio y dock (Desktop.qml, Dock.qml) | `deskOrder` = `{}` · `dockApps` = `[]` · `dockBehavior` = `"inteligente"` · `dockInTiling` = `false` |
 | Fondos | `wallpaperTransition` = `"fundido"` · `wallpaperNoFullscreen` = `true` · `wallpaperMotion` = `true` · `wallpaperMotionKind` = `"video"` · `wallpaperFps` = `30` · `wallpaperPauseOn` = `["fullscreen", "bateria", "juego"]` |
 | IA | `aiProvider` = `"claude-code"` · `aiModel` = `""` · `aiEndpoint` = `""` · `aiKeyEnv` = `"HF_AI_KEY"` · `aiContextWindow` = `true` · `aiContextClipboard` = `true` · `aiContextCapture` = `true` · `aiTerminal` = `true` · `aiControlShell` = `true` · `aiConfirm` = `true` · `aiSpotlight` = `true` · `aiHistory` = `true` |
-| Panel | `pipSize` = `"minimo"` · `pip` = `true` · `pipMargin` = `12` · `pipOpacity` = `1.0` · `pipButton` = `true` · `pipAuto` = `false` · `pipAllWs` = `true` · `pipHoverControls` = `false` · `pipFadeNear` = `false` · `sidePanelApps` = `["ia", "wa", "yt", "pin"]` · `sideWidth` = `400` · `sideSide` = `"derecha"` |
+| Panel | `pipSize` = `"minimo"` · `pip` = `true` · `pipMargin` = `12` · `pipOpacity` = `1.0` · `pipButton` = `true` · `pipAuto` = `false` · `pipAllWs` = `true` · `pipHoverControls` = `false` · `pipFadeNear` = `false` · `sidePanelApps` = `["ia", "wa", "yt", "pin"]` · `sideWidth` = `400` · `sideSide` = `"derecha"` · `sidePanelPinned` = `false` (chincheta de la cabecera o «Fijar el panel»: el panel pasa a formar parte del mosaico en la pantalla principal; una capa invisible `hf-ia-zone` reserva su franja como zona exclusiva y las ventanas se apartan; sigue abierto en todos los espacios, Esc no lo cierra, se aparta con una ventana a pantalla completa y en el modo sin distracciones; Super + A y la × lo esconden en la sesión —`Shell.sideHidden`— y Super + A lo vuelve a mostrar fijado) |
 | Pantallas | `nightLight` = `"off"` · `nightTemp` = `4000` (2500–6500 K; al arrastrar se previsualiza con hyprsunset y al soltar se guarda y se vuelve al estado anterior) · `sunAuto` = `true` (amanecer/atardecer con la ecuación de NOAA a partir de la ubicación del clima: `weatherLat`/`weatherLon` o la última por IP en `~/.cache/hyprfrijol/weather.json`) · `sunset` = `"19:00"` · `sunrise` = `"07:00"` (a mano, o si no hay ubicación) · `nightFrom` = `"22:00"` · `nightTo` = `"07:00"` |
-| Perfiles | `profiles` = `{}` · `profileRules` = `[{"id": "monitor", "on": true, "kind"…` |
 | Sistema | `updatesSnapshot` = `true` · `updatesMode` = `"avisar"` · `updatesFlatpak` = `true` · `updatesFirmware` = `true` |
 | Sonido | `noiseSuppression` = `false` · `audioAutoSwitch` = `true` |
 | Teclado | `clipboardAutoPaste` = `true` · `kbRepeatRate` = `25` · `clipboardClearOnLogin` = `false` |

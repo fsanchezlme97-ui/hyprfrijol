@@ -20,7 +20,7 @@ Una extensión rota solo deja un comentario `-- x.py: error …`, no rompe el re
 | `52-pip.py` | regla de ventana del PiP: esquina (pipCorner/pipFree) y margen (pipMargin) apartados de la barra (sustituye a HF.rules.pip) |
 | `60-binds.py` | keybinds (reasignaciones, ver keybind-actions.json), atajos de webapps (hf-webapp open), overAmplify, lupa (magnifier) |
 | `15-apps.py` | fileManager (si está instalado), terminal |
-| `17-theme-apps.py` | themeApps + themeKitty/themeQt/themeBtop → include de kitty, esquema «HyprFrijol» en kdeglobals (Dolphin/Qt; qt6ct si está), tema de btop; themeIcons/iconFolders → tema de usuario Papirus-Liquid-* con las carpetas del color del acento (sin root). Recarga en vivo solo con el HOME real |
+| `17-theme-apps.py` | themeApps + themeKitty/themeQt/themeBtop → include de kitty, paleta e iconos de qt6ct (apps Qt; kdeglobals solo si está el tema de Plasma), tema de btop; themeIcons/iconFolders → tema de usuario Papirus-Liquid-* con las carpetas del color del acento (sin root). Recarga en vivo solo con el HOME real |
 | `16-gtk.py` | themeApps (+ themeGtk) → colores de libadwaita (gtk-adw.css) y gsettings color-scheme / accent-color / gtk-theme |
 | `70-plugins.py` | plugins {id: {on, …}} → opciones de los plugins de hyprpm activados (catálogo en config/tools/plugins.json), con guarda si no están cargados |
 | `85-idle.py` | idleDim, idleLock, idleScreenOff, idleSuspend, lockOnSuspend → hypridle.conf (no devuelve Lua) |

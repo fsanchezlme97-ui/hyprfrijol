@@ -4,9 +4,9 @@
 #  · kitty  (themeKitty)  include de ~/.local/state/hyprfrijol/kitty-colors.conf (esquema completo: 16 colores
 #                         ANSI de la paleta, pestañas, selección) en un bloque al final de ~/.config/kitty/kitty.conf;
 #                         en el mismo bloque, font_size de «Texto de la terminal» (termFontPx, aunque el tema esté apagado)
-#  · Qt/KDE (themeQt)     esquema de color «HyprFrijol» (~/.local/share/color-schemes/HyprFrijol.colors) y sus
-#                         [Colors:*] en ~/.config/kdeglobals: Dolphin, Kate, Okular… con QT_QPA_PLATFORMTHEME=kde
-#                         (plasma-integration, lo fija env.lua). Con qt6ct instalado, también su paleta.
+#  · Qt (themeQt)         paleta e iconos de qt6ct (~/.config/qt6ct; env.lua fija QT_QPA_PLATFORMTHEME=qt6ct).
+#                         Solo si está el tema de Plasma (alternativa, plasma-integration): esquema «HyprFrijol»
+#                         (~/.local/share/color-schemes/HyprFrijol.colors) y sus [Colors:*] en ~/.config/kdeglobals.
 #                         La primera vez se guarda kdeglobals en ~/.local/state/hyprfrijol/kdeglobals.orig y al
 #                         desactivarlo se restauran sus colores.
 #  · btop   (themeBtop)   ~/.config/btop/themes/hyprfrijol.theme + color_theme en btop.conf (se recuerda el anterior)
@@ -270,6 +270,12 @@ def kde_colors(c):
 def kde_wm(c):
     return {"activeBackground": c["s3"], "activeForeground": c["t"], "activeBlend": c["t"],
             "inactiveBackground": c["s1"], "inactiveForeground": c["tv"], "inactiveBlend": c["tv"]}
+
+
+def _kde_qt():
+    """¿Está el tema de Qt de Plasma (plasma-integration)? Con él env.lua usa QT_QPA_PLATFORMTHEME=kde si falta qt6ct."""
+    return any(pathlib.Path(d, "platformthemes/KDEPlasmaPlatformTheme6.so").exists() for d in
+               ("/usr/lib/qt6/plugins", "/usr/lib64/qt6/plugins", "/usr/lib/x86_64-linux-gnu/qt6/plugins", "/usr/lib/aarch64-linux-gnu/qt6/plugins"))
 
 
 def apply_kde(c, on):
@@ -598,14 +604,17 @@ def hypr_lua(s, c):
     now["kitty"] = kitty
 
     qt = want("themeQt")
-    kde_changed = apply_kde(c, qt)
+    # kdeglobals solo si el tema de Plasma está instalado (alternativa); lo normal es qt6ct (env.lua). Sin él, se
+    # devuelven a kdeglobals los colores de antes, si los habíamos cambiado.
+    kde = _kde_qt()
+    kde_changed = apply_kde(c, qt and kde)
     icon = ""
     try:
         icon = apply_icons(s, c)
     except Exception:
         pass
     if icon:
-        kde_changed |= set_icon_theme(icon, True)
+        kde_changed |= set_icon_theme(icon, kde)
     apply_qt6ct(c, qt, icon)
     now["kde"] = hashlib.md5(json.dumps([qt, kde_colors(c) if qt else None]).encode()).hexdigest()
     now["icons"] = icon

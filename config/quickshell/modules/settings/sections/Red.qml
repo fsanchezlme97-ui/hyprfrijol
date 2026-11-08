@@ -1,6 +1,6 @@
 // Ajustes › Red — Wi-Fi (Net / nmcli), cortafuegos (ufw/firewalld), punto de acceso, conexión medida, DNS,
-// VPN de NetworkManager de cualquier tipo (scripts/hf-vpn: WireGuard, OpenVPN, OpenConnect, L2TP, IKEv2…)
-// y VPN en malla (Tailscale, ZeroTier).
+// VPN de NetworkManager de cualquier tipo (scripts/hf-vpn: WireGuard, OpenVPN, OpenConnect, L2TP, IKEv2…),
+// VPN de empresa FortiGate y GlobalProtect con SSO/SAML (ui/VpnCorpForm.qml; docs/AJUSTES.md) y VPN en malla (Tailscale, ZeroTier).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -196,16 +196,35 @@ ColumnLayout {
         property string busy: ""        // uuid que está conectando/desconectando
         property string confirmDel: ""
         property string msg: ""
+        property var official: []       // hf-vpn official: FortiClient y GlobalProtect oficiales, si están
         readonly property var cur: types.find(t => t.key === addType) ?? null
-        readonly property var kindLabel: ({ wireguard: "WireGuard", openvpn: "OpenVPN", openconnect: "OpenConnect", fortisslvpn: "Fortinet SSL",
+        readonly property bool anyConnecting: conns.some(c => c.status === "connecting")
+        readonly property var kindLabel: ({ wireguard: "WireGuard", openvpn: "OpenVPN", openconnect: "OpenConnect", fortisslvpn: "FortiGate SSL VPN",
             l2tp: "L2TP/IPsec", strongswan: "IPsec IKEv2", pptp: "PPTP", sstp: "SSTP", vpnc: "Cisco VPNC", libreswan: "IPsec (Libreswan)" })
-        readonly property var protoLabel: ({ anyconnect: "Cisco AnyConnect", gp: "GlobalProtect", pulse: "Pulse Secure", nc: "Juniper", fortinet: "Fortinet", f5: "F5", array: "Array" })
+        readonly property var protoLabel: ({ anyconnect: "Cisco AnyConnect", gp: "GlobalProtect", pulse: "Pulse Secure", nc: "Juniper", fortinet: "FortiGate SSL VPN", f5: "F5", array: "Array" })
+        readonly property var corpLabel: ({ fortinet: "FortiGate SSL VPN", gp: "GlobalProtect" })
+        readonly property var authShort: ({ password: "contraseña", saml: "SSO", cert: "certificado" })
+        readonly property var backendShort: ({ "nm-forti": "fortisslvpn", "nm-oc": "OpenConnect", openfortivpn: "openfortivpn · sudo", gpclient: "gpclient · sudo" })
+        function describe(c) {
+            if (c.corp) return corpLabel[c.corp] + " · " + (authShort[c.auth] ?? c.auth) + (c.otp ? " + 2FA" : "") + (backendShort[c.backend] ? " · " + backendShort[c.backend] : "");
+            return c.proto ? (protoLabel[c.proto] ?? c.proto) : (kindLabel[c.kind] ?? c.kind);
+        }
+        function stateText(c, working) {
+            if (c.status === "connected" || c.active) return "conectada" + (c.device ? " · " + c.device : "");
+            if (c.status === "connecting") return c.msg || "conectando…";
+            if (working) return "conectando…";
+            if (c.status === "error") return "no se pudo conectar";
+            return "desconectada";
+        }
 
         function refresh() { listProc.running = false; listProc.running = true; }
-        function reloadTypes() { plugProc.running = false; plugProc.running = true; }
+        function reloadTypes() { plugProc.running = false; plugProc.running = true; offProc.running = false; offProc.running = true; }
         function run(args, then) { act.command = [cmd].concat(args); act.then = then ?? ""; act.running = true; }
+        function shRun(script, args) { act.command = ["sh", "-c", script, "sh"].concat(args); act.then = ""; act.running = true; }
 
-        Timer { interval: 5000; running: true; repeat: true; onTriggered: vs.refresh() }
+        Timer { interval: vs.anyConnecting ? 1500 : 5000; running: true; repeat: true; onTriggered: vs.refresh() }
+        // Solo para capturas de prueba: HF_DEV_VPN_ADD="fortinet:saml" abre el formulario de ese tipo
+        Component.onCompleted: { const d = Quickshell.env("HF_DEV_VPN_ADD") ?? ""; if (d) { adding = true; addType = d.split(":")[0]; } }
         Timer { id: soon; interval: 1500; onTriggered: { vs.busy = ""; vs.refresh(); } }
         Timer { id: typesLater; interval: 12000; repeat: true; property int left: 0; onTriggered: { vs.reloadTypes(); if (--left <= 0) stop(); } }
         Process {
@@ -228,12 +247,18 @@ ColumnLayout {
             }
         }
         Process {
+            id: offProc
+            running: true
+            command: [vs.cmd, "official"]
+            stdout: StdioCollector { onStreamFinished: vs.official = text.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch (e) { return null; } }).filter(o => o && o.installed) }
+        }
+        Process {
             id: act
             property string then: ""
             stdout: StdioCollector { id: actOut }
             stderr: StdioCollector { id: actErr }
             onExited: code => {
-                vs.msg = code === 0 ? (act.then || "") : (actErr.text || actOut.text).trim().split("\n").pop();
+                vs.msg = code === 0 ? (act.then || "") : code === 4 ? "" : (actErr.text || actOut.text).trim().split("\n").pop();
                 if (code === 0 && act.then) { vs.adding = false; vs.addType = ""; }
                 soon.restart();
             }
@@ -250,61 +275,115 @@ ColumnLayout {
 
         // ---------- conexiones ----------
         Txt {
-            visible: vs.conns.length === 0 && !vs.adding
+            visible: vs.conns.length === 0 && vs.official.length === 0 && !vs.adding
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
             muted: true
-            text: "No tienes ninguna VPN. Importa el archivo que te dio tu proveedor o tu empresa (.ovpn de OpenVPN, .conf de WireGuard, .pcf de Cisco…) o añádela a mano por tipo."
+            text: "No tienes ninguna VPN. Importa el archivo que te dio tu proveedor o tu empresa (.ovpn de OpenVPN, .conf de WireGuard, .pcf de Cisco, copia .conf de FortiClient…) o añádela por tipo: FortiGate y GlobalProtect admiten SSO en el navegador."
         }
         Repeater {
             model: vs.conns
-            Item {
+            ColumnLayout {
                 id: row
                 required property var modelData
                 required property int index
-                readonly property bool on: modelData.active
-                readonly property bool working: vs.busy === modelData.uuid
+                readonly property bool on: modelData.active || modelData.status === "connected"
+                readonly property bool working: vs.busy === modelData.uuid || modelData.status === "connecting"
+                readonly property bool failed: modelData.status === "error" && !working
                 Layout.fillWidth: true
-                implicitHeight: 52
-                Rectangle { visible: row.index > 0; width: parent.width; height: 1; color: Theme.ov }
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.topMargin: 1
-                    spacing: 12
-                    Rectangle {
-                        implicitWidth: 34; implicitHeight: 34
-                        radius: Theme.r(8)
-                        color: row.on ? Theme.pc : Theme.s4
-                        Icon { anchors.centerIn: parent; name: row.modelData.type === "wireguard" ? "key" : "shield"; size: 16; color: row.on ? Theme.pcText : Theme.tv }
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 1
-                        Txt { Layout.fillWidth: true; text: row.modelData.name; weight: Font.DemiBold }
-                        Txt {
+                spacing: 0
+                Item {
+                    Layout.fillWidth: true
+                    implicitHeight: 52
+                    Rectangle { visible: row.index > 0; width: parent.width; height: 1; color: Theme.ov }
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.topMargin: 1
+                        spacing: 12
+                        Rectangle {
+                            implicitWidth: 34; implicitHeight: 34
+                            radius: Theme.r(8)
+                            color: row.on ? Theme.pc : row.failed ? Qt.alpha(Theme.danger, 0.16) : Theme.s4
+                            Icon { anchors.centerIn: parent; name: row.modelData.type === "wireguard" ? "key" : "shield"; size: 16; color: row.on ? Theme.pcText : row.failed ? Theme.danger : Theme.tv }
+                        }
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            muted: true; size: 11.5
-                            text: (row.modelData.proto ? (vs.protoLabel[row.modelData.proto] ?? row.modelData.proto) : (vs.kindLabel[row.modelData.kind] ?? row.modelData.kind))
-                                + " · " + (row.working ? (row.on ? "desconectando…" : "conectando…") : row.on ? "conectada" + (row.modelData.device ? " · " + row.modelData.device : "") : "desconectada")
+                            spacing: 1
+                            Txt { Layout.fillWidth: true; text: row.modelData.name; weight: Font.DemiBold }
+                            Txt {
+                                Layout.fillWidth: true
+                                muted: !row.failed; size: 11.5
+                                color: row.failed ? Theme.danger : Theme.tv
+                                text: vs.describe(row.modelData) + " · " + vs.stateText(row.modelData, vs.busy === row.modelData.uuid)
+                            }
                         }
-                    }
-                    Button { kind: "link"; text: "Editar"; onClicked: vs.run(["edit", row.modelData.uuid]) }
-                    Txt { text: "·"; color: Theme.p }
-                    Button {
-                        kind: "link"
-                        text: vs.confirmDel === row.modelData.uuid ? "¿Seguro? Eliminar" : "Eliminar"
-                        onClicked: {
-                            if (vs.confirmDel !== row.modelData.uuid) { vs.confirmDel = row.modelData.uuid; return; }
-                            vs.confirmDel = ""; vs.run(["delete", row.modelData.uuid]);
+                        Button { visible: row.modelData.type !== "direct"; kind: "link"; text: "Editar"; onClicked: vs.run(["edit", row.modelData.uuid]) }
+                        Txt { visible: row.modelData.type !== "direct"; text: "·"; color: Theme.p }
+                        Button {
+                            kind: "link"
+                            text: vs.confirmDel === row.modelData.uuid ? "¿Seguro? Eliminar" : "Eliminar"
+                            onClicked: {
+                                if (vs.confirmDel !== row.modelData.uuid) { vs.confirmDel = row.modelData.uuid; return; }
+                                vs.confirmDel = ""; vs.run(["delete", row.modelData.uuid]);
+                            }
                         }
-                    }
-                    Sw {
-                        Layout.leftMargin: 6
-                        checked: row.on
-                        enabled: !row.working
-                        onToggled: v => { vs.busy = row.modelData.uuid; vs.run([v ? "up" : "down", row.modelData.uuid]); }
+                        Sw {
+                            Layout.leftMargin: 6
+                            checked: row.on || row.working
+                            enabled: !(vs.busy === row.modelData.uuid)
+                            onToggled: v => { vs.busy = row.modelData.uuid; vs.run([v ? "up" : "down", row.modelData.uuid]); }
+                        }
                     }
                 }
+                // error con mensaje claro; si es el certificado, la huella y «Confiar»
+                Rectangle {
+                    visible: row.failed && (row.modelData.msg ?? "") !== ""
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 46
+                    Layout.bottomMargin: 10
+                    implicitHeight: errCol.implicitHeight + 20
+                    radius: Theme.r(8)
+                    color: Qt.alpha(Theme.danger, 0.08)
+                    border.width: 1
+                    border.color: Qt.alpha(Theme.danger, 0.35)
+                    ColumnLayout {
+                        id: errCol
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 6
+                        Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; size: 12; text: row.modelData.msg ?? "" }
+                        Mono {
+                            visible: row.modelData.errKind === "cert"
+                            Layout.fillWidth: true
+                            text: (row.modelData.gateway ? row.modelData.gateway + " · " : "") + (row.modelData.pin ?? "")
+                        }
+                        RowLayout {
+                            spacing: 8
+                            Button {
+                                visible: row.modelData.errKind === "cert"
+                                kind: "primary"; text: "Confiar y conectar"
+                                onClicked: { vs.busy = row.modelData.uuid; vs.shRun("\"$1\" trust \"$2\" && \"$1\" up \"$2\"", [vs.cmd, row.modelData.uuid]); }
+                            }
+                            Button {
+                                text: "Reintentar"
+                                onClicked: { vs.busy = row.modelData.uuid; vs.run(["up", row.modelData.uuid]); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // clientes oficiales instalados: solo se abren (su configuración es suya)
+        Repeater {
+            model: vs.official
+            InfoRow {
+                required property var modelData
+                required property int index
+                separator: vs.conns.length > 0 || index > 0
+                label: modelData.label
+                icon: "shield"
+                sub: "Cliente oficial · " + modelData.desc.split(" · ").slice(1).join(" · ")
+                Button { kind: "primary"; text: "Abrir"; onClicked: Quickshell.execDetached([vs.cmd, "open-official", modelData.key]) }
             }
         }
         Txt { visible: vs.msg !== ""; Layout.fillWidth: true; wrapMode: Text.WordWrap; size: 11.5; color: Theme.p; text: vs.msg }
@@ -328,16 +407,28 @@ ColumnLayout {
                         Layout.preferredWidth: 1
                         h: 60
                         title: modelData.label
-                        sub: modelData.installed ? modelData.desc : "Sin instalar · falta el plugin" + (modelData.aur ? " (AUR)" : "")
+                        sub: modelData.installed ? modelData.desc : modelData.corp ? "Sin instalar · falta OpenConnect u openfortivpn" : "Sin instalar · falta el plugin" + (modelData.aur ? " (AUR)" : "")
                         selected: vs.addType === modelData.key
                         onClicked: { vs.addType = modelData.key; vs.msg = ""; nameF.text = ""; hostF.text = ""; userF.text = ""; }
                     }
                 }
             }
 
+            // FortiGate y GlobalProtect: formulario propio (autenticación, 2FA, programa)
+            VpnCorpForm {
+                visible: vs.cur !== null && vs.cur.corp === true
+                Layout.fillWidth: true
+                type: vs.cur?.corp ? vs.cur : null
+                cmd: vs.cmd
+                editor: vs.editor
+                onCreate: args => vs.run(args, "VPN creada · actívala para conectarte")
+                onInstall: k => vs.install(k)
+                onAdvanced: vs.run(["create", vs.cur.key])
+            }
+
             // tipo elegido sin plugin → instalar
             RowLayout {
-                visible: vs.cur !== null && !vs.cur.installed
+                visible: vs.cur !== null && !vs.cur.corp && !vs.cur.installed
                 Layout.fillWidth: true
                 spacing: 10
                 Txt {
@@ -360,7 +451,7 @@ ColumnLayout {
 
             // resto: formulario rápido
             ColumnLayout {
-                visible: vs.cur !== null && vs.cur.installed && vs.cur.key !== "wireguard"
+                visible: vs.cur !== null && !vs.cur.corp && vs.cur.installed && vs.cur.key !== "wireguard"
                 Layout.fillWidth: true
                 spacing: 8
                 LabeledRow { label: "Nombre"; Field { id: nameF; icon: ""; placeholder: vs.cur ? "VPN " + vs.cur.label : "" } }
@@ -382,7 +473,7 @@ ColumnLayout {
             Txt {
                 visible: vs.addType === ""
                 Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5
-                text: "Todas usan NetworkManager, así que también funcionan con nmcli y se pueden conectar solas al arrancar (opción del editor). OpenConnect cubre AnyConnect, GlobalProtect, Pulse y Fortinet."
+                text: "Todas usan NetworkManager, así que también funcionan con nmcli y se pueden conectar solas al arrancar (opción del editor). FortiGate y GlobalProtect admiten SSO/SAML en el navegador y código 2FA; si tienes FortiClient o GlobalProtect oficiales instalados, salen arriba con «Abrir»."
             }
         }
     }

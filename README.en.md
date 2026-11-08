@@ -1,6 +1,6 @@
 # HyprFrijol (English summary)
 
-HyprFrijol is a from-scratch shell and rice for **Hyprland ≥ 0.57** (Lua config) built with **Quickshell**: a glassy *Aurora* style and a solid *Material* style, Spotlight, a side panel with AI and web apps, wallpaper picker, activity profiles, widgets, an update center with restore points, screenshots/recording, and its own greetd login. The interface and docs are in Spanish; see [README.md](README.md) for the full guide.
+HyprFrijol is a from-scratch shell and rice for **Hyprland ≥ 0.57** (Lua config) built with **Quickshell**: a glassy *Aurora* style and a solid *Material* style, Spotlight, a side panel with AI and web apps, wallpaper picker, widgets, an update center with restore points, screenshots/recording, and its own greetd login. The interface and docs are in Spanish; see [README.md](README.md) for the full guide.
 
 It runs as a **separate session** from the repo folder and never touches `~/.config/hypr`, `~/.config/quickshell` or `~/.config/matugen`.
 

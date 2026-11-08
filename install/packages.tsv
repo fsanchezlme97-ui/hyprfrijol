@@ -23,6 +23,9 @@
 # ppa:cppiber/hyprland y ppa:avengemedia/danklinux, el repodata de repo-default.voidlinux.org,
 # y repology.org/api/v1 para las versiones.
 #
+# Dictado de la ronda 9 (whisper-cpp, ggml-vulkan / libggml0-backend-vulkan, python-vosk, whisper.cpp-tools) comprobado el
+# 2026-11-07 con repology.org/api/v1 (arch, fedora_44, debian_unstable/14, ubuntu_26_04, opensuse_tumbleweed, void).
+#
 # Las funciones de la ronda 8 (impresoras, escáner, móvil, huella, VMs, contenedores, VPN, cortafuegos,
 # dictado, IA local…) se comprobaron el 2026-11-07 con los Packages de deb.debian.org (sid) y
 # archive.ubuntu.com (resolute main+universe), el primary de Tumbleweed, el repodata de Void,
@@ -56,7 +59,7 @@
 #@función	spotlight	Spotlight
 #@función	archivos	Archivos y PDF (Nautilus, Firmar)
 #@función	descargas	Descargas
-#@función	juegos	Perfiles de juego
+#@función	juegos	Modo juego (Steam)
 #@función	login	Login visual (greeter)
 #
 #id	nivel	arch	fedora	suse	debian	void	descripción	función	órdenes
@@ -114,6 +117,12 @@ tablet	optional	aur:opentabletdriver	-	-	-	-	tabletas gráficas (OpenTabletDrive
 # — Ajustes › Red
 networkmanager	recommended	networkmanager	NetworkManager,NetworkManager-wifi	NetworkManager	network-manager	NetworkManager	red y Wi-Fi (nmcli)	red	nmcli
 nm-editor	recommended	nm-connection-editor	nm-connection-editor	NetworkManager-connection-editor	nm-connection-editor	network-manager-applet	editor avanzado de conexiones y VPN (nm-connection-editor)	red	nm-connection-editor
+# VPN de empresa (hf-vpn install fortinet|gp; comprobado el 2026-11-07: archlinux.org + AUR RPC, mdapi f44, primary de Tumbleweed,
+# madison de Debian, Launchpad y repology). Debian 13 no trae fortisslvpn (Ubuntu sí): se salta y se usa OpenConnect.
+# gpclient: Arch extra; Ubuntu ppa:yuezk/globalprotect-openconnect; Fedora COPR yuezk/globalprotect-openconnect; openSUSE OBS home:yuezk.
+vpn-fortinet	optional	networkmanager-openconnect,openfortivpn,aur:networkmanager-fortisslvpn	NetworkManager-openconnect,NetworkManager-openconnect-gnome,openfortivpn,NetworkManager-fortisslvpn,NetworkManager-fortisslvpn-gnome	NetworkManager-openconnect,NetworkManager-applet-openconnect,openfortivpn,NetworkManager-fortisslvpn,NetworkManager-applet-fortisslvpn	network-manager-openconnect,network-manager-openconnect-gnome,openfortivpn,network-manager-fortisslvpn,network-manager-fortisslvpn-gnome	NetworkManager-openconnect,openfortivpn	VPN FortiGate SSL (FortiClient): contraseña y 2FA, SSO/SAML en el navegador, certificado	red	openconnect,openfortivpn
+vpn-fortinet-sso	optional	aur:openfortivpn-webview-qt	-	-	-	-	ventana propia para el SSO de FortiGate cuando el navegador no vuelve a 127.0.0.1:8020 (openfortivpn-webview)	red	openfortivpn-webview
+vpn-globalprotect	optional	networkmanager-openconnect,globalprotect-openconnect	NetworkManager-openconnect,NetworkManager-openconnect-gnome	NetworkManager-openconnect,NetworkManager-applet-openconnect	network-manager-openconnect,network-manager-openconnect-gnome	NetworkManager-openconnect	VPN GlobalProtect (Palo Alto); para el SSO, gpclient (globalprotect-openconnect: PPA/COPR/OBS de yuezk fuera de Arch)	red	openconnect,gpclient
 tailscale	optional	tailscale	tailscale	tailscale	-	tailscale	VPN Tailscale (en Debian/Ubuntu: repositorio de tailscale.com)	red	tailscale
 zerotier	optional	zerotier-one	-	-	-	-	VPN ZeroTier (en otras distros: install.zerotier.com)	red	zerotier-cli
 firewall	optional	ufw	firewalld	firewalld	ufw	ufw	cortafuegos (firewalld o ufw)	red	ufw,firewall-cmd
@@ -122,7 +131,7 @@ bluetooth	optional	bluez,bluez-utils	bluez	bluez	bluez	bluez	Bluetooth	bluetooth
 bt-sendto	optional	gnome-bluetooth-3.0,bluez-obex	gnome-bluetooth,bluez-obexd	gnome-bluetooth	gnome-bluetooth-sendto	gnome-bluetooth	enviar archivos por Bluetooth (bluetooth-sendto)	bluetooth	bluetooth-sendto
 # — Ajustes › Escritorio remoto
 remote	optional	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	compartir este escritorio por VNC (wayvnc; openssl para el cifrado)	remoto	wayvnc,wayvncctl,openssl
-remote-client	optional	remmina,freerdp,libvncserver	remmina,remmina-plugins-rdp,remmina-plugins-vnc	remmina,remmina-plugin-rdp,remmina-plugin-vnc	remmina,remmina-plugin-rdp,remmina-plugin-vnc	remmina,freerdp	conectarse a otros equipos por RDP/VNC (Remmina)	remoto	remmina
+remote-client	optional	remmina,freerdp,libvncserver	remmina,remmina-plugins-rdp,remmina-plugins-vnc	remmina,remmina-plugin-rdp,remmina-plugin-vnc	remmina,remmina-plugin-rdp,remmina-plugin-vnc	remmina,freerdp	conectarse a Windows por RDP y a otros por VNC (Remmina: el más compatible; sin él, FreeRDP o Conexiones)	remoto	remmina
 # — Ajustes › Sonido
 audio	recommended	pipewire,wireplumber,pipewire-pulse,libpulse	pipewire,wireplumber,pipewire-pulseaudio,pulseaudio-utils	pipewire,wireplumber,pipewire-pulseaudio,pulseaudio-utils	pipewire,wireplumber,pipewire-pulse,pulseaudio-utils	pipewire,wireplumber,pulseaudio-utils	sonido (PipeWire) y pactl	sonido	pactl,wpctl,pipewire
 cava	recommended	cava	cava	cava	cava	cava	onda de audio de la barra	sonido	cava
@@ -161,7 +170,9 @@ typing	recommended	wtype	wtype	wtype	wtype	wtype	escribir emojis / dictado en la
 alsa	recommended	alsa-utils	alsa-utils	alsa-utils	alsa-utils	alsa-utils	grabar el micrófono con arecord (si no hay pw-record)	dictado	arecord
 pw-tools	recommended	pipewire	pipewire-utils	pipewire-tools	pipewire-bin	pipewire	pw-record y pw-dump: dictado y «micrófono en uso»	dictado	pw-record,pw-dump
 ydotool	recommended	ydotool	ydotool	ydotool	ydotool	-	escribir en apps XWayland y clics simulados (si wtype no basta)	dictado	ydotool
-whisper	optional	aur:whisper.cpp-git	whisper-cpp	-	whisper.cpp	-	motor de dictado local whisper.cpp (sin él: faster-whisper con pip)	dictado	whisper-cli
+whisper	optional	whisper-cpp	whisper-cpp	-	whisper.cpp,whisper.cpp-tools	-	motor de dictado local whisper.cpp (whisper-server queda residente; modelos: hf-dictate manage, de huggingface.co/ggerganov/whisper.cpp)	dictado	whisper-cli,whisper-server
+whisper-gpu	optional	ggml-vulkan	-	-	libggml0-backend-vulkan	-	whisper.cpp en la GPU con Vulkan (AMD/Intel/NVIDIA; dictado con «small» o «turbo» al momento)	dictado	
+vosk	optional	python-vosk	-	-	-	-	Vosk: texto provisional al momento (motor «Vosk» o «Híbrido»); sin paquete: hf-dictate install-vosk (venv con pip en ~/.local/share/hyprfrijol/whisper/vosk-venv) · modelos de alphacephei.com/vosk/models	dictado	
 # — Ajustes › Asistente de IA
 ollama	optional	ollama	ollama	ollama	-	-	IA local con Ollama (en otras distros: ollama.com/download)	ia	ollama
 # — Capturas y grabación
@@ -175,7 +186,7 @@ translate	optional	translate-shell	translate-shell	translate-shell	-	translate-s
 clipboard-history	recommended	cliphist	cliphist	cliphist	cliphist	cliphist	historial del portapapeles	portapapeles	cliphist
 # — Centro de control (música, brillo, móvil)
 media	recommended	playerctl,brightnessctl	playerctl,brightnessctl	playerctl,brightnessctl	playerctl,brightnessctl	playerctl,brightnessctl	música y brillo	centro	playerctl,brightnessctl
-kdeconnect	optional	kdeconnect	kde-connect	kdeconnect-kde	kdeconnect	kdeconnect	móvil (KDE Connect)	centro	kdeconnect-cli
+valent	optional	aur:valent	-	-	-	-	móvil en los ajustes rápidos (Valent, GTK; protocolo de KDE Connect. Fedora: repo Terra)	centro	valent
 android	optional	scrcpy,android-tools	android-tools	scrcpy,android-tools	scrcpy,adb	scrcpy,android-tools	ver y controlar el móvil Android (scrcpy + adb)	centro	scrcpy,adb
 # — Spotlight
 fd	optional	fd	fd-find	fd	fd-find	fd	búsqueda de archivos más rápida en Spotlight	spotlight	fd
@@ -187,7 +198,7 @@ rembg	optional	aur:python-rembg	-	-	-	-	quitar el fondo de firmas e imágenes (e
 ytdlp	recommended	yt-dlp	yt-dlp	yt-dlp	yt-dlp	yt-dlp	descargas de vídeo y audio (hf-download)	descargas	yt-dlp
 gallerydl	optional	aur:gallery-dl	-	-	gallery-dl	gallery-dl	descargas de galerías de imágenes (hf-download)	descargas	gallery-dl
 aria2	optional	aria2	aria2	aria2	aria2	aria2	descargas de archivos más rápidas (sin él, hf-download usa su propio descargador)	descargas	aria2c
-# — Perfiles de juego
-gamescope	optional	gamescope	gamescope	gamescope	gamescope	gamescope	perfil de juego (gamescope)	juegos	gamescope
+# — Modo juego (Steam)
+gamescope	optional	gamescope	gamescope	gamescope	gamescope	gamescope	Modo juego (Steam) en Spotlight y en el login (gamescope)	juegos	gamescope
 # — Login visual (greeter)
 greetd	greeter	greetd	greetd	greetd	greetd	greetd	login visual (--greeter)	login	greetd

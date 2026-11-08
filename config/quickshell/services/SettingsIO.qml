@@ -1,6 +1,6 @@
 pragma Singleton
 // Exportar / importar los ajustes (~/.config/hyprfrijol/settings.json) — Ajustes › Sistema › Tus ajustes.
-//   SettingsIO.exportFile()          elige dónde con zenity/kdialog (si no hay, ~/Documentos/hyprfrijol-ajustes-<fecha>.json)
+//   SettingsIO.exportFile()          elige dónde con zenity (si no hay, ~/Documentos/hyprfrijol-ajustes-<fecha>.json)
 //   SettingsIO.importFile()          elige el archivo (si no hay diálogo, la copia más reciente de Documentos)
 //   SettingsIO.exportFile(ruta) / importFile(ruta)   sin diálogo (IPC de pruebas: settings exportTo / importFrom)
 // Importar valida el JSON (un objeto; claves válidas y del mismo tipo que su valor por defecto), lo mezcla con
@@ -27,7 +27,6 @@ Singleton {
             + "def=\"$d/hyprfrijol-ajustes-$(date +%F).json\"; f=$2; "
             + "if [ -n \"$f\" ]; then :; "
             + "elif command -v zenity >/dev/null; then f=$(zenity --file-selection --save --confirm-overwrite --title='Exportar ajustes' --filename=\"$def\" --file-filter='JSON | *.json' 2>/dev/null) || { echo CANCEL; exit; }; "
-            + "elif command -v kdialog >/dev/null; then f=$(kdialog --title 'Exportar ajustes' --getsavefilename \"$def\" '*.json' 2>/dev/null) || { echo CANCEL; exit; }; "
             + "else mkdir -p \"$d\"; f=$def; fi; "
             + "case $f in *.json) ;; *) f=$f.json;; esac; "
             + "{ [ -f \"$1\" ] && cp \"$1\" \"$f\" || echo '{}' > \"$f\"; } && echo \"OK $f\" || echo \"ERR $f\"",
@@ -40,7 +39,6 @@ Singleton {
         importProc.command = ["sh", "-c", docs
             + "f=$1; if [ -n \"$f\" ]; then :; "
             + "elif command -v zenity >/dev/null; then f=$(zenity --file-selection --title='Importar ajustes' --filename=\"$d/\" --file-filter='JSON | *.json' 2>/dev/null) || { echo CANCEL; exit; }; "
-            + "elif command -v kdialog >/dev/null; then f=$(kdialog --title 'Importar ajustes' --getopenfilename \"$d\" '*.json' 2>/dev/null) || { echo CANCEL; exit; }; "
             + "else f=$(ls -t \"$d\"/hyprfrijol-ajustes-*.json \"$d\"/hypr-liquid-ajustes-*.json 2>/dev/null | head -n1); [ -n \"$f\" ] || { echo NOFILE; exit; }; fi; "
             + "[ -r \"$f\" ] || { echo \"NOREAD $f\"; exit; }; echo \"FILE $f\"; head -c 2000000 \"$f\"",
             "sh", path ?? ""];

@@ -2,6 +2,9 @@
 // calendario del mes (es_ES, lunes primero) · eventos del día elegido con «Unirse» · relojes del mundo (WorldClock).
 // Eventos: services/Events.qml (locales + .ics del ajuste calendarIcs). «+» añade un evento local.
 // Teclas (cuando tiene el foco): ← → ↑ ↓ días · RePág/AvPág mes · Inicio = hoy · N nuevo evento · Esc cerrar.
+// Contraído (botón ⌃ de la cabecera, ajuste calendarCollapsed): solo la semana del día elegido (con los días de los meses
+// vecinos), para que eventos y relojes quepan sin desplazar; ‹ › pasan de semana. La rejilla se pliega deslizándose
+// hasta esa fila (altura y desplazamiento animados con Theme.dur).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -19,6 +22,7 @@ Glass {
     property bool adding: false
     readonly property var es: Qt.locale("es_ES")
     readonly property date today: Time.now
+    readonly property bool collapsed: Settings.get("calendarCollapsed", false) === true
 
     function sameDay(a, b): bool { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
     function cap(s: string): string { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -32,7 +36,8 @@ Glass {
         if (focusKeys) Qt.callLater(() => keys.forceActiveFocus());
     }
 
-    // 6×7 celdas (weekStart: 1 = lunes primero, 0 = domingo, 6 = sábado); null = hueco
+    // 6×7 celdas (weekStart: 1 = lunes primero, 0 = domingo, 6 = sábado); los días de los meses vecinos solo se ven
+    // contraído (out: fuera del mes)
     readonly property int weekStart: Number(Settings.get("weekStart", 1)) || 0
     readonly property var dayLetters: { const d = ["D", "L", "M", "X", "J", "V", "S"]; return d.slice(weekStart).concat(d.slice(0, weekStart)); }
     readonly property var cells: {
@@ -40,11 +45,21 @@ Glass {
         const lead = (first.getDay() + 7 - weekStart) % 7;
         const n = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
         const out = [];
-        for (let i = 0; i < lead; i++) out.push(null);
+        for (let i = lead; i > 0; i--) out.push(new Date(month.getFullYear(), month.getMonth(), 1 - i));
         for (let i = 1; i <= n; i++) out.push(new Date(month.getFullYear(), month.getMonth(), i));
-        while (out.length % 7) out.push(null);
+        for (let i = 1; out.length % 7; i++) out.push(new Date(month.getFullYear(), month.getMonth() + 1, i));
         return out;
     }
+    readonly property int rows: cells.length / 7
+    // Fila que queda a la vista contraído: la del día elegido (o la de hoy, o la primera)
+    readonly property int weekRow: {
+        let i = cells.findIndex(d => sameDay(d, day));
+        if (i < 0) i = cells.findIndex(d => sameDay(d, today));
+        return Math.max(0, Math.floor(i / 7));
+    }
+    readonly property real cellH: 29
+    onCollapsedChanged: foldAnim.restart()
+    Timer { id: foldAnim; interval: Theme.dur + 60 }
     readonly property string dayTitle: {
         if (sameDay(day, today)) return "Hoy";
         const t = new Date(today); t.setDate(t.getDate() + 1);
@@ -76,55 +91,86 @@ Glass {
                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: win.pick(new Date()) }
                 }
             }
-            IconBtn { implicitWidth: 26; implicitHeight: 26; radius: Theme.r(6); icon: "chevron_left"; iconSize: 13; fg: Theme.tv; tooltip: "Mes anterior"; onClicked: win.goMonth(-1) }
-            IconBtn { implicitWidth: 26; implicitHeight: 26; radius: Theme.r(6); icon: "chevron_right"; iconSize: 13; fg: Theme.tv; tooltip: "Mes siguiente"; onClicked: win.goMonth(1) }
+            IconBtn { implicitWidth: 26; implicitHeight: 26; radius: Theme.r(6); icon: "chevron_left"; iconSize: 13; fg: Theme.tv; tooltip: win.collapsed ? "Semana anterior" : "Mes anterior"; onClicked: win.collapsed ? win.moveDays(-7) : win.goMonth(-1) }
+            IconBtn { implicitWidth: 26; implicitHeight: 26; radius: Theme.r(6); icon: "chevron_right"; iconSize: 13; fg: Theme.tv; tooltip: win.collapsed ? "Semana siguiente" : "Mes siguiente"; onClicked: win.collapsed ? win.moveDays(7) : win.goMonth(1) }
+            IconBtn {
+                implicitWidth: 26; implicitHeight: 26; radius: Theme.r(6)
+                icon: win.collapsed ? "chevron_down" : "chevron_up"; iconSize: 13; fg: Theme.tv
+                tooltip: win.collapsed ? "Mostrar el mes" : "Contraer: solo esta semana"
+                onClicked: {
+                    // Al contraer, la semana que queda es la del día elegido: si el mes visible es otro, vuelve a él
+                    if (!win.collapsed && (win.day.getMonth() !== win.month.getMonth() || win.day.getFullYear() !== win.month.getFullYear())) win.pick(win.day);
+                    Settings.set("calendarCollapsed", !win.collapsed);
+                }
+            }
         }
 
-        GridLayout {
+        // Letras de los días (siempre a la vista)
+        RowLayout {
             Layout.fillWidth: true
             Layout.topMargin: 2
-            columns: 7
-            rowSpacing: 0
-            columnSpacing: 0
+            spacing: 0
             Repeater {
                 model: win.dayLetters
                 Txt { required property string modelData; text: modelData; size: 10.5; muted: true; weight: Font.DemiBold; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.preferredHeight: 20; horizontalAlignment: Text.AlignHCenter }
             }
-            Repeater {
-                model: win.cells
-                delegate: Item {
-                    required property var modelData
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: 1
-                    Layout.preferredHeight: 29
-                    readonly property bool isToday: !!modelData && win.sameDay(modelData, win.today)
-                    readonly property bool isSel: !!modelData && win.sameDay(modelData, win.day)
-                    readonly property bool busy: { Events.all; return !!modelData && Events.hasDay(modelData); }
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: 27; height: 27; radius: 13.5
-                        visible: !!parent.modelData
-                        color: parent.isToday ? Theme.p : dayMa.containsMouse ? Theme.fill2 : "transparent"
-                        border.width: parent.isSel && !parent.isToday ? 1.5 : 0
-                        border.color: Theme.p
-                        Txt {
+        }
+        // Días: contraído, la ventana se encoge a una fila y la rejilla sube hasta la semana elegida
+        Item {
+            id: daysClip
+            Layout.fillWidth: true
+            Layout.preferredHeight: (win.collapsed ? 1 : win.rows) * win.cellH
+            Behavior on Layout.preferredHeight { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+            clip: true
+            GridLayout {
+                width: parent.width
+                y: win.collapsed ? -win.weekRow * win.cellH : 0
+                // solo al plegar o desplegar (al pasar de semana o de mes la fila cambia sin deslizarse)
+                Behavior on y { enabled: !Theme.reduceMotion && foldAnim.running; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+                columns: 7
+                rowSpacing: 0
+                columnSpacing: 0
+                Repeater {
+                    model: win.cells
+                    delegate: Item {
+                        required property var modelData
+                        required property int index
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        Layout.preferredHeight: win.cellH
+                        readonly property bool out: modelData.getMonth() !== win.month.getMonth()
+                        // Fuera del mes: hueco con el mes entero; contraído, día atenuado de la semana
+                        readonly property bool live: !out || win.collapsed
+                        readonly property bool isToday: win.sameDay(modelData, win.today)
+                        readonly property bool isSel: win.sameDay(modelData, win.day)
+                        readonly property bool busy: { Events.all; return Events.hasDay(modelData); }
+                        opacity: !live ? 0 : out ? 0.55 : 1
+                        Behavior on opacity { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.dur } }
+                        Rectangle {
                             anchors.centerIn: parent
-                            text: parent.parent.modelData ? parent.parent.modelData.getDate() : ""
-                            color: parent.parent.isToday ? Theme.pText : Theme.t
-                            weight: parent.parent.isToday ? Font.Bold : Font.Normal
-                            size: 12
-                            tabular: true
+                            width: 27; height: 27; radius: 13.5
+                            color: parent.isToday ? Theme.p : dayMa.containsMouse ? Theme.fill2 : "transparent"
+                            border.width: parent.isSel && !parent.isToday ? 1.5 : 0
+                            border.color: Theme.p
+                            Txt {
+                                anchors.centerIn: parent
+                                text: parent.parent.modelData.getDate()
+                                color: parent.parent.isToday ? Theme.pText : Theme.t
+                                weight: parent.parent.isToday ? Font.Bold : Font.Normal
+                                size: 12
+                                tabular: true
+                            }
                         }
+                        // punto: hay eventos ese día
+                        Rectangle {
+                            visible: parent.busy
+                            anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 2 }
+                            width: 4; height: 4; radius: 2
+                            color: parent.isToday ? Theme.pText : Theme.p
+                            z: 1
+                        }
+                        MouseArea { id: dayMa; anchors.fill: parent; enabled: parent.live; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { win.pick(parent.modelData); keys.forceActiveFocus(); } }
                     }
-                    // punto: hay eventos ese día
-                    Rectangle {
-                        visible: parent.busy
-                        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 2 }
-                        width: 4; height: 4; radius: 2
-                        color: parent.isToday ? Theme.pText : Theme.p
-                        z: 1
-                    }
-                    MouseArea { id: dayMa; anchors.fill: parent; enabled: !!parent.modelData; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { win.pick(parent.modelData); keys.forceActiveFocus(); } }
                 }
             }
         }

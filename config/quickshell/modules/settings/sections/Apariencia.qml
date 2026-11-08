@@ -45,12 +45,12 @@ ColumnLayout {
         red: "Rojo", carmine: "Carmín", deeporange: "Naranja intenso", orange: "Naranja", paleorange: "Naranja pálido",
         yellow: "Amarillo", green: "Verde", teal: "Verde azulado", cyan: "Cian", darkcyan: "Cian oscuro", nordic: "Nórdico",
         breeze: "Breeze", bluegrey: "Gris azulado", brown: "Marrón", palebrown: "Marrón claro", grey: "Gris", black: "Negro", white: "Blanco" })
-    // ¿Siguen las apps Qt el tema? (plasma-integration, que lee kdeglobals, o qt6ct)
+    // ¿Siguen las apps Qt el tema? (qt6ct; o, de alternativa, el tema de Plasma, que lee kdeglobals)
     property bool qtReady: true
     Process {
         id: qtCheck
         running: true
-        command: ["sh", "-c", "ls /usr/lib/qt6/plugins/platformthemes/ 2>/dev/null | grep -qiE 'KDEPlasma|qt6ct'"]
+        command: ["sh", "-c", "ls /usr/lib/qt6/plugins/platformthemes/ /usr/lib64/qt6/plugins/platformthemes/ /usr/lib/*-linux-gnu/qt6/plugins/platformthemes/ 2>/dev/null | grep -qiE 'qt6ct|KDEPlasma'"]
         onExited: code => root.qtReady = code === 0
     }
 
@@ -590,7 +590,7 @@ ColumnLayout {
         SwRow {
             separator: false
             label: "Aplicar el tema a las apps"
-            sub: "Los colores de la paleta y el acento en el terminal, las apps GTK y Qt/KDE (Dolphin) y btop; cambian al momento"
+            sub: "Los colores de la paleta y el acento en el terminal, las apps GTK y Qt y btop; cambian al momento"
             key: "themeApps"; def: false
         }
         GridLayout {
@@ -603,13 +603,13 @@ ColumnLayout {
             SwRow { Layout.preferredWidth: 1; label: "Apps GTK y GNOME"; sub: "Nautilus, Loupe, Papers… · libadwaita y GTK 3"; key: "themeGtk"; def: true }
             SwRow {
                 Layout.preferredWidth: 1
-                label: "Apps Qt y KDE"
-                sub: root.qtReady ? "Dolphin, Kate, Okular… · esquema «HyprFrijol»" : "Falta plasma-integration para que las apps Qt lo sigan"
+                label: "Apps Qt"
+                sub: root.qtReady ? "OBS, VLC, qBittorrent… · paleta de qt6ct" : "Falta qt6ct para que las apps Qt lo sigan"
                 key: "themeQt"; def: true
                 trailing: Button {
                     visible: !root.qtReady
                     text: "Instalar"
-                    onClicked: { Pkg.install([{ key: "repo", pkg: "plasma-integration", name: "plasma-integration" }], "Tema de Qt (plasma-integration)"); qtCheck.running = true; }
+                    onClicked: { Pkg.install([{ key: "repo", pkg: "qt6ct", name: "qt6ct" }], "Tema de Qt (qt6ct)"); qtCheck.running = true; }
                 }
             }
             SwRow { Layout.preferredWidth: 1; label: "btop"; sub: "Tema «hyprfrijol» con los colores de la paleta"; key: "themeBtop"; def: true }

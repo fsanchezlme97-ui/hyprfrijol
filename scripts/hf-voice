@@ -1,0 +1,632 @@
+#!/usr/bin/env python3
+"""hf-voice — comandos de voz de hyprfrijol: entiende frases en español («Reproduce Walk de los Foo Fighters desde
+YouTube», «sube el volumen al 50 por ciento», «nueva pestaña»…) y las ejecuta. Sin IA: expresiones regulares. Lo
+que no entiende se lo pasa al asistente (hf-ai, en el panel lateral, con sus reglas de aprobación).
+
+  hf-voice parse "<frase>"          imprime la intención en JSON sin ejecutar nada (prueba en seco)
+  hf-voice run "<frase>" [--no-ai] [--dry-run]
+                                    la ejecuta → {"ok", "intent", "label", "msg", "fallback"}
+  hf-voice youtube "<búsqueda>" [--service youtube|music|spotify] [--print]
+                                    busca la primera canción/vídeo (yt-dlp; si falta, la página de resultados) y la abre
+  hf-voice browser <op> [valor] [--print]
+                                    new-tab · close-tab · next-tab · prev-tab · back · forward · reload · scroll-down ·
+                                    scroll-up · top · bottom · fullscreen · find <texto> · search <texto> · open <sitio|url>
+  hf-voice intents                  lista de intenciones admitidas (para Ajustes y la documentación)
+  hf-voice test                     prueba el analizador con frases de ejemplo (en seco)
+
+Ajustes: voiceAiFallback (true: lo no entendido va a la IA) · voiceMusicService youtube|music|spotify (al decir
+«pon X» sin decir dónde) · dictationWakeWord (palabra de activación, «Frijol»).
+Pruebas: HF_VOICE_OPEN="<orden>" abre las direcciones con esa orden en lugar de xdg-open (la dirección va al final);
+HF_VOICE_NO_NET=1 no consulta YouTube (usa la búsqueda).
+"""
+import difflib, json, os, pathlib, re, shlex, shutil, subprocess, sys, time, unicodedata, urllib.parse, urllib.request
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+HOME = pathlib.Path.home()
+ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
+SETTINGS = HOME / ".config/hyprfrijol/settings.json"
+QS = ["qs", "-p", str(ROOT / "config/quickshell")]
+
+def load(p, d=None):
+    try:
+        return json.loads(pathlib.Path(p).read_text())
+    except Exception:
+        return d
+
+def settings():
+    s = dict(load(ROOT / "config/defaults/settings.json", {}) or {})
+    s.update(load(SETTINGS, {}) or {})
+    return s
+
+# ---------------------------------------------------------------- texto
+def fold(s):
+    """minúsculas y sin tildes, carácter a carácter (misma longitud: los índices valen en el original)."""
+    out = []
+    for c in s:
+        d = unicodedata.normalize("NFD", c)
+        out.append((d[0] if d else c).lower())       # ñ → n también (las expresiones van sin tildes ni eñes)
+    return "".join(out)
+
+def clean(s):
+    s = re.sub(r"[¿?¡!«»\"“”…]", " ", s or "")
+    s = re.sub(r"(?<!\d)[.,;:](?!\d)|[.,;:](?=\s|$)", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+UNITS = {"cero": 0, "un": 1, "uno": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7,
+         "ocho": 8, "nueve": 9, "diez": 10, "once": 11, "doce": 12, "trece": 13, "catorce": 14, "quince": 15,
+         "dieciseis": 16, "diecisiete": 17, "dieciocho": 18, "diecinueve": 19, "veinte": 20, "veintiun": 21,
+         "veintiuno": 21, "veintiuna": 21, "veintidos": 22, "veintitres": 23, "veinticuatro": 24, "veinticinco": 25,
+         "veintiseis": 26, "veintisiete": 27, "veintiocho": 28, "veintinueve": 29, "cien": 100, "ciento": 100}
+TENS = {"treinta": 30, "cuarenta": 40, "cincuenta": 50, "sesenta": 60, "setenta": 70, "ochenta": 80, "noventa": 90}
+NUM_RE = r"(\d{1,3}|(?:treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa)(?: y (?:un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve))?|" \
+         + "|".join(sorted(UNITS, key=len, reverse=True)) + ")"
+
+def num(w):
+    w = fold(w or "").strip()
+    if w.isdigit():
+        return int(w)
+    m = re.fullmatch(r"(\w+)(?: y (\w+))?", w)
+    if not m:
+        return None
+    if m.group(1) in TENS:
+        return TENS[m.group(1)] + (UNITS.get(m.group(2) or "cero", 0))
+    return UNITS.get(w)
+
+WAKE_DEFAULT = "frijol"
+
+def wake_re(word=None):
+    w = fold(word or settings().get("dictationWakeWord") or WAKE_DEFAULT).strip()
+    alts = {w}
+    if w == "frijol":   # cómo lo suele escribir el reconocedor
+        alts |= {"frijol", "frijoles", "frejol", "frijo", "frijol", "fri jol", "free jol", "frío", "frijolito"}
+    alt = "|".join(sorted((re.escape(a) for a in alts), key=len, reverse=True))
+    return re.compile(r"^\W*(?:(?:oye|hey|ey|ok|okey|eh|hola)[\s,]+)?(?:" + alt + r")\b[\s,.:;!¡-]*", re.I)
+
+def strip_wake(text, word=None):
+    """(True, resto) si la frase empieza por la palabra de activación («Frijol, …», «oye Frijol …»)."""
+    t = text or ""
+    m = wake_re(word).match(fold(t))
+    if m:
+        return True, t[m.end():].strip()
+    # parecida («Fijol», «Frijo»): solo si va sola al principio y seguida de coma, como se dice «Frijol, …»
+    w = fold(word or settings().get("dictationWakeWord") or WAKE_DEFAULT).strip()
+    m = re.match(r"^\W*(?:(?:oye|hey|ok)\s+)?([a-zñ]+)\s*[,:]\s*", fold(t))
+    if m and difflib.SequenceMatcher(None, m.group(1), w).ratio() >= 0.75:
+        return True, t[m.end():].strip()
+    return False, t
+
+# ---------------------------------------------------------------- intenciones
+SITES = {
+    "youtube": "https://www.youtube.com", "youtube music": "https://music.youtube.com", "google": "https://www.google.com",
+    "gmail": "https://mail.google.com", "correo": "https://mail.google.com", "google drive": "https://drive.google.com",
+    "drive": "https://drive.google.com", "google maps": "https://maps.google.com", "maps": "https://maps.google.com",
+    "mapas": "https://maps.google.com", "calendario de google": "https://calendar.google.com", "traductor": "https://translate.google.com",
+    "google translate": "https://translate.google.com", "wikipedia": "https://es.wikipedia.org", "github": "https://github.com",
+    "twitter": "https://x.com", "equis": "https://x.com", "facebook": "https://www.facebook.com", "instagram": "https://www.instagram.com",
+    "reddit": "https://www.reddit.com", "amazon": "https://www.amazon.es", "netflix": "https://www.netflix.com",
+    "twitch": "https://www.twitch.tv", "whatsapp web": "https://web.whatsapp.com", "linkedin": "https://www.linkedin.com",
+    "outlook": "https://outlook.live.com", "chatgpt": "https://chatgpt.com", "claude": "https://claude.ai",
+    "pinterest": "https://www.pinterest.com", "tiktok": "https://www.tiktok.com", "spotify web": "https://open.spotify.com",
+    "duckduckgo": "https://duckduckgo.com", "el pais": "https://elpais.com", "marca": "https://www.marca.com",
+    "stack overflow": "https://stackoverflow.com", "arch wiki": "https://wiki.archlinux.org",
+}
+SEARCH = {"google": "https://www.google.com/search?q={}", "youtube": "https://www.youtube.com/results?search_query={}",
+          "youtube music": "https://music.youtube.com/search?q={}", "wikipedia": "https://es.wikipedia.org/w/index.php?search={}",
+          "amazon": "https://www.amazon.es/s?k={}", "github": "https://github.com/search?q={}",
+          "duckduckgo": "https://duckduckgo.com/?q={}", "google maps": "https://www.google.com/maps/search/{}",
+          "maps": "https://www.google.com/maps/search/{}", "mapas": "https://www.google.com/maps/search/{}",
+          "spotify": "spotify:search:{}"}
+# apps del escritorio por su nombre hablado (lo demás se lo pasa hf-ai launch_app, que busca en los .desktop)
+APPS = {"terminal": "kitty", "la terminal": "kitty", "archivos": "nautilus", "el explorador de archivos": "nautilus",
+        "navegador": "@browser", "el navegador": "@browser", "calculadora": "gnome-calculator", "editor de texto": "@editor"}
+VIEWS = {"ajustes": "ajustesapp", "configuracion": "ajustesapp", "las opciones": "ajustesapp", "los ajustes": "ajustesapp",
+         "ajustes rapidos": "ajustes", "el centro de control": "ajustes", "notificaciones": "notificaciones",
+         "las notificaciones": "notificaciones", "el portapapeles": "portapapeles", "portapapeles": "portapapeles",
+         "los fondos": "fondos", "fondos de pantalla": "fondos", "el selector de fondos": "fondos", "la agenda": "agenda",
+         "el calendario": "agenda", "spotlight": "spotlight", "el lanzador": "spotlight", "los widgets": "widgets",
+         "la vista general": "vista", "el menu de energia": "energia", "el asistente": "@ia", "la ia": "@ia",
+         "el chat": "@ia", "las actualizaciones": "actualizaciones", "las herramientas": "herramientas"}
+
+BROWSER_KEYS = {   # op → teclas de wtype
+    "new-tab": ["-M", "ctrl", "-k", "t", "-m", "ctrl"], "close-tab": ["-M", "ctrl", "-k", "w", "-m", "ctrl"],
+    "reopen-tab": ["-M", "ctrl", "-M", "shift", "-k", "t", "-m", "shift", "-m", "ctrl"],
+    "next-tab": ["-M", "ctrl", "-k", "Tab", "-m", "ctrl"], "prev-tab": ["-M", "ctrl", "-M", "shift", "-k", "Tab", "-m", "shift", "-m", "ctrl"],
+    "back": ["-M", "alt", "-k", "Left", "-m", "alt"], "forward": ["-M", "alt", "-k", "Right", "-m", "alt"],
+    "reload": ["-k", "F5"], "scroll-down": ["-k", "Page_Down"], "scroll-up": ["-k", "Page_Up"],
+    "top": ["-k", "Home"], "bottom": ["-k", "End"], "fullscreen": ["-k", "F11"],
+    "zoom-in": ["-M", "ctrl", "-k", "plus", "-m", "ctrl"], "zoom-out": ["-M", "ctrl", "-k", "minus", "-m", "ctrl"],
+    "zoom-reset": ["-M", "ctrl", "-k", "0", "-m", "ctrl"],
+}
+BROWSER_LABELS = {"new-tab": "Nueva pestaña", "close-tab": "Cerrar la pestaña", "reopen-tab": "Reabrir la pestaña cerrada",
+                  "next-tab": "Pestaña siguiente", "prev-tab": "Pestaña anterior", "back": "Atrás", "forward": "Adelante",
+                  "reload": "Recargar la página", "scroll-down": "Bajar la página", "scroll-up": "Subir la página",
+                  "top": "Ir al principio", "bottom": "Ir al final", "fullscreen": "Pantalla completa",
+                  "zoom-in": "Acercar", "zoom-out": "Alejar", "zoom-reset": "Tamaño normal", "find": "Buscar en la página"}
+BROWSERS = ("firefox", "librewolf", "zen", "floorp", "waterfox", "chromium", "chrome", "google-chrome", "brave", "vivaldi",
+            "microsoft-edge", "opera", "epiphany", "org.gnome.epiphany", "qutebrowser", "thorium", "helium")
+
+VERBS = ["reproduce", "reproduceme", "pon", "ponme", "toca", "abre", "abreme", "busca", "buscame", "sube", "baja",
+         "cierra", "pausa", "para", "silencia", "recarga", "actualiza", "vuelve", "cambia", "activa", "desactiva", "bloquea",
+         "haz", "captura", "siguiente", "anterior", "reanuda", "continua", "maximiza", "minimiza", "mueve", "llevame", "quita"]
+
+def I(intent, label, **kw):
+    return dict(intent=intent, label=label, **kw)
+
+def music_service(word, s=None):
+    w = fold(word or "")
+    if "spotify" in w:
+        return "spotify"
+    if "music" in w or "musica" in w:
+        return "music"
+    if "youtube" in w or "you tube" in w:
+        return "youtube"
+    return (s or settings()).get("voiceMusicService") or "youtube"
+
+SVC_NAMES = {"youtube": "YouTube", "music": "YouTube Music", "spotify": "Spotify"}
+
+def parse(text, s=None):
+    """Frase → intención (dict). Nunca ejecuta nada. intent == "unknown" si no la entiende."""
+    s = s or settings()
+    raw = text or ""
+    is_wake, raw = strip_wake(raw, s.get("dictationWakeWord"))
+    o = clean(raw)
+    t = fold(o)
+    t = re.sub(r"^(?:por favor|porfa|oye|venga|vale|ahora)\s+", "", t)
+    o = o[len(o) - len(t):] if len(t) <= len(o) else o
+    t = re.sub(r"\s+(?:por favor|porfa)$", "", t)
+    o = o[:len(t)]
+    # el reconocedor a veces tuerce el verbo («Repromuze», «Abrí»): se corrige la primera palabra si se parece mucho
+    first = t.split(" ", 1)[0]
+    if first not in VERBS and len(first) >= 4:
+        near = difflib.get_close_matches(first, VERBS, 1, 0.75)
+        if near:
+            t = near[0] + t[len(first):]
+            o = near[0] + o[len(first):]
+    def q(m, g=1):           # grupo de la frase original (con mayúsculas y tildes)
+        return o[m.start(g):m.end(g)].strip()
+    if not t:
+        return I("none", "Nada que hacer")
+    if re.fullmatch(r"(?:cancela(?:r)?|nada|olvidalo|da igual|dejalo|no importa)", t):
+        return I("none", "Cancelado")
+
+    SVC = r"(youtube music|youtube|you tube|spotify)"
+    # --- música en YouTube / YouTube Music / Spotify
+    m = re.fullmatch(r"(?:reproduce(?:me)?|pon(?:me)?|toca|escuchar?|quiero (?:escuchar|oir|ver)|busca y (?:reproduce|pon)|"
+                     r"play)\s+(?:la cancion |el video |el tema |la musica de |musica de |algo de )?(.+?)\s+"
+                     r"(?:en|desde|de|con|por|des de|ves de|es de|dese)\s+(?:el |la )?" + SVC + r"$", t)
+    if m:
+        svc = music_service(m.group(2), s)
+        return I("play", f"Reproducir «{q(m)}» en {SVC_NAMES[svc]}", query=q(m), service=svc)
+    m = re.fullmatch(r"(?:busca|buscar)\s+(.+?)\s+en\s+" + SVC + r"$", t)
+    if m:
+        svc = music_service(m.group(2), s)
+        if svc == "spotify":
+            return I("play", f"Buscar «{q(m)}» en Spotify", query=q(m), service="spotify")
+        key = "youtube music" if svc == "music" else "youtube"
+        return I("url", f"Buscar «{q(m)}» en {SVC_NAMES[svc]}", url=SEARCH[key].format(urllib.parse.quote_plus(q(m))))
+
+    # --- reproducción (MPRIS)
+    if re.fullmatch(r"(?:pausa(?:r)?|pon(?: la)? pausa|para(?:r)?(?: la (?:musica|cancion|reproduccion))?|deten(?: la musica)?|"
+                    r"detener|stop|silencia la musica|pausa la (?:musica|cancion|reproduccion|video))", t):
+        return I("media", "Pausar", op="pause")
+    if re.fullmatch(r"(?:reanuda(?:r)?|continua(?:r)?|sigue|play|reproduce|reproducir|dale al play|pon(?: la)? musica|"
+                    r"reanuda la (?:musica|cancion|reproduccion)|quita la pausa)", t):
+        return I("media", "Reproducir", op="play")
+    if re.fullmatch(r"(?:(?:la )?(?:siguiente|proxima)(?: cancion| pista| tema| video)?|pasa(?: de)?(?: la)? cancion|"
+                    r"salta(?: la)?(?: cancion)?|cambia de cancion|otra cancion|(?:pon|reproduce) la siguiente(?: cancion)?|next)", t):
+        return I("media", "Siguiente pista", op="next")
+    if re.fullmatch(r"(?:(?:la )?(?:cancion |pista )?anterior(?: cancion| pista)?|vuelve a la (?:cancion )?anterior|"
+                    r"(?:pon|reproduce) la anterior(?: cancion)?|previous)", t):
+        return I("media", "Pista anterior", op="previous")
+
+    # --- volumen
+    m = re.fullmatch(r"(?:(?:sube|baja|pon|ajusta|cambia|deja)(?: el)? volumen|volumen)\s+(?:a|al|en|hasta(?: el)?)\s+" + NUM_RE +
+                     r"(?:\s*(?:%|por ?ciento))?", t)
+    if m and num(m.group(1)) is not None:
+        n = max(0, min(100, num(m.group(1))))
+        return I("volume", f"Volumen al {n} %", value=n)
+    m = re.fullmatch(r"(sube|subir|aumenta|mas|baja|bajar|reduce|disminuye|menos)(?: el| un poco el| un poco)? (?:volumen|sonido)(?: un poco| mas)?"
+                     r"(?: (?:en )?" + NUM_RE + r"(?:\s*(?:%|por ?ciento|puntos))?)?", t)
+    if m:
+        up = m.group(1) in ("sube", "subir", "aumenta", "mas")
+        n = num(m.group(2)) if m.group(2) else 10
+        return I("volume", ("Subir" if up else "Bajar") + f" el volumen {n} %", value=("+" if up else "-") + str(n))
+    if re.fullmatch(r"(?:silencia(?:r)?(?: el (?:sonido|audio|volumen|equipo))?|silencio|mute|quita(?:r)? el sonido|"
+                    r"sin sonido|mutea)", t):
+        return I("volume", "Silenciar", value="mute")
+    if re.fullmatch(r"(?:activa(?:r)? el sonido|quita(?:r)? el silencio|desilencia|unmute|pon(?: el)? sonido)", t):
+        return I("volume", "Quitar el silencio", value="unmute")
+
+    # --- brillo
+    m = re.fullmatch(r"(?:(?:sube|baja|pon|ajusta|cambia)(?: el)? brillo|brillo)\s+(?:a|al|en|hasta(?: el)?)\s+" + NUM_RE +
+                     r"(?:\s*(?:%|por ?ciento))?", t)
+    if m and num(m.group(1)) is not None:
+        n = max(1, min(100, num(m.group(1))))
+        return I("brightness", f"Brillo al {n} %", value=n)
+    m = re.fullmatch(r"(sube|subir|aumenta|mas|baja|bajar|reduce|menos)(?: el| un poco el)? brillo(?: un poco| de la pantalla)?", t)
+    if m:
+        up = m.group(1) in ("sube", "subir", "aumenta", "mas")
+        return I("brightness", ("Subir" if up else "Bajar") + " el brillo", value="+10" if up else "-10")
+
+    # --- navegador (teclas a la ventana del navegador)
+    BR = [(r"(?:abre |nueva |abrir )?(?:una )?(?:nueva )?pestana(?: nueva)?", "new-tab"),
+          (r"(?:cierra|cerrar|quita)(?: (?:la|esta))? pestana(?: actual)?", "close-tab"),
+          (r"(?:reabre|recupera|vuelve a abrir) la (?:ultima )?pestana(?: cerrada)?", "reopen-tab"),
+          (r"(?:(?:ve a|cambia a|pasa a) )?(?:la )?(?:siguiente pestana|pestana siguiente)", "next-tab"),
+          (r"(?:(?:ve a|cambia a|vuelve a) )?(?:la )?pestana anterior", "prev-tab"),
+          (r"(?:vuelve|volver|ve|ir|regresa)(?: hacia)? atras|atras|(?:vuelve a la |ve a la )?pagina anterior", "back"),
+          (r"(?:ve|ir|avanza)(?: hacia)? adelante|adelante|(?:ve a la )?pagina siguiente", "forward"),
+          (r"(?:recarga(?:r)?|actualiza(?:r)?|refresca(?:r)?)(?: la (?:pagina|web))?", "reload"),
+          (r"(?:baja|bajar|desplazate hacia abajo|desplaza hacia abajo|scroll abajo|mas abajo|hacia abajo)(?: la pagina)?(?: un poco)?", "scroll-down"),
+          (r"(?:sube|subir|desplazate hacia arriba|desplaza hacia arriba|scroll arriba|mas arriba|hacia arriba)(?: la pagina)?(?: un poco)?", "scroll-up"),
+          (r"(?:ve |ir |vuelve )?al (?:principio|inicio) de la pagina|arriba del todo", "top"),
+          (r"(?:ve |ir )?al final de la pagina|abajo del todo", "bottom"),
+          (r"(?:acerca(?:r)?|amplia(?:r)?|mas grande|zoom mas)(?: la pagina)?", "zoom-in"),
+          (r"(?:aleja(?:r)?|reduce(?: la pagina)?|mas pequeno|zoom menos)", "zoom-out")]
+    for rx, op in BR:
+        if re.fullmatch(rx, t):
+            return I("browser", BROWSER_LABELS[op], op=op)
+    m = re.fullmatch(r"busca\s+(.+?)\s+en (?:la|esta) pagina", t)
+    if m:
+        return I("browser", f"Buscar «{q(m)}» en la página", op="find", value=q(m))
+    m = re.fullmatch(r"(?:busca(?:r)?|buscame|googlea|investiga)\s+(.+?)(?:\s+en\s+(google|wikipedia|amazon|github|duckduckgo|google maps|maps|mapas|internet|la web))?", t)
+    if m:
+        eng = m.group(2) if m.group(2) and m.group(2) not in ("internet", "la web") else "google"
+        return I("url", f"Buscar «{q(m)}» en " + {"google": "Google", "wikipedia": "Wikipedia", "amazon": "Amazon",
+                 "github": "GitHub", "duckduckgo": "DuckDuckGo"}.get(eng, "Google Maps"),
+                 url=SEARCH[eng].format(urllib.parse.quote_plus(q(m))))
+    m = re.fullmatch(r"(?:como (?:llego|ir) a|llevame a|ruta (?:a|hasta))\s+(.+)", t)
+    if m:
+        return I("url", f"Ruta a «{q(m)}»", url="https://www.google.com/maps/dir/?api=1&destination=" + urllib.parse.quote_plus(q(m)))
+
+    # --- escritorio
+    if re.fullmatch(r"(?:haz(?: una)?|hazme(?: una)?|toma(?: una)?|saca(?: una)?)? ?captura(?: de pantalla)?|pantallazo|captura la pantalla", t):
+        return I("screenshot", "Captura de pantalla")
+    if re.fullmatch(r"(?:recorta|captura) (?:una )?(?:zona|region|parte de la pantalla)", t):
+        return I("screenshot", "Recortar una zona", region=True)
+    if re.fullmatch(r"bloquea(?:r)?(?: (?:la pantalla|el (?:equipo|ordenador|portatil|pc)|la sesion))?", t):
+        return I("lock", "Bloquear la pantalla")
+    m = re.fullmatch(r"(activa(?:r)?|pon(?:er)?|enciende|quita(?:r)?|desactiva(?:r)?|apaga)?(?: el)? (?:modo )?no molestar"
+                     r"(?: (?:durante|por|una?) " + NUM_RE + r" (minutos?|horas?))?", t) if "molestar" in t else None
+    if m:
+        on = not (m.group(1) or "").startswith(("quita", "desactiva", "apaga"))
+        mins = (num(m.group(2)) or 0) * (60 if (m.group(3) or "").startswith("hora") else 1) if m.group(2) else None
+        return I("dnd", ("Activar" if on else "Desactivar") + " No molestar" + (f" {mins} min" if mins else ""), value=on, minutes=mins)
+    m = re.fullmatch(r"(?:cambia(?:r)?|ve|ir|pasa|salta|muevete|llevame|vamos)(?: me)? (?:al|a el|a)(?: espacio| escritorio)?(?: de trabajo)?"
+                     r"(?: numero)? " + NUM_RE, t) or re.fullmatch(r"(?:escritorio|espacio)(?: de trabajo)?(?: numero)? " + NUM_RE, t)
+    if m and num(m.group(1)) and 1 <= num(m.group(1)) <= 20:
+        n = num(m.group(1))
+        return I("workspace", f"Ir al escritorio {n}", value=n)
+    m = re.fullmatch(r"(?:mueve|manda|lleva|envia)(?: (?:la|esta) ventana| esto)? al? (?:espacio|escritorio) " + NUM_RE, t)
+    if m and num(m.group(1)):
+        n = num(m.group(1))
+        return I("window", f"Mover la ventana al escritorio {n}", op="move", workspace=n)
+    WIN = [(r"(?:cierra|cerrar|quita)(?: (?:la|esta))? (?:ventana|aplicacion|app)(?: actual| activa)?", "close", "Cerrar la ventana"),
+           (r"(?:pon(?: la ventana)? en |modo )?pantalla completa(?: la ventana)?", "fullscreen", "Pantalla completa"),
+           (r"maximiza(?:r)?(?: (?:la|esta) ventana)?", "maximize", "Maximizar la ventana"),
+           (r"minimiza(?:r)?(?: (?:la|esta) ventana)?", "minimize", "Minimizar la ventana"),
+           (r"(?:haz flotar|pon flotante|flota)(?: (?:la|esta) ventana)?", "float", "Ventana flotante"),
+           (r"fija(?:r)? (?:la|esta) ventana", "pin", "Fijar la ventana")]
+    for rx, op, lab in WIN:
+        if re.fullmatch(rx, t):
+            return I("window", lab, op=op)
+    if re.fullmatch(r"(?:(?:pon(?: el)?|cambia(?: el)?|siguiente) fondo(?: de pantalla)?(?: siguiente)?|fondo siguiente|"
+                    r"cambia(?: el)? fondo de pantalla|otro fondo|nuevo fondo)", t):
+        return I("wallpaper", "Siguiente fondo", value="next")
+    if re.fullmatch(r"(?:fondo|pon el fondo) anterior", t):
+        return I("wallpaper", "Fondo anterior", value="prev")
+    if re.fullmatch(r"(?:pon(?: un)?|elige(?: un)?) fondo (?:al azar|aleatorio)", t):
+        return I("wallpaper", "Fondo al azar", value="random")
+    m = re.fullmatch(r"(?:pon|activa|cambia a)(?: el)? (?:modo|tema) (oscuro|claro|automatico|noche)", t)
+    if m:
+        v = {"noche": "oscuro", "automatico": "auto"}.get(m.group(1), m.group(1))
+        return I("set", f"Tema {v}", key="themeMode", value=v)
+    m = re.fullmatch(r"(?:pon(?:me)?|crea|activa)(?: un)? (?:temporizador|alarma|cuenta atras)(?: de)? " + NUM_RE + r" (minutos?|segundos?|horas?)(?: para (.+))?", t)
+    if m and num(m.group(1)):
+        n = num(m.group(1)); u = m.group(2)
+        mins = n * 60 if u.startswith("hora") else n / 60 if u.startswith("seg") else n
+        return I("timer", f"Temporizador de {n} {u}", minutes=round(mins, 2), what=q(m, 3) if m.group(3) else "")
+    m = re.fullmatch(r"(activa|pon|quita|desactiva)(?: la)? cafeina", t)
+    if m:
+        on = m.group(1) in ("activa", "pon")
+        return I("caffeine", ("Activar" if on else "Desactivar") + " la cafeína", value=on)
+    m = re.fullmatch(r"(activa|entra en|pon|quita|desactiva|sal del?)(?: el)? modo (?:sin distracciones|concentracion|enfoque)", t)
+    if m:
+        on = m.group(1) in ("activa", "entra en", "pon")
+        return I("focus", ("Entrar en" if on else "Salir del") + " modo sin distracciones", value=on)
+
+    # --- abrir algo (vista del shell, web o app)
+    m = re.fullmatch(r"(?:abre(?:me)?|abrir|lanza|ejecuta|inicia|arranca|muestra(?:me)?|ensename|ve a|ir a|entra en|llevame a)\s+(.+)", t)
+    if m:
+        what, wo = m.group(1), q(m)
+        what = re.sub(r"^(?:la app(?:licacion)? |el programa |la web(?: de)? |la pagina(?: de)? |el sitio(?: de)? )", "", what)
+        wo = wo[len(wo) - len(what):]
+        if what in VIEWS:
+            v = VIEWS[what]
+            return I("ia" if v == "@ia" else "view", f"Abrir {wo}", value=v)
+        if what in SITES:
+            return I("url", f"Abrir {wo}", url=SITES[what])
+        dom = re.fullmatch(r"([a-z0-9ñ\- ]+?)\s*(?:punto|\.)\s*(com|es|org|net|io|dev|app|ai|tv|mx|ar|co|eu|info)", what)
+        if dom:
+            host = re.sub(r"[^a-z0-9\-]", "", dom.group(1).replace("ñ", "n"))
+            return I("url", f"Abrir {host}.{dom.group(2)}", url=f"https://{host}.{dom.group(2)}")
+        if what in APPS:
+            return I("launch", f"Abrir {wo}", app=APPS[what])
+        return I("launch", f"Abrir {wo}", app=wo, guess_url="https://www." + re.sub(r"[^a-z0-9\-]", "", what.replace("ñ", "n")) + ".com")
+
+    # --- «pon X» sin decir dónde: música en el servicio de Ajustes
+    m = re.fullmatch(r"(?:reproduce(?:me)?|pon(?:me)?|toca|quiero escuchar)\s+(?:la cancion |el tema |musica de |algo de |la musica de )?(.{2,})", t)
+    if m and not re.match(r"(?:el|la|los|las|un|una)? ?(?:volumen|brillo|fondo|modo|temporizador|alarma|pantalla)\b", m.group(1)):
+        svc = music_service("", s)
+        return I("play", f"Reproducir «{q(m)}» en {SVC_NAMES[svc]}", query=q(m), service=svc)
+    return I("unknown", f"Preguntar a la IA: «{o}»", text=o, wake=is_wake)
+
+# ---------------------------------------------------------------- ejecutar
+def run(cmd, timeout=20, **kw):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, **kw)
+    except Exception as e:
+        return subprocess.CompletedProcess(cmd, 127, "", str(e))
+
+def open_url(url, dry=False):
+    over = os.environ.get("HF_VOICE_OPEN")
+    cmd = (shlex.split(over) if over else ["xdg-open"]) + [url]
+    if dry:
+        return cmd
+    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    return cmd
+
+def yt_id(query):
+    """id del primer resultado de YouTube: yt-dlp, o la página de resultados; ("", cómo)."""
+    if os.environ.get("HF_VOICE_NO_NET"):
+        return "", "sin red"
+    if shutil.which("yt-dlp"):
+        r = run(["yt-dlp", "--no-warnings", "--no-playlist", "--get-id", "--default-search", "ytsearch", "ytsearch1:" + query], timeout=25)
+        vid = (r.stdout or "").strip().splitlines()[:1]
+        if r.returncode == 0 and vid and re.fullmatch(r"[\w-]{11}", vid[0]):
+            return vid[0], "yt-dlp"
+    try:
+        req = urllib.request.Request("https://www.youtube.com/results?hl=es&search_query=" + urllib.parse.quote_plus(query),
+                                     headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0",
+                                              "Accept-Language": "es-ES,es;q=0.9", "Cookie": "SOCS=CAI; CONSENT=YES+1"})
+        html = urllib.request.urlopen(req, timeout=10).read(3_000_000).decode("utf-8", "replace")
+        m = re.search(r'"videoRenderer":\{"videoId":"([\w-]{11})"', html) or re.search(r'"videoId":"([\w-]{11})"', html)
+        if m:
+            return m.group(1), "página de resultados"
+    except Exception:
+        pass
+    return "", "búsqueda"
+
+def spotify_running():
+    r = run(["playerctl", "-l"], timeout=3)
+    return "spotify" in (r.stdout or "").lower()
+
+def play(query, service="youtube", dry=False):
+    """Abre la primera canción/vídeo de «query»: YouTube (watch?v=… arranca sola), YouTube Music o Spotify."""
+    if service == "spotify":
+        uri = "spotify:search:" + urllib.parse.quote(query)
+        if not dry and spotify_running() and shutil.which("dbus-send"):
+            run(["dbus-send", "--print-reply", "--dest=org.mpris.MediaPlayer2.spotify", "/org/mpris/MediaPlayer2",
+                 "org.mpris.MediaPlayer2.Player.OpenUri", f"string:{uri}"], timeout=5)
+            return {"ok": True, "url": uri, "how": "MPRIS", "msg": "Abierto en Spotify"}
+        if not shutil.which("spotify") and not dry:
+            url = "https://open.spotify.com/search/" + urllib.parse.quote(query)
+            return {"ok": True, "url": url, "how": "web", "cmd": open_url(url), "msg": "Abierto en Spotify (web)"}
+        return {"ok": True, "url": uri, "how": "uri", "cmd": open_url(uri, dry), "msg": "Abierto en Spotify"}
+    vid, how = ("", "prueba en seco") if dry else yt_id(query)
+    host = "https://music.youtube.com" if service == "music" else "https://www.youtube.com"
+    if vid:
+        url = f"{host}/watch?v={vid}"
+    else:
+        url = (f"{host}/search?q=" if service == "music" else f"{host}/results?search_query=") + urllib.parse.quote_plus(query)
+    return {"ok": True, "url": url, "id": vid, "how": how, "cmd": open_url(url, dry),
+            "msg": "Reproduciendo en " + SVC_NAMES.get(service, "YouTube") if vid else "Abrí la búsqueda en " + SVC_NAMES.get(service, "YouTube")}
+
+def hyprj(*args):
+    r = run(["hyprctl", *args, "-j"], timeout=4)
+    try:
+        return json.loads(r.stdout or "null")
+    except Exception:
+        return None
+
+def is_browser(c):
+    cl = ((c or {}).get("class") or "").lower() + " " + ((c or {}).get("initialClass") or "").lower()
+    return any(b in cl for b in BROWSERS)
+
+def browser(op, value="", dry=False):
+    """Teclas al navegador: si la ventana con foco no es un navegador, enfoca el último usado."""
+    if op == "search":
+        return {"ok": True, "cmd": open_url(SEARCH["google"].format(urllib.parse.quote_plus(value)), dry), "msg": "Hecho"}
+    if op == "open":
+        v = value.strip()
+        url = v if re.match(r"^[a-z]+://", v) else SITES.get(fold(v)) or ("https://" + v if "." in v else "https://www." + re.sub(r"\W", "", fold(v)) + ".com")
+        return {"ok": True, "url": url, "cmd": open_url(url, dry), "msg": "Hecho"}
+    if op not in BROWSER_KEYS and op != "find":
+        return {"ok": False, "msg": f"No sé hacer «{op}» en el navegador"}
+    keys = BROWSER_KEYS.get(op) or ["-M", "ctrl", "-k", "f", "-m", "ctrl", "-s", "150", value]
+    if op == "find" and value:
+        keys = ["-M", "ctrl", "-k", "f", "-m", "ctrl", "-s", "200", "--", value]
+    plan = {"keys": keys}
+    if dry:
+        return {"ok": True, "dry": True, "wtype": ["wtype"] + keys}
+    act = hyprj("activewindow")
+    if not is_browser(act):
+        cands = sorted((c for c in (hyprj("clients") or []) if is_browser(c)), key=lambda c: c.get("focusHistoryID", 99))
+        if not cands:
+            return {"ok": False, "msg": "No hay ningún navegador abierto"}
+        run(["hyprctl", "dispatch", f'hl.dsp.focus({{ window = "address:{cands[0]["address"]}" }})'], timeout=4)
+        time.sleep(0.25)
+        plan["focused"] = cands[0].get("class")
+    if not shutil.which("wtype"):
+        return {"ok": False, "msg": "Falta wtype para mandar teclas al navegador"}
+    time.sleep(0.12)                       # que se suelten las teclas del atajo
+    r = run(["wtype"] + keys, timeout=10)
+    return {"ok": r.returncode == 0, "msg": "Hecho" if r.returncode == 0 else "No pude mandar las teclas (wtype)", **plan}
+
+def hf_ai(actions):
+    """Acciones validadas de hf-ai (con deshacer); las pidió el usuario por voz, así que no hay tarjeta de aprobación."""
+    r = run([str(ROOT / "scripts/hf-ai"), "apply", json.dumps(actions, ensure_ascii=False)], timeout=60)
+    try:
+        j = json.loads(r.stdout or "{}")
+    except Exception:
+        j = {}
+    if j.get("error") or (r.returncode != 0 and not j):
+        return {"ok": False, "msg": j.get("error") or (r.stderr or "hf-ai falló").strip().splitlines()[-1][:160]}
+    errs = j.get("errors") or []
+    if not (j.get("labels") or j.get("undo")) and not errs:
+        return {"ok": False, "msg": "No pude hacerlo (¿existe esa app o ventana?)"}
+    return {"ok": not errs, "msg": "; ".join(errs) if errs else "Hecho", "undo": j.get("undo")}
+
+def ask_ai(text):
+    r = run(QS + ["ipc", "call", "sidepanel", "ask", text], timeout=8)
+    if r.returncode != 0:
+        return {"ok": False, "msg": "No pude abrir el asistente"}
+    return {"ok": True, "msg": "Se lo pregunté al asistente"}
+
+def plan_of(it):
+    """Lo que se haría (en seco): hf-ai apply […], teclas o dirección."""
+    k = it["intent"]
+    if k in ("media",):
+        return {"hf-ai": [{"type": "media", "value": it["op"]}]}
+    if k in ("volume", "brightness", "wallpaper", "workspace", "caffeine", "focus"):
+        return {"hf-ai": [{"type": k, "value": it["value"]}]}
+    if k == "dnd":
+        return {"hf-ai": [{"type": "dnd", "value": it["value"], **({"minutes": it["minutes"]} if it.get("minutes") else {})}]}
+    if k == "window":
+        return {"hf-ai": [{"type": "window", "op": it["op"], "target": "active", **({"workspace": it["workspace"]} if it.get("workspace") else {})}]}
+    if k == "set":
+        return {"hf-ai": [{"type": "set", "key": it["key"], "value": it["value"]}]}
+    if k == "timer":
+        return {"hf-ai": [{"type": "timer", "minutes": it["minutes"], "label": it.get("what") or ""}]}
+    if k == "view":
+        return {"hf-ai": [{"type": "open", "value": it["value"]}]}
+    if k == "launch":
+        return {"hf-ai": [{"type": "launch", "app": it["app"]}]}
+    if k == "url":
+        return {"open": open_url(it["url"], dry=True)}
+    if k == "play":
+        return play(it["query"], it["service"], dry=True)
+    if k == "browser":
+        return browser(it["op"], it.get("value", ""), dry=True)
+    if k == "screenshot":
+        return {"run": [str(ROOT / "scripts/hf-capture"), "region" if it.get("region") else "screen"]}
+    if k == "lock":
+        return {"run": [str(ROOT / "scripts/hf-lock")]}
+    if k == "ia":
+        return {"run": QS + ["ipc", "call", "shell", "open", "ia"]}
+    if k == "unknown":
+        return {"ai": it.get("text")}
+    return {}
+
+def execute(it, s=None, no_ai=False):
+    s = s or settings()
+    k = it["intent"]
+    if k == "none":
+        return {"ok": True, "msg": it["label"]}
+    if k == "unknown":
+        if no_ai or s.get("voiceAiFallback", True) is False:
+            return {"ok": False, "msg": "No entendí la orden", "fallback": "ai" if not no_ai else None}
+        return {**ask_ai(it.get("text") or ""), "fallback": "ai"}
+    if k == "play":
+        return play(it["query"], it["service"])
+    if k == "url":
+        open_url(it["url"])
+        return {"ok": True, "msg": "Hecho", "url": it["url"]}
+    if k == "browser":
+        return browser(it["op"], it.get("value", ""))
+    if k == "screenshot":
+        time.sleep(0.4)          # que se vaya la píldora
+        subprocess.Popen(plan_of(it)["run"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        return {"ok": True, "msg": "Hecho"}
+    if k in ("lock", "ia"):
+        subprocess.Popen(plan_of(it)["run"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        return {"ok": True, "msg": "Hecho"}
+    if k == "launch":
+        app = it["app"]
+        if app == "@browser":
+            return _launch_cmd("browser", s)
+        if app == "@editor":
+            return _launch_cmd("textEditor", s)
+        r = hf_ai([{"type": "launch", "app": app}])
+        if not r["ok"] and it.get("guess_url") and " " not in app.strip():
+            open_url(it["guess_url"])      # «abre lavanguardia» → https://www.lavanguardia.com
+            return {"ok": True, "msg": "Abrí " + it["guess_url"].split("//", 1)[1], "url": it["guess_url"]}
+        return r
+    return hf_ai(plan_of(it)["hf-ai"])
+
+def _launch_cmd(key, s):
+    cmd = s.get(key) or ""
+    if not cmd:
+        return {"ok": False, "msg": "No hay una app elegida para eso en Ajustes"}
+    r = run([str(ROOT / "scripts/hf-launch"), cmd], timeout=6)
+    return {"ok": r.returncode == 0, "msg": "Hecho" if r.returncode == 0 else "No pude abrirla"}
+
+TESTS = [
+    "Reproduce Walk de los Foo Fighters desde YouTube.", "Pon Bohemian Rhapsody de Queen en YouTube Music",
+    "Frijol, pon Despacito en Spotify", "Oye Frijol, pausa la música", "Siguiente canción", "Canción anterior",
+    "Sube el volumen", "Baja el volumen un poco", "Volumen al cincuenta por ciento", "Pon el volumen al 30 %", "Silencia",
+    "Abre YouTube", "Abre elpais punto com", "Abre Firefox", "Busca recetas de paella", "Busca gatos en Wikipedia",
+    "Busca la última de Rosalía en YouTube", "Nueva pestaña", "Cierra la pestaña", "Vuelve atrás", "Recarga la página",
+    "Baja", "Sube la página", "Haz una captura de pantalla", "Bloquea la pantalla", "Activa el modo no molestar",
+    "Cambia al escritorio tres", "Cierra la ventana", "Fondo siguiente", "Sube el brillo", "Pon un temporizador de 10 minutos para el té",
+    "Abre los ajustes", "Pon el modo oscuro", "¿Qué tiempo hará mañana en Sevilla?", "Reproduce", "Llévame a la Puerta del Sol",
+]
+
+def main(argv):
+    cmd = argv[0] if argv else ""
+    rest = [a for a in argv[1:] if not a.startswith("--")]
+    flags = [a for a in argv[1:] if a.startswith("--")]
+    def opt(name, d=""):
+        for i, a in enumerate(argv):
+            if a == name and i + 1 < len(argv):
+                return argv[i + 1]
+        return d
+    if cmd == "parse":
+        it = parse(" ".join(rest))
+        print(json.dumps({**it, "plan": plan_of(it)}, ensure_ascii=False)); return
+    if cmd == "run":
+        it = parse(" ".join(rest))
+        if "--dry-run" in flags:
+            print(json.dumps({**it, "plan": plan_of(it), "ok": True, "dry": True}, ensure_ascii=False)); return
+        r = execute(it, no_ai="--no-ai" in flags)
+        print(json.dumps({**it, **r}, ensure_ascii=False))
+        sys.exit(0 if r.get("ok") else 1)
+    if cmd == "youtube":
+        svc = opt("--service", "youtube")
+        q = " ".join(a for a in rest if a != svc)
+        r = play(q, svc if svc in SVC_NAMES else "youtube", dry="--print" in flags)
+        if "--print" in flags and svc != "spotify":      # en seco, resuelve igualmente el id (sin abrir nada)
+            vid, how = yt_id(q)
+            host = "https://music.youtube.com" if svc == "music" else "https://www.youtube.com"
+            if vid:
+                r.update(id=vid, how=how, url=f"{host}/watch?v={vid}", msg="Reproduciendo en " + SVC_NAMES[svc])
+                r["cmd"] = open_url(r["url"], dry=True)
+        print(json.dumps(r, ensure_ascii=False)); return
+    if cmd == "browser":
+        op = rest[0] if rest else ""
+        print(json.dumps(browser(op, " ".join(rest[1:]), dry="--print" in flags), ensure_ascii=False)); return
+    if cmd == "wake":
+        ok, r = strip_wake(" ".join(rest))
+        print(json.dumps({"wake": ok, "rest": r}, ensure_ascii=False)); return
+    if cmd == "intents":
+        print(json.dumps(INTENT_DOC, ensure_ascii=False)); return
+    if cmd == "test":
+        for ph in TESTS:
+            it = parse(ph)
+            p = plan_of(it)
+            print(f"{ph}\n    → {it['intent']}: {it['label']}\n    → {json.dumps(p, ensure_ascii=False)}")
+        return
+    print(__doc__)
+    sys.exit(0 if cmd in ("-h", "--help") else 1)
+
+INTENT_DOC = [
+    ["Música", "«Reproduce/pon <canción> en YouTube | YouTube Music | Spotify» · «pausa» · «sigue» · «siguiente/anterior canción»"],
+    ["Volumen y brillo", "«sube/baja el volumen» · «volumen al 40 %» · «silencia» · «activa el sonido» · «sube/baja el brillo» · «brillo al 70»"],
+    ["Navegador", "«abre <web>» · «busca <algo> (en Google/Wikipedia/YouTube)» · «nueva pestaña» · «cierra la pestaña» · «atrás» · «adelante» · «recarga» · «baja/sube» · «busca <x> en la página»"],
+    ["Escritorio", "«abre <app>» · «abre los ajustes» · «captura de pantalla» · «bloquea» · «no molestar» · «escritorio 3» · «cierra/maximiza la ventana» · «fondo siguiente» · «modo oscuro» · «temporizador de 10 minutos» · «cafeína»"],
+    ["Lo demás", "se lo pregunto al asistente (panel lateral), que pide aprobación para cambiar cosas"],
+]
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

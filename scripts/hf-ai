@@ -36,7 +36,7 @@ Permisos (Ajustes › IA): aiContextCapture (leer capturas adjuntas y la pantall
   aiReadDesktop (consultas de solo lectura: ventanas, avisos, archivos, estado), aiContextWindow (ventanas).
 Acciones: ajustes (cualquier clave de settings.json salvo las de la IA, comandos, red y seguridad), fondo, espacios,
   ventanas (enfocar/cerrar/mover/…), abrir apps y webs, música, volumen, brillo, no molestar, cafeína, temporizadores,
-  pomodoro, borrar avisos, perfiles, vistas y comandos de terminal (siempre con confirmación). Casi todas se deshacen.
+  pomodoro, borrar avisos, vistas y comandos de terminal (siempre con confirmación). Casi todas se deshacen.
 Consultas: el modelo puede pedir datos con un bloque ```hf-query``` (hasta 3 rondas) antes de responder.
 Imágenes: con visión (claude-code por stream-json, Gemini inline_data, OpenAI image_url, Ollama si el modelo tiene
   "vision") se mandan reducidas a 1568 px (ImageMagick); si no, su texto por OCR. aiVision true/false lo fuerza.
@@ -114,9 +114,14 @@ SET_KEYS = {
 }
 VIEWS = {"spotlight": "Spotlight", "ajustes": "ajustes rápidos", "vista": "vista general", "agenda": "agenda",
          "portapapeles": "portapapeles", "snap": "organizar ventanas", "energia": "menú de energía", "fondos": "selector de fondos",
-         "captura": "captura de pantalla", "perfiles": "perfiles", "widgets": "widgets", "actualizaciones": "actualizaciones",
+         "captura": "captura de pantalla", "widgets": "widgets", "actualizaciones": "actualizaciones",
          "notificaciones": "notificaciones", "ajustesapp": "Ajustes", "herramientas": "centro de herramientas"}
-PROFILES = {"trabajo": "Trabajo", "diseno": "Diseño 3D", "juego": "Juego", "personal": "Personal"}
+BROWSER_OPS = {"new-tab": "Nueva pestaña", "close-tab": "Cerrar la pestaña", "reopen-tab": "Reabrir la pestaña cerrada",
+               "next-tab": "Pestaña siguiente", "prev-tab": "Pestaña anterior", "back": "Atrás en el navegador",
+               "forward": "Adelante en el navegador", "reload": "Recargar la página", "scroll-down": "Bajar la página",
+               "scroll-up": "Subir la página", "top": "Ir al principio de la página", "bottom": "Ir al final de la página",
+               "fullscreen": "Pantalla completa en el navegador", "zoom-in": "Acercar la página", "zoom-out": "Alejar la página",
+               "find": "Buscar en la página", "search": "Buscar en Google", "open": "Abrir la web"}
 WINDOW_OPS = {"focus": "Enfocar", "close": "Cerrar", "fullscreen": "Pantalla completa", "maximize": "Maximizar",
               "float": "Hacer flotante", "tile": "Poner en mosaico", "pin": "Fijar encima", "move": "Mover",
               "minimize": "Minimizar", "restore": "Recuperar"}
@@ -174,9 +179,8 @@ SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden
 - {"type":"pomodoro","value":"start"|"pause"|"reset","minutes":25}
 - {"type":"focus","value":true|false}        modo sin distracciones
 - {"type":"notifications","op":"clear"}      borrar las notificaciones
-- {"type":"profile","value":"trabajo"|"diseno"|"juego"|"personal"}
 - {"type":"open","value":VISTA}             abrir: spotlight, ajustes, vista, agenda, portapapeles, snap, energia, fondos,
-                                             captura, perfiles, widgets, actualizaciones, notificaciones, ajustesapp, herramientas
+                                             captura, widgets, actualizaciones, notificaciones, ajustesapp, herramientas
 - {"type":"device","op":"mount"|"unmount"|"eject"|"open"|"eject-all","dev":"/dev/sdb1"}   memorias USB y tarjetas SD
                                               (consulta "devices" antes para saber el dev)
 - {"type":"download","urls":["https://…"],"kind":"auto"|"video"|"audio"|"image"|"file","format":"best"|"720"|"mp3"|"opus"}
@@ -184,6 +188,11 @@ SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden
 - {"type":"download_ctl","op":"pause"|"resume"|"cancel"|"retry","id":ID|"all"}   controlar la cola (consulta "downloads")
 - {"type":"wallhaven","op":"add"|"set","id":"abc123"}   fondo de wallhaven.cc: añadir a mis fondos o ponerlo (consulta
                                               "wallhaven" para buscar)
+- {"type":"youtube","query":"Walk Foo Fighters","service":"youtube"|"music"|"spotify"}   reproducir una canción o vídeo:
+                                              abre el primer resultado (YouTube arranca solo; Spotify abre su búsqueda)
+- {"type":"browser","op":OP,"value":"…"}      teclas al navegador (enfoca uno si hace falta). OP: new-tab|close-tab|
+                                              reopen-tab|next-tab|prev-tab|back|forward|reload|scroll-down|scroll-up|top|
+                                              bottom|fullscreen|zoom-in|zoom-out|find (value: texto)|search (value)|open (value: web)
 - {"type":"run","command":"…"}               comando de terminal; el usuario debe confirmarlo antes"""
 
 QUERY_DOC = """Consultas (solo lectura; se ejecutan solas y te devuelvo el resultado para que sigas):
@@ -285,8 +294,6 @@ def label(a):
             f"{'Subir' if str(v)[0] == '+' else 'Bajar'} el volumen un {str(v)[1:]} %" if str(v)[:1] in "+-" else f"Volumen al {v} %")
     if t == "brightness":
         return f"{'Subir' if str(v)[0] == '+' else 'Bajar'} el brillo un {str(v)[1:]} %" if str(v)[:1] in "+-" else f"Brillo al {v} %"
-    if t == "profile":
-        return f"Perfil: {PROFILES.get(v, v)}"
     if t == "dnd":
         return ("Activar No molestar" + (f" durante {a['minutes']} min" if a.get("minutes") else "")) if v else "Desactivar No molestar"
     if t == "caffeine":
@@ -325,6 +332,10 @@ def label(a):
     if t == "wallhaven":
         return (f"Añadir el fondo {a.get('id')} de Wallhaven a mis fondos" if a.get("op") == "add"
                 else f"Poner de fondo {a.get('id')} (Wallhaven)")
+    if t == "youtube":
+        return f"Reproducir «{a.get('query')}» en " + {"music": "YouTube Music", "spotify": "Spotify"}.get(a.get("service"), "YouTube")
+    if t == "browser":
+        return BROWSER_OPS.get(a.get("op"), a.get("op")) + (f" «{a['value']}»" if a.get("value") else "")
     return str(a)
 
 def _show(k, v):
@@ -346,9 +357,6 @@ def preview(a, s=None):
         if t == "wallpaper":
             cur = (STATE / "wallpaper-path").read_text().strip() if (STATE / "wallpaper-path").exists() else ""
             return (pathlib.Path(cur).name or "—") + " → " + ({"next": "el siguiente", "prev": "el anterior", "random": "uno al azar"}.get(a.get("value")) or pathlib.Path(str(a.get("value"))).name)
-        if t == "profile":
-            cur = (STATE / "profile").read_text().strip() if (STATE / "profile").exists() else ""
-            return f"{PROFILES.get(cur, cur or '—')} → {PROFILES.get(a.get('value'), a.get('value'))}"
         if t == "volume":
             cur = volume_get()
             return f"ahora {cur['vol']} %" + (" (silenciado)" if cur.get("muted") else "") if cur.get("vol") is not None else ""
@@ -365,6 +373,10 @@ def preview(a, s=None):
             return (a.get("dev") or "") + (f" · montada en {a['mountpoint']}" if a.get("mountpoint") else "")
         if t == "wallhaven":
             return f"wallhaven.cc/w/{a.get('id')}"
+        if t == "youtube":
+            return "el primer resultado de la búsqueda"
+        if t == "browser":
+            return "en la ventana del navegador"
         if t == "launch":
             return a.get("desktop") or ""
         if t == "url":
@@ -376,11 +388,11 @@ def preview(a, s=None):
 KIND_LABELS = {"wallpaper": "Cambiar el fondo", "workspace": "Ir a otro espacio", "launch": "Abrir apps", "url": "Abrir webs",
                "volume": "Cambiar el volumen", "brightness": "Cambiar el brillo", "media": "Controlar la música", "dnd": "No molestar",
                "caffeine": "Cafeína", "timer": "Temporizadores", "pomodoro": "Pomodoro", "focus": "Modo sin distracciones",
-               "profile": "Cambiar de perfil", "open": "Abrir paneles del shell", "winmode": "Modo de ventanas",
+               "open": "Abrir paneles del shell", "winmode": "Modo de ventanas",
                "download": "Añadir descargas", "device:mount": "Montar unidades", "device:unmount": "Desmontar unidades",
                "device:open": "Abrir unidades", "download_ctl:pause": "Pausar descargas", "download_ctl:resume": "Reanudar descargas",
                "download_ctl:retry": "Reintentar descargas", "wallhaven:add": "Añadir fondos de Wallhaven",
-               "wallhaven:set": "Poner fondos de Wallhaven"}
+               "wallhaven:set": "Poner fondos de Wallhaven", "youtube": "Reproducir canciones y vídeos"}
 
 def kind_label(kind):
     """Nombre en español de una clave de aiAlwaysApprove (para la lista de Ajustes › IA)."""
@@ -390,6 +402,8 @@ def kind_label(kind):
         return f"Cambiar «{SET_KEYS.get(key, (KEY_LABELS.get(key, key), None))[0]}»"
     if k.startswith("window:"):
         return "Ventanas: " + WINDOW_OPS.get(k[7:], k[7:]).lower()
+    if k.startswith("browser:"):
+        return "Navegador: " + BROWSER_OPS.get(k[8:], k[8:]).lower()
     return KIND_LABELS.get(k, k)
 
 def approve_kind(a):
@@ -397,7 +411,7 @@ def approve_kind(a):
     t = a.get("type")
     if t == "set":
         return "set:" + str(a.get("key"))
-    op = a.get("op") if t in ("window", "device", "download_ctl", "wallhaven") else None
+    op = a.get("op") if t in ("window", "device", "download_ctl", "wallhaven", "browser") else None
     return f"{t}:{op}" if op else str(t)
 
 def meta(a):
@@ -405,8 +419,10 @@ def meta(a):
     t = a.get("type")
     irreversible = (t == "window" and a.get("op") == "close") or t in ("notifications", "url", "run") \
         or (t == "media" and a.get("value") == "stop") or (t == "device" and a.get("op") in ("eject", "eject-all")) \
-        or (t == "download_ctl" and a.get("op") == "cancel")
-    return {"label": label(a), "undo": not irreversible, "confirm": irreversible and t != "url",
+        or (t == "download_ctl" and a.get("op") == "cancel") or t in ("youtube", "browser")
+    # abrir webs, reproducir música y las teclas del navegador no piden confirmación (salvo cerrar la pestaña)
+    quiet = t in ("url", "youtube") or (t == "browser" and a.get("op") != "close-tab")
+    return {"label": label(a), "undo": not irreversible, "confirm": irreversible and not quiet,
             "kind": approve_kind(a), "preview": preview(a)}
 
 def _num(v):
@@ -486,8 +502,6 @@ def validate(actions):
                     ok.append(a)
                 else:
                     a["value"] = max(1, min(100, int(_num(v)))); ok.append(a)
-            elif t == "profile" and a.get("value") in PROFILES:
-                ok.append(a)
             elif t in ("dnd", "focus", "caffeine") and isinstance(a.get("value"), bool):
                 if a.get("minutes") is not None:
                     a["minutes"] = max(0, min(1440, int(_num(a["minutes"]))))
@@ -528,6 +542,15 @@ def validate(actions):
                 a["id"] = str(a.get("id") or "all")[:40]
                 ok.append(a)
             elif t == "wallhaven" and a.get("op") in ("add", "set") and re.fullmatch(r"[a-z0-9]{4,12}", str(a.get("id") or "")):
+                ok.append(a)
+            elif t == "youtube" and isinstance(a.get("query"), str) and a["query"].strip():
+                a["query"] = a["query"].strip()[:200]
+                a["service"] = a.get("service") if a.get("service") in ("youtube", "music", "spotify") else "youtube"
+                ok.append(a)
+            elif t == "browser" and a.get("op") in BROWSER_OPS:
+                a["value"] = str(a.get("value") or "")[:300]
+                if a["op"] in ("find", "search", "open") and not a["value"].strip():
+                    continue
                 ok.append(a)
         except Exception:
             continue
@@ -700,7 +723,6 @@ def snapshot():
         "settings": {k: s.get(k) for k in SET_KEYS},
         "settingsPresent": list((load(SETTINGS, {}) or {}).keys()),
         "wallpaper": (STATE / "wallpaper-path").read_text().strip() if (STATE / "wallpaper-path").exists() else None,
-        "profile": (STATE / "profile").read_text().strip() if (STATE / "profile").exists() else None,
         "dnd": (STATE / "dnd").exists(),
         "workspace": jrun(["hyprctl", "activeworkspace", "-j"]).get("id"),
         "focus": run(QS + ["ipc", "call", "shell", "current"]) == "enfoque",
@@ -721,8 +743,6 @@ def exec_action(a):
         subprocess.Popen([str(ROOT / "scripts/hf-wallpaper"), v], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     elif t == "workspace":
         hypr(f"hl.dsp.focus({{ workspace = {int(v)} }})")
-    elif t == "profile":
-        subprocess.Popen([str(ROOT / "scripts/hf-profile"), v], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     elif t == "dnd":
         if v and a.get("minutes"):
             qs_call("notifs", "dndFor", int(a["minutes"]))
@@ -832,6 +852,12 @@ def exec_action(a):
         script_json("hf-download", a["op"], a["id"])
         back = {"pause": "resume", "resume": "pause"}.get(a["op"])
         return {"kind": "download_ctl", "op": back, "id": a["id"]} if back else None
+    elif t in ("youtube", "browser"):
+        # hf-voice: lo mismo que los comandos de voz («pon Walk de Foo Fighters en YouTube», «nueva pestaña»)
+        args = ["youtube", a["query"], "--service", a["service"]] if t == "youtube" else ["browser", a["op"]] + ([a["value"]] if a.get("value") else [])
+        r = script_json("hf-voice", *args, timeout=40) or {}
+        if not r.get("ok"):
+            return {"kind": "error", "msg": r.get("msg") or "No se pudo"}
     elif t == "wallhaven":
         t0 = time.time()
         if a["op"] == "add":
@@ -955,8 +981,6 @@ def do_undo(uid):
             pass
     if ("wallpaper" in types or any(a["type"] == "wallhaven" and a.get("op") == "set" for a in acts)) and b.get("wallpaper"):
         subprocess.Popen([str(ROOT / "scripts/hf-wallpaper"), b["wallpaper"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    if "profile" in types and b.get("profile"):
-        subprocess.Popen([str(ROOT / "scripts/hf-profile"), b["profile"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if "dnd" in types:
         qs_call("notifs", "setDnd", "true" if b.get("dnd") else "false")
     if "workspace" in types and b.get("workspace"):
@@ -1269,21 +1293,17 @@ def portal_pick():
         return None
 
 def pick_images():
-    # en la sesión de prueba (dev/try.sh, HF_TRY) el portal es el del escritorio real: ahí se usa kdialog/zenity
+    # en la sesión de prueba (dev/try.sh, HF_TRY) el portal es el del escritorio real: ahí se usa zenity
     got = None if os.environ.get("HF_AI_NO_PORTAL") or os.environ.get("HF_TRY") else portal_pick()
     if got is not None:
         return got
     pics = os.path.isdir(HOME / "Imágenes") and str(HOME / "Imágenes") or str(HOME)
-    if shutil.which("kdialog"):
-        out = run(["kdialog", "--title", "Adjuntar imágenes", "--multiple", "--separate-output", "--getopenfilename", pics,
-                   "image/png image/jpeg image/webp image/gif image/bmp image/tiff image/avif image/svg+xml"], timeout=900)
-        return [l for l in out.split("\n") if l]
     if shutil.which("zenity"):
         out = run(["zenity", "--file-selection", "--multiple", "--separator=\n", "--title=Adjuntar imágenes", f"--filename={pics}/",
                    "--file-filter=Imágenes | *.png *.jpg *.jpeg *.webp *.gif *.bmp *.tif *.tiff *.avif *.svg *.PNG *.JPG *.JPEG",
                    "--file-filter=Todos los archivos | *"], timeout=900)
         return [l for l in out.split("\n") if l]
-    raise AIError("No encuentro un selector de archivos (portal, kdialog o zenity).")
+    raise AIError("No encuentro un selector de archivos (portal o zenity).")
 
 def do_attach(src, mime=""):
     """hf-ai attach clipboard|pick|-|<ruta|file://…|https://…> … → {"images": [rutas], "error": …}"""
@@ -1430,7 +1450,7 @@ def gather(ctx, ocr=True):
         if t.strip():
             parts.append("Texto en pantalla (OCR):\n" + t)
     parts.append(f"Estado del shell: estilo={s.get('estilo')}, color={s.get('colorMode')}/{s.get('palette')}, "
-                 f"barra={s.get('barPos')}/{s.get('barMode')}, perfil={(STATE / 'profile').read_text().strip() if (STATE / 'profile').exists() else 'trabajo'}")
+                 f"barra={s.get('barPos')}/{s.get('barMode')}")
     return "\n\n".join(parts)
 
 # ---------------------------------------------------------------- proveedores
@@ -1971,9 +1991,19 @@ TOOL_SPECS = [
     ("wallhaven_wallpaper", "Con un id de wallhaven_search: 'add' lo añade a los fondos del usuario, 'set' lo pone de fondo.",
      {"type": "object", "properties": {"op": {"enum": ["add", "set"]}, "id": {"type": "string"}}, "required": ["op", "id"]},
      "action", lambda a: {"type": "wallhaven", "op": a.get("op"), "id": a.get("id")}),
+    # Ronda 9: lo mismo que los comandos de voz (scripts/hf-voice)
+    ("play_music", "Reproduce una canción o vídeo: busca «query» y abre el primer resultado en YouTube (arranca solo), "
+     "YouTube Music o Spotify (búsqueda). Ej.: query «Walk Foo Fighters».",
+     {"type": "object", "properties": {"query": {"type": "string"}, "service": {"enum": ["youtube", "music", "spotify"]}}, "required": ["query"]},
+     "action", lambda a: {"type": "youtube", "query": a.get("query"), "service": a.get("service") or "youtube"}),
+    ("browser_control", "Manda teclas al navegador (enfoca uno si la ventana activa no lo es): new-tab, close-tab, reopen-tab, "
+     "next-tab, prev-tab, back, forward, reload, scroll-down, scroll-up, top, bottom, fullscreen, zoom-in, zoom-out, "
+     "find (value: texto a buscar en la página), search (value: búsqueda en Google), open (value: web o dirección).",
+     {"type": "object", "properties": {"op": {"enum": list(BROWSER_OPS)}, "value": {"type": "string"}}, "required": ["op"]},
+     "action", lambda a: {"type": "browser", "op": a.get("op"), "value": a.get("value") or ""}),
 ]
 # Herramientas que pueden borrar o quitar algo sin vuelta atrás (hf-mcp lo anuncia como destructiveHint)
-DESTRUCTIVE_TOOLS = {"window_action", "clear_notifications", "device_action", "download_control"}
+DESTRUCTIVE_TOOLS = {"window_action", "clear_notifications", "device_action", "download_control", "browser_control"}
 
 def tool_call(name, args):
     t = next((x for x in TOOL_SPECS if x[0] == name), None)

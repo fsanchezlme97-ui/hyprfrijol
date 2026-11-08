@@ -3,7 +3,7 @@ HF.rules = HF.rules or {}
 
 hl.window_rule({
     name  = "dialogs-float",
-    match = { class = "^(org.pulseaudio.pavucontrol|pavucontrol|nm-connection-editor|blueman-manager|org.kde.polkit-kde-authentication-agent-1)$" },
+    match = { class = "^(org.pulseaudio.pavucontrol|pavucontrol|nm-connection-editor|blueman-manager)$" },
     float = true,
     center = true,
 })

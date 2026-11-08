@@ -147,8 +147,9 @@ Scope {
                 });
             }
             function pickDoc(): void {
-                run(["sh", "-c", "zenity --file-selection --title='Abrir documento para firmar' --file-filter='PDF e imágenes | *.pdf *.PDF *.png *.jpg *.jpeg *.PNG *.JPG *.JPEG *.webp' 2>/dev/null"
-                    + " || kdialog --getopenfilename \"$HOME\" 'application/pdf image/png image/jpeg' 2>/dev/null"], r => { if (String(r).trim()) win.openDoc(String(r).trim()); });
+                // Selector del portal (GTK) o zenity: scripts/hf-pickfile
+                run([Paths.script("hf-pickfile"), "--title", "Abrir documento para firmar", "--filter", "PDF e imágenes|*.pdf *.png *.jpg *.jpeg *.webp"],
+                    r => { if (String(r).trim()) win.openDoc(String(r).trim().split("\n")[0]); });
             }
             function pageAspect(): real { const s = info.sizes[page] ?? [595, 842]; return s[0] / s[1]; }
 
@@ -596,8 +597,8 @@ Scope {
                 property bool working: false
                 property real strength: 0.5
                 function pick(): void {
-                    win.run(["sh", "-c", "zenity --file-selection --title='Foto de tu firma' --file-filter='Imágenes | *.png *.jpg *.jpeg *.webp *.heic *.PNG *.JPG *.JPEG' 2>/dev/null"
-                        + " || kdialog --getopenfilename \"$HOME\" 'image/png image/jpeg image/webp' 2>/dev/null"], r => { if (String(r).trim()) photo.load(String(r).trim()); });
+                    win.run([Paths.script("hf-pickfile"), "--title", "Foto de tu firma", "--filter", "Imágenes|*.png *.jpg *.jpeg *.webp *.heic"],
+                        r => { if (String(r).trim()) photo.load(String(r).trim().split("\n")[0]); });
                 }
                 function load(path): void { src = path; result = ""; err = ""; nameIn.text = ""; win.dialog = "foto"; process(); }
                 function process(): void {

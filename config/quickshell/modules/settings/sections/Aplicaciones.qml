@@ -1,7 +1,8 @@
 // Ajustes › Aplicaciones — acceso al Centro de aplicaciones (vista "herramientas", catálogo
 // config/tools/catalog.json) y al asistente de bienvenida (vista "bienvenida"), con lo instalado por categoría,
 // las fuentes de software de esta distro (repos, AUR, Flatpak, AppImage) y una búsqueda que abre la tienda.
-// Misma lógica que la tienda y la Bienvenida: services/Pkg.qml. Arriba, las apps de HyprFrijol por nivel (ui/AppTiers.qml → scripts/hf-apps).
+// Misma lógica que la tienda y la Bienvenida: services/Pkg.qml. Arriba, las apps de HyprFrijol por nivel (ui/AppTiers.qml → scripts/hf-apps)
+// y todo lo instalado con su paquete y «Desinstalar» (ui/InstalledApps.qml → hf-apps installed; lo esencial, protegido).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -79,6 +80,14 @@ ColumnLayout {
 
     // ---------- apps de hyprfrijol por nivel (install/apps.json · scripts/hf-apps) ----------
     AppTiers { Layout.fillWidth: true }
+
+    // ---------- todo lo instalado, para desinstalar (scripts/hf-apps installed · ui/InstalledApps.qml) ----------
+    Section {
+        Layout.fillWidth: true
+        title: "Instaladas en este equipo"
+        headerRight: Mono { text: "hf-apps installed" }
+        InstalledApps { Layout.fillWidth: true }
+    }
 
     RowLayout {
         Layout.fillWidth: true

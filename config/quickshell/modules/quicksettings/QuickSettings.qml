@@ -1,7 +1,7 @@
 // Centro de control: UN panel lateral junto a la barra (vista "ajustes"; alias "agenda", "notificaciones" y "centro",
 // ver Shell.aliases), a toda la altura y en una sola columna (como la barra lateral derecha de illogical-impulse):
 //   · ajustes rápidos (diseño «AjustesRapidos»): cabecera (usuario, batería, ajustes/bloquear/apagar) · brillo y
-//     volumen · mosaicos · perfil · modo de energía · teléfono (KDE Connect · scrcpy)
+//     volumen · mosaicos · modo de energía · teléfono (Valent, scripts/hf-phone · scrcpy)
 //   · notificaciones (recientes por app e historial: ../notifications/NotifCenter.qml; ocupan el sitio que sobre)
 //   · agenda (calendario, eventos del día, relojes del mundo: ../agenda/AgendaCard.qml)
 // Estilo, color y Pomodoro viven en Ajustes › Apariencia y en el chip de la barra. El grupo de estado de la barra
@@ -35,20 +35,15 @@ Overlay {
     property bool vncOn: false
     property bool vncAuth: false        // ~/.config/wayvnc con contraseña: solo así se escucha en la red (hf-remote)
     readonly property bool vncNet: vncAuth && Settings.get("vncListen", "127.0.0.1") !== "127.0.0.1"
-    property string profile: "trabajo"
-    property var phone: null                  // { id, name } o null
+    property var phone: null                  // el primer móvil conectado { id, name, battery } o null (hf-phone)
+    property string phoneBackend: ""          // "valent" | "kdeconnect" (alternativa) | "" (sin instalar)
+    property bool phoneRunning: false
     // Modo de ventanas del espacio actual: el general (WinMode, ajuste "windowMode") o la excepción que pongas
     // aquí para este espacio durante la sesión (desplegable del mosaico «Modo de ventanas»)
     readonly property int curWs: Hyprland.focusedMonitor?.activeWorkspace?.id ?? 1
     readonly property string wsMode: { WinMode.overrides; WinMode.mode; return WinMode.modeOf(curWs); }
     readonly property bool wsOverride: WinMode.overrides[String(curWs)] !== undefined
 
-    readonly property var profHints: ({
-        diseno: "Blender, FreeCAD y OrcaSlicer · widget de impresora · rendimiento",
-        trabajo: "Gmail, Calendario y Docs visibles · WhatsApp solo favoritos",
-        personal: "Todas las web apps · avisos normales",
-        juego: "gamemode, sin avisos, rendimiento máximo"
-    })
     function setNight(on) {
         nightOn = on;
         Shell.exec(on ? [Paths.script("hf-sunset"), "set", String(Settings.get("nightTemp", 4000))] : [Paths.script("hf-sunset"), "off"]);
@@ -82,11 +77,14 @@ Overlay {
     }
     Process {
         id: phoneCheck
-        command: ["sh", "-c", "command -v kdeconnect-cli >/dev/null && kdeconnect-cli -a --id-name-only 2>/dev/null | head -n1"]
+        command: [Paths.script("hf-phone"), "status", "--json"]
         stdout: StdioCollector {
             onStreamFinished: {
-                const s = text.trim(), i = s.indexOf(" ");
-                win.phone = s && i > 0 ? { id: s.slice(0, i), name: s.slice(i + 1) } : null;
+                let r = {};
+                try { r = JSON.parse(text || "{}"); } catch (e) {}
+                win.phoneBackend = r.backend ?? "";
+                win.phoneRunning = !!r.running;
+                win.phone = (r.devices ?? []).find(d => d.connected && d.paired) ?? null;
             }
         }
     }
@@ -103,13 +101,6 @@ Overlay {
                 win.adbState = win.scrcpyOk ? (l[1] ?? "").trim() : "";
             }
         }
-    }
-    FileView {
-        path: Paths.state + "/profile"
-        watchChanges: true
-        printErrors: false
-        onFileChanged: reload()
-        onLoaded: win.profile = text().trim() || "trabajo"
     }
     Connections {
         target: Shell
@@ -425,23 +416,6 @@ Overlay {
                         }
                     }
 
-                    // Perfil
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 5
-                        Txt {
-                            Layout.fillWidth: true
-                            size: 11.5; muted: true
-                            text: "Perfil · " + (win.profHints[win.profile] ?? "")
-                        }
-                        AjusteSeg {
-                            Layout.fillWidth: true
-                            model: [{ key: "trabajo", label: "Trabajo" }, { key: "diseno", label: "3D" },
-                                    { key: "personal", label: "Personal" }, { key: "juego", label: "Juego" }]
-                            current: win.profile
-                            onPicked: k => { win.profile = k; Shell.exec([Paths.script("hf-profile"), k]); }
-                        }
-                    }
                     // Modo de energía
                     ColumnLayout {
                         Layout.fillWidth: true
@@ -458,10 +432,10 @@ Overlay {
                 }
             }
 
-            // ═══ Teléfono (KDE Connect · scrcpy) ═══
+            // ═══ Teléfono (Valent · scrcpy) ═══
             Glass {
                 kind: "panel"
-                visible: win.phone !== null || win.adbState !== ""
+                visible: win.phoneBackend !== "" || win.adbState !== ""
                 Layout.fillWidth: true
                 Layout.preferredHeight: phoneCol.implicitHeight + 20
                 ColumnLayout {
@@ -469,7 +443,7 @@ Overlay {
                     anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 12; rightMargin: 12 }
                     spacing: 8
                     RowLayout {
-                        visible: win.phone !== null
+                        visible: win.phoneBackend !== ""
                         Layout.fillWidth: true
                         Layout.preferredHeight: 34
                         spacing: 12
@@ -480,10 +454,28 @@ Overlay {
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 0
-                            Txt { Layout.fillWidth: true; weight: Font.DemiBold; text: (win.phone?.name ?? "") + " · conectado" }
-                            Txt { Layout.fillWidth: true; size: 11.5; muted: true; text: "Portapapeles y notificaciones compartidos" }
+                            Txt { Layout.fillWidth: true; weight: Font.DemiBold; elide: Text.ElideRight
+                                text: win.phone ? win.phone.name + " · conectado" : win.phoneBackend === "kdeconnect" ? "KDE Connect" : "Valent" }
+                            Txt {
+                                Layout.fillWidth: true; size: 11.5; muted: true; elide: Text.ElideRight
+                                text: win.phone ? (win.phone.battery ? "Batería " + win.phone.battery.percentage + " %" + (win.phone.battery.charging ? " · cargando" : "")
+                                                                     : "Portapapeles y notificaciones compartidos")
+                                    : win.phoneRunning ? "Ningún móvil conectado · abre Valent para enlazarlo" : "Valent no está en marcha"
+                            }
+                        }
+                        IconBtn {
+                            visible: win.phone !== null
+                            implicitWidth: 26; implicitHeight: 26; radius: 13
+                            icon: "bell"; iconSize: 13; tooltip: "Hacer sonar el móvil"
+                            onClicked: Quickshell.execDetached([Paths.script("hf-phone"), "ring", win.phone.id])
+                        }
+                        IconBtn {
+                            implicitWidth: 26; implicitHeight: 26; radius: 13
+                            icon: "external"; iconSize: 13; tooltip: win.phoneBackend === "kdeconnect" ? "Abrir KDE Connect" : "Abrir Valent"
+                            onClicked: { Shell.close(); Quickshell.execDetached([Paths.script("hf-phone"), "open"].concat(win.phone ? [win.phone.id] : [])); }
                         }
                         Rectangle {
+                            visible: win.phone !== null
                             implicitHeight: 26; implicitWidth: sendTxt.implicitWidth + 22; radius: 13
                             color: sendMa.containsMouse ? Theme.fill2 : "transparent"
                             border.width: 1; border.color: Theme.ov
@@ -493,7 +485,7 @@ Overlay {
                                 anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                 onClicked: {
                                     Shell.close();
-                                    Shell.exec(["sh", "-c", 'f="$(zenity --file-selection --title="Enviar al teléfono")" && kdeconnect-cli -d "$1" --share "$f"', "sh", win.phone.id]);
+                                    Quickshell.execDetached([Paths.script("hf-phone"), "share", win.phone.id]);
                                 }
                             }
                         }

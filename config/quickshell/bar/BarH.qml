@@ -84,7 +84,7 @@ Item {
         PomodoroChip { id: pomo; visible: Settings.barHas("pomodoro") }
         CaffeineChip { id: cafe; visible: Settings.barHas("cafeina") }
         IconBtn { id: clipBtn; visible: Settings.barHas("portapapeles"); icon: "clipboard"; tooltip: "Portapapeles"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // abre Spotlight en modo portapapeles
-        IconBtn { id: aiBtn; visible: Settings.barHas("ia"); icon: "ai"; preload: "ia"; active: Shell.view === "ia"; onClicked: Shell.toggle("ia") }
+        IconBtn { id: aiBtn; visible: Settings.barHas("ia"); icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") }
         IconBtn { id: gearBtn; visible: Settings.barHas("ajustes"); icon: "gear"; onClicked: Shell.open("ajustesapp") }   // Ajustes (tuerca; opcional, ya está en el panel)
         OmarchySlot { barWindow: root.barWindow; place: "derecha" }     // widgets de plugins de Omarchy (omarchyBarSlot)
         Tray { id: tray; barWindow: root.barWindow; visible: Settings.get("barTray", true) && any; Layout.leftMargin: 4 }

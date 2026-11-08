@@ -8,6 +8,8 @@ Ajustes › Aplicaciones, la IA (hf-ai/hf-mcp) y la terminal.
   hf-apps install <app|nivel…>           instala (niveles: serie, productividad, destacada, creativa, experimental;
                                          varios con comas: serie,productividad; «all» = todos)
   hf-apps remove <app…>                  desinstala por donde esté instalada
+  hf-apps installed [--json]             todas las apps con lanzador: paquete (o Flatpak) que las trae, si están
+                                         protegidas (lo que hyprfrijol necesita) y la orden para desinstalarlas
   hf-apps defaults                       hace predeterminadas las de serie instaladas (navegador → Chrome, fotos →
                                          Loupe, PDF → Papers…; con scripts/hf-defaults)
   hf-apps extension [--remove]           enlaza la extensión de Nautilus (menú «HyprFrijol») en
@@ -550,6 +552,190 @@ def remove_steps(apps):
     return st
 
 
+# ---------------------------------------------------------------- todo lo instalado (Ajustes › Aplicaciones)
+# Cada app con lanzador (.desktop visible) y el paquete que la trae (pacman -Qo / rpm -qf / dpkg -S / xbps-query -o,
+# o su id de Flatpak), con la orden para desinstalarla. Nunca se ofrece quitar lo que hyprfrijol necesita: los
+# niveles required/base de install/packages.tsv, el compositor, el shell, el kernel, la terminal con la que se
+# desinstala, etc.
+PROTECT = {"hyprland", "hyprland-git", "quickshell", "quickshell-git", "python", "python3", "bash", "systemd", "glibc", "pacman",
+           "sudo", "dbus", "polkit", "mesa", "networkmanager", "network-manager", "pipewire", "wireplumber", "flatpak",
+           "xdg-desktop-portal", "xdg-desktop-portal-gtk", "xdg-desktop-portal-gnome", "xdg-desktop-portal-hyprland",
+           "xdg-utils", "coreutils", "filesystem", "base", "dnf", "rpm", "apt", "dpkg", "zypper", "xbps", "gnome-keyring", "zenity"}
+PROTECT_RX = re.compile(r"^(linux(-[a-z0-9]+)?(-headers)?|linux-image-.*|kernel(-.*)?|.*-firmware|systemd-.*|hyprland-.*|hyprutils|"
+                        r"aquamarine|qt6-.*|lib.*)$")
+TSV_COL = {"arch": 2, "fedora": 3, "rhel": 3, "suse": 4, "suse-leap": 4, "debian": 5, "ubuntu": 5, "void": 6}
+
+
+def required_pkgs():
+    """Paquetes de los niveles required/base de install/packages.tsv para esta familia."""
+    out, col = set(), TSV_COL.get(FAMILY)
+    try:
+        for l in (ROOT / "install/packages.tsv").read_text().splitlines():
+            f = l.split("\t")
+            if l.startswith("#") or len(f) < 7 or f[1] not in ("required", "base"):
+                continue
+            cols = [f[col]] if col else f[2:7]
+            for c in cols:
+                out |= {x.strip().removeprefix("aur:") for x in c.split(",") if x.strip() and x.strip() != "-"}
+    except Exception:
+        pass
+    return out
+
+
+def _desktop_info(path):
+    """[Desktop Entry] → dict; None si no es una app visible."""
+    try:
+        txt = path.read_text(errors="replace")
+    except Exception:
+        return None
+    sec, d = "", {}
+    lang = (os.environ.get("LANG") or "es").split(".")[0]
+    for line in txt.splitlines():
+        line = line.strip()
+        if line.startswith("["):
+            sec = line; continue
+        if sec != "[Desktop Entry]" or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        d.setdefault(k.strip(), v.strip())
+    if d.get("Type", "Application") != "Application" or d.get("NoDisplay", "").lower() == "true" or d.get("Hidden", "").lower() == "true":
+        return None
+    name = d.get(f"Name[{lang}]") or d.get(f"Name[{lang.split('_')[0]}]") or d.get("Name") or path.stem
+    return {"name": name, "icon": d.get("Icon", ""), "comment": d.get(f"Comment[{lang.split('_')[0]}]") or d.get("Comment", ""),
+            "onlyShowIn": d.get("OnlyShowIn", "")}
+
+
+def owners(files):
+    """ruta → paquete nativo (o "")."""
+    files = [str(f) for f in files]
+    res = {f: "" for f in files}
+    if not files or SIMULATED:
+        return res
+    env = dict(os.environ, LC_ALL="C")
+    try:
+        if PM == "pacman":
+            r = subprocess.run(["pacman", "-Qo", *files], capture_output=True, text=True, env=env, timeout=30)
+            for l in r.stdout.splitlines():
+                m = re.match(r"^(.*) is owned by (\S+) ", l)
+                if m: res[m.group(1)] = m.group(2)
+        elif PM in ("dnf", "zypper"):
+            r = subprocess.run(["rpm", "-qf", "--qf", "%{NAME}\n", *files], capture_output=True, text=True, env=env, timeout=30)
+            for f, l in zip(files, r.stdout.splitlines()):
+                if " " not in l: res[f] = l.strip()
+        elif PM == "apt-get":
+            r = subprocess.run(["dpkg", "-S", *files], capture_output=True, text=True, env=env, timeout=30)
+            for l in r.stdout.splitlines():
+                pk, _, f = l.partition(": ")
+                if f in res and "," not in pk: res[f] = pk.split(":")[0]
+        elif PM == "xbps-install":
+            for f in files:
+                r = subprocess.run(["xbps-query", "-o", f], capture_output=True, text=True, env=env, timeout=10)
+                m = re.match(r"^(\S+?)-[0-9][^:]*: ", r.stdout)
+                if m: res[f] = m.group(1)
+    except Exception:
+        pass
+    return res
+
+
+def required_by(pkgs):
+    """paquete → paquetes instalados que dependen de él (solo Arch: pacman -Qi)."""
+    out = {}
+    if PM != "pacman" or not pkgs or SIMULATED:
+        return out
+    r = q(["env", "LC_ALL=C", "pacman", "-Qi", *sorted(pkgs)], timeout=30)
+    name = ""
+    for l in (r.stdout if r else "").splitlines():
+        if l.startswith("Name "):
+            name = l.split(":", 1)[1].strip()
+        elif l.startswith("Required By ") and name:
+            v = l.split(":", 1)[1].strip()
+            out[name] = [] if v == "None" else v.split()
+    return out
+
+
+def remove_cmd(kind, pkg, scope=""):
+    pre = " ".join(sudo()) + " " if sudo() else ""
+    if kind == "native":
+        c = pm_remove([pkg])
+        return pre + " ".join(shlex.quote(x) for x in c) if c else ""
+    if kind == "flatpak":
+        return f"flatpak uninstall --{scope or 'user'} --delete-data {shlex.quote(pkg)}"
+    if kind == "appimage":
+        return f"{shlex.quote(str(ROOT / 'scripts/hf-apps'))} remove {shlex.quote(pkg)}"
+    return ""
+
+
+def cmd_installed():
+    sys_dirs = [d for d in APP_DIRS[1:] if "flatpak" not in str(d)]
+    fp_dirs = {DATA / "flatpak/exports/share/applications": "user", pathlib.Path("/var/lib/flatpak/exports/share/applications"): "system"}
+    seen, apps = set(), []
+    # Precedencia de XDG: la copia del usuario tapa la del sistema (si la oculta, la app no sale)
+    for d in [LAUNCH] + list(fp_dirs) + sys_dirs:
+        if not d.is_dir():
+            continue
+        for f in sorted(d.rglob("*.desktop")):
+            did = str(f.relative_to(d)).replace("/", "-")
+            if did in seen:
+                continue
+            seen.add(did)
+            info = _desktop_info(f)
+            if not info:
+                continue
+            kind, pkg, scope, path = "", "", "", f
+            if d in fp_dirs:
+                kind, scope = "flatpak", fp_dirs[d]
+                ids = [k for k in flatpaks() if did[:-8] == k or did.startswith(k + ".")]
+                pkg = max(ids, key=len) if ids else did[:-8]
+            elif d == LAUNCH:
+                sysf = next((s / did for s in sys_dirs if (s / did).is_file()), None)
+                if sysf:
+                    kind, path = "native", sysf          # copia del usuario de una app del sistema
+                elif did.startswith("hf-app-"):
+                    kind, pkg = "appimage", did[len("hf-app-"):-8]
+                else:
+                    kind = "local"
+            else:
+                kind = "native"
+            apps.append(dict(info, id=did, kind=kind, pkg=pkg, scope=scope, path=str(path)))
+    # Paquetes nativos (una consulta para todos) y la terminal con la que se desinstala
+    term = shutil.which(str(SET.get("terminal") or "kitty"))
+    own = owners([a["path"] for a in apps if a["kind"] == "native"] + ([term] if term else []))
+    for a in apps:
+        if a["kind"] == "native":
+            a["pkg"] = own.get(a["path"], "")
+            if not a["pkg"]: a["kind"] = "local"
+    req = required_pkgs()
+    term_pkg = own.get(term, "") if term else ""
+    rby = required_by({a["pkg"] for a in apps if a["kind"] == "native"})
+    foreign = set()   # Arch: paquetes que no vienen de los repos (AUR o a mano)
+    if PM == "pacman" and not SIMULATED:
+        r = q(["pacman", "-Qqm"])
+        foreign = set((r.stdout if r else "").split())
+    by_pkg = {}
+    for a in apps:
+        if a["pkg"]: by_pkg.setdefault((a["kind"], a["pkg"]), []).append(a["name"])
+    for a in apps:
+        pk = a["pkg"].lower()
+        prot = ""
+        if a["kind"] == "native":
+            if pk in req: prot = "lo necesita hyprfrijol"
+            elif pk == term_pkg.lower(): prot = "es la terminal con la que se desinstala"
+            elif pk in PROTECT or PROTECT_RX.match(pk): prot = "es parte del sistema"
+        a["protected"] = prot
+        a["also"] = sorted(n for n in by_pkg.get((a["kind"], a["pkg"]), []) if n != a["name"])
+        a["requiredBy"] = rby.get(a["pkg"], []) if a["kind"] == "native" else []
+        a["cmd"] = "" if prot else remove_cmd(a["kind"], a["pkg"], a["scope"])
+        a["source"] = "AUR" if a["kind"] == "native" and a["pkg"] in foreign else \
+            {"native": SRC_LABEL["native"], "flatpak": "Flatpak", "appimage": "AppImage", "local": "Local"}[a["kind"]]
+    apps.sort(key=lambda a: a["name"].lower())
+    if JSON:
+        print(json.dumps(dict(header(), apps=apps), ensure_ascii=False)); return 0
+    for a in apps:
+        extra = f"  [protegida: {a['protected']}]" if a["protected"] else (f"  (también: {', '.join(a['also'])})" if a["also"] else "")
+        print(f"  {a['name'][:34]:34} {a['source']:8} {a['pkg'] or '-':32}{extra}")
+    return 0
+
+
 # ---------------------------------------------------------------- salida
 def app_info(a):
     via = installed_via(a)
@@ -627,6 +813,8 @@ def main():
     if c == "remove":
         if not rest: raise SystemExit("hf-apps: ¿qué quito?")
         return run_steps(remove_steps(resolve(rest, True)))
+    if c == "installed":
+        return cmd_installed()
     if c == "defaults":
         p = defaults_plan()
         if JSON: print(json.dumps([{"role": r, "desktop": d, "name": n} for r, d, n in p], ensure_ascii=False)); return 0

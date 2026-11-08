@@ -2,11 +2,11 @@ pragma Singleton
 // Servidor de notificaciones propio (sustituye a mako/dunst).
 // - list:    historial (centro de notificaciones y ajustes rápidos); list.values = Notification[]
 // - popups:  las que se ven ahora como avisos emergentes
-// - dnd:     «no molestar»; se guarda en ~/.local/state/hyprfrijol/dnd (lo usa también hf-profile).
+// - dnd:     «no molestar»; se guarda en ~/.local/state/hyprfrijol/dnd.
 //            El archivo vacío = hasta que lo desactives; con un número = hora de fin (epoch en ms).
 //            dndUntil (ms, 0 = sin fin) · dndPreset("1h" | "noche" | "manana" | "siempre") · dndLeft ("quedan 52 min")
 // - timeOf(n) / ago(n) / agoT(ms): hora de llegada relativa ("ahora", "hace 3 min", "hace 2 h", "ayer", "lun")
-// - reply(n, texto): respuesta en línea (WhatsApp, Telegram, KDE Connect…)
+// - reply(n, texto): respuesta en línea (WhatsApp, Telegram, Valent…)
 // - groupsOf(lista): [{ key, app, items }] agrupados por app (más reciente primero; las urgentes delante)
 // - popupGroups: los avisos emergentes agrupados (la pila muestra el último y cuántos más hay)
 // - history: historial persistente (~/.local/state/hyprfrijol/notify-history.json, notifyHistory, máx. 300)
@@ -28,14 +28,6 @@ Singleton {
     property bool dnd: false
     property real dndUntil: 0             // epoch ms en que se apaga solo; 0 = hasta que lo desactives
     property string dndKind: ""           // último atajo usado ("1h" | "noche" | "manana" | "siempre")
-    // Política del perfil (hf-profile → state/notify-policy): normales | favoritos | silencio.
-    // Con «favoritos», en «no molestar» siguen saliendo los avisos de las apps de notifyFavorites.
-    property string policy: "normales"
-    readonly property var favorites: Settings.get("notifyFavorites", ["whatsapp", "telegram", "signal", "calendar", "calendario", "kdeconnect", "thunderbird"])
-    function isFavorite(n): bool {
-        const a = ((n.appName || "") + " " + (n.desktopEntry || "")).toLowerCase();
-        return (favorites || []).some(f => f && a.includes(String(f).toLowerCase()));
-    }
     property var arrived: ({})            // id → epoch ms
     readonly property int defaultTimeout: 6000
     readonly property int count: list.values.length
@@ -45,12 +37,12 @@ Singleton {
     function appOf(n): string { return String(n?.appName || n?.desktopEntry || "Sistema").trim() || "Sistema"; }
     function keyOf(n): string { return String(n?.appName || n?.desktopEntry || "").trim().toLowerCase(); }
     function ruleOf(n) { return (Settings.get("notifyApps", ({})) ?? {})[keyOf(n)] ?? {}; }
-    // ¿Puede salir como emergente? (no molestar, política del perfil y reglas por app)
+    // ¿Puede salir como emergente? (no molestar y reglas por app)
     function canPopup(n): bool {
         if (isCritical(n)) return true;
         const r = ruleOf(n);
         if (r.allow === false || r.popups === false) return false;
-        return !dnd || (policy === "favoritos" && isFavorite(n));
+        return !dnd;
     }
     // Agrupa por app conservando el orden de la lista (la primera = la más reciente); urgentes delante
     function groupsOf(arr) {
@@ -221,7 +213,7 @@ Singleton {
     }
     function tone(n): string {
         const a = ((n.appName || "") + " " + (n.desktopEntry || "") + " " + (n.hints?.category ?? "")).toLowerCase();
-        if (/whatsapp|telegram|signal|discord|slack|element|im\.|chat|mensaj|kdeconnect/.test(a)) return "pc";
+        if (/whatsapp|telegram|signal|discord|slack|element|im\.|chat|mensaj|kdeconnect|valent/.test(a)) return "pc";
         if (/calend|evolution|thunderbird|mail|correo|gmail|email/.test(a)) return "sc";
         return "s4";
     }
@@ -272,13 +264,6 @@ Singleton {
         function queue(n) { if (!pending.includes(n)) pending = pending.concat([n]); restart(); }
         interval: 30
         onTriggered: { const p = pending; pending = []; for (const n of p) root.bump(n); }
-    }
-    FileView {
-        path: Paths.state + "/notify-policy"
-        watchChanges: true
-        printErrors: false
-        onFileChanged: reload()
-        onLoaded: root.policy = text().trim() || "normales"
     }
 
     IpcHandler {

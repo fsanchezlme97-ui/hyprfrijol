@@ -66,7 +66,7 @@ RowLayout {
         id: pickFace
         // Elige una imagen, la recorta a 256×256 si hay ImageMagick y la guarda en ~/.face (bloqueo, ajustes rápidos)
         // y en AccountsService (pantalla de inicio de sesión).
-        command: ["sh", "-c", "f=$(zenity --file-selection --title='Elige tu foto' --file-filter='Imágenes | *.png *.jpg *.jpeg *.webp *.gif *.bmp' 2>/dev/null || kdialog --getopenfilename \"$HOME\" 'image/png image/jpeg image/webp' 2>/dev/null) || exit 1; [ -f \"$f\" ] || exit 1; "
+        command: ["sh", "-c", "f=$(zenity --file-selection --title='Elige tu foto' --file-filter='Imágenes | *.png *.jpg *.jpeg *.webp *.gif *.bmp' 2>/dev/null) || exit 1; [ -f \"$f\" ] || exit 1; "
             + "if command -v magick >/dev/null; then magick \"$f\"'[0]' -auto-orient -thumbnail '256x256^' -gravity center -extent 256x256 png:\"$HOME/.face\"; else cp -f \"$f\" \"$HOME/.face\"; fi; "
             + "ln -sf .face \"$HOME/.face.icon\"; busctl --system call --allow-interactive-authorization org.freedesktop.Accounts \"/org/freedesktop/Accounts/User$(id -u)\" org.freedesktop.Accounts.User SetIconFile s \"$HOME/.face\" >/dev/null 2>&1; echo ok"]
         stdout: StdioCollector { onStreamFinished: if (text.includes("ok")) { root.faceTick++; later.restart(); } }

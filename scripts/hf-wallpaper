@@ -8,10 +8,12 @@
 #   hf-wallpaper restore          vuelve a poner el último (al iniciar sesión)
 #   hf-wallpaper list             lista los fondos disponibles (tuyos + los de hyprfrijol)
 #   hf-wallpaper thumbs           genera las miniaturas (~/.cache/hyprfrijol/thumbs) y las lista "fondo<TAB>miniatura"
+#   hf-wallpaper gallery          para el selector: la lista al momento y luego las miniaturas que falten (en paralelo),
+#                                 con resolución, colores dominantes y origen (incluido · mio · wallhaven)
 #   hf-wallpaper vthumbs          lo mismo, solo de los fondos animados (vídeos y GIF): primer cuadro con
 #                                 ffmpegthumbnailer o ffmpeg
 #   hf-wallpaper add <archivo…>   copia imágenes/vídeos a tu carpeta de fondos (imprime la ruta de cada copia)
-#   hf-wallpaper pick-animated    elige un vídeo/GIF (zenity o kdialog), lo copia a la carpeta y lo pone de fondo
+#   hf-wallpaper pick-animated    elige un vídeo/GIF (zenity), lo copia a la carpeta y lo pone de fondo
 #   hf-wallpaper deps             qué hay instalado para los fondos animados: "mpvpaper 1", "ffmpeg 0"…
 #   hf-wallpaper wallhaven …      lo mismo que scripts/hf-wallhaven (buscar, caché, añadir a mis fondos); con
 #                                 wallpaperSource = "wallhaven", next/random traen uno nuevo de wallhaven.cc
@@ -111,13 +113,45 @@ by_hour() {
   local f; f="$(findw "$DIR" | grep -i "/$k\.[a-z0-9]*$" | head -n1 || true)"
   printf '%s' "${f:-$(findw "$ASSETS" | grep "/$k\." | head -n1)}"
 }
+thumb_path() { printf '%s/%s.jpg' "$THUMBS" "$(printf '%s' "$1" | md5sum | cut -c1-16)"; }
+thumb_fresh() { [ -s "$2" ] && ! [ "$1" -nt "$2" ]; }   # thumb_fresh <fondo> <miniatura>
 thumb_of() {   # ruta de la miniatura (se genera si falta o está desactualizada)
-  local f="$1" t; t="$THUMBS/$(printf '%s' "$f" | md5sum | cut -c1-16).jpg"
-  if [ ! -s "$t" ] || [ "$f" -nt "$t" ]; then
+  local f="$1" t; t="$(thumb_path "$f")"
+  if ! thumb_fresh "$f" "$t"; then
     if is_motion "$f"; then first_frame "$f" "$t" 480 || true
-    else magick "$f[0]" -auto-orient -thumbnail 'x480^' -quality 85 "$t" 2>/dev/null || true; fi
+    # jpeg:size: libjpeg decodifica ya reducido (un 4K a la mitad), mucho más rápido que leerlo entero
+    else magick -define jpeg:size=1708x960 "$f[0]" -auto-orient -thumbnail 'x480^' -quality 85 "$t" 2>/dev/null || true; fi
   fi
   printf '%s' "$t"
+}
+# Datos de la galería (junto a la miniatura, <miniatura>.info): "ANCHOxALTO #rrggbb #rrggbb…" (resolución del
+# original y los colores dominantes de la miniatura). Se rehace si la miniatura es más nueva.
+info_of() {   # info_of <fondo> <miniatura>
+  local f="$1" t="$2" i="$2.info" res cols
+  if [ ! -s "$i" ] || [ "$t" -nt "$i" ]; then
+    [ -s "$t" ] || return 0
+    if is_motion "$f"; then
+      res="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$f" 2>/dev/null | head -n1)"
+    else res="$(magick identify -ping -format '%wx%h' "$f[0]" 2>/dev/null)"; fi
+    cols="$(magick "$t" -scale '64x36!' -colors 6 -depth 8 -format '%c' histogram:info:- 2>/dev/null \
+            | sort -rn | grep -o '#[0-9A-Fa-f]\{6\}' | head -n4 | tr '\n' ' ')"
+    printf '%s %s\n' "${res:-?}" "$cols" > "$i.tmp" && mv "$i.tmp" "$i"
+  fi
+  tr -d '\n' < "$i"
+}
+# Origen de un fondo para la galería: incluido (assets) · wallhaven (su caché) · mio (tu carpeta)
+origin_of() { case "$1" in "$ASSETS"/*) echo incluido ;; "$HOME/.cache/hyprfrijol/wallhaven"/*) echo wallhaven ;; *) echo mio ;; esac; }
+gallery_line() {   # fondo<TAB>miniatura<TAB>ANCHOxALTO<TAB>colores<TAB>origen
+  local f="$1" t inf; t="$(thumb_path "$f")"; inf=""
+  thumb_fresh "$f" "$t" && inf="$(info_of "$f" "$t")"
+  printf '%s\t%s\t%s\t%s\t%s\n' "$f" "$t" "${inf%% *}" "$( [ -n "$inf" ] && printf '%s' "${inf#* }" )" "$(origin_of "$f")"
+}
+# Lista de la galería: tus fondos + los incluidos (+ la caché de Wallhaven si es el origen elegido)
+gallery_list() {
+  list all
+  [ "$(setting wallpaperSource carpeta)" = wallhaven ] && [ -d "$HOME/.cache/hyprfrijol/wallhaven" ] \
+    && find "$HOME/.cache/hyprfrijol/wallhaven" -maxdepth 1 -type f -name 'wallhaven-*' ! -name '*.part' 2>/dev/null | sort
+  return 0
 }
 write_json() {   # actualiza wallpaper.json con un filtro de jq (atómico)
   local cur='{}'; [ -s "$STATE/wallpaper.json" ] && cur="$(cat "$STATE/wallpaper.json")"
@@ -138,7 +172,21 @@ case "${1:-next}" in
   hora)    FILE="$(by_hour)"; [ -z "$OUTPUT" ] && [ "$FILE" = "$(current)" ] && exit 0 ;;
   restore) FILE="$(current)"; [ -f "$FILE" ] || is_scene "$FILE" || FILE="$(list | head -n1)" ;;
   list)    list all; exit 0 ;;
-  thumbs)  mkdir -p "$THUMBS"; while IFS= read -r f; do printf '%s\t%s\n' "$f" "$(thumb_of "$f")"; done < <(list all); exit 0 ;;
+  thumbs)  mkdir -p "$THUMBS"
+           # las que faltan, en paralelo; luego la lista
+           while IFS= read -r f; do thumb_fresh "$f" "$(thumb_path "$f")" || printf '%s\0' "$f"; done < <(list all) \
+             | xargs -0 -r -P "$(nproc 2>/dev/null || echo 4)" -n1 "$0" _thumb >/dev/null
+           while IFS= read -r f; do printf '%s\t%s\n' "$f" "$(thumb_path "$f")"; done < <(list all); exit 0 ;;
+  # Para el selector de fondos: primero la lista entera al momento (sin esperar a las miniaturas que falten; sus
+  # columnas de datos van vacías), una línea "." y después, según se generan en paralelo, otra vez la línea de cada
+  # fondo que faltaba, ya con su miniatura. Formato: fondo<TAB>miniatura<TAB>ANCHOxALTO<TAB>colores<TAB>origen
+  gallery) mkdir -p "$THUMBS"; mapfile -t L < <(gallery_list); MISS=()
+           for f in "${L[@]}"; do gallery_line "$f"; thumb_fresh "$f" "$(thumb_path "$f")" || MISS+=("$f"); done
+           echo .
+           [ "${#MISS[@]}" -gt 0 ] && printf '%s\0' "${MISS[@]}" | xargs -0 -r -P "$(nproc 2>/dev/null || echo 4)" -n1 "$0" _gline
+           exit 0 ;;
+  _gline)  thumb_of "$2" >/dev/null; gallery_line "$2"; exit 0 ;;
+  _thumb)  thumb_of "$2" >/dev/null; exit 0 ;;
   vthumbs) mkdir -p "$THUMBS"; while IFS= read -r f; do is_motion "$f" && printf '%s\t%s\n' "$f" "$(thumb_of "$f")"; done < <(list all); exit 0 ;;
   thumb)   mkdir -p "$THUMBS"; thumb_of "$(readlink -f "$2")"; echo; exit 0 ;;
   add)     shift; mkdir -p "$DIR"; for f in "$@"; do cp -n -- "$f" "$DIR/"; printf '%s\n' "$DIR/$(basename -- "$f")"; done; exit 0 ;;
@@ -147,14 +195,12 @@ case "${1:-next}" in
     F=""
     if command -v zenity >/dev/null; then
       F="$(zenity --file-selection --title='Añadir fondo animado' --file-filter='Vídeos y GIF | *.mp4 *.webm *.mkv *.mov *.gif *.MP4 *.WEBM *.MKV *.MOV *.GIF' 2>/dev/null)" || exit 1
-    elif command -v kdialog >/dev/null; then
-      F="$(kdialog --title 'Añadir fondo animado' --getopenfilename "$HOME" 'video/mp4 video/webm video/x-matroska video/quicktime image/gif' 2>/dev/null)" || exit 1
     else echo "Instala zenity para elegir el archivo (o copia el vídeo a $DIR)" >&2; exit 1; fi
     [ -f "$F" ] && is_motion "$F" || { echo "Elige un vídeo (.mp4, .webm, .mkv, .mov) o un GIF" >&2; exit 1; }
     mkdir -p "$DIR"; cp -n -- "$F" "$DIR/"
     exec "$0" "$DIR/$(basename -- "$F")" ;;
   reset)   [ -n "$OUTPUT" ] && write_json --arg o "$OUTPUT" '.monitors = ((.monitors // {}) | del(.[$o]))'; exit 0 ;;
-  -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
+  -h|--help) sed -n '2,27p' "$0"; exit 0 ;;
   *)       FILE="$(readlink -f "$1")" ;;
 esac
 [ -n "$FILE" ] && { [ -f "$FILE" ] || is_scene "$FILE"; } || { echo "No hay fondo que poner (${FILE:-vacío}). Pon imágenes en $DIR" >&2; exit 1; }

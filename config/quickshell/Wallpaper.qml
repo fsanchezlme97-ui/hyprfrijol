@@ -109,19 +109,13 @@ PanelWindow {
         const l = Settings.get("wallpaperPauseOn", ["fullscreen", "bateria", "juego"]);
         return (Array.isArray(l) ? l : []).map(x => x === "pantalla-completa" ? "fullscreen" : x);
     }
-    property string profile: ""
-    FileView {
-        path: Paths.state + "/profile"
-        watchChanges: true
-        printErrors: false
-        onFileChanged: reload()
-        onLoaded: win.profile = text().trim()
-    }
+    // Un juego en un espacio visible (Steam, gamescope: las mismas clases que rules.lua y Focus.qml)
+    readonly property bool anyGame: shownClients.some(c => /^(steam_app_\d+|gamescope)$/i.test(c.class ?? ""))
     readonly property bool paused: wp.video && (
         (pauseOn.includes("fullscreen") && anyFullscreen) ||
         (pauseOn.includes("maximizada") && anyMaximized) ||
         (pauseOn.includes("bateria") && Battery.onBattery) ||
-        (pauseOn.includes("juego") && profile === "juego") ||
+        (pauseOn.includes("juego") && anyGame) ||
         (pauseOn.includes("foco") && Shell.focusMode))
     property bool sentPause: false
     onPausedChanged: if (primary) syncPause()

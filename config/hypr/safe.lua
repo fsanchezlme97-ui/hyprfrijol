@@ -4,7 +4,7 @@
 --   start-hyprland -- --config <repo>/config/hypr/safe.lua
 --
 -- Es a propósito un archivo autónomo: no carga config/hypr/frijol/*, ni settings.lua (hf-apply), ni
--- profile.lua, ni ~/.config/hyprfrijol/local.lua, ni Quickshell, ni plugins (hyprpm). Así arranca aunque
+-- ~/.config/hyprfrijol/local.lua, ni Quickshell, ni plugins (hyprpm). Así arranca aunque
 -- la configuración normal esté rota. Abre una terminal con el menú de recuperación (hf-safe menu).
 --
 -- Atajos:  Super+Intro terminal · Super+R menú de recuperación · Super+Q cerrar ventana

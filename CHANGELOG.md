@@ -3,6 +3,37 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.1] — 2026-11-07
+
+- **Dictado en tiempo real** (whisper.cpp residente): el texto aparece mientras hablas, en la misma posición que
+  los avisos de volumen y mayúsculas, y se escribe por frases. Modelos gestionables desde Ajustes › Dictado,
+  GPU (Vulkan) si está instalada y motores Vosk / faster-whisper opcionales.
+- **Órdenes de voz** (Super+Alt+V, o «Frijol, …» mientras dictas; `hf-voice`): música en YouTube, YouTube Music
+  o Spotify («Reproduce Walk de los Foo Fighters desde YouTube»), volumen, brillo, controles multimedia, el
+  navegador (abrir sitios, buscar, pestañas, desplazarse, zoom), espacios, ventanas, fondos, temporizadores… Lo que
+  no entiende pasa al asistente, con su aprobación.
+- **VPN de empresa**: FortiGate (FortiClient) y GlobalProtect (Palo Alto) con usuario y contraseña, 2FA,
+  certificado o SSO/SAML en el navegador, sin sudo (NetworkManager + OpenConnect / openfortivpn / gpclient);
+  confianza en el certificado del servidor e importación de copias de FortiClient. Los clientes oficiales
+  aparecen si están instalados.
+- **Escritorio remoto**: Remmina por defecto para Windows (RDP), con puerta de enlace, varias pantallas, carpetas
+  y sonido; FreeRDP 3 y Conexiones como alternativas.
+- **Apps en ventana flotante** (Ajustes › Escritorio y gestos): archivos, imágenes, audio, vídeo, calculadora o
+  cualquier app se abren flotantes y centradas en vez de en mosaico.
+- **Desinstalar apps** desde Ajustes › Aplicaciones › «Instaladas en este equipo» (paquetes y Flatpak), con las
+  esenciales protegidas y aviso de lo que se lleva cada paquete.
+- **Panel lateral fijable**: el asistente puede quedarse fijo como parte del mosaico en vez de por encima.
+- **Calendario plegable** en el centro de control: una sola fila con la semana actual.
+- **Sin KDE**: Valent sustituye a KDE Connect (`hf-phone`), las apps Qt usan qt6ct y los selectores de archivo,
+  el portal GTK (`hf-pickfile`). Las apps de KDE siguen como alternativa opcional.
+- **Selector de fondos** rediseñado, con animaciones más fluidas.
+- **Arreglado**: las apps GTK (Nautilus, Loupe…) tardaban hasta 15 s en abrir porque cada recarga repetía las
+  rutas de `XDG_DATA_DIRS`; montaje de discos NTFS/exFAT con mensaje claro si falta el controlador o reiniciar.
+- **Se retiran los perfiles de actividad** (Trabajo, Diseño 3D, Juego, Personal; `hf-profile`, Ctrl+Super+P).
+  Los avisos siguen solo «no molestar» y el modo sin distracciones; la barra, sus propios ajustes (Super+J la
+  esconde en la sesión). `hf-migrate` (y `hf-apply` al arrancar) borra su estado y quita `profiles`,
+  `profileRules` y `notifyFavorites` de settings.json, con copia. El modo de energía no se toca.
+
 ## [0.8.0] — 2026-11-07
 
 Primera versión publicada con etiqueta.
@@ -19,7 +50,7 @@ Primera versión publicada con etiqueta.
 - **PiP** para vídeos, videollamadas (Meet, Teams, Zoom, Jitsi) y reproductores (Spotify, YouTube Music), con los
   botones por fuera de la ventana, en el lado contrario a su posición.
 - **Herramientas**: selector de fondos (por monitor, por hora), captura y grabación con lupa, OCR y anotación,
-  selector de color, perfiles de actividad, modo sin distracciones, bloqueo, menú de energía, agente de polkit.
+  selector de color, modo sin distracciones, bloqueo, menú de energía, agente de polkit.
 - **Ajustes** completos (Apariencia, Barra, Pantallas, Sonido, Red, Bluetooth, Energía, Plugins, Sistema…)
   con buscador; centro de actualizaciones del sistema con punto de restauración (`hf-updates`).
 - **Login** propio con greetd + Quickshell, sincronizado con tu tema (`hf-greeter-sync`).

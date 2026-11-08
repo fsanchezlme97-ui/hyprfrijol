@@ -9,9 +9,18 @@ hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
 
--- Tema de Qt (KDE si está, como en tu sesión anterior) y menú «Abrir con» de Dolphin
+-- Tema de Qt: qt6ct (config/apply/17-theme-apps.py le escribe la paleta y los iconos del tema). Si no está y sí el
+-- tema de Plasma (alternativa: alguien con apps de KDE), ese, con el menú «Abrir con» de Dolphin.
 local function exists(p) local f = io.open(p, "r"); if f then f:close(); return true end; return false end
-if exists("/usr/lib/qt6/plugins/platformthemes/KDEPlasmaPlatformTheme6.so") then
+local function qtTheme(name)
+    for _, d in ipairs({ "/usr/lib/qt6/plugins", "/usr/lib64/qt6/plugins", "/usr/lib/x86_64-linux-gnu/qt6/plugins", "/usr/lib/aarch64-linux-gnu/qt6/plugins" }) do
+        if exists(d .. "/platformthemes/" .. name) then return true end
+    end
+    return false
+end
+if qtTheme("libqt6ct.so") then
+    hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
+elseif qtTheme("KDEPlasmaPlatformTheme6.so") then
     hl.env("QT_QPA_PLATFORMTHEME", "kde")
     hl.env("XDG_MENU_PREFIX", "plasma-")
 end
@@ -20,26 +29,37 @@ for _, dir in ipairs({ "/usr/share/icons/Bibata-Modern-Classic", (os.getenv("HOM
     if exists(dir .. "/index.theme") then hl.env("XCURSOR_THEME", "Bibata-Modern-Classic"); HF.cursor = "Bibata-Modern-Classic"; break end
 end
 -- Iconos para Quickshell (apps del escritorio, centro de aplicaciones) si nadie fija un tema:
--- el primero instalado de Papirus / Breeze / Adwaita (sin esto Qt cae en hicolor y faltan iconos)
+-- el primero instalado de Papirus / Adwaita / Breeze (sin esto Qt cae en hicolor y faltan iconos)
 if not os.getenv("QS_ICON_THEME") then
-    for _, t in ipairs({ "Papirus-Dark", "Papirus", "breeze-dark", "breeze", "Adwaita" }) do
+    for _, t in ipairs({ "Papirus-Dark", "Papirus", "Adwaita", "breeze-dark", "breeze" }) do
         if exists("/usr/share/icons/" .. t .. "/index.theme") or exists((os.getenv("HOME") or "") .. "/.local/share/icons/" .. t .. "/index.theme") then
             hl.env("QS_ICON_THEME", t); break
         end
     end
 end
 -- Apps de Flatpak en el lanzador
+-- Sin repetidos: cada recarga de la config volvía a anteponer las rutas (hl.env cambia el entorno del propio
+-- Hyprland) y con 160 entradas en XDG_DATA_DIRS las apps GTK tardaban ~15 s en abrir (iconos/mime/.desktop ×30).
+local function pathlist(...)
+    local out, seen = {}, {}
+    for _, s in ipairs({ ... }) do
+        for p in string.gmatch(s or "", "[^:]+") do
+            if not seen[p] then seen[p] = true; out[#out + 1] = p end
+        end
+    end
+    return table.concat(out, ":")
+end
 local home = os.getenv("HOME") or ""
-hl.env("XDG_DATA_DIRS", home .. "/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share:" .. (os.getenv("XDG_DATA_DIRS") or ""))
+hl.env("XDG_DATA_DIRS", pathlist(home .. "/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share", os.getenv("XDG_DATA_DIRS")))
 
 -- Para los scripts y Quickshell
 hl.env("HF_ROOT", HF.root)
 hl.env("HF_SESSION", "1")
-hl.env("PATH", HF.scripts .. ":" .. os.getenv("PATH"))
+hl.env("PATH", pathlist(HF.scripts, os.getenv("PATH")))
 
 -- Programas (cámbialos en ~/.config/hyprfrijol/local.lua)
 -- La primera instalada de cada lista (hf-launch), como en illogical-impulse.
--- Primero las de GNOME/libadwaita (siguen el tema: Ajustes › Apariencia › «Aplicar a las apps»); las de KDE, de alternativa.
+-- Primero las de GNOME/libadwaita (siguen el tema: Ajustes › Apariencia › «Aplicar a las apps»); las demás (Qt/KDE…), de alternativa.
 local function first(...)
     local q = {}
     for _, c in ipairs({ ... }) do q[#q + 1] = "'" .. c .. "'" end

@@ -14,7 +14,14 @@
 // sideSide ("derecha" | "izquierda").  Shell.open("ia", {ask, image}) adjunta una imagen a la pregunta.
 // Modo de cada web app (Ajustes › Web apps, services/WebApps.qml modeOf): las de modo «navegador» abren o enfocan la
 // web en el navegador predeterminado (`hf-webapp open <clave>`, modo app si es Chromium) y el panel se cierra; las
-// demás se acoplan como arriba. Cabecera: abrir la página actual en el navegador, desacoplar, cerrar.
+// demás se acoplan como arriba. Cabecera: abrir la página actual en el navegador, desacoplar, fijar, cerrar.
+// Fijar (botón de la chincheta · Ajustes › Panel lateral, sidePanelPinned): el panel deja de flotar encima y pasa a
+// formar parte del mosaico: una capa invisible (hf-ia-zone) reserva su franja (zona exclusiva de layer-shell, como la
+// barra) y las ventanas en mosaico se recolocan a su lado. Se queda abierto en todos los espacios y al abrir otras
+// vistas, no se cierra con Esc (Esc devuelve el teclado a la última ventana) y va siempre en la pantalla principal
+// (Ajustes › Pantallas). Se esconde (sin dejar la franja visible) con una ventana a pantalla completa, en el modo sin
+// distracciones y durante la captura de la IA. Super + A y la × lo esconden en esta sesión (Shell.sideHidden: la
+// franja se libera) y Super + A lo vuelve a mostrar fijado; desfijar = la chincheta o el ajuste.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -26,7 +33,61 @@ import "../../services"
 
 PanelWindow {
     id: win
-    readonly property bool shown: Shell.view === "ia"
+    // ---- fijado (sidePanelPinned): forma parte del mosaico
+    readonly property bool pinPref: Settings.get("sidePanelPinned", false) === true
+    readonly property bool pinActive: pinPref && !Shell.focusMode && !Shell.sideHidden
+    readonly property var pinScreen: Shell.primaryScreen
+    readonly property var pinMon: HyprClients.monitorByName(pinScreen?.name ?? "")
+    // Ventana a pantalla completa de verdad (fullscreen 2; la maximizada respeta la franja) en la pantalla del panel
+    readonly property bool fsHere: {
+        if (!pinActive) return false;
+        HyprClients.refreshes;
+        const id = pinMon?.activeWorkspace?.id ?? 0;
+        return HyprClients.clients.some(c => c.workspace?.id === id && (c.fullscreen ?? 0) === 2);
+    }
+    // Al pasar una ventana a pantalla completa el panel fijado se aparta aunque se hubiera abierto con Super + A
+    // (abrirlo después, ya en pantalla completa, sí lo muestra encima)
+    // Si su pantalla desaparece (monitor que se apaga, salida nueva) Quickshell esconde la ventana y su `visible` deja de
+    // seguir al enlace; el panel fijado no cambia de estado y no volvería: tras cada cambio de pantallas se vuelve a enlazar
+    Connections { target: Quickshell; function onScreensChanged() { kickTimer.restart(); } }
+    Timer {
+        id: kickTimer; interval: 400
+        // Se cierra y se vuelve a crear la superficie (con la pantalla nueva puede quedarse sin capa en Hyprland)
+        onTriggered: { win.visible = false; zone.visible = false; rebind.restart(); }
+    }
+    Timer {
+        id: rebind; interval: 60
+        onTriggered: {
+            win.visible = Qt.binding(() => win.shown || slide.running);
+            zone.visible = Qt.binding(() => win.pinActive && win.zoneW > 0);
+        }
+    }
+    onFsHereChanged: if (fsHere && Shell.view === "ia") Shell.close()
+    // Captura de pantalla de la IA (AiChat.capturing): el panel fijado también se aparta
+    property bool chatCapturing: false
+    Connections {
+        target: chatLoader.item
+        ignoreUnknownSignals: true
+        function onCapturingChanged() { win.chatCapturing = chatLoader.item?.capturing ?? false; }
+    }
+    readonly property bool pinShown: pinActive && !fsHere && !chatCapturing
+    readonly property bool shown: Shell.view === "ia" || pinShown
+    onPinActiveChanged: Shell.sidePinned = pinActive
+    function togglePin() {
+        const on = !pinPref;
+        Settings.set("sidePanelPinned", on);
+        if (on) { Shell.sideHidden = false; if (Shell.view !== "ia") Shell.open("ia"); }
+    }
+    // × o Esc: fijado se esconde (esta sesión) o solo devuelve el teclado; si no, se cierra como siempre
+    function hidePanel() {
+        if (pinPref) Shell.sideHidden = true;
+        if (Shell.view === "ia") Shell.close();
+    }
+    function releaseFocus() {
+        const c = HyprClients.byRecent.find(c => c.monitor === pinMon?.id) ?? HyprClients.byRecent[0];
+        if (c) HyprClients.focusWindow(c.address);
+        if (Shell.view === "ia") Shell.close();
+    }
     property string tab: "ia"
     readonly property bool web: tab !== "ia"
     // Web apps en modo «navegador» (Ajustes › Web apps): la pestaña abre o enfoca la web en el navegador predeterminado
@@ -36,7 +97,12 @@ PanelWindow {
     // El chat (AiChat.qml) se carga la primera vez que se usa la pestaña IA (carga diferida, lazyModules) y se descarga
     // un rato después de cerrar el panel si no hay conversación ni respuesta en curso (sin aiHistory se perdería).
     property bool chatHeld: false
-    onShownChanged: if (shown && !web) chatHeld = true
+    onShownChanged: {
+        Shell.sideShown = shown;
+        if (shown && !web) chatHeld = true;
+        if (!shown) autoPip(tab);
+        dock.reconcile();
+    }
     onWebChanged: if (shown && !web) chatHeld = true
     Timer {
         interval: 60000
@@ -94,10 +160,24 @@ PanelWindow {
     // Cada web app tiene su ancho (WebApps.panelWidth): WhatsApp de escritorio no cabe en 400 px sin encogerse
     readonly property real panelW: web ? WebApps.panelWidth(tab, baseW, screen?.width ?? 1920) : baseW
     onPanelWChanged: Shell.sideW = panelW
-    Component.onCompleted: Shell.sideW = panelW
+    Component.onCompleted: { Shell.sideW = panelW; Shell.sidePinned = pinActive; Shell.sideShown = shown; }
+    // Franja reservada (fijado): lo que ocupa el panel desde el borde menos lo que ya reserva la barra en ese lado
+    // (Hyprland suma las zonas exclusivas; las ventanas quedan a gaps_out del panel, como del borde: sin doble hueco)
+    readonly property real barSideReserve: {
+        if (Settings.barPos !== (onLeft ? "izquierda" : "derecha") || Shell.focusMode) return 0;
+        if (Settings.get("barAllScreens", true) === false && pinScreen !== Shell.primaryScreen) return 0;
+        if (Settings.barAutoHide || Shell.barHidden) return 0;
+        if (Settings.barSmartHide) {
+            WinMode.overrides; WinMode.mode;
+            const ws = pinMon?.activeWorkspace?.id ?? -1;
+            if (WinMode.isFloat(ws) || WinMode.hasFullscreen(pinScreen?.name ?? "")) return 0;
+        }
+        return Settings.barThickness + Settings.barOffset;
+    }
+    readonly property int zoneW: Math.max(0, Math.round(mR + panelW - barSideReserve))
     readonly property real headH: 40
 
-    screen: Shell.screen
+    screen: pinActive ? pinScreen : Shell.screen
     visible: shown || slide.running
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
@@ -131,7 +211,6 @@ PanelWindow {
     Connections {
         target: Shell
         function onOpened(v) { if (v === "ia") win.handleArg(Shell.arg); }
-        function onViewChanged() { if (!win.shown) { win.autoPip(win.tab); dock.reconcile(); } }
     }
     function select(k) {
         if (inBrowser(k)) { openInBrowser(k); Shell.close(); return; }
@@ -181,7 +260,7 @@ PanelWindow {
         function sel(c) { return 'window = "address:' + c.address + '"'; }
         function d(lua) { Shell.dispatch(lua); }
         function target() {
-            const m = HyprClients.focusedMonitor;
+            const m = (win.pinActive ? win.pinMon : null) ?? HyprClients.focusedMonitor;
             if (!m) return null;
             const L = HyprClients.logical(m);
             return { ws: m.activeWorkspace?.id ?? 1, x: Math.round(win.onLeft ? L.x + win.mR : L.x + L.w - win.mR - win.panelW),
@@ -267,6 +346,7 @@ PanelWindow {
         if (!current) return;
         setWebPip(tab);
         Quickshell.execDetached([Paths.script("hf-webapp"), "cmd", tab, "pipon"]);
+        if (pinPref && tabKeys.includes("ia")) tab = "ia";     // fijado: el panel sigue, con la IA
         Shell.close();
     }
     // Cerrar la ventana desacoplada hace que vuelva a abrirse acoplada la próxima vez
@@ -281,7 +361,7 @@ PanelWindow {
         height: win.docked ? win.headH : parent.height - win.mT - win.mB
         Behavior on height { enabled: !win.docked; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
         focus: true
-        Keys.onEscapePressed: Shell.close()
+        Keys.onEscapePressed: win.pinPref ? win.releaseFocus() : Shell.close()
 
         opacity: win.shown ? 1 : 0
         transform: Translate { x: win.shown ? 0 : (win.onLeft ? -24 : 24); Behavior on x { NumberAnimation { duration: Theme.durIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } } }
@@ -388,7 +468,17 @@ PanelWindow {
                         icon: "detach"; iconSize: 14; implicitWidth: 26; implicitHeight: 26
                         onClicked: chat.handoff()
                     }
-                    IconBtn { icon: "x"; iconSize: 14; implicitWidth: 26; implicitHeight: 26; onClicked: Shell.close() }
+                    IconBtn {
+                        icon: "pin"; iconSize: 14; implicitWidth: 26; implicitHeight: 26
+                        active: win.pinPref
+                        tooltip: win.pinPref ? "Desfijar: volver a flotar encima" : "Fijar: parte del mosaico"
+                        onClicked: win.togglePin()
+                    }
+                    IconBtn {
+                        icon: "x"; iconSize: 14; implicitWidth: 26; implicitHeight: 26
+                        tooltip: win.pinPref ? "Esconder (sigue fijado; vuelve con Super + A)" : ""
+                        onClicked: win.hidePanel()
+                    }
                 }
                 Rectangle {
                     anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
@@ -466,6 +556,28 @@ PanelWindow {
     }
 
     OpenProbe { name: "ia"; shown: win.shown }
+
+    // Reserva de la franja del panel fijado: capa invisible y sin ratón, encima de la barra en el orden de Hyprland
+    // (Overlay), para que la barra del mismo lado no se desplace
+    PanelWindow {
+        id: zone
+        screen: win.pinScreen
+        visible: win.pinActive && win.zoneW > 0
+        color: "transparent"
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "hf-ia-zone"
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+        anchors { top: true; bottom: true; left: win.onLeft; right: !win.onLeft }
+        implicitWidth: 1
+        exclusiveZone: win.zoneW
+        mask: Region {}
+    }
+    // La ventana web acoplada no se puede arrastrar fuera: mover una flotante no avisa por IPC, así que se mira cada poco
+    Timer {
+        interval: 1500; repeat: true
+        running: win.pinShown && win.docked
+        onTriggered: HyprClients.refreshNow()
+    }
 
     IpcHandler {
         target: "sidepanel"

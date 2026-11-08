@@ -1,7 +1,7 @@
 // Ajustes › Notificaciones — «no molestar» (y su horario: notifyDndSchedule/From/To), pantalla de bloqueo (notifyLock),
 // posición y duración de los avisos (notifyPosition, notifyTimeout), sonido (notifySound) y, por aplicación
 // (las que han avisado alguna vez: ~/.local/state/hyprfrijol/notify-apps.json), permitir / emergentes / sonido
-// (notifyApps) y favoritas (notifyFavorites: pasan con «no molestar» en el perfil de «solo favoritos»).
+// (notifyApps).
 // Las reglas las aplica modules/settings/NotifRules.qml.
 import QtQuick
 import QtQuick.Layouts
@@ -18,7 +18,6 @@ RowLayout {
     property var seen: ({})
     property string appQuery: ""
     readonly property var rules: Settings.get("notifyApps", ({}))
-    readonly property var favs: Settings.get("notifyFavorites", [])
     readonly property var apps: Object.keys(seen).map(k => Object.assign({ key: k }, seen[k])).sort((a, b) => (b.last || 0) - (a.last || 0))
     readonly property var times: {
         const t = [];
@@ -44,11 +43,6 @@ RowLayout {
         if (r.sound !== false) delete r.sound;
         if (Object.keys(r).length) all[k] = r; else delete all[k];
         Settings.set("notifyApps", all);
-    }
-    function isFav(k: string): bool { return (favs || []).some(f => f && k.includes(String(f).toLowerCase())); }
-    function toggleFav(k: string): void {
-        const l = (favs || []).slice();
-        Settings.set("notifyFavorites", isFav(k) ? l.filter(f => !(f && k.includes(String(f).toLowerCase()))) : l.concat([k]));
     }
     function forget(k: string): void {
         const s = Object.assign({}, seen); delete s[k]; seen = s;
@@ -187,7 +181,7 @@ RowLayout {
             headerRight: Mono { text: root.apps.length ? root.apps.length + (root.apps.length === 1 ? " app" : " apps") : "" }
             Txt {
                 Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-                text: "Las apps aparecen aquí cuando envían su primer aviso. ★ favorita: con el perfil de «solo favoritos» sus avisos pasan aunque esté «no molestar»."
+                text: "Las apps aparecen aquí cuando envían su primer aviso."
             }
             Field {
                 visible: root.apps.length > 6
@@ -203,7 +197,6 @@ RowLayout {
                     required property var modelData
                     readonly property var r: root.rules[modelData.key] ?? {}
                     readonly property bool allowed: r.allow !== false
-                    readonly property bool fav: root.isFav(modelData.key)
                     Layout.fillWidth: true
                     implicitHeight: col.implicitHeight + 16
                     Rectangle { width: parent.width; height: 1; color: Theme.ov }
@@ -237,12 +230,6 @@ RowLayout {
                                     Layout.fillWidth: true; muted: true; size: 11.5
                                     text: ap.allowed ? root.ago(ap.modelData.last) + " · " + (ap.modelData.count || 1) + ((ap.modelData.count || 1) === 1 ? " aviso" : " avisos") : "Bloqueada: sus avisos se descartan"
                                 }
-                            }
-                            Rectangle {
-                                implicitWidth: 30; implicitHeight: 30; radius: Theme.ctl(30)
-                                color: fm.containsMouse ? Qt.alpha(Theme.t, 0.06) : "transparent"
-                                Txt { anchors.centerIn: parent; text: ap.fav ? "★" : "☆"; size: 16; color: ap.fav ? Theme.p : Theme.tv }
-                                MouseArea { id: fm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.toggleFav(ap.modelData.key) }
                             }
                             Sw { checked: ap.allowed; onToggled: v => root.setRule(ap.modelData.key, "allow", v) }
                         }

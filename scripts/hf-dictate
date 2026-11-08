@@ -1,49 +1,89 @@
 #!/usr/bin/env python3
-"""hf-dictate — dictado local (voz a texto) de hyprfrijol: graba el micrófono, transcribe con whisper.cpp
-(whisper-cli) o faster-whisper y escribe el texto en la ventana con foco. Nada sale del equipo (salvo la
-limpieza opcional con IA, que usa el proveedor de Ajustes › Asistente de IA).
+"""hf-dictate — dictado local (voz a texto) y comandos de voz de hyprfrijol. Graba el micrófono, corta las frases
+por los silencios (VAD), enseña el texto provisional mientras hablas y escribe cada frase en la ventana con foco en
+cuanto la terminas. Nada sale del equipo (salvo la limpieza opcional con IA y lo que pidas al asistente).
 
-  hf-dictate record            graba hasta recibir SIGTERM/SIGINT/SIGUSR1 (o `hf-dictate stop`), transcribe y
-                               escribe; imprime eventos en líneas JSON (lo usa el shell: modules/dictado):
-                               {"ev":"rec"} {"ev":"level","v":0..1} {"ev":"transcribing"} {"ev":"cleaning"}
-                               {"ev":"text","text":…} {"ev":"done","how":"escrito|pegado|copiado"} {"ev":"error","msg":…}
-  hf-dictate toggle            sin el shell: empieza a grabar o, si ya graba, para (avisos con notify-send)
-  hf-dictate stop | cancel     para la grabación en curso (y transcribe) / la descarta
-  hf-dictate status            {engine, bin, model, modelOk, models:[…], recorder, typer, …}
-  hf-dictate transcribe <wav>  imprime el texto (pruebas)
-  hf-dictate output "<texto>"  lo escribe / pega / copia según dictationOutput
-  hf-dictate download <modelo> descarga ggml-<modelo>.bin (tiny|base|small|medium) → {"ev":"progress","pct":…}
+Motor: whisper.cpp con whisper-server residente (el modelo se queda cargado mientras dictas y se descarga tras
+dictationKeepLoaded s sin uso; usa la GPU si ggml tiene Vulkan/CUDA/ROCm), Vosk (parciales al momento, menos
+preciso), «híbrido» (Vosk para lo provisional, whisper para la frase final) o faster-whisper (Python).
+
+  hf-dictate record [--command] [--mode ptt|toggle|continuo] [--hold] [--file clip.wav [--simulate-live]]
+        graba hasta «stop» (por stdin, SIGUSR1 o `hf-dictate stop`); --command: una orden de voz (hf-voice);
+        --hold: no escribe hasta «release» por stdin (modo mantener: las teclas del atajo siguen pulsadas);
+        --file: lee el audio de un archivo en lugar del micrófono (pruebas; --simulate-live lo da a tiempo real).
+        stdin admite líneas: stop · cancel · release. Imprime eventos en líneas JSON (los lee modules/dictado):
+        {"ev":"rec","kind":"dictado|comando",…} {"ev":"ready"} {"ev":"level","v":0..1,"t":s} {"ev":"speech","on":bool}
+        {"ev":"partial","text":…} {"ev":"phrase","text":…,"lat":s,"how":…} {"ev":"cmd","text":…,"label":…}
+        {"ev":"cmdresult","ok":…,"msg":…} {"ev":"transcribing"} {"ev":"cleaning"} {"ev":"text","text":…}
+        {"ev":"done","how":"escrito|pegado|copiado|comando|ninguna"} {"ev":"error","msg":…,"code":…} {"ev":"cancelled"}
+  hf-dictate toggle [--command]  sin el shell: empieza o, si ya graba, para (avisos con notify-send)
+  hf-dictate stop | cancel       para la grabación en curso (y transcribe) / la descarta
+  hf-dictate status              {engine, bin, server, model, modelOk, models, vosk…, recorder, typer, gpu…}
+  hf-dictate warm | unload       carga el modelo en whisper-server / lo descarga ya
+  hf-dictate transcribe <wav>    imprime el texto (pruebas)
+  hf-dictate output "<texto>"    lo escribe / pega / copia según dictationOutput
+  hf-dictate download <modelo>   tiny|base|small|medium|turbo (whisper, Hugging Face) o vosk-model-small-es-0.42 …
+                                 (alphacephei.com) → {"ev":"progress","pct":…}; --tty: barra de progreso en la terminal
+  hf-dictate install-vosk        (solo si tu distro no trae python-vosk) venv con pip en …/whisper/vosk-venv; lo pides tú
+  hf-dictate manage              menú de la terminal para descargar y borrar modelos (Ajustes › Dictado lo abre)
   hf-dictate delete <modelo>
-  hf-dictate last              último texto dictado
+  hf-dictate last                último texto dictado
 
-Ajustes (settings.json): dictationModel tiny|base|small|medium (base) · dictationLang es|auto|en|… (es) ·
-  dictationMode ptt|toggle (ptt: mantener el atajo) · dictationEngine auto|whisper.cpp|faster-whisper ·
-  dictationOutput escribir|pegar|portapapeles · dictationAI (limpiar con hf-ai) · dictationPrompt (vocabulario) ·
-  dictationMaxSec (120)
-Modelos: ~/.local/share/hyprfrijol/whisper/ggml-<modelo>.bin (whisper.cpp). faster-whisper los descarga
-  él mismo; se usa el python del sistema o ~/.local/share/hyprfrijol/whisper/venv.
+Ajustes (settings.json): dictationModel tiny|base|small|medium|turbo (base) · dictationLang es|auto|en|… (es) ·
+  dictationMode ptt|toggle|continuo · dictationEngine auto|whisper.cpp|vosk|hibrido|faster-whisper ·
+  dictationOutput escribir|pegar|portapapeles · dictationPunct (puntuación y mayúsculas) · dictationLive (texto
+  provisional) · dictationPauseMs (silencio que cierra una frase, 700) · dictationSilenceSec (continuo: para tras
+  N s callado, 5) · dictationKeepLoaded (s con el modelo cargado, 600) · dictationWake + dictationWakeWord (decir
+  «Frijol, …» para dar una orden) · dictationVoskModel · dictationAI (limpiar con hf-ai: escribe al final) ·
+  dictationPrompt (vocabulario) · dictationMaxSec (120 en ptt/toggle; 600 en continuo)
+Modelos: ~/.local/share/hyprfrijol/whisper/ggml-<modelo>.bin · …/whisper/vosk/<modelo>/
+Pruebas: HF_DICTATE_OUTPUT=ninguna no escribe nada · HF_VOICE_DRY=1 no ejecuta las órdenes (hf-voice --dry-run) ·
+  HF_WHISPER_SERVER / HF_WHISPER_CLI eligen los binarios · HF_DICTATE_DATA cambia la carpeta de modelos.
 """
-import array, json, math, os, pathlib, shutil, signal, subprocess, sys, tempfile, threading, time, urllib.request, wave
+import array, collections, io, json, math, os, pathlib, queue, shutil, signal, socket, subprocess, sys, tempfile
+import threading, time, urllib.request, uuid, wave, zipfile, re
 for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
     if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
 HOME = pathlib.Path.home()
 ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
 SETTINGS = HOME / ".config/hyprfrijol/settings.json"
-DATA = HOME / ".local/share/hyprfrijol/whisper"
+DATA = pathlib.Path(os.environ.get("HF_DICTATE_DATA") or HOME / ".local/share/hyprfrijol/whisper")
 STATE = HOME / ".local/state/hyprfrijol"
-RUNTIME = pathlib.Path(os.environ.get("XDG_RUNTIME_DIR") or tempfile.gettempdir())
+RUNTIME = pathlib.Path(os.environ.get("HF_DICTATE_RUNTIME") or os.environ.get("XDG_RUNTIME_DIR") or tempfile.gettempdir())
 PIDFILE = RUNTIME / "hf-dictate.pid"
+def SRVFILE(model):
+    return RUNTIME / f"hf-dictate-server-{model}.json"
+def server_states():
+    """[(modelo, estado)] de los whisper-server residentes vivos."""
+    out = []
+    for f in RUNTIME.glob("hf-dictate-server-*.json"):
+        st = load(f, {}) or {}
+        if st.get("pid") and alive(st["pid"]):
+            out.append((st.get("model"), st))
+        else:
+            f.unlink(missing_ok=True)
+    return out
+USEDFILE = RUNTIME / "hf-dictate-used"
 RATE = 16000
+FRAME = 480                       # 30 ms
+FRAME_S = FRAME / RATE
 
-MODELS = {   # nombre → (tamaño aprox. en MB, descripción)
-    "tiny": (75, "Muy rápido · menos preciso"),
-    "base": (142, "Rápido · bueno para frases cortas"),
-    "small": (466, "Equilibrado · recomendado en español"),
-    "medium": (1500, "El más preciso · lento sin GPU"),
+MODELS = {   # nombre → (MB aprox., descripción, archivo)
+    "tiny": (75, "Muy rápido · menos preciso", "ggml-tiny.bin"),
+    "base": (142, "Rápido · bueno para frases cortas", "ggml-base.bin"),
+    "small": (466, "Equilibrado · recomendado en español", "ggml-small.bin"),
+    "medium": (1500, "Muy preciso · lento sin GPU", "ggml-medium.bin"),
+    "turbo": (547, "large-v3-turbo · el más preciso · necesita GPU", "ggml-large-v3-turbo-q5_0.bin"),
 }
-URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-{}.bin"
+VOSK_MODELS = {   # alphacephei.com/vosk/models
+    "vosk-model-small-es-0.42": (39, "Vosk pequeño en español · parciales al momento"),
+    "vosk-model-es-0.42": (1400, "Vosk grande en español · más preciso"),
+}
+URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{}"
+VOSK_URL = "https://alphacephei.com/vosk/models/{}.zip"
 CLI_NAMES = ("whisper-cli", "whisper-cpp", "whisper.cpp")
+SERVER_NAMES = ("whisper-server", "whisper-cpp-server")
 
 def load(p, d=None):
     try:
@@ -57,13 +97,15 @@ def settings():
     return s
 
 ORPHAN = {"v": False}
+_emit_lock = threading.Lock()
 
 def emit(ev, **kw):
     kw["ev"] = ev
-    try:
-        print(json.dumps(kw, ensure_ascii=False), flush=True)
-    except (BrokenPipeError, OSError):
-        ORPHAN["v"] = True       # quien leía (el shell) ya no está: se descarta la grabación
+    with _emit_lock:
+        try:
+            print(json.dumps(kw, ensure_ascii=False), flush=True)
+        except (BrokenPipeError, OSError):
+            ORPHAN["v"] = True       # quien leía (el shell) ya no está: se descarta la grabación
 
 def notify(title, body="", urgent=False):
     if os.environ.get("HF_DICTATE_QUIET") or not shutil.which("notify-send"):
@@ -71,16 +113,32 @@ def notify(title, body="", urgent=False):
     subprocess.run(["notify-send", "-a", "Dictado", "-i", "audio-input-microphone"] + (["-u", "critical"] if urgent else []) + [title, body],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-# ---------------------------------------------------------------- motor
-def whisper_bin():
-    env = os.environ.get("HF_WHISPER_CLI")
-    if env and os.access(env, os.X_OK):
-        return env
-    for n in CLI_NAMES:
+def alive(pid):
+    try:
+        os.kill(int(pid), 0)
+        return True
+    except Exception:
+        return False
+
+def threads():
+    return str(max(2, min(8, (os.cpu_count() or 4) // 2)))
+
+# ---------------------------------------------------------------- motores disponibles
+def _which(env, names):
+    e = os.environ.get(env)
+    if e and os.access(e, os.X_OK):
+        return e
+    for n in names:
         p = shutil.which(n)
         if p:
             return p
     return ""
+
+def whisper_bin():
+    return _which("HF_WHISPER_CLI", CLI_NAMES)
+
+def server_bin():
+    return _which("HF_WHISPER_SERVER", SERVER_NAMES)
 
 def fw_python():
     """python con faster_whisper (venv propio o el del sistema), o ""."""
@@ -91,15 +149,92 @@ def fw_python():
                 return str(py)
     return ""
 
+def vosk_here():
+    try:
+        import importlib.util
+        return importlib.util.find_spec("vosk") is not None
+    except Exception:
+        return False
+
+def vosk_venv_python():
+    """python del venv de Vosk (hf-dictate install-vosk), si existe y tiene vosk."""
+    py = DATA / "vosk-venv/bin/python"
+    if py.exists() and subprocess.run([str(py), "-c", "import vosk"], capture_output=True).returncode == 0:
+        return str(py)
+    return ""
+
+def vosk_ok():
+    return vosk_here() or bool(vosk_venv_python())
+
+def install_vosk():
+    """Instalación iniciada por el usuario (en la terminal): venv propio con pip install vosk."""
+    venv = DATA / "vosk-venv"
+    print(f"Se creará un entorno de Python en {venv} y se instalará «vosk» desde PyPI (pip).")
+    DATA.mkdir(parents=True, exist_ok=True)
+    if subprocess.run([sys.executable, "-m", "venv", str(venv)]).returncode != 0:
+        print("No se pudo crear el venv (¿falta python3-venv?)"); return 1
+    if subprocess.run([str(venv / "bin/pip"), "install", "--upgrade", "vosk"]).returncode != 0:
+        print("pip no pudo instalar vosk"); return 1
+    print("Vosk instalado. Falta un modelo en español: hf-dictate download vosk-model-small-es-0.42")
+    return 0
+
 def model_path(name):
-    return DATA / f"ggml-{name}.bin"
+    return DATA / MODELS.get(name, (0, "", f"ggml-{name}.bin"))[2]
+
+def vosk_path(name):
+    return DATA / "vosk" / name
+
+def model_installed(name):
+    p = model_path(name)
+    return p.exists() and p.stat().st_size > MODELS.get(name, (1,))[0] * 1e6 * 0.8
+
+def vosk_installed(name):
+    return (vosk_path(name) / "am").is_dir() or (vosk_path(name) / "conf").is_dir()
+
+def gpu_backends():
+    """Backends de GPU de ggml instalados (whisper.cpp los carga solo)."""
+    out = []
+    for d in ("/usr/lib/ggml", "/usr/lib64/ggml", "/usr/local/lib/ggml", "/usr/lib/x86_64-linux-gnu/ggml", "/usr/lib", "/usr/lib64"):
+        for n, lab in (("vulkan", "Vulkan"), ("cuda", "CUDA"), ("hip", "ROCm"), ("sycl", "SYCL")):
+            if (pathlib.Path(d) / f"libggml-{n}.so").exists() and lab not in out:
+                out.append(lab)
+    return out
+
+ORDER = ["tiny", "base", "small", "turbo", "medium"]
+
+def live_model(s):
+    """Modelo de lo provisional: dictationLiveModel, o «tiny» si el principal es grande (small o más) y está
+    descargado y no hay GPU: así lo provisional no retrasa la frase final (va en otro whisper-server)."""
+    m = s.get("dictationModel") or "base"
+    want = s.get("dictationLiveModel") or "auto"
+    if want != "auto":
+        return want if model_installed(want) else m
+    if ORDER.index(m) >= ORDER.index("small") if m in ORDER else False:
+        if not gpu_backends():
+            for c in ("base", "tiny"):
+                if model_installed(c):
+                    return c
+    return m
 
 def engine(s):
+    """motor efectivo: whisper.cpp | vosk | hibrido | faster-whisper | ""."""
     want = s.get("dictationEngine") or "auto"
-    if want in ("auto", "whisper.cpp") and whisper_bin():
+    wm = s.get("dictationModel") or "base"
+    vm = s.get("dictationVoskModel") or "vosk-model-small-es-0.42"
+    has_w = bool(whisper_bin() or server_bin())
+    has_v = vosk_ok() and vosk_installed(vm)
+    if want == "hibrido" and has_w and has_v:
+        return "hibrido"
+    if want == "vosk" and has_v:
+        return "vosk"
+    if want in ("auto", "whisper.cpp", "hibrido") and has_w and (model_installed(wm) or want != "auto" or not has_v):
         return "whisper.cpp"
+    if want in ("auto", "vosk", "hibrido") and has_v:
+        return "vosk"
     if want in ("auto", "faster-whisper") and fw_python():
         return "faster-whisper"
+    if has_w:
+        return "whisper.cpp"
     return ""
 
 def recorder():
@@ -116,30 +251,359 @@ def typer():
         return "ydotool"
     return ""
 
+def family():
+    try:
+        osr = pathlib.Path("/etc/os-release").read_text().lower()
+        return "arch" if "arch" in osr else "debian" if ("debian" in osr or "ubuntu" in osr) else "fedora" if "fedora" in osr else "suse" if "suse" in osr else "arch"
+    except Exception:
+        return "arch"
+
 def status():
     s = settings()
     m = s.get("dictationModel") or "base"
+    vm = s.get("dictationVoskModel") or "vosk-model-small-es-0.42"
     models = []
-    for n, (mb, d) in MODELS.items():
+    for n, (mb, d, f) in MODELS.items():
         p = model_path(n)
-        ok = p.exists() and p.stat().st_size > mb * 1e6 * 0.8
-        models.append({"name": n, "mb": mb, "desc": d, "installed": ok, "bytes": p.stat().st_size if p.exists() else 0})
+        models.append({"name": n, "mb": mb, "desc": d, "file": f, "installed": model_installed(n), "bytes": p.stat().st_size if p.exists() else 0})
+    vmodels = [{"name": n, "mb": mb, "desc": d, "installed": vosk_installed(n)} for n, (mb, d) in VOSK_MODELS.items()]
     eng = engine(s)
-    model_ok = any(x["installed"] for x in models if x["name"] == m) if eng == "whisper.cpp" else bool(eng)
-    fam = "arch"
+    model_ok = (model_installed(m) if eng in ("whisper.cpp", "hibrido") else True) and (vosk_installed(vm) if eng in ("vosk", "hibrido") else True) and bool(eng)
+    srv = server_states()
+    loaded = bool(srv)
+    fam = family()
+    return {"engine": eng, "bin": whisper_bin(), "server": server_bin(), "fasterWhisper": bool(fw_python()), "vosk": vosk_ok(),
+            "model": m, "modelOk": model_ok, "models": models, "voskModel": vm, "voskModels": vmodels, "dir": str(DATA),
+            "recorder": recorder(), "typer": typer(), "clipboard": bool(shutil.which("wl-copy")),
+            "ready": bool(eng and model_ok and recorder()), "recording": running_pid() > 0, "family": fam,
+            "gpu": gpu_backends(), "loaded": loaded, "loadedModels": [m for m, _ in srv], "liveModel": live_model(s),
+            "ytdlp": bool(shutil.which("yt-dlp")),
+            # paquetes que ofrece instalar Ajustes › Dictado (Arch: todo en los repos oficiales)
+            "pkgs": {"engine": "whisper-cpp" if fam == "arch" else "", "gpu": "ggml-vulkan" if fam == "arch" else "",
+                     "vosk": "python-vosk" if fam == "arch" else "", "typer": "wtype", "recorder": "pipewire",
+                     "ytdlp": "yt-dlp"}}
+
+# ---------------------------------------------------------------- whisper-server residente
+def free_port():
+    with socket.socket() as so:
+        so.bind(("127.0.0.1", 0))
+        return so.getsockname()[1]
+
+def http(port, path, data=None, headers=None, timeout=60):
+    req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", data=data, headers=headers or {})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
+
+def ping(port):
     try:
-        osr = pathlib.Path("/etc/os-release").read_text().lower()
-        fam = "arch" if "arch" in osr else "debian" if ("debian" in osr or "ubuntu" in osr) else "fedora" if "fedora" in osr else "suse" if "suse" in osr else "arch"
+        return b"ok" in http(port, "/health", timeout=1.5)
+    except Exception:
+        return False
+
+def touch_used():
+    try:
+        USEDFILE.touch()
     except Exception:
         pass
-    return {"engine": eng, "bin": whisper_bin(), "fasterWhisper": bool(fw_python()), "model": m, "modelOk": model_ok,
-            "models": models, "dir": str(DATA), "recorder": recorder(), "typer": typer(),
-            "clipboard": bool(shutil.which("wl-copy")), "ready": bool(eng and model_ok and recorder()),
-            "recording": running_pid() > 0, "family": fam,
-            # paquetes que ofrece instalar Ajustes › Dictado (whisper.cpp está en los repos oficiales de Arch)
-            "pkgs": {"engine": "whisper-cpp" if fam == "arch" else "", "typer": "wtype", "recorder": "pipewire"}}
 
-# ---------------------------------------------------------------- grabación
+def server_daemon(model, lang, idle):
+    """Proceso residente: lanza whisper-server con el modelo y lo cierra tras «idle» s sin uso."""
+    port = free_port()
+    log = open(RUNTIME / f"hf-dictate-server-{model}.log", "w")
+    child = subprocess.Popen([server_bin(), "-m", str(model_path(model)), "-l", lang, "-t", threads(), "--host", "127.0.0.1",
+                              "--port", str(port), "-nt", "-sns"], stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+    def bye(*_):
+        try:
+            child.terminate(); child.wait(3)
+        except Exception:
+            child.kill()
+        st = load(SRVFILE(model), {}) or {}
+        if st.get("pid") == os.getpid():
+            SRVFILE(model).unlink(missing_ok=True)
+        sys.exit(0)
+    signal.signal(signal.SIGTERM, bye)
+    signal.signal(signal.SIGINT, bye)
+    t0 = time.time()
+    while not ping(port):
+        if child.poll() is not None or time.time() - t0 > 90:
+            bye()
+        time.sleep(0.05)
+    touch_used()
+    SRVFILE(model).write_text(json.dumps({"pid": os.getpid(), "child": child.pid, "port": port, "model": model, "lang": lang,
+                                   "loadSec": round(time.time() - t0, 2), "started": time.time()}))
+    while True:
+        time.sleep(2)
+        if child.poll() is not None:
+            bye()
+        try:
+            used = USEDFILE.stat().st_mtime
+        except Exception:
+            used = t0
+        if time.time() - used > idle and not running_pid():
+            bye()
+
+def server_stop(model=None, keep=()):
+    """Cierra el whisper-server de «model» (o todos, salvo los de «keep»)."""
+    for m, st in server_states():
+        if (model and m != model) or m in keep:
+            continue
+        os.kill(st["pid"], signal.SIGTERM)
+        for _ in range(40):
+            if not alive(st["pid"]):
+                break
+            time.sleep(0.05)
+        SRVFILE(m).unlink(missing_ok=True)
+
+def server_ensure(model, lang, idle):
+    """Puerto de un whisper-server con este modelo (lo arranca si hace falta)."""
+    st = load(SRVFILE(model), {}) or {}
+    if st and alive(st.get("pid", 0)) and st.get("lang") == lang and ping(st.get("port", 0)):
+        touch_used()
+        return st["port"]
+    if st:
+        server_stop(model)
+    if not server_bin():
+        return 0
+    subprocess.Popen([sys.executable, os.path.abspath(__file__), "_server", model, lang, str(idle)],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True)
+    t0 = time.time()
+    while time.time() - t0 < 90:
+        st = load(SRVFILE(model), {}) or {}
+        if st.get("model") == model and alive(st.get("pid", 0)) and ping(st.get("port", 0)):
+            return st["port"]
+        time.sleep(0.05)
+    return 0
+
+def wav_bytes(pcm):
+    b = io.BytesIO()
+    with wave.open(b, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(RATE); w.writeframes(bytes(pcm))
+    return b.getvalue()
+
+def server_infer(port, pcm, lang, prompt=""):
+    bd = uuid.uuid4().hex
+    fields = {"response_format": "json", "temperature": "0.0", "language": lang}
+    if prompt:
+        fields["prompt"] = prompt
+    body = b"".join(f"--{bd}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n{v}\r\n".encode() for k, v in fields.items())
+    body += (f"--{bd}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"a.wav\"\r\nContent-Type: audio/wav\r\n\r\n").encode() \
+        + wav_bytes(pcm) + f"\r\n--{bd}--\r\n".encode()
+    touch_used()
+    r = json.loads(http(port, "/inference", body, {"Content-Type": f"multipart/form-data; boundary={bd}"}, timeout=120))
+    touch_used()
+    if r.get("error"):
+        raise RuntimeError("whisper-server: " + str(r["error"])[:160])
+    return r.get("text", "")
+
+# ---------------------------------------------------------------- motores (una sesión)
+class WhisperEngine:
+    """whisper.cpp: whisper-server residente; si falta, whisper-cli por frase (carga el modelo cada vez)."""
+    name = "whisper.cpp"
+    def __init__(self, s, model=None):
+        self.model = model or s.get("dictationModel") or "base"
+        self.lang = s.get("dictationLang") or "es"
+        self.idle = max(30, int(s.get("dictationKeepLoaded") or 600))
+        self.port = 0
+        if not model_installed(self.model) and not model_path(self.model).exists():
+            raise RuntimeError(f"Falta el modelo «{self.model}»: descárgalo en Ajustes › Dictado")
+    def start(self):
+        if server_bin():
+            self.port = server_ensure(self.model, self.lang, self.idle)
+    def transcribe(self, pcm, prompt=""):
+        if self.port:
+            try:
+                return server_infer(self.port, pcm, self.lang, prompt)
+            except Exception:
+                self.port = server_ensure(self.model, self.lang, self.idle)
+                if self.port:
+                    return server_infer(self.port, pcm, self.lang, prompt)
+        with tempfile.NamedTemporaryFile(prefix="hf-dictate-", suffix=".wav", delete=False) as f:
+            f.write(wav_bytes(pcm)); wav = f.name
+        try:
+            cmd = [whisper_bin(), "-m", str(model_path(self.model)), "-f", wav, "-l", self.lang, "-nt", "-np", "-t", threads()]
+            if prompt:
+                cmd += ["--prompt", prompt]
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            if r.returncode != 0:
+                raise RuntimeError("whisper.cpp falló: " + (r.stderr.strip().splitlines() or ["?"])[-1][:160])
+            return r.stdout
+        finally:
+            os.unlink(wav)
+    def close(self):
+        pass
+
+class FasterWhisperEngine:
+    """faster-whisper en un proceso Python residente durante la sesión."""
+    name = "faster-whisper"
+    CODE = ("import sys,json,io,wave\nfrom faster_whisper import WhisperModel\n"
+            "m=WhisperModel(sys.argv[1],device='auto',compute_type='int8',download_root=sys.argv[3])\nprint('{}',flush=True)\n"
+            "for l in sys.stdin:\n j=json.loads(l)\n seg,_=m.transcribe(j['wav'],language=None if sys.argv[2]=='auto' else sys.argv[2],"
+            "initial_prompt=j.get('prompt') or None)\n print(json.dumps({'text':' '.join(x.text.strip() for x in seg)}),flush=True)\n")
+    def __init__(self, s):
+        self.model = s.get("dictationModel") or "base"
+        self.lang = s.get("dictationLang") or "es"
+        self.p = None
+        self.lock = threading.Lock()
+    def start(self):
+        self.p = subprocess.Popen([fw_python(), "-c", self.CODE, self.model, self.lang, str(DATA / "faster-whisper")],
+                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        self.p.stdout.readline()
+    def transcribe(self, pcm, prompt=""):
+        with tempfile.NamedTemporaryFile(prefix="hf-dictate-", suffix=".wav", delete=False) as f:
+            f.write(wav_bytes(pcm)); wav = f.name
+        try:
+            with self.lock:
+                self.p.stdin.write(json.dumps({"wav": wav, "prompt": prompt}) + "\n"); self.p.stdin.flush()
+                return json.loads(self.p.stdout.readline() or "{}").get("text", "")
+        finally:
+            os.unlink(wav)
+    def close(self):
+        if self.p:
+            self.p.kill()
+
+class VoskEngine:
+    """Vosk (Kaldi): reconoce mientras llega el audio, así que lo provisional sale al momento."""
+    name = "vosk"
+    def __init__(self, s):
+        self.path = vosk_path(s.get("dictationVoskModel") or "vosk-model-small-es-0.42")
+        self.rec = None
+    def start(self):
+        import vosk
+        vosk.SetLogLevel(-1)
+        self.model = vosk.Model(str(self.path))
+        self.rec = vosk.KaldiRecognizer(self.model, RATE)
+    def feed(self, frame):
+        """→ texto provisional de la frase en curso."""
+        if self.rec.AcceptWaveform(bytes(frame)):
+            self.done = (getattr(self, "done", "") + " " + json.loads(self.rec.Result()).get("text", "")).strip()
+        return (getattr(self, "done", "") + " " + json.loads(self.rec.PartialResult()).get("partial", "")).strip()
+    def final(self):
+        t = (getattr(self, "done", "") + " " + json.loads(self.rec.FinalResult()).get("text", "")).strip()
+        self.done = ""
+        self.rec.Reset()
+        return vosk_punct(t)
+    def transcribe(self, pcm, prompt=""):
+        import vosk
+        r = vosk.KaldiRecognizer(self.model, RATE)
+        r.AcceptWaveform(bytes(pcm))
+        return vosk_punct(json.loads(r.FinalResult()).get("text", ""))
+    def close(self):
+        pass
+
+def vosk_punct(t):
+    """Vosk no puntúa: mayúscula al principio y punto al final."""
+    t = t.strip()
+    return (t[:1].upper() + t[1:] + ".") if t else ""
+
+# ---------------------------------------------------------------- texto
+NOISE = ("[BLANK_AUDIO]", "[MÚSICA]", "[Música]", "[Music]", "(música)", "[SILENCIO]", "[silencio]", "[ Silencio ]", "[risas]", "(risas)")
+HALLU = re.compile(r"^(?:gracias(?: por (?:ver|vernos|su atencion|mirar)(?: el video)?)?|subtitulos? (?:realizados? |hechos? )?por.*|"
+                   r".*amara\.?\s?org.*|suscribete.*|musica|silencio|aplausos|thank you\.?|you|\.+|¡?adios!?|chao)$", re.I)
+
+def clean_out(t):
+    lines = []
+    for ln in (t or "").splitlines():
+        ln = ln.strip()
+        if ln.startswith("[") and "-->" in ln:      # marcas de tiempo, por si acaso
+            ln = ln.split("]", 1)[-1].strip()
+        for n in NOISE:
+            ln = ln.replace(n, "")
+        ln = re.sub(r"\[[^\]]{0,30}\]|\([A-ZÁÉÍÓÚ ]{3,30}\)", "", ln).strip()
+        if ln:
+            lines.append(ln)
+    return re.sub(r"\s+", " ", " ".join(lines)).strip()
+
+def fold(s):
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFD", s.lower()) if not unicodedata.combining(c))
+
+def hallucination(text, speech_s):
+    f = re.sub(r"[¡!¿?.,…\s]+", " ", fold(text)).strip()
+    if not f:
+        return True
+    if speech_s < 2.5 and HALLU.match(f):
+        return True
+    return bool(re.search(r"amara\.?\s?org|subtitulos realizados por", f))
+
+SPOKEN = {"nueva linea": "\n", "salto de linea": "\n", "punto y aparte": ".\n", "nuevo parrafo": "\n\n",
+          "punto": ".", "coma": ",", "dos puntos": ":", "punto y coma": ";", "abre interrogacion": "¿",
+          "cierra interrogacion": "?", "signo de interrogacion": "?", "puntos suspensivos": "…"}
+
+def spoken_cmd(text):
+    f = re.sub(r"[¡!¿?.,…]+", "", fold(text)).strip()
+    return SPOKEN.get(f)
+
+def join_piece(prev, text, punct=True):
+    """El trozo que se escribe tras «prev»: espacio, y mayúscula solo al empezar frase."""
+    text = text.strip()
+    if not punct:
+        text = re.sub(r"[.,;:¡!¿?…]+", "", text).strip()
+        text = text[:1].lower() + text[1:] if text[1:2].islower() else text
+    if not prev:
+        return text[:1].upper() + text[1:] if punct else text
+    p = prev.rstrip(" ")
+    if p.endswith("\n"):
+        return text[:1].upper() + text[1:] if punct else text
+    ends = p.endswith((".", "!", "?", "…", ":"))
+    if punct and not ends and text[:1].isupper() and text[1:2].islower():
+        text = text[:1].lower() + text[1:]          # sigue la frase: whisper la empieza siempre en mayúscula
+    if punct and ends and text[:1].islower():
+        text = text[:1].upper() + text[1:]
+    if text[:1] in ",.;:?!…":
+        return text
+    return " " + text
+
+# ---------------------------------------------------------------- salida
+def copy(text):
+    if not shutil.which("wl-copy"):
+        return False
+    return subprocess.run(["wl-copy", "--", text], stderr=subprocess.DEVNULL).returncode == 0
+
+def output(text, s=None, first=True):
+    s = s or settings()
+    mode = os.environ.get("HF_DICTATE_OUTPUT") or s.get("dictationOutput") or "escribir"
+    if mode == "ninguna":       # quien llama (p. ej. el chat de la IA o una prueba) se queda el texto de los eventos
+        return "ninguna"
+    if first:
+        time.sleep(0.15)        # que se suelten las teclas del atajo
+    t = typer()
+    if mode == "escribir" and t == "wtype":
+        if subprocess.run(["wtype", "-d", "4", "--", text], stderr=subprocess.DEVNULL).returncode == 0:
+            return "escrito"
+    if mode == "escribir" and t == "ydotool" and "\n" not in text:
+        if subprocess.run(["ydotool", "type", "--key-delay", "4", "--", text], capture_output=True).returncode == 0:
+            return "escrito"
+    if mode in ("escribir", "pegar") and copy(text):
+        if t == "wtype" and subprocess.run(["wtype", "-M", "ctrl", "-k", "v", "-m", "ctrl"], stderr=subprocess.DEVNULL).returncode == 0:
+            return "pegado"
+        if t == "ydotool" and subprocess.run(["ydotool", "key", "29:1", "47:1", "47:0", "29:0"], capture_output=True).returncode == 0:
+            return "pegado"
+        return "copiado"
+    if copy(text):
+        return "copiado"
+    return "nada"
+
+def ai_clean(text):
+    instr = ("Eres un corrector de dictados. Devuelve SOLO el texto corregido, sin comillas ni comentarios: arregla "
+             "puntuación, mayúsculas, muletillas («eh», «este…») y errores evidentes de reconocimiento, sin cambiar el "
+             "sentido ni el idioma ni añadir nada.")
+    try:
+        r = subprocess.run([str(ROOT / "scripts/hf-ai"), "transform", instr], input=text, capture_output=True, text=True, timeout=45)
+        out = r.stdout.strip()
+        return out if r.returncode == 0 and out and len(out) < len(text) * 3 + 40 else ""
+    except Exception:
+        return ""
+
+def voice_command(text, s):
+    """Pasa la orden a hf-voice (en seco con HF_VOICE_DRY=1) → dict."""
+    args = [str(ROOT / "scripts/hf-voice"), "run", text] + (["--dry-run"] if os.environ.get("HF_VOICE_DRY") else [])
+    try:
+        r = subprocess.run(args, capture_output=True, text=True, timeout=90)
+        return json.loads(r.stdout or "{}") or {"ok": False, "msg": "hf-voice no respondió"}
+    except Exception as e:
+        return {"ok": False, "msg": f"hf-voice falló: {e}"}
+
+# ---------------------------------------------------------------- audio
 def running_pid():
     try:
         pid = int(PIDFILE.read_text().strip())
@@ -157,226 +621,578 @@ def rec_cmd():
         return ["arecord", "-q", "-f", "S16_LE", "-r", str(RATE), "-c", "1", "-t", "raw", "-"]
     return None
 
-def record_session():
-    s = settings()
-    if running_pid():
-        emit("error", msg="Ya hay un dictado en curso"); return 1
-    eng = engine(s)
-    if not eng:
-        emit("error", msg="Falta whisper.cpp: instálalo en Ajustes › Dictado", code="engine"); return 1
-    if eng == "whisper.cpp" and not model_path(s.get("dictationModel") or "base").exists():
-        emit("error", msg="Falta el modelo «" + (s.get("dictationModel") or "base") + "»: descárgalo en Ajustes › Dictado", code="model"); return 1
-    cmd = rec_cmd()
-    if not cmd:
-        emit("error", msg="No hay con qué grabar (pw-record o arecord)", code="recorder"); return 1
-    PIDFILE.write_text(str(os.getpid()))
-    state = {"stop": False, "cancel": False}
-    def on_stop(*_):
-        state["stop"] = True
-    def on_cancel(*_):
-        state["stop"] = state["cancel"] = True
-    for sg in (signal.SIGTERM, signal.SIGINT, signal.SIGUSR1):
-        signal.signal(sg, on_stop)
-    signal.signal(signal.SIGUSR2, on_cancel)
+def file_pcm(path):
+    """PCM 16 kHz mono s16 de un archivo (wav directo; lo demás con ffmpeg)."""
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-    except Exception as e:
-        PIDFILE.unlink(missing_ok=True)
-        emit("error", msg=f"No se pudo grabar: {e}"); return 1
-    emit("rec", engine=eng, model=s.get("dictationModel") or "base")
-    maxsec = float(s.get("dictationMaxSec") or 120)
-    pcm = bytearray()
-    chunk = RATE // 20 * 2          # 50 ms
-    peak = 0.0
-    t0 = time.time()
-    ppid = os.getppid()
-    os.set_blocking(proc.stdout.fileno(), False)
-    while not state["stop"] and proc.poll() is None:
-        if time.time() - t0 > maxsec:
-            break
-        if ORPHAN["v"] or os.getppid() != ppid:
-            state["stop"] = state["cancel"] = True
-            break
-        try:
-            b = proc.stdout.read(chunk)
-        except Exception:
-            b = None
-        if not b:
-            time.sleep(0.02); continue
-        pcm.extend(b)
-        a = array.array("h"); a.frombytes(b[: len(b) // 2 * 2])
-        if a:
-            rms = math.sqrt(sum(x * x for x in a) / len(a)) / 32768
-            db = 20 * math.log10(max(rms, 1e-6))
-            v = max(0.0, min(1.0, (db + 55) / 45))     # −55 dBFS → 0 · −10 dBFS → 1
-            peak = max(peak, v)
-            emit("level", v=round(v, 3), t=round(time.time() - t0, 1))
-    try:
-        proc.send_signal(signal.SIGINT)
-        rest = proc.communicate(timeout=2)[0] or b""
-        pcm.extend(rest)
-    except Exception:
-        proc.kill()
-    PIDFILE.unlink(missing_ok=True)
-    if state["cancel"]:
-        emit("cancelled"); return 0
-    secs = len(pcm) / 2 / RATE
-    if secs < 0.4:
-        emit("error", msg="Grabación demasiado corta"); return 1
-    if peak < 0.12:
-        emit("error", msg="No se oyó nada: revisa el micrófono en Ajustes › Sonido", code="silence"); return 1
-    with tempfile.NamedTemporaryFile(prefix="hf-dictate-", suffix=".wav", delete=False) as f:
-        wav = f.name
-    with wave.open(wav, "wb") as w:
-        w.setnchannels(1); w.setsampwidth(2); w.setframerate(RATE); w.writeframes(bytes(pcm))
-    emit("transcribing", secs=round(secs, 1))
-    try:
-        text = transcribe(wav, s)
-    except Exception as e:
-        emit("error", msg=str(e)); return 1
-    finally:
-        if not os.environ.get("HF_DICTATE_KEEP"):
-            os.unlink(wav)
-    if state["cancel"] or ORPHAN["v"]:          # cancelado mientras transcribía
-        emit("cancelled"); return 0
-    return finish(text, s)
-
-def finish(text, s):
-    text = text.strip()
-    if not text:
-        emit("error", msg="No entendí nada", code="empty"); return 1
-    if s.get("dictationAI"):
-        emit("cleaning")
-        text = ai_clean(text) or text
-    emit("text", text=text)
-    try:
-        STATE.mkdir(parents=True, exist_ok=True)
-        (STATE / "dictation-last.txt").write_text(text + "\n")
+        with wave.open(str(path)) as w:
+            if w.getframerate() == RATE and w.getnchannels() == 1 and w.getsampwidth() == 2:
+                return w.readframes(w.getnframes())
     except Exception:
         pass
-    how = output(text, s)
-    if how == "nada":
-        emit("error", msg="No pude escribir ni copiar el texto (falta wtype o wl-clipboard)", code="typer", text=text); return 1
-    emit("done", how=how)
-    return 0
+    r = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(path), "-f", "s16le", "-ac", "1", "-ar", str(RATE), "-"],
+                       capture_output=True, timeout=120)
+    if r.returncode != 0:
+        raise RuntimeError("No pude leer el audio: " + r.stderr.decode(errors="replace").strip()[-160:])
+    return r.stdout
 
-# ---------------------------------------------------------------- transcripción
-NOISE = ("[BLANK_AUDIO]", "[MÚSICA]", "[Música]", "[Music]", "(música)", "[SILENCIO]", "[silencio]", "[ Silencio ]")
+def frame_db(b):
+    a = array.array("h"); a.frombytes(b[: len(b) // 2 * 2])
+    if not a:
+        return -90.0
+    rms = math.sqrt(sum(x * x for x in a) / len(a)) / 32768
+    return 20 * math.log10(max(rms, 1e-6))
 
-def clean_out(t):
-    lines = []
-    for ln in t.splitlines():
-        ln = ln.strip()
-        if ln.startswith("[") and "-->" in ln:      # marcas de tiempo, por si acaso
-            ln = ln.split("]", 1)[-1].strip()
-        for n in NOISE:
-            ln = ln.replace(n, "")
-        if ln:
-            lines.append(ln)
-    return " ".join(lines).strip()
+# ---------------------------------------------------------------- sesión
+class Session:
+    def __init__(self, s, kind="dictado", mode=None, hold=False, src=None, live_pace=False):
+        self.s = s
+        self.kind = kind
+        self.mode = mode or s.get("dictationMode") or "ptt"
+        self.hold = hold
+        self.src = src
+        self.live_pace = live_pace
+        self.punct = s.get("dictationPunct", True) is not False
+        self.live = s.get("dictationLive", True) is not False
+        self.ai = bool(s.get("dictationAI")) and kind == "dictado"
+        self.wake = s.get("dictationWake", True) is not False
+        self.pause = max(250, int(s.get("dictationPauseMs") or 700)) / 1000
+        self.silence = max(1.5, float(s.get("dictationSilenceSec") or 5))
+        self.maxsec = float(s.get("dictationMaxSec") or 120)
+        if self.mode == "continuo":
+            self.maxsec = max(self.maxsec, 600.0)
+        if kind == "comando":
+            self.maxsec = 15.0
+        self.vocab = (s.get("dictationPrompt") or "").strip()
+        self.stop = threading.Event()
+        self.cancel = threading.Event()
+        self.released = threading.Event()
+        if not hold:
+            self.released.set()
+        self.jobs = queue.Queue()
+        self.partial_job = None
+        self.cv = threading.Condition()
+        self.busy = False
+        self.partial_busy = False
+        self.live_eng = None
+        self.typed = ""            # lo ya entregado (escrito / copiado)
+        self.pending = []          # trozos que esperan a «release»
+        self.hows = []
+        self.phrases = 0
+        self.cmd_done = False
+        self.errors = []
+        self.eng = None
+        self.vosk = None
+        self.ready = threading.Event()
+        self.first_out = True
 
-def transcribe(wav, s=None):
-    s = s or settings()
-    lang = s.get("dictationLang") or "es"
-    model = s.get("dictationModel") or "base"
-    prompt = (s.get("dictationPrompt") or "").strip()
-    eng = engine(s)
-    threads = str(max(2, min(8, (os.cpu_count() or 4) - 1)))
-    if eng == "whisper.cpp":
-        mp = model_path(model)
-        if not mp.exists():
-            raise RuntimeError(f"Falta el modelo «{model}»")
-        cmd = [whisper_bin(), "-m", str(mp), "-f", wav, "-l", lang, "-nt", "-np", "-t", threads]
-        if prompt:
-            cmd += ["--prompt", prompt]
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-        if r.returncode != 0:
-            raise RuntimeError("whisper.cpp falló: " + (r.stderr.strip().splitlines() or ["?"])[-1][:160])
-        return clean_out(r.stdout)
-    if eng == "faster-whisper":
-        code = ("import sys,json\nfrom faster_whisper import WhisperModel\n"
-                "m=WhisperModel(sys.argv[1],device='auto',compute_type='int8',download_root=sys.argv[4])\n"
-                "seg,_=m.transcribe(sys.argv[2],language=None if sys.argv[3]=='auto' else sys.argv[3],vad_filter=True,"
-                "initial_prompt=sys.argv[5] or None)\nprint(' '.join(x.text.strip() for x in seg))")
-        r = subprocess.run([fw_python(), "-c", code, model, wav, lang, str(DATA / "faster-whisper"), prompt],
-                           capture_output=True, text=True, timeout=900)
-        if r.returncode != 0:
-            raise RuntimeError("faster-whisper falló: " + (r.stderr.strip().splitlines() or ["?"])[-1][:160])
-        return clean_out(r.stdout)
-    raise RuntimeError("Falta whisper.cpp (o faster-whisper)")
+    # -- motor
+    def make_engines(self):
+        e = engine(self.s)
+        if not e:
+            raise RuntimeError("Falta whisper.cpp: instálalo en Ajustes › Dictado")
+        if e in ("vosk", "hibrido"):
+            self.vosk = VoskEngine(self.s)
+        if e == "vosk":
+            self.eng = self.vosk
+        elif e == "faster-whisper":
+            self.eng = FasterWhisperEngine(self.s)
+        else:
+            self.eng = WhisperEngine(self.s)
+            lm = live_model(self.s)
+            if lm != self.eng.model and self.live and not self.ai:
+                self.live_eng = WhisperEngine(self.s, lm)       # lo provisional en otro servidor, más ligero
+            server_stop(keep=(self.eng.model, lm))
+        self.live_eng = self.live_eng or self.eng
+        return e
 
-def ai_clean(text):
-    instr = ("Eres un corrector de dictados. Devuelve SOLO el texto corregido, sin comillas ni comentarios: arregla "
-             "puntuación, mayúsculas, muletillas («eh», «este…») y errores evidentes de reconocimiento, sin cambiar el "
-             "sentido ni el idioma ni añadir nada.")
+    def load_engines(self):
+        try:
+            t0 = time.time()
+            if self.vosk:
+                self.vosk.start()
+            if self.eng is not self.vosk:
+                self.eng.start()
+            if self.live_eng is not self.eng:
+                self.live_eng.start()
+            emit("ready", secs=round(time.time() - t0, 2), model=getattr(self.eng, "model", ""), liveModel=getattr(self.live_eng, "model", ""))
+        except Exception as e:
+            self.errors.append(str(e))
+            self.stop.set()
+        finally:
+            self.ready.set()
+
+    def prompt(self):
+        # solo el vocabulario del usuario y, al dictar, el final de lo ya escrito (da contexto entre frases).
+        # Nada de frases de ejemplo: whisper tiende a copiarlas cuando el audio es dudoso.
+        tail = self.typed[-200:].strip() if self.kind == "dictado" and not os.environ.get("HF_DICTATE_NOCTX") else ""
+        return (self.vocab + " " + tail).strip()
+
+    # -- trabajadores: uno escribe las frases terminadas; otro, lo provisional (si el motor está libre)
+    def worker(self):
+        self.ready.wait()
+        while True:
+            job = self.jobs.get()
+            if job == "END":
+                return
+            self.busy = True
+            try:
+                self.do_final(*job)
+            except Exception as e:
+                self.errors.append(str(e)); emit("error", msg=str(e)[:200], code="engine", fatal=False)
+            self.busy = False
+
+    def partial_worker(self):
+        self.ready.wait()
+        while not self.capture_done.is_set():
+            with self.cv:
+                pj, self.partial_job = self.partial_job, None
+            if pj is None or self.errors:
+                time.sleep(0.03); continue
+            self.partial_busy = True
+            try:
+                self.do_partial(*pj)
+            finally:
+                self.partial_busy = False
+
+    def partial_free(self):
+        """¿se puede pedir lo provisional? Si comparte servidor con lo final, solo si no hay frases esperando."""
+        if self.partial_busy:
+            return False
+        return self.live_eng is not self.eng or (not self.busy and self.jobs.empty())
+
+    def do_partial(self, pid, pcm):
+        if self.live_eng is self.vosk or not self.live or self.errors:
+            return
+        try:
+            t = clean_out(self.live_eng.transcribe(pcm, self.prompt()))
+        except Exception:
+            return
+        if pid == self.phrase_id and t and not hallucination(t, len(pcm) / 2 / RATE):
+            emit("partial", text=t)
+
+    def do_final(self, pid, pcm, speech_s, end_wall):
+        if self.cancel.is_set():
+            return
+        if os.environ.get("HF_DICTATE_DUMP"):          # depurar: guarda el audio de cada frase
+            pathlib.Path(os.environ["HF_DICTATE_DUMP"], f"frase-{pid:03d}.wav").write_bytes(wav_bytes(pcm))
+        if self.vosk and self.eng is self.vosk:
+            text = self.vosk_final.pop(pid, "")
+        else:
+            text = clean_out(self.eng.transcribe(pcm, self.prompt()))
+        if hallucination(text, speech_s):
+            emit("phrase", text="", skipped=True, lat=round(time.time() - end_wall, 2))
+            return
+        if self.cancel.is_set():
+            return
+        lat = round(time.time() - end_wall, 2)
+        is_cmd = self.kind == "comando"
+        if not is_cmd and self.wake:
+            is_cmd, rest = wake_split(text, self.s)
+            if is_cmd:
+                text = rest
+        if is_cmd:
+            self.run_command(text, lat)
+            return
+        sp = spoken_cmd(text)
+        piece = (sp if sp is not None else join_piece(self.typed + "".join(self.pending), text, self.punct))
+        if sp is not None and sp.startswith((".", ",", ":", ";", "?", "…")):
+            piece = sp
+        self.phrases += 1
+        if self.ai or not self.released.is_set():
+            self.pending.append(piece)
+            emit("phrase", text=piece, lat=lat, how="espera")
+            return
+        how = self.deliver(piece)
+        emit("phrase", text=piece, lat=lat, how=how)
+
+    def deliver(self, piece):
+        mode = os.environ.get("HF_DICTATE_OUTPUT") or self.s.get("dictationOutput") or "escribir"
+        self.typed += piece
+        if mode == "portapapeles":
+            how = "copiado" if copy(self.typed.strip()) else "nada"
+        else:
+            how = output(piece, self.s, first=self.first_out)
+        self.first_out = False
+        self.hows.append(how)
+        return how
+
+    def flush(self):
+        if self.pending and not self.ai:
+            piece = "".join(self.pending); self.pending = []
+            self.deliver(piece)
+
+    def run_command(self, text, lat):
+        text = text.strip().strip(".").strip()
+        if not text:
+            emit("cmdresult", ok=False, msg="Di la orden después de «" + (self.s.get("dictationWakeWord") or "Frijol") + "»", text="")
+            return
+        self.cmd_done = True
+        emit("cmd", text=text, lat=lat)
+        self.released.wait(timeout=5)       # que se suelten las teclas antes de mandar atajos
+        r = voice_command(text, self.s)
+        emit("cmdresult", ok=bool(r.get("ok")), msg=r.get("msg") or ("Hecho" if r.get("ok") else "No pude hacerlo"),
+             label=r.get("label") or text, intent=r.get("intent"), fallback=r.get("fallback"), text=text,
+             **({"plan": r.get("plan")} if r.get("dry") else {}))
+        if self.kind == "comando":
+            self.stop.set()
+
+    # -- control por stdin
+    def stdin_loop(self):
+        try:
+            for line in sys.stdin:
+                c = line.strip()
+                if c == "stop":
+                    self.stop.set()
+                elif c == "cancel":
+                    self.cancel.set(); self.stop.set()
+                elif c == "release":
+                    self.released.set()
+        except Exception:
+            pass
+
+    # -- bucle principal
+    def run(self):
+        try:
+            eng_name = self.make_engines()
+        except Exception as e:
+            emit("error", msg=str(e), code="model" if "modelo" in str(e) else "engine"); return 1
+        if self.src is None and not rec_cmd():
+            emit("error", msg="No hay con qué grabar (pw-record o arecord)", code="recorder"); return 1
+        if self.src is None and running_pid():
+            emit("error", msg="Ya hay un dictado en curso"); return 1
+        PIDFILE.write_text(str(os.getpid()))
+        def on_stop(*_): self.stop.set()
+        def on_cancel(*_): self.cancel.set(); self.stop.set()
+        for sg in (signal.SIGTERM, signal.SIGINT, signal.SIGUSR1):
+            signal.signal(sg, on_stop)
+        signal.signal(signal.SIGUSR2, on_cancel)
+        self.capture_done = threading.Event()
+        self.phrase_id = 0
+        self.vosk_final = {}
+        threading.Thread(target=self.load_engines, daemon=True).start()
+        if not sys.stdin.isatty():
+            threading.Thread(target=self.stdin_loop, daemon=True).start()
+        wk = threading.Thread(target=self.worker, daemon=True); wk.start()
+        threading.Thread(target=self.partial_worker, daemon=True).start()
+        emit("rec", engine=eng_name, model=self.s.get("dictationModel") or "base", kind=self.kind, mode=self.mode,
+             live=self.live and not self.ai, hold=self.hold, file=bool(self.src))
+        try:
+            self.capture()
+        finally:
+            PIDFILE.unlink(missing_ok=True)
+        # termina lo que quede por transcribir
+        if not self.cancel.is_set() and (self.busy or not self.jobs.empty()):
+            emit("transcribing")
+        self.jobs.put("END")
+        while wk.is_alive():
+            if self.cancel.is_set() or ORPHAN["v"]:
+                break
+            wk.join(0.1)
+        if self.eng:
+            self.eng.close()
+        if self.cancel.is_set() or ORPHAN["v"]:
+            emit("cancelled"); return 0
+        if self.errors and not self.typed and not self.pending:
+            emit("error", msg=self.errors[0][:200], code="engine"); return 1
+        if self.kind == "comando" or self.cmd_done and not self.typed and not self.pending:
+            if not self.cmd_done:
+                emit("error", msg="No te oí: prueba otra vez", code="silence" if self.peak < 0.12 else "empty"); return 1
+            emit("done", how="comando"); return 0
+        self.released.set()
+        if self.ai and self.pending:
+            full = "".join(self.pending).strip(); self.pending = []
+            emit("cleaning")
+            full = ai_clean(full) or full
+            self.deliver(full)
+        self.flush()
+        full = self.typed.strip()
+        if not full:
+            if self.peak < 0.12 and not self.src:
+                emit("error", msg="No se oyó nada: revisa el micrófono en Ajustes › Sonido", code="silence"); return 1
+            emit("error", msg="No entendí nada", code="empty"); return 1
+        try:
+            STATE.mkdir(parents=True, exist_ok=True)
+            (STATE / "dictation-last.txt").write_text(full + "\n")
+        except Exception:
+            pass
+        emit("text", text=full)
+        hows = [h for h in self.hows if h]
+        how = "nada" if hows and all(h == "nada" for h in hows) else next((h for h in reversed(hows) if h != "nada"), "nada")
+        if how == "nada":
+            emit("error", msg="No pude escribir ni copiar el texto (falta wtype o wl-clipboard)", code="typer", text=full); return 1
+        emit("done", how=how)
+        return 0
+
+    def capture(self):
+        proc = None
+        if self.src is None:
+            try:
+                proc = subprocess.Popen(rec_cmd(), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            except Exception as e:
+                self.errors.append(f"No se pudo grabar: {e}"); return
+            os.set_blocking(proc.stdout.fileno(), False)
+            data = None
+        else:
+            data = self.src + b"\0\0" * int(RATE * max(1.5, self.pause + 0.8))   # cola de silencio: cierra la última frase
+        pos = 0
+        buf = bytearray()
+        t0 = time.time()
+        ppid = os.getppid()
+        floor = -60.0
+        on_count = 0
+        pre = collections.deque(maxlen=10)        # 300 ms antes de que empiece a hablar
+        phrase = None                             # bytearray de la frase en curso
+        speech_frames = silence_frames = 0
+        last_voice_t = time.time()
+        last_partial = 0.0
+        nframe = 0
+        self.peak = 0.0
+        while not self.stop.is_set():
+            if ORPHAN["v"] or (self.src is None and os.getppid() != ppid):
+                self.cancel.set(); self.stop.set(); break
+            if time.time() - t0 > self.maxsec:
+                break
+            # --- siguiente trozo de 30 ms
+            if data is not None:
+                if pos >= len(data):
+                    break
+                fr = data[pos:pos + FRAME * 2]; pos += FRAME * 2
+                if self.live_pace:
+                    ahead = t0 + nframe * FRAME_S - time.time()
+                    if ahead > 0:
+                        time.sleep(ahead)
+            else:
+                if proc.poll() is not None:
+                    break
+                try:
+                    b = proc.stdout.read(FRAME * 2 * 4)
+                except Exception:
+                    b = None
+                if b:
+                    buf.extend(b)
+                if len(buf) < FRAME * 2:
+                    time.sleep(0.01); continue
+                fr = bytes(buf[:FRAME * 2]); del buf[:FRAME * 2]
+            nframe += 1
+            db = frame_db(fr)
+            v = max(0.0, min(1.0, (db + 55) / 45))     # −55 dBFS → 0 · −10 dBFS → 1
+            self.peak = max(self.peak, v)
+            if nframe % 2 == 0:
+                emit("level", v=round(v, 3), t=round(nframe * FRAME_S, 1))
+            # --- VAD por energía con suelo de ruido adaptable
+            thr_on = max(floor + 11, -50.0)
+            thr_off = thr_on - 4
+            if phrase is None:
+                floor = floor * 0.97 + db * 0.03 if db < floor + 8 else floor
+                floor = min(max(floor if db >= floor else db * 0.4 + floor * 0.6, -80.0), -32.0)
+                pre.append(fr)
+                on_count = on_count + 1 if db > thr_on else 0
+                if on_count >= 3:
+                    phrase = bytearray(b"".join(pre)); pre.clear()
+                    speech_frames, silence_frames = on_count, 0
+                    self.phrase_id += 1
+                    last_partial = time.time()
+                    emit("speech", on=True)
+                    if self.vosk:
+                        self.vosk_text = self.vosk.feed(phrase) if self.ready.is_set() and not self.errors else ""
+                elif self.mode == "continuo" or self.kind == "comando":
+                    limit = self.silence if (self.phrases or self.cmd_done) else max(self.silence, 8.0 if self.kind == "dictado" else 6.0)
+                    if self.src is None and time.time() - last_voice_t > limit and self.jobs.empty() and not self.busy:
+                        break
+                continue
+            phrase.extend(fr)
+            if self.vosk and self.ready.is_set() and not self.errors:
+                pt = self.vosk.feed(fr)
+                if pt and pt != getattr(self, "vosk_text", "") and self.live:
+                    self.vosk_text = pt
+                    emit("partial", text=pt)
+            if db > thr_off:
+                speech_frames += 1; silence_frames = 0
+                last_voice_t = time.time()
+            else:
+                silence_frames += 1
+            plen = len(phrase) / 2 / RATE
+            end = silence_frames * FRAME_S >= self.pause
+            force = plen >= 20.0
+            if end or force:
+                cut = len(phrase) - max(0, silence_frames - 7) * FRAME * 2 if end else len(phrase)
+                self.finalize(phrase[:cut], speech_frames * FRAME_S, silence_frames * FRAME_S)
+                phrase = None; on_count = 0
+                emit("speech", on=False)
+                if self.kind == "comando":
+                    break                            # una orden = una frase
+                continue
+            # lo provisional: cada 0,6 s de voz nueva si el motor está libre
+            if self.live and not self.vosk and not self.ai and time.time() - last_partial > 0.6 and plen > 0.5:
+                with self.cv:
+                    if self.partial_free():
+                        self.partial_job = (self.phrase_id, bytes(phrase))
+                        last_partial = time.time()
+        if phrase is not None and not self.cancel.is_set() and speech_frames >= 8:
+            self.finalize(phrase, speech_frames * FRAME_S, silence_frames * FRAME_S)
+        self.capture_done.set()
+        if proc:
+            try:
+                proc.send_signal(signal.SIGINT); proc.wait(timeout=2)
+            except Exception:
+                proc.kill()
+
+    def finalize(self, pcm, speech_s, trail_s=0.0):
+        if speech_s < 0.24:
+            return
+        pid = self.phrase_id
+        with self.cv:
+            self.partial_job = None
+        if self.vosk and self.eng is self.vosk:
+            self.vosk_final[pid] = self.vosk.final() if self.ready.is_set() and not self.errors else ""
+        elif self.vosk:
+            self.vosk.final()
+        self.jobs.put((pid, bytes(pcm), speech_s, time.time() - trail_s))     # trail_s: silencio tras la última palabra
+
+def wake_split(text, s):
+    """(es orden, resto) con la palabra de activación de hf-voice."""
     try:
-        r = subprocess.run([str(ROOT / "scripts/hf-ai"), "transform", instr], input=text, capture_output=True, text=True, timeout=45)
-        out = r.stdout.strip()
-        return out if r.returncode == 0 and out and len(out) < len(text) * 3 + 40 else ""
+        import importlib.machinery, importlib.util
+        ld = importlib.machinery.SourceFileLoader("hf_voice", str(ROOT / "scripts/hf-voice"))
+        spec = importlib.util.spec_from_loader("hf_voice", ld)
+        mod = importlib.util.module_from_spec(spec); ld.exec_module(mod)
+        return mod.strip_wake(text, s.get("dictationWakeWord"))
     except Exception:
-        return ""
+        return False, text
 
-# ---------------------------------------------------------------- salida
-def copy(text):
-    if not shutil.which("wl-copy"):
-        return False
-    return subprocess.run(["wl-copy", "--", text], stderr=subprocess.DEVNULL).returncode == 0
-
-def output(text, s=None):
+# ---------------------------------------------------------------- transcribir un archivo
+def transcribe_file(wav, s=None):
     s = s or settings()
-    mode = os.environ.get("HF_DICTATE_OUTPUT") or s.get("dictationOutput") or "escribir"
-    if mode == "ninguna":       # quien llama (p. ej. el chat de la IA) se queda el texto del evento "text"
-        return "nada"
-    time.sleep(0.15)            # que se suelten las teclas del atajo
-    t = typer()
-    if mode == "escribir" and t == "wtype":
-        if subprocess.run(["wtype", "-d", "4", "--", text], stderr=subprocess.DEVNULL).returncode == 0:
-            return "escrito"
-    if mode in ("escribir", "pegar") and copy(text):
-        if t == "wtype" and subprocess.run(["wtype", "-M", "ctrl", "-k", "v", "-m", "ctrl"], stderr=subprocess.DEVNULL).returncode == 0:
-            return "pegado"
-        if t == "ydotool" and subprocess.run(["ydotool", "key", "29:1", "47:1", "47:0", "29:0"], capture_output=True).returncode == 0:
-            return "pegado"
-        return "copiado"
-    if copy(text):
-        return "copiado"
-    return "nada"
+    e = engine(s)
+    eng = VoskEngine(s) if e == "vosk" else FasterWhisperEngine(s) if e == "faster-whisper" else WhisperEngine(s)
+    eng.start()
+    try:
+        return clean_out(eng.transcribe(file_pcm(wav), (s.get("dictationPrompt") or "").strip()))
+    finally:
+        eng.close()
 
 # ---------------------------------------------------------------- modelos
-def download(name):
-    if name not in MODELS:
-        emit("error", msg=f"Modelo desconocido: {name}"); return 1
-    DATA.mkdir(parents=True, exist_ok=True)
-    dst = model_path(name)
-    tmp = dst.with_suffix(".part")
-    try:
-        req = urllib.request.Request(os.environ.get("HF_WHISPER_URL") or URL.format(name), headers={"User-Agent": "hyprfrijol"})
-        with urllib.request.urlopen(req, timeout=30) as r, open(tmp, "wb") as f:
-            total = int(r.headers.get("Content-Length") or 0) or MODELS[name][0] * 1_000_000
-            got, last = 0, -1
-            while True:
-                b = r.read(1 << 18)
-                if not b:
-                    break
-                f.write(b); got += len(b)
-                pct = min(100, int(got * 100 / total))
-                if pct != last:
-                    emit("progress", model=name, pct=pct, mb=round(got / 1e6), total=round(total / 1e6)); last = pct
-        if got < 1_000_000:
-            raise RuntimeError("descarga incompleta")
-        tmp.replace(dst)
-        emit("done", model=name, path=str(dst))
-        return 0
-    except Exception as e:
+def _fetch(url, dst, name, tty=False, mb=0):
+    tmp = dst.with_suffix(dst.suffix + ".part")
+    req = urllib.request.Request(url, headers={"User-Agent": "hyprfrijol"})
+    with urllib.request.urlopen(req, timeout=30) as r, open(tmp, "wb") as f:
+        total = int(r.headers.get("Content-Length") or 0) or mb * 1_000_000
+        got, last, t0 = 0, -1, time.time()
+        while True:
+            b = r.read(1 << 18)
+            if not b:
+                break
+            f.write(b); got += len(b)
+            pct = min(100, int(got * 100 / max(1, total)))
+            if pct != last:
+                last = pct
+                if tty:
+                    bar = "█" * (pct // 4) + "░" * (25 - pct // 4)
+                    sp = got / 1e6 / max(0.1, time.time() - t0)
+                    sys.stdout.write(f"\r  {bar} {pct:3d} %  {got / 1e6:6.0f} / {total / 1e6:.0f} MB  {sp:4.1f} MB/s "); sys.stdout.flush()
+                else:
+                    emit("progress", model=name, pct=pct, mb=round(got / 1e6), total=round(total / 1e6))
+    if tty:
+        print()
+    if got < 1_000_000:
         tmp.unlink(missing_ok=True)
-        emit("error", model=name, msg=f"No se pudo descargar: {e}")
+        raise RuntimeError("descarga incompleta")
+    tmp.replace(dst)
+
+def download(name, tty=False):
+    try:
+        DATA.mkdir(parents=True, exist_ok=True)
+        if name in MODELS:
+            dst = model_path(name)
+            _fetch(os.environ.get("HF_WHISPER_URL") or URL.format(MODELS[name][2]), dst, name, tty, MODELS[name][0])
+            emit("done", model=name, path=str(dst)) if not tty else print(f"  Listo: {dst}")
+            return 0
+        if name in VOSK_MODELS:
+            vd = DATA / "vosk"; vd.mkdir(parents=True, exist_ok=True)
+            z = vd / f"{name}.zip"
+            _fetch(VOSK_URL.format(name), z, name, tty, VOSK_MODELS[name][0])
+            with zipfile.ZipFile(z) as zf:          # solo rutas dentro de la carpeta del modelo
+                for m in zf.infolist():
+                    p = pathlib.PurePosixPath(m.filename)
+                    if p.is_absolute() or ".." in p.parts or not p.parts or p.parts[0] != name:
+                        continue
+                    zf.extract(m, vd)
+            z.unlink(missing_ok=True)
+            if not vosk_installed(name):
+                raise RuntimeError("el zip no traía el modelo")
+            emit("done", model=name, path=str(vosk_path(name))) if not tty else print(f"  Listo: {vosk_path(name)}")
+            return 0
+        raise RuntimeError(f"Modelo desconocido: {name}")
+    except Exception as e:
+        if tty:
+            print(f"  No se pudo descargar: {e}")
+        else:
+            emit("error", model=name, msg=f"No se pudo descargar: {e}")
         return 1
+
+def delete(name):
+    if name in MODELS:
+        model_path(name).unlink(missing_ok=True)
+        server_stop(name)
+    elif name in VOSK_MODELS and vosk_path(name).is_dir():
+        shutil.rmtree(vosk_path(name))
+
+def manage():
+    """Menú de la terminal: descargar y borrar modelos (fuentes oficiales)."""
+    while True:
+        st = status()
+        rows = [("whisper", m) for m in st["models"]] + [("vosk", m) for m in st["voskModels"]]
+        print("\n\033[1mModelos de dictado de HyprFrijol\033[0m  ·  " + str(DATA))
+        print("  whisper.cpp: huggingface.co/ggerganov/whisper.cpp   ·   Vosk: alphacephei.com/vosk/models\n")
+        for i, (k, m) in enumerate(rows, 1):
+            mark = "\033[32m✔ descargado\033[0m" if m["installed"] else "  —"
+            cur = " (en uso)" if m["name"] in (st["model"], st["voskModel"]) else ""
+            print(f"  {i:2d}. {k:7s} {m['name']:26s} {m['mb']:5d} MB  {mark}{cur}\n       {m['desc']}")
+        if not st["vosk"]:
+            print("\n  Vosk necesita su módulo de Python (Arch: paquete python-vosk; otras: pipx/venv, ver hf-deps explain vosk).")
+        try:
+            a = input("\nNúmero para descargar (o «b N» para borrar, Intro para salir): ").strip()
+        except EOFError:
+            return 0
+        if not a:
+            return 0
+        rm = a.lower().startswith("b")
+        try:
+            k, m = rows[int(a.split()[-1]) - 1]
+        except Exception:
+            print("  No entiendo esa opción"); continue
+        if rm:
+            delete(m["name"]); print(f"  Borrado {m['name']}")
+        elif m["installed"]:
+            print("  Ya está descargado")
+        else:
+            print(f"\n  Descargando {m['name']}…")
+            download(m["name"], tty=True)
 
 # ---------------------------------------------------------------- órdenes
 def main(argv):
     cmd = argv[0] if argv else ""
+    flags = argv[1:]
+    def opt(name):
+        return flags[flags.index(name) + 1] if name in flags and flags.index(name) + 1 < len(flags) else None
+    if cmd == "_server":
+        server_daemon(argv[1], argv[2], int(argv[3])); return
     if cmd == "record":
-        sys.exit(record_session())
+        s = settings()
+        # Vosk instalado con pip en su venv: hf-dictate sigue en ese python (allí está el módulo)
+        if engine(s) in ("vosk", "hibrido") and not vosk_here() and vosk_venv_python() and not os.environ.get("HF_DICTATE_REEXEC"):
+            os.environ["HF_DICTATE_REEXEC"] = "1"
+            py = vosk_venv_python()
+            os.execv(py, [py, os.path.abspath(__file__)] + argv)
+        src = None
+        if opt("--file"):
+            try:
+                src = file_pcm(opt("--file"))
+            except Exception as e:
+                emit("error", msg=str(e)); sys.exit(1)
+        ses = Session(s, kind="comando" if "--command" in flags else "dictado", mode=opt("--mode"),
+                      hold="--hold" in flags, src=src, live_pace="--simulate-live" in flags)
+        sys.exit(ses.run())
     if cmd in ("stop", "cancel"):
         pid = running_pid()
         if pid:
@@ -387,7 +1203,8 @@ def main(argv):
         if pid:
             os.kill(pid, signal.SIGUSR1); return
         # sin el shell: los eventos van a notificaciones
-        p = subprocess.Popen([sys.argv[0], "record"], stdout=subprocess.PIPE, text=True, start_new_session=True)
+        p = subprocess.Popen([sys.argv[0], "record", "--mode", "toggle"] + (["--command"] if "--command" in flags else []),
+                             stdout=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True, start_new_session=True)
         notify("Escuchando…", "Vuelve a pulsar el atajo para terminar")
         for line in p.stdout:
             try:
@@ -396,24 +1213,41 @@ def main(argv):
                 continue
             if j["ev"] == "error":
                 notify("Dictado", j.get("msg", ""), urgent=True)
+            elif j["ev"] == "cmdresult":
+                notify(j.get("label") or "Orden", j.get("msg", ""), urgent=not j.get("ok"))
             elif j["ev"] == "done" and j.get("how") == "copiado":
                 notify("Texto copiado", "Pégalo con Ctrl+V")
         return
     if cmd == "status":
         print(json.dumps(status(), ensure_ascii=False)); return
+    if cmd == "warm":
+        s = settings()
+        m, lm = s.get("dictationModel") or "base", live_model(s)
+        server_stop(keep=(m, lm))
+        out = {}
+        for mm in dict.fromkeys((m, lm)):
+            port = server_ensure(mm, s.get("dictationLang") or "es", max(30, int(s.get("dictationKeepLoaded") or 600)))
+            out[mm] = {"ok": bool(port), **(load(SRVFILE(mm), {}) or {})}
+        print(json.dumps(out)); return
+    if cmd == "unload":
+        server_stop(); print(json.dumps({"ok": True})); return
     if cmd == "transcribe":
-        print(transcribe(argv[1])); return
+        print(transcribe_file(argv[1])); return
     if cmd == "finish":           # pruebas: como si se hubiera dictado este texto
-        sys.exit(finish(" ".join(argv[1:]), settings()))
+        text = " ".join(argv[1:]).strip()
+        how = output(text) if text else "nada"
+        print(json.dumps({"text": text, "how": how}, ensure_ascii=False)); return
     if cmd == "output":
         print(output(" ".join(argv[1:]))); return
     if cmd == "download":
-        sys.exit(download(argv[1] if len(argv) > 1 else "base"))
+        names = [a for a in flags if not a.startswith("--")] or ["base"]
+        sys.exit(max(download(n, tty="--tty" in flags) for n in names))
+    if cmd == "install-vosk":
+        sys.exit(install_vosk())
+    if cmd == "manage":
+        sys.exit(manage())
     if cmd == "delete":
-        n = argv[1] if len(argv) > 1 else ""
-        if n in MODELS:
-            model_path(n).unlink(missing_ok=True)
-        return
+        delete(argv[1] if len(argv) > 1 else ""); return
     if cmd == "last":
         try:
             print((STATE / "dictation-last.txt").read_text().strip())

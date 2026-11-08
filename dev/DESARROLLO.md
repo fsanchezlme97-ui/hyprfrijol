@@ -62,8 +62,8 @@ Las vistas que solo hacen falta abiertas se crean al abrirlas y se destruyen un 
   (`IconBtn { preload: "<vista>" }`).
 - **Lo que no puede ir dentro**: IPC, atajos globales, vigilantes y avisos tienen que funcionar con la vista cerrada.
   Van en `Modules.qml` (IPC `spotlight`, `capture` y `color`, que crean el módulo con `lazyView.load()` si hace falta),
-  en el módulo siempre cargado (`UpdatesCheck.qml`: comprobación en segundo plano; `ProfilesAuto.qml`: «Cambiar
-  solo» de perfiles; el temporizador de la bienvenida) o en `services/`. El atajo `hf:color` está en `Shell`.
+  en el módulo siempre cargado (`UpdatesCheck.qml`: comprobación en segundo plano; el temporizador de la
+  bienvenida) o en `services/`. El atajo `hf:color` está en `Shell`.
 - **Siempre cargados** (y por qué, en el comentario de `Modules.qml`): Lock, Polkit, Osd, Dictado, Focus, Pip,
   SidePanel (acopla las web apps; su chat `AiChat.qml` sí es diferido y solo se descarga sin conversación), AltTab
   y Snap (atajos que actúan al momento), Desktop, OmarchyHost (los paneles de plugins ya eran diferidos),
@@ -96,7 +96,7 @@ está desactualizado.
 - Paletas en `config/themes/palettes.json`: `group` ("" originales · "pastel" · "popular"), `pair` + `variant` (pareja clara/oscura),
   `ansi` (16 colores del terminal; si falta, hf-apply los deriva). El selector de Ajustes › Apariencia las filtra y busca.
 - `accent` ("#RRGGBB") sustituye al principal en todo el tema (`apply_accent` en hf-apply; contraste automático).
-- `config/apply/17-theme-apps.py`: kitty, Qt/KDE (kdeglobals), btop e iconos Papirus con carpetas del acento. Pruébalo
+- `config/apply/17-theme-apps.py`: kitty, Qt (qt6ct; kdeglobals solo con el tema de Plasma), btop e iconos Papirus con carpetas del acento. Pruébalo
   siempre con un HOME de prueba (`HOME=… scripts/hf-apply --no-reload`, sin `HF_ROOT`/`HF_SESSION` de tu sesión).
 
 ## Nombre anterior (hypr-liquid → hyprfrijol)
@@ -108,7 +108,9 @@ está desactualizado.
   17-theme-apps/16-gtk/90-files sustituyen las líneas y temas que dejó el nombre anterior; el greeter acepta la sesión
   `hypr-liquid.desktop`.
 - `scripts/hf-migrate [--dry-run]` migra una instalación existente (carpetas, repo, `~/.local/bin/hl-*`, lanzadores) e
-  imprime los pasos con sudo. `hf-session`, `hf-apply` y `hyprland.lua` lo llaman con `--dirs-only` si aún existen las
+  imprime los pasos con sudo. Su paso 6 limpia lo que dejaron funciones retiradas (los perfiles de actividad: estado en
+  `~/.local/state/hyprfrijol/`, claves de settings.json con copia `.antes-sin-perfiles`); solo ese paso:
+  `hf-migrate --retired-only`, que `hf-apply` lanza solo si queda algo. `hf-session`, `hf-apply` y `hyprland.lua` lo llaman con `--dirs-only` si aún existen las
   carpetas `…/hypr-liquid` reales. Pruébalo siempre con `HOME=<carpeta de prueba> scripts/hf-migrate --repo <copia>`.
 
 ## Instalador
@@ -135,7 +137,7 @@ está desactualizado.
 
 ## Que no se rompa: modo seguro, diagnóstico y actualizaciones de HyprFrijol
 
-- **Modo seguro** — `config/hypr/safe.lua` es autónomo a propósito: no carga `frijol/*`, `settings.lua`, `profile.lua`,
+- **Modo seguro** — `config/hypr/safe.lua` es autónomo a propósito: no carga `frijol/*`, `settings.lua`,
   `local.lua`, Quickshell ni plugins (solo lee `kbLayouts` de settings.json con un patrón, protegido con `pcall`).
   Lo arranca `hf-session --safe` (entrada `hyprfrijol-seguro.desktop` que crea `install.sh`; el greeter la pone al
   final y no la recuerda). Abre una terminal con `hf-safe menu`; Super+R la vuelve a abrir, Super+M sale al login.
@@ -289,3 +291,23 @@ Como siempre, los scripts hacen el trabajo; el shell, la IA (`hf-ai`/`hf-mcp`) y
   - `wallhavenPurity` está en `DENY_KEYS`: la IA no puede cambiarla.
   - **Probar**: `aiProvider: "mock"` con `~/.cache/hyprfrijol/ai-mock.json` y, en la sesión anidada,
     `qs ipc call sidepanel ask "…"`.
+
+## Dictado en tiempo real y comandos de voz (ronda 9)
+
+- **`scripts/hf-dictate`**: VAD por energía (frases cortadas por pausas de `dictationPauseMs`), texto provisional
+  (`partial`) y escritura frase a frase (`phrase`) sin reescribir lo ya escrito. whisper.cpp va en un `whisper-server`
+  residente por modelo (`$XDG_RUNTIME_DIR/hf-dictate-server-<modelo>.json`) que se cierra tras `dictationKeepLoaded` s
+  sin uso; con un modelo grande y sin GPU, lo provisional sale de «base» en otro servidor (`live_model`). Vosk/híbrido si
+  hay `python-vosk` (o `hf-dictate install-vosk`). Modos `ptt` (con `--hold`: no escribe hasta «release» por stdin),
+  `toggle` y `continuo`.
+- **`scripts/hf-voice`**: intenciones en español sin IA (`parse`/`run`/`test`), YouTube (`yt-dlp --get-id`, o el primer
+  `videoId` de la página de resultados, o la búsqueda), teclas al navegador con wtype. Lo demás → `sidepanel ask`.
+  hf-ai/hf-mcp: acciones `youtube` y `browser` (herramientas `play_music`, `browser_control`).
+- **Píldora**: `modules/dictado/Dictado.qml` usa la geometría de `services/OsdStack.qml` (la misma del OSD); si se ven
+  las dos, el OSD se aparta (`OsdStack.push`).
+- **Probar sin micrófono** (HOME falso y `HF_DICTATE_RUNTIME=<carpeta>` para no compartir el servidor con tu sesión):
+  `hf-dictate record --file clip.wav --simulate-live` (eventos JSON; `HF_DICTATE_OUTPUT=ninguna` no escribe,
+  `HF_VOICE_DRY=1` no ejecuta órdenes, `HF_DICTATE_DUMP=<dir>` guarda el audio de cada frase); en la sesión anidada
+  `qs ipc call dictado file <clip.wav> [dictado|comando]`. `HF_VOICE_OPEN=<orden>` abre las direcciones con otra orden
+  (un navegador falso), nunca tu navegador. Pon `aiProvider: "mock"` en el HOME de prueba: lo no entendido va al asistente.
+

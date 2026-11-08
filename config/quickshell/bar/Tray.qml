@@ -1,4 +1,4 @@
-// Bandeja del sistema (StatusNotifierItem: OBS, Steam, Discord, Nextcloud, KDE Connect…). Quickshell hace de
+// Bandeja del sistema (StatusNotifierItem: OBS, Steam, Discord, Nextcloud, Valent…). Quickshell hace de
 // StatusNotifierWatcher si no hay otro, así que las apps se registran solas.
 // Ajustes › Barra › Bandeja del sistema:
 //   barTray        (sí)  enseñarla

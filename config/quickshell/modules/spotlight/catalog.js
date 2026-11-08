@@ -4,11 +4,11 @@
 
 var WEBAPPS = [
     { key: "web:wa", cat: "Web apps", g: "W", name: "WhatsApp", sub: "en el panel lateral", kw: "mensajes chat whatsapp", hint: "", top: true, act: "side:wa",
-      det: [["Tipo", "Web app en el panel lateral"], ["Perfil Trabajo", "Solo contactos favoritos"], ["Respuesta rápida", "Desde la notificación"]] },
+      det: [["Tipo", "Web app en el panel lateral"], ["Respuesta rápida", "Desde la notificación"]] },
     { key: "web:gmail", cat: "Web apps", g: "G", name: "Gmail", sub: "correo en ventana propia", kw: "correo mail email gmail", hint: "", act: "app:https://mail.google.com",
       det: [["Tipo", "Web app en ventana propia"], ["Dirección", "mail.google.com"]] },
     { key: "web:yt", cat: "Web apps", g: "Y", name: "YouTube", sub: "modo cine y PiP", kw: "videos youtube musica", act: "side:yt",
-      det: [["Tipo", "Web app en el panel lateral"], ["Perfil Trabajo", "Bloqueada durante el foco"]] },
+      det: [["Tipo", "Web app en el panel lateral"], ["Modo foco", "Bloqueada durante el foco"]] },
     { key: "web:pin", cat: "Web apps", g: "P", name: "Pinterest", sub: "tableros como fondos", kw: "imagenes inspiracion fondo pinterest", act: "side:pin",
       det: [["Integración", "Tablero como fuente de fondos"]] }
 ];
@@ -36,8 +36,6 @@ var ACTIONS = [
       det: [["Herramientas", "grim, slurp, wf-recorder"], ["Guarda en", "~/Imágenes/Capturas"]] },
     { key: "act:color", cat: "Acciones", g: "◍", icon: "drop", name: "Selector de color", sub: "elige un color de la pantalla · HEX, RGB, HSL, OKLCH", kw: "color picker cuentagotas pipeta hex rgb hsl oklch selector colores muestra", hint: "Super Mayús C", act: "view:color",
       det: [["Copia", "En tu formato preferido"], ["Historial", "Los últimos 30 colores"]] },
-    { key: "act:profiles", cat: "Acciones", g: "◑", name: "Perfiles de actividad", sub: "Trabajo, Diseño 3D, Juego, Personal", kw: "perfil modo actividad trabajo juego 3d diseno personal", hint: "Ctrl Super P", top: true, act: "view:perfiles",
-      det: [["Cambia", "Fondo, apps, avisos, energía y barra"], ["Atajo", "Super + Alt + P pasa al siguiente"]] },
     { key: "act:widgets", cat: "Acciones", g: "▦", name: "Mostrar escritorio y widgets", sub: "clima, impresora 3D, sistema", kw: "widgets escritorio clima impresora cpu", hint: "Super G", act: "view:widgets",
       det: [["Widgets", "QML · se editan en el sitio"]] },
     { key: "act:downloads", cat: "Acciones", g: "↓", icon: "download", name: "Descargas", sub: "cola de vídeo, música, imágenes y archivos · «descargar <dirección>»", kw: "descargar bajar download yt-dlp youtube mp3 video musica galeria aria2 cola",

@@ -183,6 +183,10 @@ Singleton {
             || /^(org\.quickshell|hf-webapp\.qml6|steam_app_.*|gamescope)$/.test(c.class ?? "")
             || /^([Pp]icture[-\s]?[Ii]n[-\s]?[Pp]icture|[Pp]antalla[-\s]?en[-\s]?[Pp]antalla)/.test(c.title ?? "");
     }
+    // Apps que flotan siempre al centro (floatApps, reglas hf-float-apps de config/apply/35-windows.py): al salir
+    // del modo flotante (o en un espacio en mosaico) no se vuelven a meter en el mosaico
+    readonly property var floatApps: (Settings.get("floatApps", []) ?? []).map(c => String(c).toLowerCase())
+    function isFloatApp(cls): bool { return floatApps.includes(String(cls ?? "").toLowerCase()); }
     // Diálogo o utilidad pequeña: flota y conserva su tamaño
     function small(c): bool { return (c.size?.[0] ?? 0) < 560 && (c.size?.[1] ?? 0) < 420; }
 
@@ -194,7 +198,7 @@ Singleton {
             if (on && !c.floating) {
                 Shell.dispatch('hl.dsp.window.float({ action = "enable", ' + w + ' })');
                 place(c, true, placed);
-            } else if (!on && c.floating && !small(c)) {
+            } else if (!on && c.floating && !small(c) && !isFloatApp(c.class)) {
                 Shell.dispatch('hl.dsp.window.float({ action = "disable", ' + w + ' })');
             }
         }
@@ -275,11 +279,11 @@ Singleton {
             // Recarga de la configuración (cada cambio de ajustes): vuelven las excepciones de diseño
             if (ev.name === "configreloaded") { Qt.callLater(root.reapplyRules); return; }
             if (ev.name !== "openwindow") return;
-            const [addr, wsName] = ev.data.split(",");
+            const [addr, wsName, cls] = ev.data.split(",");
             const ws = parseInt(wsName);
             if (!(ws > 0)) return;
             const want = root.isFloat(ws), base = root.baseFloat(ws, root.mode);
-            if (want !== base)
+            if (want !== base && (want || !root.isFloatApp(cls)))
                 Shell.dispatch('hl.dsp.window.float({ action = "' + (want ? "enable" : "disable") + '", window = "address:0x' + addr + '" })');
             if (want) { root.pending = root.pending.concat([{ a: "0x" + addr, t: Date.now() }]); HyprClients.refresh(); }
         }

@@ -1,5 +1,6 @@
-// Ajustes › Escritorio remoto — conexiones guardadas (remoteHosts: RDP con FreeRDP 3, VNC, SSH, SPICE; Remmina o
-// GNOME Conexiones como alternativa) y compartir este escritorio por VNC (wayvnc). Lógica en scripts/hf-remote.
+// Ajustes › Escritorio remoto — conexiones guardadas (remoteHosts: RDP, VNC, SSH, SPICE) y compartir este escritorio
+// por VNC (wayvnc). Lógica en scripts/hf-remote. RDP «Automático»: Remmina (el más compatible con Windows) › FreeRDP 3
+// (el más rápido, sin interfaz) › GNOME Conexiones (sencillo, sin puerta de enlace).
 // Las contraseñas nunca van a settings.json: el cliente las pide o se guardan en el llavero (secret-tool).
 import QtQuick
 import QtQuick.Layouts
@@ -15,7 +16,8 @@ ColumnLayout {
     spacing: 12
     readonly property string cmd: Paths.script("hf-remote")
     readonly property var hosts: Settings.get("remoteHosts", [])
-    property var cl: ({ freerdp: "", remmina: false, connections: false, vncviewer: false, remoteviewer: false, secret: false, wayvnc: false })
+    property var cl: ({ freerdp: "", remmina: false, remminaRdp: false, rdpAuto: "", connections: false, vncviewer: false, remoteviewer: false, secret: false, wayvnc: false })
+    readonly property var clientName: ({ remmina: "Remmina", freerdp: "FreeRDP", connections: "Conexiones" })
     property var srv: ({ installed: false, running: false, auth: false, ips: [], port: 5900, clients: 0, firewall: "" })
     // Escuchar en la red exige contraseña: sin ella hf-remote se queda en 127.0.0.1 (ver scripts/hf-remote)
     readonly property bool wantsNet: Settings.get("vncListen", "127.0.0.1") !== "127.0.0.1"
@@ -172,7 +174,7 @@ ColumnLayout {
                             spacing: 6
                             Repeater {
                                 model: root.form.proto === "rdp"
-                                    ? [["fullscreen", "Pantalla completa", false], ["dynamicRes", "Ajustar resolución", true], ["sound", "Sonido", true], ["clipboard", "Portapapeles", true], ["drives", "Carpeta personal", false]]
+                                    ? [["fullscreen", "Pantalla completa", false], ["multimon", "Varias pantallas", false], ["dynamicRes", "Ajustar resolución", true], ["sound", "Sonido", true], ["clipboard", "Portapapeles", true], ["drives", "Carpeta personal", false]]
                                     : [["fullscreen", "Pantalla completa", false]]
                                 Chip {
                                     required property var modelData
@@ -218,37 +220,47 @@ ColumnLayout {
                 title: "Clientes"
                 InfoRow {
                     separator: false
-                    label: "FreeRDP 3"; glyph: "RDP"; lit: root.cl.freerdp !== ""
-                    sub: root.cl.freerdp ? root.cl.freerdp + " · Windows y servidores RDP" : "Cliente RDP rápido y moderno"
-                    Button { visible: !root.cl.freerdp; text: "Instalar"; onClicked: root.install({ arch: "freerdp", debian: "freerdp3-sdl", fedora: "freerdp", suse: "freerdp" }, "FreeRDP") }
-                }
-                InfoRow {
-                    label: "Remmina"; glyph: "R"; lit: root.cl.remmina
-                    sub: root.cl.remmina ? "Instalado · RDP, VNC, SSH y SPICE con contraseñas guardadas" : "Todo en uno: RDP, VNC, SSH y SPICE"
-                    Button { visible: root.cl.remmina; kind: "link"; text: "Abrir"; anchors.verticalCenter: parent.verticalCenter; onClicked: Quickshell.execDetached(["remmina"]) }
+                    label: "Remmina"; glyph: "R"; lit: root.cl.remmina && root.cl.remminaRdp
+                    badge: "Recomendado para Windows"; badgeStrong: true
+                    sub: !root.cl.remmina ? "RD Gateway, varias pantallas, carpetas, impresoras, sonido y NLA"
+                        : root.cl.remminaRdp ? "Instalado · RD Gateway, varias pantallas, carpetas y sonido"
+                        : "Instalado sin el plugin RDP: no conecta con Windows"
+                    Button { visible: root.cl.remmina && root.cl.remminaRdp; kind: "link"; text: "Abrir"; anchors.verticalCenter: parent.verticalCenter; onClicked: Quickshell.execDetached(["sh", "-c", "command -v remmina >/dev/null && exec remmina || exec flatpak run org.remmina.Remmina"]) }
                     Button {
-                        visible: !root.cl.remmina; text: "Instalar"
-                        onClicked: root.install({ arch: "remmina freerdp libvncserver", debian: "remmina remmina-plugin-rdp remmina-plugin-vnc", fedora: "remmina remmina-plugins-rdp remmina-plugins-vnc", suse: "remmina", flatpak: "org.remmina.Remmina" }, "Remmina")
+                        visible: !root.cl.remmina || !root.cl.remminaRdp; text: root.cl.remmina ? "Instalar plugin" : "Instalar"
+                        onClicked: root.install({ arch: "remmina freerdp libvncserver", debian: "remmina remmina-plugin-rdp remmina-plugin-vnc", fedora: "remmina remmina-plugins-rdp remmina-plugins-vnc", suse: "remmina remmina-plugin-rdp remmina-plugin-vnc", flatpak: "org.remmina.Remmina" }, "Remmina")
                     }
                 }
                 InfoRow {
                     label: "Conexiones"; glyph: "G"; lit: root.cl.connections
-                    sub: root.cl.connections ? "Instalado · el cliente sencillo de GNOME" : "El cliente sencillo de GNOME (RDP y VNC)"
+                    badge: "La más sencilla; sin puerta de enlace"
+                    sub: root.cl.connections ? "Instalado · RDP y VNC básicos, la interfaz más limpia" : "El cliente de GNOME: RDP y VNC básicos, sin RD Gateway"
                     Button { visible: root.cl.connections; kind: "link"; text: "Abrir"; anchors.verticalCenter: parent.verticalCenter; onClicked: Quickshell.execDetached(["gnome-connections"]) }
-                    Button { visible: !root.cl.connections; text: "Instalar"; onClicked: root.install({ arch: "gnome-connections", flatpak: "org.gnome.Connections" }, "Conexiones") }
+                    Button { visible: !root.cl.connections; text: "Instalar"; onClicked: root.install({ arch: "gnome-connections", debian: "gnome-connections", fedora: "gnome-connections", suse: "gnome-connections", flatpak: "org.gnome.Connections" }, "Conexiones") }
+                }
+                InfoRow {
+                    label: "FreeRDP 3"; glyph: "RDP"; lit: root.cl.freerdp !== ""
+                    badge: "Más rápido; sin interfaz"
+                    sub: root.cl.freerdp ? root.cl.freerdp + " · se abre desde tus conexiones" : "El motor de Remmina, sin ventana propia"
+                    Button { visible: !root.cl.freerdp; text: "Instalar"; onClicked: root.install({ arch: "freerdp", debian: "freerdp3-sdl", fedora: "freerdp", suse: "freerdp" }, "FreeRDP") }
                 }
                 InfoRow {
                     label: "TigerVNC"; glyph: "VNC"; lit: root.cl.vncviewer
-                    sub: root.cl.vncviewer ? "vncviewer · el visor VNC más compatible" : "Visor VNC ligero y compatible"
+                    badge: "Solo VNC (no Windows)"
+                    sub: root.cl.vncviewer ? "vncviewer · el visor VNC más compatible" : "Visor VNC ligero para Linux, Mac y Raspberry Pi"
                     Button { visible: !root.cl.vncviewer; text: "Instalar"; onClicked: root.install({ arch: "tigervnc", debian: "tigervnc-viewer", fedora: "tigervnc", suse: "tigervnc" }, "TigerVNC") }
                 }
                 LabeledRow {
                     label: "Usar para RDP"
                     Dropdown {
-                        model: [["auto", "Automático"], ["freerdp", "FreeRDP"], ["remmina", "Remmina"], ["connections", "Conexiones"]]
+                        model: [["auto", "Automático" + (root.cl.rdpAuto ? " · " + root.clientName[root.cl.rdpAuto] : "")], ["remmina", "Remmina"], ["freerdp", "FreeRDP"], ["connections", "Conexiones"]]
                         current: Settings.get("remoteClient", "auto")
                         onPicked: k => Settings.set("remoteClient", k)
                     }
+                }
+                Txt {
+                    Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5
+                    text: "Automático usa Remmina, luego FreeRDP y luego Conexiones. Si guardaste la contraseña en el llavero se usa FreeRDP, que la recibe sin pedirla."
                 }
             }
         }

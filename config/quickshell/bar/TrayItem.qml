@@ -1,4 +1,4 @@
-// Un icono de la bandeja (StatusNotifierItem: OBS, Steam, Discord, KDE Connect…).
+// Un icono de la bandeja (StatusNotifierItem: OBS, Steam, Discord, Valent…).
 //   clic: abrir (o el menú si la app solo tiene menú) · clic derecho: menú · clic central: acción secundaria
 //   rueda: se la pasa a la app (volumen, etc.) · al pasar el cursor: su descripción
 // El icono se busca así: tema de iconos (Papirus) por su nombre → el IconThemePath de la app (Quickshell no

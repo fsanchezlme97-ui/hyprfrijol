@@ -53,14 +53,14 @@ b(mod .. " + ALT + COMMA", hl.dsp.global("hf:ajustesapp"))
 b(mod .. " + SHIFT + I", hl.dsp.global("hf:herramientas"),   { description = "Centro de aplicaciones" })
 b(mod .. " + ALT + A",   ipc("settings open accesibilidad"), { description = "Accesibilidad" })
 b(mod .. " + ALT + D",   hl.dsp.global("hf:dictado"),        { description = "Dictado" })   -- mantener: hablar · soltar: escribir
+b(mod .. " + ALT + V",   hl.dsp.global("hf:comando"),        { description = "Comando de voz" })   -- «pon Walk de Foo Fighters en YouTube»
 b(mod .. " + V",         hl.dsp.global("hf:portapapeles"),   { description = "Portapapeles" })   -- Spotlight en modo «:»
 b(mod .. " + PERIOD",    hl.dsp.global("hf:emojis"),         { description = "Emojis" })         -- Spotlight en modo «;»
 b(mod .. " + SLASH",     hl.dsp.global("hf:atajos"),         { description = "Atajos de teclado" })
 b(mod .. " + code:20",   hl.dsp.global("hf:atajos"))         -- tecla ' en teclado español
 b(mod .. " + M",         hl.dsp.global("hf:musica"),         { description = "Controles de música" })
 b(mod .. " + G",         hl.dsp.global("hf:widgets"),        { description = "Widgets" })
-b(mod .. " + J",         exec("sh -c 'f=$HOME/.local/state/hyprfrijol/profile-bar; [ \"$(cat $f 2>/dev/null)\" = oculta ] && echo fija > $f || echo oculta > $f'"),
-                                                              { description = "Mostrar / ocultar barra" })
+b(mod .. " + J",         hl.dsp.global("hf:barra"),          { description = "Mostrar / ocultar barra" })
 b(mod .. " + K",         exec("sh -c 'pkill -x wvkbd-mobintl || " .. S .. "/hf-launch wvkbd-mobintl'"), { description = "Teclado en pantalla" })
 b(mod .. " + Z",         hl.dsp.global("hf:enfoque"),        { description = "Sin distracciones" })
 b(mod .. " + ALT + C",   hl.dsp.global("hf:cafeina"),        { description = "Cafeína" })
@@ -68,8 +68,6 @@ b(mod .. " + SHIFT + W", hl.dsp.global("hf:fondos"),         { description = "Fo
 b("CTRL + " .. mod .. " + T", hl.dsp.global("hf:fondos"))
 b(mod .. " + CTRL + W",  exec("hf-wallpaper next"),          { description = "Siguiente fondo" })
 b("CTRL + " .. mod .. " + SHIFT + D", exec(S .. "/hf-apply toggle-mode"), { description = "Claro / oscuro" })
-b("CTRL + " .. mod .. " + P", hl.dsp.global("hf:perfiles"),  { description = "Perfiles" })
-b(mod .. " + ALT + P",   exec("hf-profile next"),            { description = "Siguiente perfil" })
 b("CTRL + " .. mod .. " + R", exec(HF.root .. "/scripts/hf-shell restart"),
                                                               { description = "Reiniciar el shell" })
 

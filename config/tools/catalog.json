@@ -97,7 +97,7 @@
     "libre",
     "obsidian",
     "thunder",
-    "okular",
+    "papers",
     "localsend",
     "keepass",
     "zen"
@@ -2715,12 +2715,27 @@
    }
   },
   {
+   "id": "valent",
+   "name": "Valent",
+   "cat": "sys",
+   "desc": "Teléfono integrado (protocolo de KDE Connect, app GTK): avisos, archivos, portapapeles y batería",
+   "alt": "Enlace móvil",
+   "flags": "",
+   "icon": [
+    "ca.andyholmes.Valent",
+    "valent"
+   ],
+   "pkgs": {
+    "aur": "valent"
+   }
+  },
+  {
    "id": "kdeconnect",
    "name": "KDE Connect",
    "cat": "sys",
-   "desc": "Teléfono integrado: avisos, archivos, portapapeles",
-   "alt": "Enlace móvil",
-   "flags": "",
+   "desc": "Teléfono integrado: avisos, archivos, portapapeles (KDE)",
+   "alt": "Valent",
+   "flags": "k",
    "icon": [
     "org.kde.kdeconnect.app",
     "kdeconnect"

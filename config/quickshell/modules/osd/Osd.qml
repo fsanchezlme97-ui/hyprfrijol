@@ -32,19 +32,17 @@ PanelWindow {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore
     // Posición (Ajustes › Notificaciones y avisos → osdPos): abajo · arriba · centro · izquierda · derecha ·
-    // inf-der · sup-der; osdOffset = distancia en px al borde (o a la barra, si está en ese borde)
-    readonly property string pos: Settings.get("osdPos", "abajo")
-    readonly property real off: Math.max(0, Number(Settings.get("osdOffset", 14)) || 0)
-    readonly property bool atB: pos === "abajo" || pos === "inf-der"
-    readonly property bool atT: pos === "arriba" || pos === "sup-der"
-    readonly property bool atL: pos === "izquierda"
-    readonly property bool atR: pos === "derecha" || pos === "inf-der" || pos === "sup-der"
-    readonly property string barPos: Settings.barPos
-    function edge(side) { return (Settings.barReserves && barPos === side ? Settings.barEdge : 4) + off - 20; }
+    // inf-der · sup-der; osdOffset = distancia en px al borde (o a la barra, si está en ese borde). La geometría
+    // es la de services/OsdStack.qml, compartida con la píldora del dictado: si las dos se ven, el OSD se aparta.
+    readonly property bool atB: OsdStack.atB
+    readonly property bool atT: OsdStack.atT
+    readonly property bool atL: OsdStack.atL
+    readonly property bool atR: OsdStack.atR
+    readonly property real stackRoom: 70          // sitio para apartarse de la píldora del dictado (42 + 8 + aire)
     anchors { bottom: atB; top: atT; left: atL; right: atR }
-    margins { bottom: atB ? edge("abajo") : 0; top: atT ? edge("arriba") : 0; left: atL ? edge("izquierda") : 0; right: atR ? edge("derecha") : 0 }
+    margins { bottom: atB ? OsdStack.edge("abajo") : 0; top: atT ? OsdStack.edge("arriba") : 0; left: atL ? OsdStack.edge("izquierda") : 0; right: atR ? OsdStack.edge("derecha") : 0 }
     implicitWidth: pill.width + 40
-    implicitHeight: 42 + 40
+    implicitHeight: 42 + 40 + (atT || atB ? stackRoom : 2 * stackRoom)
     mask: Region {}
 
     readonly property real level: kind === "volumen" ? Audio.volume : kind === "brillo" ? Brightness.value : 0
@@ -62,7 +60,9 @@ PanelWindow {
         id: pill
         kind: "panel"
         radius: Theme.panelRadius
-        anchors.centerIn: parent
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: OsdStack.pillY(win.height, height, OsdStack.push)
+        Behavior on y { NumberAnimation { duration: Theme.durIn; easing.type: Easing.OutCubic } }
         width: Math.max(260, row.implicitWidth + 32)
         height: 42
         opacity: win.shown ? 1 : 0

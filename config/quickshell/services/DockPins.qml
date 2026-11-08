@@ -8,13 +8,15 @@ import ".."
 
 Singleton {
     id: root
-    // GNOME primero (siguen el tema); KDE y otras como alternativa si no están
-    readonly property var defaultDock: ["org.gnome.Nautilus", "org.kde.dolphin", "thunar", "firefox", "chromium", "google-chrome",
-        "kitty", "org.gnome.TextEditor", "org.gnome.Calculator", "org.kde.kcalc", "org.kde.kate", "code"]
+    // Una app por tarea: la primera instalada de cada grupo. GNOME primero (siguen el tema); las demás (también las
+    // de KDE) solo si no hay de GNOME
+    readonly property var defaultGroups: [["org.gnome.Nautilus", "thunar", "nemo", "org.kde.dolphin"], ["firefox"], ["chromium", "google-chrome"],
+        ["kitty"], ["org.gnome.TextEditor", "org.kde.kate"], ["org.gnome.Calculator", "org.kde.kcalc"], ["code"]]
+    readonly property var defaultDock: { DesktopEntries.applications.values.length; return defaultGroups.map(g => g.find(id => DesktopEntries.byId(id))).filter(Boolean); }
     readonly property var pinned: {
         DesktopEntries.applications.values.length;   // se recalcula cuando se cargan las apps
         // Solo cuenta lo que el usuario fijó (los valores por defecto traen [] y dejarían el dock vacío)
-        const ids = Settings.user?.dockApps ?? defaultDock.filter(id => DesktopEntries.byId(id)).slice(0, 6);
+        const ids = Settings.user?.dockApps ?? defaultDock.slice(0, 6);
         return ids.filter(id => DesktopEntries.byId(id));
     }
     function isPinned(id: string): bool { return pinned.includes(id); }

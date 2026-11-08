@@ -13,7 +13,7 @@ local HOME = os.getenv("HOME")
 HF = {
     root  = here:gsub("/config/hypr$", ""),
     hypr  = here,
-    state = HOME .. "/.local/state/hyprfrijol",   -- colores, perfil y fondo generados
+    state = HOME .. "/.local/state/hyprfrijol",   -- colores, fondo y estado generados
     user  = HOME .. "/.config/hyprfrijol",        -- ajustes del usuario
 }
 HF.scripts = HF.root .. "/scripts"
@@ -50,5 +50,4 @@ require("frijol.binds")
 require("frijol.autostart")
 
 HF.load(HF.state .. "/settings.lua")  -- generado por hf-apply desde ~/.config/hyprfrijol/settings.json
-HF.load(HF.state .. "/profile.lua")   -- escrito por hf-profile
 HF.load(HF.user .. "/local.lua")      -- ajustes personales

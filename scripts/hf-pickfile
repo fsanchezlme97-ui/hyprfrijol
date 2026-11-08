@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""hf-pickfile — elige un archivo con el selector del sistema e imprime su ruta (una por línea con --multiple).
+
+  hf-pickfile [--title T] [--filter "Nombre|*.pdf *.png"]… [--dir CARPETA] [--multiple]
+
+Primero el portal (org.freedesktop.portal.FileChooser: el selector de GTK/GNOME de xdg-desktop-portal-gtk o
+-gnome); si no hay portal, zenity. Sale con 1 si se cancela o no hay selector. En la sesión de prueba
+(dev/try.sh, HF_TRY) o con HF_NO_PORTAL=1 va directo a zenity. Lo usan Firmar y el teléfono de los ajustes rápidos.
+"""
+import os, shutil, subprocess, sys, urllib.parse
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+args = sys.argv[1:]
+title, filters, folder, multiple = "Elegir archivo", [], "", False
+while args:
+    a = args.pop(0)
+    if a in ("-h", "--help"): print(__doc__); sys.exit(0)
+    elif a == "--title" and args: title = args.pop(0)
+    elif a == "--filter" and args:
+        n, _, pats = args.pop(0).partition("|")
+        filters.append((n.strip() or "Archivos", (pats or n).split()))
+    elif a == "--dir" and args: folder = args.pop(0)
+    elif a == "--multiple": multiple = True
+
+
+def portal():
+    """Lista de rutas, [] si se canceló, None si no hay portal."""
+    try:
+        import gi
+        gi.require_version("Gio", "2.0")
+        from gi.repository import Gio, GLib
+        bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        token = f"hfpick{os.getpid()}"
+        handle = f"/org/freedesktop/portal/desktop/request/{bus.get_unique_name()[1:].replace('.', '_')}/{token}"
+        loop, res = GLib.MainLoop(), {}
+
+        def on_resp(_c, _s, _p, _i, _sig, params, *_):
+            code, results = params.unpack()
+            res["code"], res["uris"] = code, results.get("uris", [])
+            loop.quit()
+        bus.signal_subscribe("org.freedesktop.portal.Desktop", "org.freedesktop.portal.Request", "Response", handle,
+                             None, Gio.DBusSignalFlags.NONE, on_resp)
+        # Patrón «*.pdf» → (0, "*.pdf") · tipo MIME «image/*» → (1, "image/*")
+        fl = [(n, [(1 if "/" in p else 0, p) for p in pats]) for n, pats in filters] + [("Todos los archivos", [(0, "*")])]
+        opts = {"handle_token": GLib.Variant("s", token), "multiple": GLib.Variant("b", multiple),
+                "modal": GLib.Variant("b", True), "filters": GLib.Variant("a(sa(us))", fl)}
+        if folder:
+            opts["current_folder"] = GLib.Variant("ay", os.fsencode(folder) + b"\0")
+        bus.call_sync("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop", "org.freedesktop.portal.FileChooser",
+                      "OpenFile", GLib.Variant("(ssa{sv})", ("", title, opts)), None, Gio.DBusCallFlags.NONE, 5000, None)
+        GLib.timeout_add_seconds(900, loop.quit)
+        loop.run()
+        if "code" not in res:
+            return None
+        return [urllib.parse.unquote(urllib.parse.urlparse(u).path) for u in res["uris"] if u.startswith("file://")] if res["code"] == 0 else []
+    except Exception:
+        return None
+
+
+def zenity():
+    if not shutil.which("zenity"):
+        return None
+    cmd = ["zenity", "--file-selection", f"--title={title}"]
+    if multiple: cmd += ["--multiple", "--separator=\n"]
+    if folder: cmd.append(f"--filename={folder.rstrip('/')}/")
+    for n, pats in filters:
+        globs = [p for p in pats if "/" not in p]
+        globs += [p.upper() for p in globs if p.upper() != p]
+        if globs: cmd.append(f"--file-filter={n} | {' '.join(globs)}")
+    if filters: cmd.append("--file-filter=Todos los archivos | *")
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    return [l for l in r.stdout.split("\n") if l] if r.returncode == 0 else []
+
+
+got = None if os.environ.get("HF_TRY") or os.environ.get("HF_NO_PORTAL") else portal()
+if got is None:
+    got = zenity()
+if got is None:
+    print("hf-pickfile: no hay selector de archivos (instala xdg-desktop-portal-gtk o zenity)", file=sys.stderr)
+    sys.exit(1)
+if not got:
+    sys.exit(1)
+print("\n".join(got))

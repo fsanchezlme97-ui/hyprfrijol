@@ -1,6 +1,6 @@
 # HyprFrijol
 
-Rice/shell propio para **Hyprland**, hecho desde cero, con dos estilos sobrios: *Aurora* (vidrio translúcido) y *Material* (Material 3, sólido); tono empresarial y minimalista, y varios agregados: Spotlight, panel flotante con IA + WhatsApp + YouTube + Pinterest, PiP mínimo, selector de fondos, perfiles de actividad, widgets, centro de actualizaciones con punto de restauración, captura/grabación y login propio.
+Rice/shell propio para **Hyprland**, hecho desde cero, con dos estilos sobrios: *Aurora* (vidrio translúcido) y *Material* (Material 3, sólido); tono empresarial y minimalista, y varios agregados: Spotlight, panel flotante con IA + WhatsApp + YouTube + Pinterest, PiP mínimo, selector de fondos, widgets, centro de actualizaciones con punto de restauración, captura/grabación y login propio.
 
 Pensado para correr en **cualquier distro que tenga Hyprland 0.57 o posterior** (Arch y derivadas, Fedora, openSUSE Tumbleweed, Debian testing, Ubuntu, Void, Gentoo, NixOS), también en una instalación mínima o de servidor **sin escritorio**: el instalador pone lo que falta. No depende de GNOME, KDE ni de GDM.
 
@@ -13,7 +13,7 @@ HyprFrijol **no toca** `~/.config/hypr`, `~/.config/quickshell` ni `~/.config/ma
 | Qué | Dónde |
 |---|---|
 | Configuración (Hyprland, Quickshell, plantillas) | este repo |
-| Lo generado: colores, perfil activo, fondo | `~/.local/state/hyprfrijol/` |
+| Lo generado: colores, fondo, estado | `~/.local/state/hyprfrijol/` |
 | Tus ajustes personales (nunca se sobrescriben) | `~/.config/hyprfrijol/local.lua` |
 
 Así puedes tener otro rice instalado y elegir uno u otro al iniciar sesión.
@@ -32,7 +32,6 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 | Ajustes rápidos, notificaciones con respuesta, OSD | `modules/quicksettings`, `notifications`, `osd` |
 | Panel lateral con IA + WhatsApp / YouTube / Pinterest, PiP mínimo | `modules/sidepanel`, `pip` — ver `docs/IA.md` |
 | Vista general, Alt+Tab, Snap, dock y escritorio ordenado, widgets | `modules/overview`, `alttab`, `snap`, `desktop`, `widgets` |
-| Perfiles de actividad con reglas automáticas | `modules/profiles`, `scripts/hf-profile` |
 | Selector de fondos (por monitor, por hora, mono), captura sobre la pantalla congelada (lupa, ventanas, fijar, OCR con cajas, anotación, IA) / grabación, selector de color (HEX · RGB · HSL · OKLCH, historial) | `modules/wallpapers`, `capture`, `colorpicker` |
 | Portapapeles y emojis en Spotlight, agenda (con `.ics`), centro de actualizaciones con punto de restauración | `modules/spotlight`, `agenda`, `updates` |
 | Memorias USB y tarjetas SD (aviso con Abrir/Expulsar, icono en la barra, Ajustes › Almacenamiento), cola de descargas de vídeo, audio, imágenes y archivos (yt-dlp, gallery-dl, aria2c; «descargar <url>» en Spotlight), fondos de Wallhaven, y una IA que enseña qué cambia y pide tu aprobación paso a paso | `scripts/hf-devices`, `hf-download`, `hf-wallhaven` · `modules/devices`, `downloads` |
@@ -88,7 +87,7 @@ cd ~/hyprfrijol
 |---|---|
 | `--dry-run` | solo enseña lo que haría (con `HF_DISTRO=fedora`, `debian`, `void`… simula otra distro) |
 | `--yes` | sin preguntas (acepta lo recomendado) |
-| `--full` | también los opcionales: máquinas virtuales, contenedores, VPN, escáner, Bluetooth, KDE Connect, fondos animados, calculadora, firmware, VNC… |
+| `--full` | también los opcionales: máquinas virtuales, contenedores, VPN, escáner, Bluetooth, Valent (móvil), fondos animados, calculadora, firmware, VNC… |
 | `--no-deps` | sin instalar paquetes (tú te encargas) |
 | `--no-system` | sin tocar servicios ni grupos |
 | `--no-session` | sin la entrada en el gestor de inicio |
@@ -182,7 +181,7 @@ config/
   cava/            onda de audio de la barra
   defaults/        ajustes, colores y plantilla de local.lua por defecto
 install/           packages.tsv (dependencias por distro) y bootstrap.sh (instalación en una línea)
-scripts/           hf-session, hf-apply, hf-wallpaper, hf-profile, hf-lock, hf-capture, hf-updates, hf-ai, hf-mcp, hf-webapp,
+scripts/           hf-session, hf-apply, hf-wallpaper, hf-lock, hf-capture, hf-updates, hf-ai, hf-mcp, hf-webapp,
                    hf-devices, hf-download, hf-wallhaven
 assets/wallpapers/ fondos incluidos
 greeter/           login con greetd
@@ -226,7 +225,6 @@ Son los mismos que en illogical-impulse (misma tecla, misma función), más los 
 | Super + Shift + R (o Super + Alt + R) | Grabar; otra vez para parar |
 | Super + Shift + W · Ctrl + Super + T · Super + Ctrl + W | Fondos · fondos · siguiente fondo |
 | Ctrl + Super + Shift + D | Claro / oscuro |
-| Ctrl + Super + P · Super + Alt + P | Perfiles · siguiente perfil |
 | Super + - / Super + = (o ¡) | Lupa |
 | Super + Shift + B · N · P · M | Pista anterior · siguiente · reproducir/pausar · silenciar |
 | Super + Alt + M | Silenciar micrófono |

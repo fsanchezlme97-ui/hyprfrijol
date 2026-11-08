@@ -1,38 +1,81 @@
 #!/usr/bin/env bash
-# hf-vpn — VPN de NetworkManager (cualquier plugin), WireGuard y VPN en malla (Tailscale, ZeroTier).
-# Lo usan Ajustes › Red, la IA y la terminal. Salida en líneas JSON (una por elemento).
+# hf-vpn — VPN de NetworkManager (cualquier plugin), VPN de empresa (FortiGate y GlobalProtect, con SSO/SAML),
+# WireGuard y VPN en malla (Tailscale, ZeroTier). Lo usan Ajustes › Red, la IA y la terminal.
+# Salida en líneas JSON (una por elemento).
 #
-#   hf-vpn list                         conexiones VPN/WireGuard: {name,uuid,type,service,kind,active,device}
+#   hf-vpn list                         conexiones: {name,uuid,type,service,kind,proto,corp,auth,backend,active,status,error,…}
 #   hf-vpn up|down|delete <uuid|nombre>
 #   hf-vpn edit <uuid>                  editor de NetworkManager (nm-connection-editor) o nmtui
-#   hf-vpn import [archivo] [tipo]      importa .ovpn/.conf/.pcf/… (sin archivo: abre un selector)
-#   hf-vpn plugins                      tipos de VPN: {key,label,desc,plugin,service,pkg,installed,aur}
-#   hf-vpn add <tipo> <nombre> <servidor> [usuario]   crea la conexión básica (luego «edit» para el resto)
+#   hf-vpn import [archivo] [tipo]      .ovpn/.conf/.pcf/… y copias .conf (XML) de FortiClient; sin archivo: selector
+#   hf-vpn plugins                      tipos de VPN: {key,label,desc,plugin,service,pkg,installed,aur,corp,backends,auto}
+#   hf-vpn add <tipo> <nombre> <servidor> [usuario] [--auth password|saml|cert] [--otp] [--backend auto|…]
+#              [--cert archivo] [--key archivo] [--realm r] [--saml browser|webview]
+#   hf-vpn backends <fortinet|gp>       programas con los que se puede conectar y el que se elige solo
+#   hf-vpn cmdline <uuid|nombre>        órdenes que ejecutaría «up» (sin ejecutarlas)
+#   hf-vpn trust <uuid|nombre>          confía en el certificado actual del servidor (el que mostró el aviso)
+#   hf-vpn official · open-official <forticlient|globalprotect>   clientes oficiales instalados
 #   hf-vpn create <tipo>                abre el editor de NetworkManager para un tipo nuevo
 #   hf-vpn install <tipo|editor|tailscale|zerotier>   instala (pide sudo: pensado para una terminal)
 #   hf-vpn pkgs <tipo>                  paquetes que instalaría en esta distro
 #   hf-vpn mesh                         {key:"tailscale"|"zerotier",installed,service,state,detail,…}
 #   hf-vpn tailscale up|down|login|admin · tailscale exit <ip|nombre|none>   (nodo de salida)
 #   hf-vpn zerotier join|leave <red> · zerotier list
+#
+# --dry-run (o HF_VPN_DRY_RUN=1) imprime lo que haría sin tocar NetworkManager. Pruebas: HF_VPN_NMCLI=<nmcli falso>,
+# HF_VPN_FAKE_HAVE="nm-oc,gpclient,agent,…" (programas que se dan por instalados), HF_VPN_FAKE_CERT=ok|untrusted|down,
+# HF_VPN_BROWSER (en vez de xdg-open), HF_VPN_RUN (carpeta de estado), HF_DISTRO=fedora|ubuntu|debian|opensuse-tumbleweed|void.
+#
+# VPN de empresa (fortinet, gp): ver docs/AJUSTES.md. Resumen: con NetworkManager + OpenConnect el SSO se hace como tu
+# usuario (navegador o ventana propia) y NetworkManager levanta el túnel sin pedir sudo; openfortivpn y gpclient
+# «directos» necesitan sudo y se abren en una terminal. hyprfrijol no trae agente de secretos de NetworkManager:
+# si hay uno gráfico (nm-applet, GNOME, Plasma) lo usa; si no, las contraseñas y el código 2FA se piden en una terminal.
 set -uo pipefail
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
+SELF="$(readlink -f "$0")"
+NMCLI="${HF_VPN_NMCLI:-nmcli}"
+DRY="${HF_VPN_DRY_RUN:-0}"
+_a=(); for _x in "$@"; do if [ "$_x" = --dry-run ]; then DRY=1; else _a+=("$_x"); fi; done
+set -- "${_a[@]+"${_a[@]}"}"; unset _a _x
+CONF="$HOME/.config/hyprfrijol/vpn.json"          # datos de hyprfrijol por conexión (auth, programa, certificado de confianza)
+RUN="${HF_VPN_RUN:-${XDG_RUNTIME_DIR:-/tmp/hf-$(id -u)}/hf-vpn}"  # estado de las conexiones en curso
+SAML_TIMEOUT="${HF_VPN_SAML_TIMEOUT:-300}"
+BROWSER_CMD="${HF_VPN_BROWSER:-xdg-open}"           # abre la página del SSO (pruebas: un script que simula el navegador)
 
 # ---------- distro ----------
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
-family() {
+family_legacy() {
   local like=""
   [ -r /etc/os-release ] && like="$(. /etc/os-release; echo "$ID $ID_LIKE" | tr A-Z a-z)"
-  case "$like" in *arch*) echo arch;; *debian*|*ubuntu*) echo debian;; *fedora*|*rhel*) echo fedora;; *suse*) echo suse;; *) echo arch;; esac
+  case "$like" in *arch*) echo arch;; *debian*|*ubuntu*) echo debian;; *fedora*|*rhel*) echo fedora;; *suse*) echo suse;; *void*) echo void;; *) echo arch;; esac
 }
-FAM="$(family)"
+FAM="" UBU=0
+if [ -r "$ROOT/install/distro.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$ROOT/install/distro.sh"
+  case "$(hf_family)" in
+    arch) FAM=arch;; fedora|rhel) FAM=fedora;; suse|suse-leap) FAM=suse;; debian) FAM=debian;;
+    ubuntu) FAM=debian UBU=1;; void) FAM=void;;
+  esac
+fi
+[ -n "$FAM" ] || FAM="$(family_legacy)"
+
 installed_pkg() {   # installed_pkg <paquete…>
   local p
   for p in "$@"; do
     case "$FAM" in
       arch) pacman -Qq "$p" >/dev/null 2>&1 || return 1;;
       debian) dpkg -s "$p" >/dev/null 2>&1 || return 1;;
+      void) xbps-query "$p" >/dev/null 2>&1 || return 1;;
       *) rpm -q "$p" >/dev/null 2>&1 || return 1;;
     esac
   done
+}
+X() {   # X <orden…>: la ejecuta; con --dry-run solo la imprime
+  if [ "$DRY" = 1 ]; then
+    local a=("$@"); [ "${a[0]}" = "$NMCLI" ] && a[0]=nmcli
+    printf '$'; printf ' %q' "${a[@]}"; printf '\n'; return 0
+  fi
+  "$@"
 }
 pm_install() {   # pm_install <paquetes…>  (para la terminal)
   case "$FAM" in
@@ -41,12 +84,16 @@ pm_install() {   # pm_install <paquetes…>  (para la terminal)
       for p in "$@"; do if in_repo "$p"; then repo+=("$p"); else aur+=("$p"); fi; done
       if [ ${#aur[@]} -gt 0 ]; then
         local h; h="$(command -v paru || command -v yay || true)"
-        [ -n "$h" ] || { echo "Necesitas paru o yay para: ${aur[*]} (AUR)" >&2; return 1; }
-        "$h" -S --needed "$@"
-      else sudo pacman -S --needed "${repo[@]}"; fi;;
-    debian) sudo apt install -y "$@";;
-    fedora) sudo dnf install -y "$@";;
-    suse) sudo zypper install -y "$@";;
+        if [ -z "$h" ]; then
+          echo "Sin paru ni yay no se puede instalar de AUR: ${aur[*]}" >&2
+          [ ${#repo[@]} -gt 0 ] || return 1
+          X sudo pacman -S --needed "${repo[@]}"
+        else X "$(basename "$h")" -S --needed "$@"; fi
+      else X sudo pacman -S --needed "${repo[@]}"; fi;;
+    debian) X sudo apt install -y "$@";;
+    fedora) X sudo dnf install -y "$@";;
+    suse) X sudo zypper install -y "$@";;
+    void) X sudo xbps-install -Sy "$@";;
   esac
 }
 
@@ -54,32 +101,68 @@ pm_install() {   # pm_install <paquetes…>  (para la terminal)
 # clave|etiqueta|descripción|plugin (nombre del .name)|servicio NM|protocolo/extra
 TYPES='wireguard|WireGuard|Moderna y rápida · archivo .conf|wireguard|wireguard|
 openvpn|OpenVPN|La más común · archivo .ovpn|openvpn|org.freedesktop.NetworkManager.openvpn|
+fortinet|FortiClient / FortiGate (SSL VPN)|Fortinet · 2FA, SSO o certificado|fortisslvpn|org.freedesktop.NetworkManager.fortisslvpn|fortinet
+gp|GlobalProtect (Palo Alto)|Palo Alto · 2FA, SSO o certificado|openconnect|org.freedesktop.NetworkManager.openconnect|gp
 anyconnect|Cisco AnyConnect|OpenConnect · empresas y universidades|openconnect|org.freedesktop.NetworkManager.openconnect|anyconnect
-gp|GlobalProtect|Palo Alto · OpenConnect|openconnect|org.freedesktop.NetworkManager.openconnect|gp
-fortinet|Fortinet SSL|FortiGate · openfortivpn u OpenConnect|fortisslvpn|org.freedesktop.NetworkManager.fortisslvpn|fortinet
 pulse|Juniper / Pulse|Ivanti Connect Secure · OpenConnect|openconnect|org.freedesktop.NetworkManager.openconnect|pulse
 l2tp|L2TP/IPsec|Routers y VPN antiguas · clave compartida|l2tp|org.freedesktop.NetworkManager.l2tp|
 ikev2|IPsec IKEv2|strongSwan · certificados o EAP|strongswan|org.freedesktop.NetworkManager.strongswan|
 pptp|PPTP|Obsoleta e insegura · solo si no queda otra|pptp|org.freedesktop.NetworkManager.pptp|
 sstp|SSTP|Microsoft · sobre HTTPS|sstp|org.freedesktop.NetworkManager.sstp|
 vpnc|Cisco VPNC|Cisco IPsec clásico · archivo .pcf|vpnc|org.freedesktop.NetworkManager.vpnc|'
+SVC_OC=org.freedesktop.NetworkManager.openconnect
+SVC_FORTI=org.freedesktop.NetworkManager.fortisslvpn
 
 type_field() {   # type_field <clave> <n.º de campo>
   awk -F'|' -v k="$1" -v n="$2" '$1==k{print $n; exit}' <<<"$TYPES"
 }
+is_corp() { [ "$1" = fortinet ] || [ "$1" = gp ]; }
+
+# Paquetes de las VPN de empresa por familia (comprobados el 2026-11-07: archlinux.org + AUR RPC, mdapi f44,
+# primary de Tumbleweed, madison de Debian, Launchpad y repology). En Debian 13 no hay fortisslvpn (Ubuntu sí).
+corp_pkgs() {
+  case "$1:$FAM" in
+    fortinet:arch)   echo "networkmanager-openconnect openconnect openfortivpn networkmanager-fortisslvpn openfortivpn-webview-qt";;
+    fortinet:debian) echo "network-manager-openconnect network-manager-openconnect-gnome openconnect openfortivpn$([ "$UBU" = 1 ] && echo " network-manager-fortisslvpn network-manager-fortisslvpn-gnome")";;
+    fortinet:fedora) echo "NetworkManager-openconnect NetworkManager-openconnect-gnome openconnect openfortivpn NetworkManager-fortisslvpn NetworkManager-fortisslvpn-gnome";;
+    fortinet:suse)   echo "NetworkManager-openconnect NetworkManager-applet-openconnect openconnect openfortivpn NetworkManager-fortisslvpn NetworkManager-applet-fortisslvpn";;
+    fortinet:void)   echo "NetworkManager-openconnect openconnect openfortivpn";;
+    gp:arch)         echo "networkmanager-openconnect openconnect globalprotect-openconnect";;
+    gp:debian)       echo "network-manager-openconnect network-manager-openconnect-gnome openconnect$([ "$UBU" = 1 ] && echo " globalprotect-openconnect")";;
+    gp:fedora)       echo "NetworkManager-openconnect NetworkManager-openconnect-gnome openconnect globalprotect-openconnect";;
+    gp:suse)         echo "NetworkManager-openconnect NetworkManager-applet-openconnect openconnect";;
+    gp:void)         echo "NetworkManager-openconnect openconnect";;
+  esac
+}
+corp_pre() {   # repositorios que hay que activar antes (gpclient: PPA, COPR)
+  case "$1:$FAM" in
+    gp:debian) [ "$UBU" = 1 ] && echo "sudo add-apt-repository -y ppa:yuezk/globalprotect-openconnect && sudo apt update";;
+    gp:fedora) echo "sudo dnf copr enable -y yuezk/globalprotect-openconnect";;
+  esac
+}
+corp_note() {
+  case "$1:$FAM" in
+    gp:debian) [ "$UBU" = 1 ] || echo "gpclient (SSO): descarga el .deb de github.com/yuezk/GlobalProtect-openconnect/releases";;
+    gp:suse) echo "gpclient (SSO): repositorio OBS home:yuezk/globalprotect-openconnect";;
+    gp:void) echo "gpclient (SSO): github.com/yuezk/GlobalProtect-openconnect/releases (.bin.tar.xz)";;
+    fortinet:debian) [ "$UBU" = 1 ] || echo "Debian 13 no trae el plugin fortisslvpn: se usa OpenConnect (contraseña, 2FA y SSO)";;
+    fortinet:void) echo "Void no trae el plugin fortisslvpn: se usa OpenConnect (contraseña, 2FA y SSO)";;
+  esac
+}
 pkgs_for() {   # paquetes por distro
   local k="$1" pl
-  [ "$k" = wireguard ] && { case "$FAM" in debian) echo wireguard-tools;; *) echo wireguard-tools;; esac; return; }
-  [ "$k" = editor ] && { case "$FAM" in arch) echo nm-connection-editor;; debian) echo network-manager-gnome;; suse) echo NetworkManager-connection-editor;; *) echo nm-connection-editor;; esac; return; }
+  is_corp "$k" && { corp_pkgs "$k"; return; }
+  [ "$k" = wireguard ] && { echo wireguard-tools; return; }
+  [ "$k" = editor ] && { case "$FAM" in arch) echo nm-connection-editor;; debian) echo network-manager-gnome;; suse) echo NetworkManager-connection-editor;; void) echo network-manager-applet;; *) echo nm-connection-editor;; esac; return; }
   [ "$k" = tailscale ] && { echo tailscale; return; }
   [ "$k" = zerotier ] && { echo zerotier-one; return; }
   pl="$(type_field "$k" 4)"; [ -n "$pl" ] || return 1
-  [ "$k" = fortinet ] && pl="$(eff_plugin fortinet)"
   case "$FAM" in
     arch) echo "networkmanager-$pl";;
     debian) echo "network-manager-$pl-gnome";;
     fedora) echo "NetworkManager-$pl-gnome";;
-    suse) echo "NetworkManager-$pl";;
+    suse) echo "NetworkManager-$pl NetworkManager-applet-$pl";;
+    void) echo "NetworkManager-$pl";;
   esac
 }
 plugin_ok() {   # ¿está el plugin de NetworkManager?
@@ -87,46 +170,203 @@ plugin_ok() {   # ¿está el plugin de NetworkManager?
   [ "$pl" = wireguard ] && return 0   # WireGuard va dentro de NetworkManager
   grep -lqs "^name=$pl\$" /usr/lib/NetworkManager/VPN/*.name /etc/NetworkManager/VPN/*.name /usr/lib64/NetworkManager/VPN/*.name 2>/dev/null
 }
-# Plugin efectivo de un tipo (Fortinet cae en OpenConnect si falta fortisslvpn)
-# Fortinet: plugin propio si está (o en los repos); si no, OpenConnect (≥ 9) también lo habla
-eff_plugin() {
-  local k="$1" pl; pl="$(type_field "$k" 4)"
-  if [ "$k" = fortinet ] && ! plugin_ok fortisslvpn && { plugin_ok openconnect || ! in_repo networkmanager-fortisslvpn; }; then echo openconnect; else echo "$pl"; fi
-}
 REPO_CACHE=""
-in_repo() {   # ¿el paquete está en los repos oficiales? (Arch; en otras familias se supone que sí)
-  [ "$FAM" = arch ] || return 0
+in_repo() {   # ¿el paquete está en los repos oficiales? (Arch, con pacman; en otras familias se supone que sí)
+  [ "$FAM" = arch ] && command -v pacman >/dev/null || return 0
   [ -n "$REPO_CACHE" ] || REPO_CACHE=" $(pacman -Slq 2>/dev/null | tr '\n' ' ') "
   [[ "$REPO_CACHE" == *" $1 "* ]]
 }
-eff_service() {
-  local pl; pl="$(eff_plugin "$1")"
-  [ "$pl" = wireguard ] && { echo wireguard; return; }
-  echo "org.freedesktop.NetworkManager.$pl"
+
+# ---------- programas disponibles ----------
+agent_gui() {   # agente de secretos gráfico de NetworkManager en marcha (hyprfrijol no trae uno propio)
+  local p
+  for p in nm-applet gnome-shell plasmashell kded6 kded5; do pgrep -u "$(id -u)" -x "$p" >/dev/null 2>&1 && { echo "$p"; return 0; }; done
+  return 1
+}
+forticlient_bin() {
+  command -v forticlient 2>/dev/null && return
+  local f; f="$(find /opt/forticlient -maxdepth 3 -type f -name FortiClient -perm -u+x 2>/dev/null | head -1)"
+  [ -n "$f" ] && echo "$f"
+}
+have_b() {   # have_b <nm-forti|nm-oc|openfortivpn|webview|gpclient|agent|forticlient|globalprotect|openconnect>
+  if [ -n "${HF_VPN_FAKE_HAVE+x}" ]; then [[ ",$HF_VPN_FAKE_HAVE," == *",$1,"* ]]; return; fi
+  case "$1" in
+    nm-forti) plugin_ok fortisslvpn;;
+    nm-oc) plugin_ok openconnect;;
+    openfortivpn|gpclient|openconnect) command -v "$1" >/dev/null 2>&1;;
+    webview) command -v openfortivpn-webview >/dev/null 2>&1;;
+    agent) agent_gui >/dev/null;;
+    forticlient) [ -n "$(forticlient_bin)" ];;
+    globalprotect) command -v globalprotect >/dev/null 2>&1 || [ -x /opt/paloaltonetworks/globalprotect/PanGPUI ];;
+    *) return 1;;
+  esac
+}
+hb() { have_b "$1" && echo true || echo false; }
+
+backends() {   # backends <fortinet|gp> → JSON: lista de programas
+  case "$1" in
+    fortinet)
+      jq -cn --argjson f "$(hb nm-forti)" --argjson o "$(hb nm-oc)" --argjson v "$(hb openfortivpn)" --argjson w "$(hb webview)" '[
+        {key:"nm-forti", label:"NetworkManager · fortisslvpn", installed:$f, auth:["password","cert"], root:false,
+         desc:"Contraseña, código 2FA o certificado · sin sudo · sin SSO"},
+        {key:"nm-oc", label:"NetworkManager · OpenConnect", installed:$o, auth:["password","saml","cert"], root:false,
+         desc:"Contraseña, código 2FA o certificado · sin sudo",
+         descSso:((if $w then "SSO en una ventana propia (openfortivpn-webview)" else "SSO en tu navegador" end) + " · sin sudo")},
+        {key:"openfortivpn", label:"openfortivpn (directo)", installed:$v, auth:["password","saml","cert"], root:true,
+         desc:"Sin NetworkManager · pide sudo al conectar, en una terminal"}]';;
+    gp)
+      jq -cn --argjson o "$(hb nm-oc)" --argjson g "$(hb gpclient)" --argjson a "$(hb agent)" '[
+        {key:"nm-oc", label:"NetworkManager · OpenConnect", installed:$o, auth:["password","saml","cert"], root:false,
+         desc:"Contraseña, código 2FA o certificado · sin sudo",
+         descSso:(if $g then "SSO con gpclient en tu navegador · sin sudo" elif $a then "SSO en la ventana de NetworkManager · sin sudo" else "SSO con gpclient en tu navegador · sin sudo" end)},
+        {key:"gpclient", label:"gpclient (directo)", installed:$g, auth:["password","saml","cert"], root:true,
+         desc:"GlobalProtect-openconnect sin NetworkManager · pide sudo, en una terminal"}]';;
+    *) echo '[]';;
+  esac
+}
+auto_backend() {   # auto_backend <tipo> <auth> → el mejor programa instalado ("" si ninguno)
+  local k="$1" a="$2" b
+  case "$k:$a" in
+    fortinet:saml) for b in nm-oc openfortivpn; do have_b "$b" && { echo "$b"; return; }; done;;
+    fortinet:*)    for b in nm-forti nm-oc openfortivpn; do have_b "$b" && { echo "$b"; return; }; done;;
+    gp:saml) if have_b nm-oc && { have_b gpclient || have_b agent; }; then echo nm-oc; return; fi
+             have_b gpclient && { echo gpclient; return; }
+             have_b nm-oc && { echo nm-oc; return; };;
+    gp:*)    for b in nm-oc gpclient; do have_b "$b" && { echo "$b"; return; }; done;;
+  esac
+  echo ""
+}
+corp_installed() { [ -n "$(auto_backend "$1" password)$(auto_backend "$1" saml)" ]; }
+
+# ---------- datos propios (vpn.json) y estado (XDG_RUNTIME_DIR) ----------
+meta_all() { if [ -s "$CONF" ]; then jq -c '.' "$CONF" 2>/dev/null || echo '{}'; else echo '{}'; fi; }
+meta_get() { meta_all | jq -c --arg k "$1" '.[$k] // {}'; }
+mf() { jq -r --arg k "$2" '.[$k] // "" | tostring' <<<"$1"; }   # mf <json> <campo>
+meta_put() {   # meta_put <id> <json>  (mezcla con lo que hubiera)
+  if [ "$DRY" = 1 ]; then echo "# vpn.json[$1] += $2"; return 0; fi
+  mkdir -p "$(dirname "$CONF")"; local t; t="$(mktemp "$CONF.XXXXXX")"
+  meta_all | jq --arg k "$1" --argjson v "$2" '.[$k] = ((.[$k] // {}) + $v)' > "$t" && mv "$t" "$CONF"
+}
+meta_del() {
+  [ "$DRY" = 1 ] && { echo "# vpn.json: se borra $1"; return 0; }
+  [ -s "$CONF" ] || return 0
+  local t; t="$(mktemp "$CONF.XXXXXX")"; meta_all | jq --arg k "$1" 'del(.[$k])' > "$t" && mv "$t" "$CONF"
+}
+st_file() { echo "$RUN/$1.json"; }
+st_set() {   # st_set <id> <connecting|error> [mensaje] [json extra]
+  if [ "$DRY" = 1 ]; then echo "# estado[$1]: $2${3:+ · $3}"; return 0; fi
+  mkdir -p -m 700 "$RUN"
+  local x="${4:-}"; [ -n "$x" ] || x='{}'
+  jq -cn --arg s "$2" --arg m "${3:-}" --argjson x "$x" --argjson pid "${HF_VPN_WORKER:-0}" \
+    '{status:$s,msg:$m,ts:(now|floor),pid:$pid} + $x' > "$(st_file "$1")"
+}
+st_get() { local f; f="$(st_file "$1")"; if [ -s "$f" ]; then cat "$f"; else echo '{}'; fi; }
+st_clear() { [ "$DRY" = 1 ] || rm -f "$(st_file "$1")"; }
+
+notify() { [ "$DRY" = 1 ] && { echo "# aviso: $*"; return 0; }; command -v notify-send >/dev/null && notify-send -a Red -i network-vpn "$@"; }
+
+# Mensajes claros para los fallos más comunes (de nmcli, openconnect, openfortivpn, gpclient o curl)
+friendly() {
+  local t="${1,,}"
+  case "$t" in
+    *__saml_timeout__*) echo "No terminaste de iniciar sesión en el navegador a tiempo ($([ "$SAML_TIMEOUT" -ge 120 ] && echo "$((SAML_TIMEOUT / 60)) min" || echo "$SAML_TIMEOUT s")). Vuelve a conectar.";;
+    *__port_busy__*|*"address already in use"*) echo "El puerto 8020 está ocupado (¿FortiClient u openfortivpn abiertos?). Ciérralos y vuelve a conectar.";;
+    *__no_cookie__*) echo "El inicio de sesión terminó, pero el servidor no dio acceso. Puede que tu usuario no tenga permiso para la VPN o que el SSO no esté activado en este portal.";;
+    *"certificate"*|*"certificado"*|*"servercert"*|*"x509"*|*"ssl handshake"*|*"self-signed"*|*"self signed"*)
+      echo "El certificado del servidor no es de confianza o no coincide. Si tu empresa usa uno propio, compruébalo con TI y pulsa «Confiar».";;
+    *"could not resolve"*|*"name or service not known"*|*"failed to resolve"*|*"no address associated"*|*"unknown host"*|*"temporary failure in name resolution"*)
+      echo "No se encuentra el servidor. Revisa la dirección del portal o de la puerta de enlace.";;
+    *"connection refused"*|*"no route to host"*|*"network is unreachable"*|*"connection timed out"*|*"failed to connect"*|*"failed to open https"*)
+      echo "El servidor no responde. Revisa la dirección (¿lleva puerto, p. ej. :10443?) y tu conexión a Internet.";;
+    *"404"*|*"prelogin"*|*"unexpected 302"*|*"unknown response from"*|*"not a globalprotect"*)
+      echo "Esa dirección no parece un portal de esta VPN. Comprueba el tipo (FortiGate o GlobalProtect) y la dirección que te dio tu empresa.";;
+    *"login failed"*|*"authentication failed"*|*"invalid credentials"*|*"incorrect"*|*"invalid username"*|*"permission denied"*|*"access denied"*|*"invalid password"*)
+      echo "Usuario, contraseña o código 2FA incorrectos.";;
+    *"secrets were required"*|*"no agents"*|*"no secrets"*|*"no valid secrets"*)
+      echo "Nadie pidió la contraseña: conecta desde Ajustes › Red (abre una terminal) o inicia nm-applet.";;
+    *"not installed"*|*"no valid vpn services"*|*"plugin"*"fail"*)
+      echo "Falta el plugin de NetworkManager para este tipo de VPN. Instálalo desde Ajustes › Red › VPN.";;
+    *"timeout"*|*"timed out"*) echo "Se acabó el tiempo de espera. Vuelve a conectar.";;
+    *) printf '%s' "$1" | tr -s '\n' ' ' | sed 's/^Error: //' | cut -c1-220;;
+  esac
+}
+
+# Certificado del servidor: «ok|untrusted|down pin-sha256:… sha256-hex sha256-base64»
+server_pin() {
+  local hp="$1" h p raw cert v pin hex b64
+  if [ -n "${HF_VPN_FAKE_CERT:-}" ] || [ "$DRY" = 1 ]; then
+    echo "${HF_VPN_FAKE_CERT:-ok} pin-sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= 0000000000000000000000000000000000000000000000000000000000000000 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; return
+  fi
+  command -v openssl >/dev/null || { echo "ok - - -"; return; }
+  h="${hp#*://}"; h="${h%%/*}"; p=443
+  if [[ "$h" == *:* ]]; then p="${h##*:}"; h="${h%:*}"; fi
+  raw="$(timeout 12 openssl s_client -connect "$h:$p" -servername "$h" -verify_hostname "$h" </dev/null 2>/dev/null)"
+  cert="$(openssl x509 2>/dev/null <<<"$raw")"
+  [ -n "$cert" ] || { echo "down - - -"; return; }
+  if grep -q 'Verify return code: 0 (ok)' <<<"$raw"; then v=ok; else v=untrusted; fi
+  pin="pin-sha256:$(openssl x509 -pubkey -noout <<<"$cert" | openssl pkey -pubin -outform der 2>/dev/null | openssl dgst -sha256 -binary | base64)"
+  hex="$(openssl x509 -outform der <<<"$cert" | openssl dgst -sha256 -r | cut -d' ' -f1)"
+  b64="$(openssl x509 -outform der <<<"$cert" | openssl dgst -sha256 -binary | base64)"
+  echo "$v $pin $hex $b64"
 }
 
 # ---------- conexiones ----------
 # nmcli -t escapa «:» como «\:»; lo cambiamos por \x01 para partir bien
-nm_lines() { nmcli -t -f "$1" connection show 2>/dev/null | sed 's/\\:/\x01/g'; }
-resolve() {   # uuid o nombre → uuid
+nm_lines() { "$NMCLI" -t -f "$1" connection show 2>/dev/null | sed 's/\\:/\x01/g'; }
+resolve() {   # uuid, nombre o id propio (hf-…) → id
   local x="$1"
-  nmcli -t -f UUID connection show 2>/dev/null | grep -qx "$x" && { echo "$x"; return; }
-  nmcli -g connection.uuid connection show id "$x" 2>/dev/null | head -1
+  [ -n "$x" ] || return 1
+  [[ "$x" == hf-* ]] && [ "$(meta_get "$x")" != "{}" ] && { echo "$x"; return; }
+  "$NMCLI" -t -f UUID connection show 2>/dev/null | grep -qx "$x" && { echo "$x"; return; }
+  local u; u="$("$NMCLI" -g connection.uuid connection show id "$x" 2>/dev/null | head -1)"
+  [ -n "$u" ] && { echo "$u"; return; }
+  meta_all | jq -r --arg n "$x" 'to_entries[] | select(.value.direct and .value.name == $n) | .key' | head -1
+}
+vpn_data() { "$NMCLI" -g vpn.data connection show "$1" 2>/dev/null | tr ',' '\n' | sed -n "s/^ *$2 *= *//p" | head -1; }
+corp_of() {   # corp_of <servicio> <protocolo> → fortinet|gp|""
+  case "$1:$2" in "$SVC_FORTI":*|*:fortinet) echo fortinet;; *:gp) echo gp;; *) echo "";; esac
+}
+worker_alive() { local p; p="$(jq -r '.pid // 0' <<<"$1")"; [ "$p" != 0 ] && kill -0 "$p" 2>/dev/null; }
+direct_running() {   # direct_running <openfortivpn|gpclient> <servidor>
+  pgrep -af "^(sudo |pkexec )?(/usr/bin/)?$1( |$)" 2>/dev/null | grep -qF "${2%%/*}"
 }
 
 list() {
-  nm_lines NAME,UUID,TYPE,DEVICE,ACTIVE | while IFS=: read -r name uuid type dev act; do
+  nm_lines NAME,UUID,TYPE,DEVICE,ACTIVE,STATE | while IFS=: read -r name uuid type dev act state; do
     case "$type" in vpn|wireguard) ;; *) continue;; esac
     name="${name//$'\x01'/:}"
-    local svc="" kind="$type" proto=""
+    local svc="" kind="$type" proto="" corp m st status err
     if [ "$type" = vpn ]; then
-      svc="$(nmcli -g vpn.service-type connection show "$uuid" 2>/dev/null)"
+      svc="$("$NMCLI" -g vpn.service-type connection show "$uuid" 2>/dev/null)"
       kind="${svc##*.}"
-      [ "$kind" = openconnect ] && proto="$(nmcli -g vpn.data connection show "$uuid" 2>/dev/null | tr ',' '\n' | sed -n 's/^ *protocol *= *//p' | head -1)"
+      [ "$kind" = openconnect ] && proto="$(vpn_data "$uuid" protocol)"
     fi
+    corp="$(corp_of "$svc" "$proto")"
+    m="$(meta_get "$uuid")"; st="$(st_get "$uuid")"
+    case "$state" in
+      activated) status=connected; [ "$(mf "$st" status)" = error ] && st_clear "$uuid"; st='{}';;
+      activating) status=connecting;;
+      *) status="$(mf "$st" status)"
+         [ "$status" = connecting ] && ! worker_alive "$st" && [ $(( $(date +%s) - $(jq -r '.ts // 0' <<<"$st") )) -gt 20 ] && status=""
+         [ -n "$status" ] || status=disconnected;;
+    esac
     jq -cn --arg name "$name" --arg uuid "$uuid" --arg type "$type" --arg service "$svc" --arg kind "$kind" \
       --arg proto "$proto" --arg device "$dev" --argjson active "$([ "$act" = yes ] && echo true || echo false)" \
-      '{name:$name,uuid:$uuid,type:$type,service:$service,kind:$kind,proto:$proto,device:$device,active:$active}'
+      --arg corp "$corp" --argjson m "$m" --argjson st "$st" --arg status "$status" \
+      '{name:$name,uuid:$uuid,type:$type,service:$service,kind:$kind,proto:$proto,device:$device,active:$active,
+        corp:$corp,auth:($m.auth // (if $corp != "" then "password" else "" end)),backend:($m.backend // ""),otp:($m.otp // false),
+        status:$status,msg:($st.msg // ""),errKind:($st.kind // ""),pin:($st.pin // ""),gateway:($st.gateway // ($m.gateway // ""))}'
+  done
+  # perfiles directos (openfortivpn / gpclient, sin NetworkManager)
+  meta_all | jq -c 'to_entries[] | select(.value.direct) | {id:.key} + .value' | while read -r d; do
+    local id b gw st status
+    id="$(mf "$d" id)"; b="$(mf "$d" backend)"; gw="$(mf "$d" gateway)"; st="$(st_get "$id")"
+    if direct_running "$b" "$gw"; then status=connected; st='{}'
+    else status="$(mf "$st" status)"; [ "$status" = connecting ] && ! worker_alive "$st" && status=""; [ -n "$status" ] || status=disconnected; fi
+    jq -cn --argjson d "$d" --argjson st "$st" --arg status "$status" \
+      '{name:$d.name,uuid:$d.id,type:"direct",service:"",kind:$d.backend,proto:"",device:"",active:($status=="connected"),
+        corp:$d.type,auth:$d.auth,backend:$d.backend,otp:($d.otp // false),status:$status,msg:($st.msg // ""),
+        errKind:($st.kind // ""),pin:($st.pin // ""),gateway:$d.gateway}'
   done
 }
 
@@ -135,40 +375,96 @@ plugins() {
   local k label desc pl svc extra
   while IFS='|' read -r k label desc pl svc extra; do
     [ -n "$k" ] || continue
-    local epl ok=false aur=false pk
-    epl="$(eff_plugin "$k")"
-    plugin_ok "$epl" && ok=true
+    local ok=false aur=false pk p
     pk="$(pkgs_for "$k")"
-    in_repo "$pk" || aur=true
-    jq -cn --arg key "$k" --arg label "$label" --arg desc "$desc" --arg plugin "$epl" --arg service "$(eff_service "$k")" \
-      --arg proto "$extra" --arg pkg "$pk" --arg installed "$ok" --argjson aur "$aur" \
-      '{key:$key,label:$label,desc:$desc,plugin:$plugin,service:$service,proto:$proto,pkg:$pkg,installed:($installed=="true"),aur:$aur}'
+    for p in $pk; do in_repo "$p" || aur=true; done
+    if is_corp "$k"; then
+      corp_installed "$k" && ok=true
+      jq -cn --arg key "$k" --arg label "$label" --arg desc "$desc" --arg pkg "$pk" --argjson installed "$ok" --argjson aur "$aur" \
+        --argjson b "$(backends "$k")" --arg ap "$(auto_backend "$k" password)" --arg as "$(auto_backend "$k" saml)" --arg ac "$(auto_backend "$k" cert)" \
+        --argjson webview "$(hb webview)" --argjson agent "$(hb agent)" --arg note "$(corp_note "$k")" \
+        '{key:$key,label:$label,desc:$desc,plugin:"",service:"",proto:$key,pkg:$pkg,installed:$installed,aur:$aur,corp:true,
+          backends:$b,auto:{password:$ap,saml:$as,cert:$ac},webview:$webview,agent:$agent,note:$note}'
+      continue
+    fi
+    plugin_ok "$pl" && ok=true
+    jq -cn --arg key "$k" --arg label "$label" --arg desc "$desc" --arg plugin "$pl" --arg service "$svc" \
+      --arg proto "$extra" --arg pkg "$pk" --argjson installed "$ok" --argjson aur "$aur" \
+      '{key:$key,label:$label,desc:$desc,plugin:$plugin,service:$service,proto:$proto,pkg:$pkg,installed:$installed,aur:$aur,corp:false}'
   done <<<"$TYPES"
   jq -cn --argjson e "$(command -v nm-connection-editor >/dev/null && echo true || echo false)" --arg pkg "$(pkgs_for editor)" \
     '{key:"editor",label:"Editor de conexiones",installed:$e,pkg:$pkg}'
 }
 
+official() {   # clientes oficiales instalados (no se duplica su configuración: solo se abren)
+  jq -cn --argjson f "$(hb forticlient)" --argjson g "$(hb globalprotect)" '
+    {key:"forticlient",type:"fortinet",label:"FortiClient VPN",installed:$f,desc:"Cliente oficial de Fortinet · sus VPN se configuran en su ventana"},
+    {key:"globalprotect",type:"gp",label:"GlobalProtect",installed:$g,desc:"Cliente oficial de Palo Alto · se configura en su ventana"}'
+}
+open_official() {
+  case "${1:-}" in
+    forticlient) local b; b="$(forticlient_bin)"; [ -n "$b" ] || { echo "FortiClient no está instalado" >&2; return 1; }
+                 X setsid -f "$b" >/dev/null 2>&1;;
+    globalprotect)
+      if command -v globalprotect >/dev/null; then X setsid -f globalprotect launch-ui >/dev/null 2>&1
+      elif [ -x /opt/paloaltonetworks/globalprotect/PanGPUI ]; then X setsid -f /opt/paloaltonetworks/globalprotect/PanGPUI >/dev/null 2>&1
+      else echo "GlobalProtect no está instalado" >&2; return 1; fi;;
+    *) echo "open-official forticlient|globalprotect" >&2; return 1;;
+  esac
+}
+
 guess_type() {   # tipo de importación de nmcli según el archivo
   local f="$1"
+  grep -qis '<forticlient_configuration' "$f" && { echo forticlient; return; }
   case "${f,,}" in
     *.ovpn) echo openvpn;;
     *.pcf) echo vpnc;;
     *.conf) if grep -qi '^\[Interface\]' "$f" 2>/dev/null; then echo wireguard; elif grep -qiE '^(remote|client|dev tun)' "$f"; then echo openvpn; else echo wireguard; fi;;
+    *.sconf) echo forticlient-enc;;
     *.sstp) echo sstp;;
     *.l2tp) echo l2tp;;
     *) if grep -qi '^\[Interface\]' "$f" 2>/dev/null; then echo wireguard; else echo openvpn; fi;;
   esac
 }
-pick_file() {
+pick_file() {   # pick_file [título] [filtro]
+  local title="${1:-Importar VPN}" filt="${2:-*.ovpn *.conf *.pcf *.nmconnection *.sstp *.sconf}"
   if command -v zenity >/dev/null; then
-    zenity --file-selection --title="Importar VPN" --file-filter="VPN | *.ovpn *.conf *.pcf *.nmconnection *.sstp" --file-filter="Todos | *" 2>/dev/null
-  elif command -v kdialog >/dev/null; then
-    kdialog --title "Importar VPN" --getopenfilename "$HOME" "*.ovpn *.conf *.pcf *.nmconnection|VPN" 2>/dev/null
+    zenity --file-selection --title="$title" --file-filter="VPN | $filt" --file-filter="Todos | *" 2>/dev/null
   else
-    echo "Falta zenity o kdialog para elegir el archivo" >&2; return 1
+    echo "Falta zenity para elegir el archivo" >&2; return 1
   fi
 }
-notify() { command -v notify-send >/dev/null && notify-send -a Red -i network-vpn "$@"; }
+
+# Copia de seguridad de FortiClient (Windows/macOS: Ajustes › Copia de seguridad, sin contraseña → XML .conf).
+# Se crean las conexiones SSL VPN (servidor, usuario si no va cifrado, SSO, certificado); las IPsec no.
+import_forticlient() {
+  local f="$1" n=0 name server user sso certp auth
+  while IFS=$'\t' read -r name server user sso certp; do
+    [ -n "$server" ] || continue
+    auth=password; [ "$sso" = 1 ] && auth=saml; [ "$certp" = 1 ] && [ "$sso" != 1 ] && auth=cert
+    [[ "$user" == Enc* ]] && user=""
+    if [ "$auth" = cert ]; then auth=password; fi   # el certificado hay que elegirlo a mano después
+    add fortinet "${name:-FortiGate}" "$server" "$user" --auth "$auth" && n=$((n + 1))
+  done < <(python3 -I - "$f" <<'PY'
+import sys, xml.etree.ElementTree as ET
+try:
+    root = ET.parse(sys.argv[1]).getroot()
+except Exception as e:
+    sys.stderr.write("No se pudo leer el XML: %s\n" % e); sys.exit(1)
+def low(e):
+    for x in e.iter():
+        if isinstance(x.tag, str): x.tag = x.tag.lower()
+low(root)
+def t(c, k):
+    v = c.find(k); return (v.text or "").strip() if v is not None and v.text else ""
+for c in root.findall("./vpn/sslvpn/connections/connection"):
+    print("\t".join([t(c, "name"), t(c, "server"), t(c, "username"), t(c, "sso_enabled"), t(c, "prompt_certificate")]))
+PY
+)
+  [ "$n" -gt 0 ] || { echo "No hay conexiones SSL VPN en la copia de FortiClient (las IPsec no se importan)" >&2; return 1; }
+  echo "Importadas $n conexiones de FortiClient"
+  notify "VPN importadas" "$n conexiones de FortiClient"
+}
 
 import() {
   local f="${1:-}" t="${2:-}" out rc
@@ -178,26 +474,85 @@ import() {
     echo "Los .nmconnection se copian a /etc/NetworkManager/system-connections (necesita sudo)." >&2; exit 2
   fi
   [ -n "$t" ] || t="$(guess_type "$f")"
+  case "$t" in
+    forticlient) import_forticlient "$f"; return;;
+    forticlient-enc) echo "Esa copia de FortiClient está cifrada (.sconf). Expórtala sin contraseña (.conf) o crea la VPN a mano: tipo FortiGate, servidor y usuario." >&2; return 1;;
+  esac
   # nmcli usa el nombre del archivo como nombre de la interfaz WireGuard (≤ 15 caracteres)
   if [ "$t" = wireguard ]; then
     local base; base="$(basename "${f%.*}" | tr -cd 'A-Za-z0-9_-' | cut -c1-15)"; [ -n "$base" ] || base=wg0
     if [ "$(basename "${f%.*}")" != "$base" ]; then local tmp; tmp="$(mktemp -d)"; cp "$f" "$tmp/$base.conf"; f="$tmp/$base.conf"; fi
   fi
-  out="$(nmcli connection import type "$t" file "$f" 2>&1)"; rc=$?
+  out="$(X "$NMCLI" connection import type "$t" file "$f" 2>&1)"; rc=$?
   echo "$out"
   if [ $rc -eq 0 ]; then notify "VPN importada" "$out"
   else notify -u critical "No se pudo importar la VPN" "$out"; fi
   return $rc
 }
 
+clean_gw() { local g="${1#*://}"; g="${g%/}"; echo "$g"; }
+
 add() {
-  local k="${1:?tipo}" name="${2:?nombre}" gw="${3:?servidor}" user="${4:-}" svc proto data
-  svc="$(eff_service "$k")"; proto="$(type_field "$k" 6)"
+  local k="${1:?tipo}" name="${2:?nombre}" gw user="" svc proto data
+  gw="$(clean_gw "${3:?servidor}")"; shift 3
+  if [ $# -gt 0 ] && [[ "$1" != --* ]]; then user="$1"; shift; fi
+  local auth=password backend=auto otp=false realm="" cert="" key="" saml=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --auth) auth="${2:-}"; shift;; --backend) backend="${2:-auto}"; shift;; --otp) otp=true;;
+      --realm) realm="${2:-}"; shift;; --cert) cert="${2:-}"; shift;; --key) key="${2:-}"; shift;;
+      --saml) saml="${2:-}"; shift;; --user) user="${2:-}"; shift;;
+      *) echo "Opción desconocida: $1" >&2; return 1;;
+    esac; shift
+  done
   [ "$k" = wireguard ] && { echo "WireGuard: importa su .conf (hf-vpn import) o usa hf-vpn create wireguard" >&2; return 1; }
-  case "$(eff_plugin "$k")" in
+
+  if is_corp "$k"; then
+    case "$auth" in password|saml|cert) ;; *) echo "Autenticación desconocida: $auth (password|saml|cert)" >&2; return 1;; esac
+    [ "$auth" = cert ] && [ -z "$cert" ] && { echo "Falta el certificado (--cert archivo .pem o .p12)" >&2; return 1; }
+    [ "$backend" = auto ] && backend="$(auto_backend "$k" "$auth")"
+    if [ -z "$backend" ]; then
+      echo "No hay ningún programa instalado para esta VPN$([ "$auth" = saml ] && echo " con SSO"). Instálalo con: hf-vpn install $k" >&2; return 3
+    fi
+    jq -e --arg b "$backend" --arg a "$auth" 'map(select(.key == $b and (.auth | index($a)))) | length > 0' <<<"$(backends "$k")" >/dev/null \
+      || { echo "«$backend» no sirve para $k con $auth" >&2; return 1; }
+    local m; m="$(jq -cn --arg type "$k" --arg auth "$auth" --arg backend "$backend" --argjson otp "$otp" --arg realm "$realm" \
+      --arg cert "$cert" --arg key "$key" --arg saml "$saml" --arg gateway "$gw" --arg user "$user" --arg name "$name" \
+      '{type:$type,auth:$auth,backend:$backend,otp:$otp,realm:$realm,cert:$cert,key:$key,saml:$saml,gateway:$gateway,user:$user,name:$name}
+       | with_entries(select(.value != ""))')"
+    case "$backend" in
+      openfortivpn|gpclient)
+        local id; id="hf-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
+        meta_put "$id" "$(jq -c '. + {direct:true}' <<<"$m")"
+        jq -cn --arg id "$id" --arg name "$name" --arg b "$backend" '{id:$id,name:$name,backend:$b,direct:true}'
+        return 0;;
+      nm-forti)
+        svc="$SVC_FORTI"
+        data="gateway=$gw${user:+, user=$user}${realm:+, realm=$realm}"
+        [ "$auth" = cert ] && data+=", cert=$cert${key:+, key=$key}"
+        [ "$auth" = password ] && data+=", password-flags=1"
+        [ "$otp" = true ] && data+=", otp-flags=2";;
+      nm-oc)
+        svc="$SVC_OC"; proto="$k"
+        data="gateway=$gw, protocol=$proto, authtype=$([ "$auth" = cert ] && echo cert || echo password)"
+        [ "$auth" = cert ] && data+=", usercert=$cert${key:+, userkey=$key}"
+        data+=", cookie-flags=2, gateway-flags=2, gwcert-flags=2, enable_csd_trojan=no, prevent_invalid_cert=no, stoken_source=disabled";;
+    esac
+    local out rc uuid
+    out="$(X "$NMCLI" connection add type vpn con-name "$name" vpn-type "$svc" vpn.data "$data" autoconnect no ${user:+vpn.user-name "$user"} 2>&1)"; rc=$?
+    echo "$out"
+    [ $rc -eq 0 ] || return $rc
+    uuid="$(grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' <<<"$out" | head -1)"
+    [ -n "$uuid" ] || uuid="$("$NMCLI" -g connection.uuid connection show id "$name" 2>/dev/null | tail -1)"
+    [ "$DRY" = 1 ] && [ -z "$uuid" ] && uuid="<uuid>"
+    [ -n "$uuid" ] && meta_put "$uuid" "$m"
+    return 0
+  fi
+
+  svc="$(type_field "$k" 5)"; proto="$(type_field "$k" 6)"
+  case "$(type_field "$k" 4)" in
     openvpn)     data="remote=$gw, connection-type=password${user:+, username=$user}";;
-    openconnect) data="gateway=$gw, protocol=${proto:-anyconnect}, cookie-flags=2, gateway-flags=2";;
-    fortisslvpn) data="gateway=$gw${user:+, user=$user}";;
+    openconnect) data="gateway=$gw, protocol=${proto:-anyconnect}, cookie-flags=2, gateway-flags=2, gwcert-flags=2";;
     l2tp)        data="gateway=$gw, ipsec-enabled=yes${user:+, user=$user}";;
     strongswan)  data="address=$gw, method=eap, virtual=yes, encap=no, ipcomp=no${user:+, user=$user}";;
     pptp)        data="gateway=$gw, require-mppe=yes${user:+, user=$user}";;
@@ -205,25 +560,323 @@ add() {
     vpnc)        data="IPSec gateway=$gw${user:+, Xauth username=$user}";;
     *) echo "Tipo desconocido: $k" >&2; return 1;;
   esac
-  nmcli connection add type vpn con-name "$name" vpn-type "$svc" vpn.data "$data" autoconnect no ${user:+vpn.user-name "$user"}
+  X "$NMCLI" connection add type vpn con-name "$name" vpn-type "$svc" vpn.data "$data" autoconnect no ${user:+vpn.user-name "$user"}
+}
+
+# ---------- conectar ----------
+term() {   # abre una terminal con un comando
+  local t="${TERMINAL:-}" c
+  for c in "$t" kitty ghostty foot alacritty wezterm konsole; do [ -n "$c" ] && command -v "$c" >/dev/null && { t=$c; break; }; done
+  [ "$DRY" = 1 ] && { printf '$ <terminal>'; printf ' %q' "$@"; printf '\n'; return 0; }
+  case "$t" in wezterm) setsid -f wezterm start -- "$@";; *) setsid -f "$t" -e "$@";; esac >/dev/null 2>&1
+}
+hold() {   # en la terminal: ejecuta y, si falla, espera una tecla para que se lea el error
+  "$@"; local rc=$?
+  [ $rc -eq 0 ] || { echo; read -n1 -rsp "No se pudo conectar. Pulsa una tecla para cerrar…" || true; }
+  return $rc
+}
+bg_worker() {   # bg_worker <suborden> <id>: corre aparte (el panel no se queda esperando)
+  if [ "$DRY" = 1 ]; then "_$1" "$2"; return; fi
+  setsid -f "$SELF" "_$1" "$2" >/dev/null 2>&1
+}
+cert_check() {   # cert_check <id> <servidor> <json meta>: 0 si se puede seguir
+  local id="$1" gw="$2" m="$3" cst pin hex b64
+  read -r cst pin hex b64 <<<"$(server_pin "$gw")"
+  case "$cst" in
+    ok) return 0;;
+    down) local e; e="No se puede contactar con «$gw». $(friendly 'failed to connect')"
+          st_set "$id" error "$e" "$(jq -cn --arg g "$gw" '{kind:"down",gateway:$g}')"; echo "$e" >&2; return 1;;
+    *) [ "$pin" = "$(mf "$m" trust)" ] && return 0
+       st_set "$id" error "El certificado de «$gw» no lo firma una autoridad conocida. Si TI te confirma la huella, pulsa «Confiar»." \
+         "$(jq -cn --arg p "$pin" --arg h "$hex" --arg g "$gw" '{kind:"cert",pin:$p,hex:$h,gateway:$g}')"
+       echo "Certificado no confiable en $gw · huella $pin (hf-vpn trust para aceptarlo)" >&2; return 4;;
+  esac
+}
+up() {
+  local id; id="$(resolve "${1:?uuid}")"; [ -n "$id" ] || { echo "No existe la VPN «$1»" >&2; return 1; }
+  local m type auth backend gw name
+  m="$(meta_get "$id")"; type="$(mf "$m" type)"; auth="$(mf "$m" auth)"; backend="$(mf "$m" backend)"
+  if [ -z "$type" ] && [[ "$id" != hf-* ]]; then   # VPN creada fuera de hyprfrijol: ¿es de empresa?
+    local svc; svc="$("$NMCLI" -g vpn.service-type connection show "$id" 2>/dev/null)"
+    type="$(corp_of "$svc" "$([ "${svc##*.}" = openconnect ] && vpn_data "$id" protocol)")"
+    [ -n "$type" ] && { auth=password; [ "$svc" = "$SVC_OC" ] && backend=nm-oc || backend=nm-forti; }
+  fi
+  gw="$(mf "$m" gateway)"; [ -n "$gw" ] || [[ "$id" == hf-* ]] || gw="$(vpn_data "$id" gateway)"
+  name="$(mf "$m" name)"; [ -n "$name" ] || name="$gw"
+  st_clear "$id"
+
+  # VPN normales: como siempre (si faltan secretos y no hay agente gráfico, en una terminal)
+  if [ -z "$type" ]; then
+    local out rc; out="$(X "$NMCLI" connection up uuid "$id" 2>&1)"; rc=$?; echo "$out"
+    if [ $rc -ne 0 ]; then
+      if [[ "${out,,}" == *secrets* || "${out,,}" == *"no agents"* ]] && ! have_b agent; then
+        term "$SELF" _hold "$NMCLI" --ask connection up uuid "$id"; echo "Escribe la contraseña en la terminal"; return 0
+      fi
+      st_set "$id" error "$(friendly "$out")"; notify -u critical "VPN" "$(friendly "$out")"
+    fi
+    return $rc
+  fi
+
+  # Directos (sin NetworkManager): necesitan sudo → terminal
+  if [ "$backend" = openfortivpn ] || [ "$backend" = gpclient ]; then
+    cert_check "$id" "$gw" "$m" || return $?
+    st_set "$id" connecting "Sigue en la terminal (pide la contraseña de administrador)"
+    term "$SELF" _hold "$SELF" _direct "$id"
+    echo "Sigue en la terminal: $backend necesita la contraseña de administrador"; return 0
+  fi
+
+  cert_check "$id" "$gw" "$m" || return $?
+  if [ "$backend" = nm-oc ] && [ "$auth" = saml ]; then
+    if [ "$type" = gp ] && ! have_b gpclient; then
+      if have_b agent; then st_set "$id" connecting "Inicia sesión en la ventana de NetworkManager"; bg_worker nmup "$id"; echo "Inicia sesión en la ventana de NetworkManager"; return 0; fi
+      local e="Para el SSO de GlobalProtect hace falta gpclient (paquete globalprotect-openconnect) o un agente como nm-applet. Instálalo en Ajustes › Red › VPN."
+      st_set "$id" error "$e"; echo "$e" >&2; return 3
+    fi
+    st_set "$id" connecting "Inicia sesión en el navegador…"
+    bg_worker saml "$id"
+    echo "Inicia sesión en el navegador: la VPN se conecta sola al terminar"; return 0
+  fi
+  if have_b agent; then   # el agente gráfico pide contraseña, código 2FA y certificado
+    st_set "$id" connecting "Conectando… (los datos se piden en la ventana de NetworkManager)"
+    bg_worker nmup "$id"; echo "Conectando…"; return 0
+  fi
+  st_set "$id" connecting "Escribe tus datos en la terminal"
+  if [ "$backend" = nm-oc ]; then term "$SELF" _hold "$SELF" _auth "$id"
+  else term "$SELF" _hold "$SELF" _ask "$id"; fi
+  echo "Escribe usuario, contraseña y código 2FA en la terminal"; return 0
+}
+
+passwd_file() {   # passwd_file <gateway> <cookie> <gwcert> [resolve] → ruta (0600, se borra al usarla)
+  [ "$DRY" = 1 ] && { echo "/dev/null"; printf '# passwd-file: vpn.secrets.gateway:%s · vpn.secrets.cookie:<%d caracteres> · vpn.secrets.gwcert:%s%s\n' "$1" "${#2}" "$3" "${4:+ · vpn.secrets.resolve:$4}" >&2; return; }
+  mkdir -p -m 700 "$RUN"; local f; f="$(mktemp -p "$RUN" secrets.XXXXXX)"; chmod 600 "$f"
+  { printf 'vpn.secrets.gateway:%s\nvpn.secrets.cookie:%s\nvpn.secrets.gwcert:%s\n' "$1" "$2" "$3"; [ -n "${4:-}" ] && printf 'vpn.secrets.resolve:%s\n' "$4"; } > "$f"
+  echo "$f"
+}
+_nmup() {   # _nmup <uuid> [passwd-file]: nmcli connection up y deja el estado (error con mensaje claro)
+  local id="$1" pf="${2:-}" out rc
+  export HF_VPN_WORKER=$$
+  [ -n "$pf" ] && st_set "$id" connecting "Levantando el túnel…"
+  out="$(X "$NMCLI" connection up uuid "$id" ${pf:+passwd-file "$pf"} 2>&1)"; rc=$?
+  [ -n "$pf" ] && [ "$pf" != /dev/null ] && rm -f "$pf"
+  [ "$DRY" = 1 ] && { echo "$out"; return 0; }
+  if [ $rc -eq 0 ]; then st_clear "$id"; notify "VPN conectada" "$("$NMCLI" -g connection.id connection show "$id" 2>/dev/null)"
+  else
+    st_set "$id" error "$(friendly "$out")"; notify -u critical "No se pudo conectar la VPN" "$(friendly "$out")"
+  fi
+  return $rc
+}
+saml_listener() {   # espera en 127.0.0.1:8020 la vuelta del SSO de FortiGate (…/?id=<sesión>) e imprime el id
+  python3 -I - "$SAML_TIMEOUT" <<'PY'
+import sys, time, http.server, urllib.parse
+limit = time.time() + int(sys.argv[1])
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        sid = (q.get("id") or [""])[0]
+        ok = sid.replace("-", "").replace("_", "").isalnum()
+        self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.end_headers()
+        msg = "<h2>Listo</h2><p>Ya puedes cerrar esta pestaña: la VPN se conecta sola.</p>" if ok else "<h2>Falta el identificador de sesión</h2>"
+        self.wfile.write(("<!doctype html><meta charset=utf-8><title>VPN</title><body style='font:16px sans-serif;padding:3em'>" + msg).encode())
+        if ok:
+            print(sid, flush=True); self.server.done = True
+    def log_message(self, *a): pass
+try:
+    srv = http.server.HTTPServer(("127.0.0.1", 8020), H)
+except OSError:
+    print("__port_busy__", flush=True); sys.exit(3)
+srv.timeout = 1; srv.done = False
+while not srv.done and time.time() < limit:
+    srv.handle_request()
+sys.exit(0 if srv.done else 2)
+PY
+}
+_saml() {   # _saml <uuid>: SSO como tu usuario → cookie → NetworkManager levanta el túnel (sin sudo)
+  local id="$1" m type gw user realm method cookie="" host pin cst hex b64 trust e
+  export HF_VPN_WORKER=$$
+  m="$(meta_get "$id")"; type="$(mf "$m" type)"; gw="$(mf "$m" gateway)"; user="$(mf "$m" user)"; realm="$(mf "$m" realm)"
+  [ -n "$gw" ] || gw="$(vpn_data "$id" gateway)"
+  trust="$(mf "$m" trust)"
+  read -r cst pin hex b64 <<<"$(server_pin "$gw")"
+  fail() { st_set "$id" error "$(friendly "$1")"; notify -u critical "No se pudo conectar la VPN" "$(friendly "$1")"; exit 1; }
+  case "$type" in
+    fortinet)
+      method="$(mf "$m" saml)"; [ -n "$method" ] || { have_b webview && method=webview || method=browser; }
+      if [ "$method" = webview ]; then
+        st_set "$id" connecting "Inicia sesión en la ventana de Fortinet…"
+        local tc=(); [ "$cst" = untrusted ] && tc=(--trusted-cert="sha256/$b64")
+        if [ "$DRY" = 1 ]; then X timeout "$SAML_TIMEOUT" openfortivpn-webview "$gw" ${realm:+--realm="$realm"} "${tc[@]+"${tc[@]}"}"; cookie="SVPNCOOKIE=<de openfortivpn-webview>"
+        else
+          local wout wrc; wout="$(timeout "$SAML_TIMEOUT" openfortivpn-webview "$gw" ${realm:+--realm="$realm"} "${tc[@]+"${tc[@]}"}" 2>/dev/null)"; wrc=$?
+          [ $wrc -eq 124 ] && fail __saml_timeout__
+          cookie="$(grep -m1 -oE 'SVPNCOOKIE=[^;[:space:]]+' <<<"$wout")"
+        fi
+      else
+        st_set "$id" connecting "Inicia sesión en el navegador…"
+        local url="https://$gw/remote/saml/start?redirect=1${realm:+&realm=$realm}" sid curlc=(curl -s -D - -o /dev/null --max-time 20)
+        [ "$cst" = untrusted ] && [ "$pin" = "$trust" ] && curlc+=(-k --pinnedpubkey "sha256//${pin#pin-sha256:}")
+        if [ "$DRY" = 1 ]; then
+          echo "# escucha en http://127.0.0.1:8020 (python3, $SAML_TIMEOUT s) la vuelta del SSO"
+          X "$BROWSER_CMD" "$url"; X "${curlc[@]}" "https://$gw/remote/saml/auth_id?id=<sesión>"; cookie="SVPNCOOKIE=<de auth_id>"
+        else
+          local idf; idf="$(mktemp -p "$RUN")"
+          saml_listener > "$idf" & local lp=$!
+          sleep 0.4
+          grep -q __port_busy__ "$idf" && { rm -f "$idf"; fail __port_busy__; }
+          "$BROWSER_CMD" "$url" >/dev/null 2>&1 &
+          wait "$lp"; local lrc=$?
+          sid="$(head -1 "$idf")"; rm -f "$idf"
+          [ $lrc -eq 2 ] && fail __saml_timeout__
+          [ -n "$sid" ] && [ "$sid" != __port_busy__ ] || fail __saml_timeout__
+          st_set "$id" connecting "Comprobando el acceso…"
+          cookie="$("${curlc[@]}" "https://$gw/remote/saml/auth_id?id=$sid" 2>&1 | tr -d '\r' | grep -i '^set-cookie:' | grep -oE 'SVPNCOOKIE=[^;[:space:]]+' | grep -v '^SVPNCOOKIE=$' | head -1)"
+        fi
+      fi
+      [ -n "$cookie" ] || fail __no_cookie__
+      host="$gw";;
+    gp)
+      st_set "$id" connecting "Inicia sesión en el navegador…"
+      local gpc=(timeout "$SAML_TIMEOUT" gpclient connect --cookie-only --browser --auto-gateway); [ -n "$user" ] && gpc+=(-u "$user")
+      gpc+=("$gw")
+      if [ "$DRY" = 1 ]; then X "${gpc[@]}"; cookie="authcookie=<de gpclient>"; host="$gw"
+      else
+        local out rc; out="$("${gpc[@]}" </dev/null 2>&1)"; rc=$?
+        [ $rc -eq 124 ] && fail __saml_timeout__
+        cookie="$(sed -n "s/^COOKIE='\(.*\)'$/\1/p" <<<"$out" | head -1)"; host="$(sed -n "s/^HOST='\(.*\)'$/\1/p" <<<"$out" | head -1)"
+        if [ -z "$cookie" ]; then local el; el="$(grep -iE 'error|failed' <<<"$out" | tail -1)"; fail "${el:-__no_cookie__}"; fi
+        [ -n "$host" ] || host="$gw"
+      fi
+      if [ "$host" != "$gw" ]; then   # la puerta de enlace puede tener otro certificado que el portal
+        read -r cst pin hex b64 <<<"$(server_pin "$host")"
+        if [ "$cst" = untrusted ] && [ "$pin" != "$trust" ] && [ "$pin" != "$(mf "$m" trustGw)" ]; then
+          st_set "$id" error "El certificado de la puerta de enlace «$host» no es de confianza. Si TI te confirma la huella, pulsa «Confiar»." \
+            "$(jq -cn --arg p "$pin" --arg h "$hex" --arg g "$host" '{kind:"cert",pin:$p,hex:$h,gateway:$g}')"; exit 4
+        fi
+      fi;;
+    *) fail "Esta VPN no usa SSO";;
+  esac
+  [ "$cst" = down ] && pin=""
+  _nmup "$id" "$(passwd_file "$host" "$cookie" "$pin")"
+}
+_auth() {   # _auth <uuid>: en una terminal, openconnect --authenticate (contraseña, 2FA, certificado) → NetworkManager
+  local id="$1" m proto gw user cert key trust out a
+  m="$(meta_get "$id")"; proto="$(vpn_data "$id" protocol)"; gw="$(vpn_data "$id" gateway)"
+  user="$(mf "$m" user)"; [ -n "$user" ] || user="$("$NMCLI" -g vpn.user-name connection show "$id" 2>/dev/null)"
+  cert="$(mf "$m" cert)"; key="$(mf "$m" key)"; trust="$(mf "$m" trust)"
+  a=(openconnect --authenticate "--protocol=${proto:-anyconnect}")
+  [ -n "$user" ] && a+=(-u "$user"); [ -n "$trust" ] && a+=(--servercert "$trust")
+  [ -n "$cert" ] && a+=(-c "$cert"); [ -n "$key" ] && a+=(-k "$key")
+  [ "${proto:-anyconnect}" = anyconnect ] && a+=(--external-browser=xdg-open)
+  a+=("$gw")
+  echo "VPN «$("$NMCLI" -g connection.id connection show "$id" 2>/dev/null)» · $gw"
+  echo "Escribe usuario y contraseña y, si te lo pide, el código 2FA (OTP/FortiToken)."; echo
+  if [ "$DRY" = 1 ]; then X "${a[@]}"; out="COOKIE='<cookie>'"$'\n'"CONNECT_URL='https://$gw'"$'\n'"FINGERPRINT='pin-sha256:<huella>'"
+  else out="$("${a[@]}")" || { st_set "$id" error "$(friendly "No se pudo iniciar sesión (openconnect)")"; return 1; }; fi
+  local c g f r
+  val() { sed -n "s/^$1='\(.*\)'$/\1/p" <<<"$out" | head -1; }
+  c="$(val COOKIE)"; g="$(val CONNECT_URL)"; [ -n "$g" ] || g="$(val HOST)"; f="$(val FINGERPRINT)"; r="$(val RESOLVE)"
+  [ -n "$c" ] || { st_set "$id" error "$(friendly __no_cookie__)"; echo "$(friendly __no_cookie__)" >&2; return 1; }
+  echo; echo "Sesión iniciada. Levantando el túnel con NetworkManager…"
+  _nmup "$id" "$(passwd_file "$g" "$c" "$f" "$r")" && echo "Conectada."
+}
+_ask() {   # _ask <uuid>: nmcli pide los secretos en la terminal (fortisslvpn y otros plugins sin agente gráfico)
+  local id="$1" out rc
+  echo "Escribe la contraseña y, si te lo pide, el código 2FA."; echo
+  X "$NMCLI" --ask connection up uuid "$id"; rc=$?
+  [ "$DRY" = 1 ] && return 0
+  if [ $rc -eq 0 ]; then st_clear "$id"; else st_set "$id" error "No se pudo conectar (revisa usuario, contraseña y código 2FA)"; fi
+  return $rc
+}
+direct_cmd() {   # direct_cmd <id> → la orden (una línea) que se ejecuta en la terminal
+  local id="$1" m b gw user realm cert key auth hex q
+  m="$(meta_get "$id")"; b="$(mf "$m" backend)"; gw="$(mf "$m" gateway)"; user="$(mf "$m" user)"; realm="$(mf "$m" realm)"
+  cert="$(mf "$m" cert)"; key="$(mf "$m" key)"; auth="$(mf "$m" auth)"; hex="$(mf "$m" trustHex)"
+  q() { printf '%q' "$1"; }
+  case "$b" in
+    openfortivpn)
+      local a="sudo openfortivpn $(q "$gw")"
+      [ -n "$user" ] && [ "$auth" != saml ] && a+=" -u $(q "$user")"; [ -n "$realm" ] && a+=" --realm=$(q "$realm")"
+      [ -n "$cert" ] && a+=" --user-cert=$(q "$cert")"; [ -n "$key" ] && a+=" --user-key=$(q "$key")"
+      [ -n "$hex" ] && a+=" --trusted-cert=$hex"
+      if [ "$auth" = saml ]; then
+        local method; method="$(mf "$m" saml)"; [ -n "$method" ] || { have_b webview && method=webview || method=browser; }
+        if [ "$method" = webview ]; then echo "openfortivpn-webview $(q "$gw")${realm:+ --realm=$(q "$realm")} | $a --cookie-on-stdin"
+        else echo "(sleep 3; xdg-open $(q "https://$gw/remote/saml/start?redirect=1${realm:+&realm=$realm}")) & $a --saml-login"; fi
+      else echo "$a"; fi;;
+    gpclient)
+      local a="sudo -E gpclient connect"
+      [ "$auth" = saml ] && a+=" --browser"; [ -n "$user" ] && a+=" -u $(q "$user")"
+      [ -n "$cert" ] && a+=" --certificate $(q "$cert")"; [ -n "$key" ] && a+=" -k $(q "$key")"
+      echo "$a $(q "$gw")";;
+  esac
+}
+_direct() {
+  local id="$1" c; c="$(direct_cmd "$id")"
+  echo "Conectando con $(mf "$(meta_get "$id")" backend) (necesita la contraseña de administrador). Cierra esta ventana o pulsa Ctrl+C para desconectar."; echo
+  st_clear "$id"
+  [ "$DRY" = 1 ] && { echo "\$ bash -c $(printf '%q' "$c")"; return 0; }
+  bash -c "$c"
+}
+cmdline() {   # órdenes que ejecutaría «up» (para comprobar sin servidor)
+  local id; id="$(resolve "${1:?uuid}")"; [ -n "$id" ] || { echo "No existe la VPN «$1»" >&2; return 1; }
+  local m b; m="$(meta_get "$id")"; b="$(mf "$m" backend)"
+  case "$b" in
+    openfortivpn|gpclient) echo "# en una terminal:"; direct_cmd "$id";;
+    nm-oc) if [ "$(mf "$m" auth)" = saml ]; then echo "# SSO como tu usuario y luego NetworkManager:"; DRY=1 _saml "$id"
+           else echo "# sin agente gráfico, en una terminal (con agente: nmcli connection up uuid $id):"; DRY=1 _auth "$id" 2>/dev/null | grep '^\$'; fi;;
+    *) echo "\$ nmcli $(have_b agent || echo '--ask ')connection up uuid $id";;
+  esac
+}
+down() {
+  local id; id="$(resolve "${1:?uuid}")"; [ -n "$id" ] || { echo "No existe la VPN «$1»" >&2; return 1; }
+  local st m b; st="$(st_get "$id")"; m="$(meta_get "$id")"; b="$(mf "$m" backend)"
+  worker_alive "$st" && kill "$(jq -r .pid <<<"$st")" 2>/dev/null
+  st_clear "$id"
+  case "$b" in
+    openfortivpn) X pkexec pkill -INT -x openfortivpn;;
+    gpclient) X pkexec gpclient disconnect;;
+    *) [[ "$id" == hf-* ]] && return 0
+       local out rc; out="$(X "$NMCLI" connection down uuid "$id" 2>&1)"; rc=$?; echo "$out"
+       [ $rc -ne 0 ] && [[ "$out" != *"not active"* ]] && notify -u critical "VPN" "$out"; return $rc;;
+  esac
+}
+trust() {   # acepta el certificado que tiene ahora el servidor (tras el aviso «no es de confianza»)
+  local id; id="$(resolve "${1:?uuid}")"; [ -n "$id" ] || { echo "No existe la VPN «$1»" >&2; return 1; }
+  local m st gw cst pin hex b64; m="$(meta_get "$id")"; st="$(st_get "$id")"
+  gw="$(mf "$st" gateway)"; [ -n "$gw" ] || gw="$(mf "$m" gateway)"; [ -n "$gw" ] || gw="$(vpn_data "$id" gateway)"
+  read -r cst pin hex b64 <<<"$(server_pin "$gw")"
+  [ "$cst" = down ] && { echo "No se puede contactar con $gw" >&2; return 1; }
+  if [ -n "$(mf "$st" pin)" ] && [ "$(mf "$st" pin)" != "$pin" ]; then
+    echo "El certificado de $gw ha cambiado desde el aviso: no se confía en él." >&2; return 1
+  fi
+  local key=trust; [ "$gw" != "$(mf "$m" gateway)" ] && [ -n "$(mf "$m" gateway)" ] && key=trustGw
+  [ "$(mf "$m" type)" = "" ] && [[ "$id" != hf-* ]] && meta_put "$id" "$(jq -cn --arg g "$gw" '{gateway:$g}')"
+  meta_put "$id" "$(jq -cn --arg k "$key" --arg p "$pin" --arg h "$hex" '{($k):$p, trustHex:$h}')"
+  # fortisslvpn lo comprueba él mismo (openfortivpn --trusted-cert)
+  [ "$("$NMCLI" -g vpn.service-type connection show "$id" 2>/dev/null)" = "$SVC_FORTI" ] && X "$NMCLI" connection modify uuid "$id" +vpn.data "trusted-cert=$hex"
+  st_clear "$id"
+  echo "Confiado: $gw · $pin"
+}
+delete() {
+  local id; id="$(resolve "${1:?uuid}")"; [ -n "$id" ] || { echo "No existe la VPN «$1»" >&2; return 1; }
+  [[ "$id" == hf-* ]] || X "$NMCLI" connection delete uuid "$id" || return
+  meta_del "$id"; st_clear "$id"
 }
 
 edit() {
   local u; u="$(resolve "${1:?uuid}")"
+  [[ "$u" == hf-* ]] && { echo "Esta VPN no es de NetworkManager: bórrala y créala otra vez para cambiarla" >&2; return 1; }
   if command -v nm-connection-editor >/dev/null; then setsid -f nm-connection-editor --edit "$u" >/dev/null 2>&1
-  else term nmtui-edit "$(nmcli -g connection.id connection show "$u")"; fi
+  else term nmtui-edit "$("$NMCLI" -g connection.id connection show "$u")"; fi
 }
 create() {
-  local k="${1:-}"
+  local k="${1:-}" svc
   command -v nm-connection-editor >/dev/null || { term nmtui-connect; return; }
   if [ -z "$k" ]; then setsid -f nm-connection-editor --create >/dev/null 2>&1
   elif [ "$k" = wireguard ]; then setsid -f nm-connection-editor --create --type=wireguard >/dev/null 2>&1
-  else setsid -f nm-connection-editor --create --type="vpn:$(eff_service "$k")" >/dev/null 2>&1; fi
-}
-term() {   # abre una terminal con un comando
-  local t="${TERMINAL:-}"
-  for c in "$t" kitty ghostty foot alacritty wezterm konsole; do [ -n "$c" ] && command -v "$c" >/dev/null && { t=$c; break; }; done
-  case "$t" in wezterm) setsid -f wezterm start -- "$@";; *) setsid -f "$t" -e "$@";; esac >/dev/null 2>&1
+  else
+    svc="$(type_field "$k" 5)"; [ "$k" = fortinet ] && ! plugin_ok fortisslvpn && svc="$SVC_OC"
+    setsid -f nm-connection-editor --create --type="vpn:$svc" >/dev/null 2>&1
+  fi
 }
 
 # ---------- VPN en malla ----------
@@ -261,32 +914,44 @@ mesh() {
 }
 
 install() {
-  local k="${1:?tipo}" pk
+  local k="${1:?tipo}" pk pre
   case "$k" in
-    tailscale) pm_install tailscale && sudo systemctl enable --now tailscaled && sudo tailscale set --operator="$USER" 2>/dev/null; return;;
-    zerotier) pm_install zerotier-one && sudo systemctl enable --now zerotier-one \
+    tailscale) pm_install tailscale && X sudo systemctl enable --now tailscaled && X sudo tailscale set --operator="$USER" 2>/dev/null; return;;
+    zerotier) pm_install zerotier-one && X sudo systemctl enable --now zerotier-one \
       && echo "Para usar zerotier-cli sin sudo: sudo cp /var/lib/zerotier-one/authtoken.secret ~/.zeroTierOneAuthToken && sudo chown $USER ~/.zeroTierOneAuthToken"; return;;
   esac
   pk="$(pkgs_for "$k")" || { echo "Tipo desconocido: $k" >&2; exit 1; }
+  if is_corp "$k"; then
+    pre="$(corp_pre "$k")"; [ -n "$pre" ] && { X bash -c "$pre" || echo "No se pudo activar el repositorio de gpclient; sigo sin él" >&2; }
+    local n; n="$(corp_note "$k")"; [ -n "$n" ] && echo "Nota: $n"
+  fi
   # El editor gráfico hace falta para configurar casi todos los plugins
   [ "$k" != editor ] && ! command -v nm-connection-editor >/dev/null && pk="$pk $(pkgs_for editor)"
   # shellcheck disable=SC2086
-  pm_install $pk && { [ "$k" = editor ] || [ "$k" = wireguard ] || { echo "Reiniciando NetworkManager para cargar el plugin…"; sudo systemctl restart NetworkManager; }; }
+  pm_install $pk && { [ "$k" = editor ] || [ "$k" = wireguard ] || { echo "Reiniciando NetworkManager para cargar el plugin…"; X sudo systemctl restart NetworkManager; }; }
 }
 
 case "${1:-}" in
   list) list;;
-  up|down) u="$(resolve "${2:?uuid}")"; out="$(nmcli connection "$1" uuid "$u" 2>&1)"; rc=$?; echo "$out"
-           [ $rc -ne 0 ] && notify -u critical "VPN" "$out"; exit $rc;;
-  delete) u="$(resolve "${2:?uuid}")"; nmcli connection delete uuid "$u";;
+  up) up "${2:-}";;
+  down) down "${2:-}";;
+  delete) delete "${2:-}";;
   edit) edit "${2:-}";;
   import) import "${2:-}" "${3:-}";;
   plugins) plugins;;
+  backends) backends "${2:?tipo}"; echo "auto: contraseña=$(auto_backend "$2" password) · sso=$(auto_backend "$2" saml) · certificado=$(auto_backend "$2" cert)" >&2;;
   add) shift; add "$@";;
+  cmdline) cmdline "${2:-}";;
+  trust) trust "${2:-}";;
+  official) official;;
+  open-official) open_official "${2:-}";;
+  pick-cert) pick_file "Certificado de la VPN" "*.pem *.crt *.p12 *.pfx *.key";;
   create) create "${2:-}";;
   install) install "${2:-}";;
-  pkgs) pkgs_for "${2:?tipo}";;
+  pkgs) pkgs_for "${2:?tipo}"; is_corp "$2" && { p="$(corp_pre "$2")"; [ -n "$p" ] && echo "antes: $p" >&2; n="$(corp_note "$2")"; [ -n "$n" ] && echo "nota: $n" >&2; }; true;;
   mesh) mesh;;
+  _saml|_auth|_ask|_direct|_nmup) c="$1"; shift; "$c" "$@";;
+  _hold) shift; hold "$@";;
   tailscale)
     case "${2:-}" in
       up) tailscale up 2>&1 || { echo "Si pide permisos: sudo tailscale set --operator=$USER"; exit 1; };;
@@ -304,5 +969,5 @@ case "${1:-}" in
       join|leave) zerotier-cli "$2" "${3:?id de red}" 2>/dev/null || sudo zerotier-cli "$2" "$3";;
       list|*) zerotier-cli listnetworks 2>/dev/null || sudo zerotier-cli listnetworks;;
     esac;;
-  *) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 1;;
+  *) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 1;;
 esac

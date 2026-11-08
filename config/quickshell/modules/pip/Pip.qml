@@ -119,7 +119,7 @@ Scope {
     // Márgenes de la barra (como Overlay) y del panel lateral
     readonly property string barPos: Settings.barPos
     readonly property real barEdge: Shell.focusMode ? 4 : Math.max(4, Settings.barEdge)
-    readonly property bool sideOpen: Shell.view === "ia"
+    readonly property bool sideOpen: Shell.view === "ia" && !Shell.sidePinned     // fijado: ya va en monitor.reserved
     readonly property bool sideLeft: Settings.get("sideSide", "derecha") === "izquierda"
     readonly property real sideW: Shell.sideW > 0 ? Shell.sideW : Math.max(320, Math.min(720, Number(Settings.get("sideWidth", 400)) || 400))
     readonly property real m: Math.max(0, Number(Settings.get("pipMargin", 12)) || 0)

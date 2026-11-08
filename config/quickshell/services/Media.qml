@@ -18,7 +18,7 @@ Singleton {
     readonly property var all: Mpris.players.values
     property string lastPlaying: ""
 
-    function isBridge(p): bool { return /plasma-browser-integration|kdeconnect|playerctld|mpris-proxy/i.test(p?.dbusName ?? ""); }
+    function isBridge(p): bool { return /plasma-browser-integration|kdeconnect|MediaPlayer2\.Valent|playerctld|mpris-proxy/i.test(p?.dbusName ?? ""); }
     function hasContent(p): bool { return String(p?.trackTitle ?? "").trim() !== "" || String(p?.trackArtUrl ?? "") !== ""; }
     function score(p): int {
         return (p.isPlaying ? 100 : 0) + (isBridge(p) ? 0 : 20) + (p.dbusName === lastPlaying ? 8 : 0)

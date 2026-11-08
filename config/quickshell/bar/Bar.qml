@@ -13,7 +13,7 @@
 // Isla central: la barra flota y mide lo que su contenido, centrada; el resto de la franja deja pasar el ratón.
 // Archipiélago: cada grupo de módulos en su propia píldora flotante (BarPill), con el escritorio visible entre
 // ellas; solo las píldoras reciben el ratón (máscara con content.item.pills).
-// Un perfil con «Barra oculta» (Shell.barHidden) la deja escondida: vuelve al llevar el cursor al borde.
+// Super + J (Shell.barHidden) la deja escondida: vuelve al llevar el cursor al borde.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -32,7 +32,7 @@ PanelWindow {
     readonly property int off: Settings.barOffset
     readonly property int thickness: Settings.barThickness
     readonly property real k: Settings.barScale
-    // «Barra oculta» de un perfil (Shell.barHidden) = se esconde sola: nunca desaparece sin forma de volver
+    // Barra escondida con Super + J (Shell.barHidden) = se esconde sola: nunca desaparece sin forma de volver
     readonly property bool autoHide: Settings.barAutoHide || Shell.barHidden
     // Ocultación inteligente: se esconde si una ventana tapa su franja (WinMode.covered)
     readonly property bool smart: Settings.barSmartHide && !autoHide

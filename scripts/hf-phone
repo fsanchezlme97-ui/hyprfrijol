@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""hf-phone — el móvil enlazado con Valent (app GTK que habla el protocolo de KDE Connect). Lo usan los ajustes
+rápidos (sección Teléfono), la IA y la terminal.
+
+  hf-phone status [--json]     móviles enlazados: nombre, conectado, batería
+  hf-phone share <id> [ruta…]  envía archivos al móvil (sin ruta: elige con hf-pickfile)
+  hf-phone ring <id>           hace sonar el móvil («Buscar mi teléfono»)
+  hf-phone open [id]           abre Valent (en la página del móvil si se da el id)
+
+Valent no trae una orden de terminal como kdeconnect-cli: se habla con él por D-Bus (bus de sesión
+ca.andyholmes.Valent; org.freedesktop.DBus.ObjectManager en /ca/andyholmes/Valent con un objeto por dispositivo,
+/ca/andyholmes/Valent/Device/<id>, interfaz ca.andyholmes.Valent.Device con Id/Name/IconName/State y sus acciones
+en org.gtk.Actions: battery.state, share.uris, findmyphone.ring; la acción de la app «window» abre una página).
+Si no está Valent pero sí kdeconnect-cli (alternativa), se usa ese.
+"""
+import json, os, pathlib, shutil, subprocess, sys, urllib.parse
+for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
+    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+
+BUS = "ca.andyholmes.Valent"
+ROOT_PATH = "/ca/andyholmes/Valent"
+IFACE = "ca.andyholmes.Valent.Device"
+CONNECTED, PAIRED = 1, 2
+HERE = pathlib.Path(__file__).resolve().parent
+
+
+def gio():
+    try:
+        import gi
+        gi.require_version("Gio", "2.0")
+        from gi.repository import Gio, GLib
+        return Gio, GLib, Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    except Exception:
+        return None
+
+
+def valent_running(G):
+    Gio, GLib, bus = G
+    try:
+        r = bus.call_sync("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "NameHasOwner",
+                          GLib.Variant("(s)", (BUS,)), None, Gio.DBusCallFlags.NONE, 2000, None)
+        return bool(r.unpack()[0])
+    except Exception:
+        return False
+
+
+def valent_activatable(G):
+    Gio, GLib, bus = G
+    try:
+        r = bus.call_sync("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListActivatableNames",
+                          None, None, Gio.DBusCallFlags.NONE, 2000, None)
+        return BUS in r.unpack()[0]
+    except Exception:
+        return False
+
+
+def call(G, path, iface, method, args, timeout=4000):
+    Gio, GLib, bus = G
+    return bus.call_sync(BUS, path, iface, method, args, None, Gio.DBusCallFlags.NONE, timeout, None).unpack()
+
+
+def valent_devices(G):
+    Gio, GLib, bus = G
+    out = []
+    objs = call(G, ROOT_PATH, "org.freedesktop.DBus.ObjectManager", "GetManagedObjects", None)[0]
+    for path, ifaces in sorted(objs.items()):
+        p = ifaces.get(IFACE)
+        if p is None:
+            continue
+        st = int(p.get("State", 0))
+        d = {"id": p.get("Id", ""), "name": p.get("Name", "") or p.get("Id", ""), "icon": p.get("IconName", ""),
+             "connected": bool(st & CONNECTED), "paired": bool(st & PAIRED), "battery": None, "path": path}
+        if d["connected"] and d["paired"]:
+            try:   # org.gtk.Actions.Describe → (enabled, tipo del parámetro, [estado])
+                en, _sig, state = call(G, path, "org.gtk.Actions", "Describe", GLib.Variant("(s)", ("battery.state",)), 2000)[0]
+                if en and state and state[0].get("is-present", True):
+                    s = state[0]
+                    d["battery"] = {"percentage": round(float(s.get("percentage", 0))), "charging": bool(s.get("charging", False))}
+            except Exception:
+                pass
+        out.append(d)
+    return out
+
+
+def kdeconnect_devices():
+    r = subprocess.run(["kdeconnect-cli", "-a", "--id-name-only"], capture_output=True, text=True, timeout=8)
+    out = []
+    for l in r.stdout.splitlines():
+        i, _, n = l.strip().partition(" ")
+        if i:
+            out.append({"id": i, "name": n or i, "icon": "phone", "connected": True, "paired": True, "battery": None})
+    return out
+
+
+def status():
+    G = gio()
+    if G and (valent_running(G) or valent_activatable(G)) or shutil.which("valent"):
+        res = {"backend": "valent", "running": bool(G and valent_running(G)), "devices": []}
+        if G and res["running"]:
+            try:
+                res["devices"] = valent_devices(G)
+            except Exception as e:
+                res["error"] = str(e)
+        return res
+    if shutil.which("kdeconnect-cli"):
+        try:
+            return {"backend": "kdeconnect", "running": True, "devices": kdeconnect_devices()}
+        except Exception as e:
+            return {"backend": "kdeconnect", "running": False, "devices": [], "error": str(e)}
+    return {"backend": "", "running": False, "devices": []}
+
+
+def activate(G, path, action, param=None):
+    Gio, GLib, _ = G
+    args = GLib.Variant("(sava{sv})", (action, [param] if param is not None else [], {}))
+    call(G, path, "org.gtk.Actions", "Activate", args)
+
+
+def dev_path(G, dev_id):
+    for d in valent_devices(G):
+        if d["id"] == dev_id:
+            return d["path"]
+    raise SystemExit(f"hf-phone: no encuentro el dispositivo «{dev_id}»")
+
+
+def pick():
+    r = subprocess.run([str(HERE / "hf-pickfile"), "--multiple", "--title", "Enviar al teléfono"], capture_output=True, text=True)
+    return [l for l in r.stdout.splitlines() if l]
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(__doc__); return 0
+    cmd, rest = argv[0], [a for a in argv[1:] if not a.startswith("--")]
+    st = None
+    if cmd == "status":
+        st = status()
+        if "--json" in argv:
+            print(json.dumps(st, ensure_ascii=False)); return 0
+        if not st["backend"]:
+            print("Ni Valent ni KDE Connect están instalados (hf-deps install valent)"); return 1
+        print(f"{st['backend']}{'' if st['running'] else ' (no está en marcha)'}")
+        for d in st["devices"]:
+            b = d["battery"]
+            bat = f" · batería {b['percentage']} %{' (cargando)' if b['charging'] else ''}" if b else ""
+            print(f"  {d['id']}  {d['name']}  {'conectado' if d['connected'] else 'desconectado'}{'' if d['paired'] else ' · sin enlazar'}{bat}")
+        return 0
+    backend = status()["backend"]
+    if cmd == "open":
+        G = gio()
+        if backend == "valent" and G:
+            try:
+                Gio, GLib, _ = G
+                activate(G, ROOT_PATH, "window", GLib.Variant("s", rest[0] if rest else "main")); return 0
+            except Exception:
+                pass
+            subprocess.Popen(["valent"], start_new_session=True); return 0
+        if backend == "kdeconnect":
+            subprocess.Popen(["kdeconnect-app"], start_new_session=True); return 0
+        return 1
+    if cmd in ("share", "ring"):
+        if not rest:
+            raise SystemExit(f"hf-phone {cmd}: ¿a qué dispositivo? (hf-phone status)")
+        dev = rest[0]
+        files = [os.path.abspath(f) for f in rest[1:]] if cmd == "share" else []
+        if cmd == "share" and not files:
+            files = pick()
+            if not files:
+                return 1
+        if backend == "valent":
+            G = gio()
+            if not G:
+                raise SystemExit("hf-phone: falta python-gobject para hablar con Valent")
+            path = dev_path(G, dev)
+            Gio, GLib, _ = G
+            if cmd == "share":
+                uris = [pathlib.Path(f).as_uri() for f in files]
+                activate(G, path, "share.uris", GLib.Variant("as", uris))
+            else:
+                activate(G, path, "findmyphone.ring")
+            return 0
+        if backend == "kdeconnect":
+            if cmd == "share":
+                for f in files:
+                    subprocess.run(["kdeconnect-cli", "-d", dev, "--share", f])
+            else:
+                subprocess.run(["kdeconnect-cli", "-d", dev, "--ring"])
+            return 0
+        raise SystemExit("hf-phone: Valent no está instalado (hf-deps install valent)")
+    raise SystemExit(f"hf-phone: orden desconocida «{cmd}» (hf-phone --help)")
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

@@ -69,7 +69,7 @@ ColumnLayout {
             Layout.fillWidth: true
             spacing: 8
             Repeater {
-                model: [["youtube", "YouTube"], ["pinterest", "Pinterest"], ["whatsapp", "WhatsApp (salvo favoritos)"], ["juegos", "Juegos"], ["redes", "Redes sociales"], ["correo", "Correo"]]
+                model: [["youtube", "YouTube"], ["pinterest", "Pinterest"], ["whatsapp", "WhatsApp"], ["juegos", "Juegos"], ["redes", "Redes sociales"], ["correo", "Correo"]]
                 Chip {
                     required property var modelData
                     readonly property var list: Settings.get("focusBlock", ["youtube", "juegos", "redes"])

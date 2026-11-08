@@ -43,7 +43,7 @@ dbus-run-session -- "$ROOT/scripts/hf-session" --nested $SAFE >"$LOG" 2>&1 &
 PID=$!
 cleanup() {
   if [ "$KEEP" = 0 ]; then
-    # Bus D-Bus de la prueba: lo que activó (kdeconnectd, portales…) sobrevive a dbus-run-session si no se cierra
+    # Bus D-Bus de la prueba: lo que activó (valent, portales…) sobrevive a dbus-run-session si no se cierra
     local hp bus q
     hp=$(jq -r .pid <<<"${I:-}" 2>/dev/null)
     bus=$(tr '\0' '\n' < "/proc/${hp:-0}/environ" 2>/dev/null | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')

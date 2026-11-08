@@ -4,7 +4,7 @@
 #   ./install.sh                  dependencias + arranque mínimo del sistema + scripts + sesión «Hyprland (HyprFrijol)»
 #   ./install.sh --dry-run        enseña los comandos exactos sin ejecutar nada
 #   ./install.sh --yes            sin preguntas: acepta lo recomendado (los opcionales, solo con --full)
-#   ./install.sh --full           también los opcionales (VMs, contenedores, VPN, escáner, Bluetooth, KDE Connect, fondos
+#   ./install.sh --full           también los opcionales (VMs, contenedores, VPN, escáner, Bluetooth, Valent, fondos
 #                                 animados…); después, uno a uno: hf-deps install <función> (lista: hf-deps list)
 #   ./install.sh --no-deps        sin paquetes ni repositorios extra
 #   ./install.sh --no-system      sin tocar servicios ni grupos (NetworkManager, PipeWire, logind, grupo video…)

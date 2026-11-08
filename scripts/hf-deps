@@ -42,10 +42,10 @@ LEVEL_ES = {"base": "sistema", "required": "imprescindible", "recommended": "rec
 HINTS = {
     "nvidia-smi": "viene con el driver de NVIDIA (Arch: nvidia-utils · Fedora: xorg-x11-drv-nvidia-cuda de RPM Fusion · "
                   "Debian: nvidia-smi · Ubuntu: nvidia-utils-<versión>). Solo hace falta con una GPU NVIDIA.",
-    "kdialog": "alternativa a zenity para elegir archivos; con zenity (función «sesion») no hace falta.",
     "livecaptions": "Subtítulos en vivo: flatpak install flathub net.sapples.LiveCaptions",
     "nerd-dictation": "dictado alternativo (pip); hyprfrijol usa whisper.cpp o faster-whisper (hf-deps install whisper).",
     "faster-whisper": "pip install --user faster-whisper (o lo instala Ajustes › Dictado en su propio venv).",
+    "vosk": "Arch: python-vosk (hf-deps install vosk) · otras: hf-dictate install-vosk (venv con pip en ~/.local/share/hyprfrijol/whisper/vosk-venv).",
     "steam": "app: hf-apps install steam (o el paquete de tu distro).",
     "hyprpolkitagent": "no hace falta: el agente de polkit lo pone el propio shell.",
     "claude": "CLI de IA: lo instala Ajustes › Asistente de IA.", "codex": "CLI de IA: lo instala Ajustes › Asistente de IA.",

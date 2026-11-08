@@ -3,7 +3,7 @@
 
   claude mcp add hyprfrijol -- /ruta/a/hyprfrijol/scripts/hf-mcp
 
-Herramientas: get_state, set_settings, apply_actions, undo, wallpaper, profile, open_view, workspace, notify y las
+Herramientas: get_state, set_settings, apply_actions, undo, wallpaper, open_view, workspace, notify y las
 mismas que usa el asistente del panel (hf-ai TOOL_SPECS): list_windows, read_active_window, read_screen,
 notifications, find_files, list_apps, list_settings, system_status, window_action, launch_app, open_url, media,
 volume, brightness, do_not_disturb, caffeine, timer, window_mode, pomodoro, clear_notifications, list_devices,
@@ -11,7 +11,7 @@ device_action, list_downloads, download, download_control, wallhaven_search, wal
 Cada herramienta lleva anotaciones MCP: readOnlyHint (consultas: sin aprobación) o no (cambios: el cliente pide permiso)
 y destructiveHint para lo que no se puede deshacer (cerrar ventanas, expulsar, cancelar descargas).
 Todo pasa por las mismas piezas que el panel: scripts/hf-ai (acciones validadas + deshacer, consultas de solo
-lectura), hf-apply, hf-wallpaper, hf-profile y `qs ipc`. Respeta Ajustes › IA (aiControlShell, aiReadDesktop,
+lectura), hf-apply, hf-wallpaper y `qs ipc`. Respeta Ajustes › IA (aiControlShell, aiReadDesktop,
 aiContextCapture). Solo biblioteca estándar.
 """
 import json, os, subprocess, sys, pathlib
@@ -44,7 +44,6 @@ def t_get_state(_):
     out = {
         "settings": {k: s.get(k) for k in list(hlai.SET_KEYS) + ["aiProvider", "aiModel"] if k in s},
         "wallpaper": (st / "wallpaper-path").read_text().strip() if (st / "wallpaper-path").exists() else None,
-        "profile": (st / "profile").read_text().strip() if (st / "profile").exists() else None,
         "dnd": (st / "dnd").exists(),
         "openView": sh(QS + ["shell", "current"])[0],
     }
@@ -89,10 +88,6 @@ def t_wallpaper(a):
     return apply([{"type": "wallpaper", "value": str(a.get("value", "next"))}])
 
 
-def t_profile(a):
-    return apply([{"type": "profile", "value": a.get("name")}])
-
-
 def t_open_view(a):
     v = str(a.get("view", ""))
     if v == "":
@@ -116,7 +111,7 @@ def t_notify(a):
 SET_PROPS = {k: ({"enum": [x for x in v[1]]} if v[1] else {"type": "integer"} if k.startswith("gaps") else {"type": "string"})
              for k, v in hlai.SET_KEYS.items()}
 TOOLS = [
-    ("get_state", "Estado actual de hyprfrijol: ajustes de apariencia, fondo, perfil, no molestar, ventana y espacio activos.",
+    ("get_state", "Estado actual de hyprfrijol: ajustes de apariencia, fondo, no molestar, ventana y espacio activos.",
      {"type": "object", "properties": {}}, t_get_state),
     ("set_settings", "Cambia ajustes del escritorio (estilo, paleta, barra, huecos, PiP… y cualquier otra clave que liste "
      "list_settings, con su mismo tipo). Devuelve un id para deshacer y las claves rechazadas.",
@@ -129,8 +124,6 @@ TOOLS = [
      {"type": "object", "properties": {"id": {"type": "string"}}, "required": ["id"]}, t_undo),
     ("wallpaper", "Cambia el fondo: next, prev, random o una ruta absoluta a una imagen/vídeo. También regenera los colores.",
      {"type": "object", "properties": {"value": {"type": "string"}}, "required": ["value"]}, t_wallpaper),
-    ("profile", "Activa un perfil de escritorio.",
-     {"type": "object", "properties": {"name": {"enum": list(hlai.PROFILES)}}, "required": ["name"]}, t_profile),
     ("open_view", "Abre un panel del shell (o lo cierra con view vacío). Panel lateral: view 'ia' con arg 'wa'|'yt'|'pin'.",
      {"type": "object", "properties": {"view": {"type": "string", "enum": [""] + list(hlai.VIEWS) + ["ia"]}, "arg": {"type": "string"}},
       "required": ["view"]}, t_open_view),

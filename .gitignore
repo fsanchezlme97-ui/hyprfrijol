@@ -1,4 +1,4 @@
-# Todo lo generado (colores, perfil, fondo) vive fuera del repo:
+# Todo lo generado (colores, fondo, estado) vive fuera del repo:
 #   ~/.local/state/hyprfrijol/   y los ajustes personales en ~/.config/hyprfrijol/
 *.qslog
 

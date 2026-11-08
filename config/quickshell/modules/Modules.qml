@@ -35,7 +35,6 @@ import "alttab"
 import "snap"
 import "desktop"
 import "widgets"
-import "profiles"
 import "settings"
 import "welcome"
 import "tools"
@@ -64,7 +63,6 @@ Scope {
     Firmar {}
     OmarchyHost {}        // plugins de Omarchy: servicios y vistas (panel/overlay/menu); ver scripts/hf-plugin
     UpdatesCheck {}       // comprobación de actualizaciones en segundo plano (la vista es diferida)
-    ProfilesAuto { id: profilesAuto }   // «Cambiar solo» de los perfiles
 
     // ── Diferidos: se crean al abrir su vista ──
     LazyView { id: spotView; views: ["spotlight"]; warm: true; Spotlight {} }   // el más usado: tras la 1.ª vez se queda
@@ -76,7 +74,6 @@ Scope {
     LazyView { views: ["actualizaciones"]; Updates {} }
     LazyView { views: ["vista"]; Overview {} }
     LazyView { views: ["widgets", "w-clima", "w-sistema", "w-impresora", "w-pomodoro"]; Widgets {} }
-    LazyView { views: ["perfiles"]; Profiles { auto: profilesAuto } }
     LazyView { views: ["bienvenida"]; Welcome {} }
     LazyView { views: ["atajos"]; Cheatsheet {} }
     LazyView { views: ["musica"]; MediaControls {} }

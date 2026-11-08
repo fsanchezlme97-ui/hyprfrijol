@@ -9,14 +9,14 @@ Hyprland (compositor)  ← configuración Lua modular en config/hypr/frijol
     │  IPC (hyprctl / socket; los dispatch son Lua: hl.dsp.…)
 Quickshell (shell QML) ← barra, paneles, Spotlight, PiP, OSD, notificaciones, ajustes, login
     │  qs ipc call …   (API del shell: la usan atajos, scripts y la IA)
-Scripts (bash)         ← hf-session, hf-shell (arranca el shell y lo reabre si se cae), hf-wallpaper, hf-profile…: lógica que se reutiliza fuera del shell
-    │  ~/.local/state/hyprfrijol/  (colores, perfil, fondo: lo generado)
+Scripts (bash)         ← hf-session, hf-shell (arranca el shell y lo reabre si se cae), hf-wallpaper, hf-capture…: lógica que se reutiliza fuera del shell
+    │  ~/.local/state/hyprfrijol/  (colores, fondo, «no molestar»: lo generado)
     │
 Servicios del sistema  ← PipeWire, NetworkManager, BlueZ, UPower, power-profiles-daemon,
                           fprintd, Snapper, greetd, Flatpak, fwupd
 ```
 
-**Principio:** cada función tiene un script o comando que funciona solo (`hf-wallpaper`, `hf-profile`…). Quickshell es solo la cara visual. Así la IA, los atajos y la terminal usan lo mismo.
+**Principio:** cada función tiene un script o comando que funciona solo (`hf-wallpaper`, `hf-capture`…). Quickshell es solo la cara visual. Así la IA, los atajos y la terminal usan lo mismo.
 
 ## Pantallas del prototipo → piezas
 
@@ -33,7 +33,6 @@ Todo vive en `config/quickshell/`. Cada vista del diseño es un módulo en `modu
 | Vista general, Alt+Tab, Snap | `vista`, `alttab`, `snap` | `modules/overview`, `alttab`, `snap` | `ScreencopyView`, `services/HyprClients.qml` |
 | Dock (modo flotante: minimizar, maximizar, ocultación inteligente) y escritorio ordenado | — | `modules/desktop` | `FolderListModel` |
 | Widgets | `widgets` | `modules/widgets` | Open-Meteo, Moonraker/OctoPrint, `/proc` |
-| Perfiles de actividad | `perfiles` | `modules/profiles`, `scripts/hf-profile` | powerprofilesctl, reglas por monitor/horario/app |
 | Fondos | `fondos` | `modules/wallpapers`, `Wallpaper.qml`, `scripts/hf-wallpaper` | matugen, mpvpaper |
 | Captura y grabación | `captura` | `modules/capture`, `scripts/hf-capture` | grim, slurp, wf-recorder, tesseract |
 | Portapapeles y emojis (modos «:» y «;» de Spotlight) | `portapapeles`, `emojis` → `spotlight` | `modules/spotlight`, `services/Clip.qml` | cliphist, `config/emoji/emojis.json` |
@@ -89,6 +88,6 @@ Desde la terminal (`qs -p <repo>/config/quickshell ipc call <objetivo> <función
 - **QtWebEngine dentro de Quickshell 0.3.2 se cierra solo.** Por eso las web apps son ventanas `qml6` aparte que el panel acopla (`hf-webapp`).
 
 - **Quickshell cambia rápido.** Fija una versión en el README y prueba cada actualización.
-- **Rendimiento del vidrio:** el blur de muchas capas pesa en gráficas integradas. Hace falta el interruptor «Reducir transparencia», y el perfil Juego ya lo apaga.
+- **Rendimiento del vidrio:** el blur de muchas capas pesa en gráficas integradas. Hace falta el interruptor «Reducir transparencia», y «Quitar efectos en juegos» (`gameNoFx`) ya lo apaga en pantalla completa.
 - **Claude Desktop en Linux** es beta y solo para Debian/Ubuntu. El botón de pasar la conversación debe detectar qué hay instalado.
 - **Login:** un greeter roto te deja sin entrar. Deja tuigreet como respaldo y prueba en otra TTY.

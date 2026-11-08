@@ -4,6 +4,16 @@ El asistente vive en el **panel lateral** (`SUPER + A`, vista `ia`), pestaña **
 WhatsApp, YouTube y Pinterest como apps web. Todo lo que la IA hace en el escritorio pasa por un
 esquema fijo de acciones que **tú apruebas** antes de aplicarlas, y que se pueden deshacer.
 
+**Fijar** (chincheta de la cabecera · Ajustes › Panel lateral y PiP › «Fijar el panel», `sidePanelPinned`): el panel
+deja de flotar encima y pasa a ser parte del mosaico. Una capa invisible (`hf-ia-zone`, layer-shell Overlay) reserva su
+franja como zona exclusiva, igual que la barra, y Hyprland recoloca las ventanas en mosaico a su lado (a `gaps_out`,
+sin hueco doble; si la barra está en el mismo lado se descuenta lo que ya reserva). Va en la pantalla principal, sigue
+abierto en todos los espacios y al abrir otras vistas, no se cierra con Esc (Esc devuelve el teclado a la última
+ventana) y las apps web acopladas vuelven a su sitio si se arrastran. Se aparta con una ventana a pantalla completa
+(la maximizada respeta la franja), en el modo sin distracciones y durante la captura de la IA. `SUPER + A` y la ×
+lo esconden en esta sesión (se libera la franja; sigue fijado) y `SUPER + A` lo vuelve a mostrar; para desfijarlo,
+la chincheta o el ajuste. El estado se guarda en settings.json: tras reiniciar el shell vuelve fijado.
+
 ## Piezas
 
 | Pieza | Qué hace |
@@ -81,7 +91,7 @@ scripts/hf-ai chat '{"messages":[{"role":"user","text":"Pon la barra arriba"}],"
 Los chips de la cabecera eligen qué se envía con cada pregunta:
 **Documento activo** (clase y título de la ventana con foco), **Portapapeles** y **+ Captura**
 (el panel se aparta, se hace una captura con `grim` y se pasa por OCR con `tesseract spa+eng`; opcional).
-Además siempre va un resumen del estado del shell (estilo, color, barra, perfil).
+Además siempre va un resumen del estado del shell (estilo, color, barra).
 
 ## Acciones del shell
 
@@ -93,7 +103,6 @@ contra este esquema (todo lo demás se descarta) y genera las etiquetas en espa�
 | `set` | `{"type":"set","key":"estilo","value":"flat"}` | Estilo: Flat |
 | `wallpaper` | `{"type":"wallpaper","value":"next"}` (`prev`, `random`, ruta) | Siguiente fondo |
 | `workspace` | `{"type":"workspace","value":5}` | Ir al espacio 5 |
-| `profile` | `{"type":"profile","value":"trabajo"}` | Perfil: Trabajo |
 | `dnd` | `{"type":"dnd","value":true}` | Activar No molestar |
 | `pomodoro` | `{"type":"pomodoro","value":"start","minutes":25}` | Iniciar pomodoro de 25 min |
 | `focus` | `{"type":"focus","value":true}` | Entrar en modo sin distracciones |
@@ -103,13 +112,15 @@ contra este esquema (todo lo demás se descarta) y genera las etiquetas en espa�
 | `download` | `{"type":"download","urls":["https://…"],"kind":"audio","format":"mp3"}` | Descargar el audio (mp3) de youtube.com/… |
 | `download_ctl` | `{"type":"download_ctl","op":"pause","id":"all"}` (`resume`, `cancel`, `retry`) | Pausar todas las descargas |
 | `wallhaven` | `{"type":"wallhaven","op":"add","id":"abc123"}` (`set`) | Añadir el fondo abc123 de Wallhaven a mis fondos |
+| `youtube` | `{"type":"youtube","query":"Walk Foo Fighters","service":"youtube"}` (`music`, `spotify`) | Reproducir «Walk Foo Fighters» en YouTube |
+| `browser` | `{"type":"browser","op":"new-tab"}` (`close-tab`, `back`, `reload`, `scroll-down`, `find`/`search`/`open` con `value`…) | Nueva pestaña |
 
 Claves de `set`: `estilo`, `colorMode`, `palette`, `themeMode`, `barPos`, `barMode`, `animado`,
 `reduceTransparency`, `reduceMotion`, `gapsIn`, `gapsOut`, `pipSize`, `pipCorner`, `deskSort`.
 
-- **Aplicar** → `hf-ai apply` (`hf-apply set`, `hf-wallpaper`, `hf-profile`, `hyprctl dispatch`, `qs ipc`).
+- **Aplicar** → `hf-ai apply` (`hf-apply set`, `hf-wallpaper`, `hyprctl dispatch`, `qs ipc`).
   Antes guarda el estado en `~/.cache/hyprfrijol/undo/<id>.json` (se guardan los 30 últimos).
-- **Deshacer** → `hf-ai undo <id>`: restaura los ajustes tocados, el fondo, el perfil, «no molestar» y el espacio.
+- **Deshacer** → `hf-ai undo <id>`: restaura los ajustes tocados, el fondo, «no molestar» y el espacio.
 - Los comandos `run` nunca se ejecutan solos: hay que confirmar y se abren en la terminal (`kitty`).
 
 ### Aprobación

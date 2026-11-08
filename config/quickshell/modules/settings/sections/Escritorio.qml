@@ -2,6 +2,7 @@
 // muestras ui/WinModePreview.qml; services/WinMode.qml, config/apply/30-layout.py y 35-windows.py), columnas del
 // desplazamiento ("scrollColumnWidth", "scrollFocusFit", "scrollOneFull"), dock ("dockBehavior": fijo / auto / inteligente, "dockInTiling"; modules/desktop),
 // espacios ("wsNumerals", "wsShowAll"; bar/Workspaces.qml), iconos del escritorio ("deskIcons", "deskIconSize") y widgets; esquinas calientes (Daemons.qml), gestos del touchpad (hl.gesture),
+// apps en ventana flotante ("floatApps", "floatAppsSize"; ui/FloatApps.qml, 35-windows.py),
 // diseño de mosaico (general:layout), enfocar al pasar el cursor y acoplar a los bordes; nombres e iconos de los
 // espacios ("wsNames", "wsIcons", "wsBarNames" → barra y vista general; ui/WsNames.qml).
 import QtQuick
@@ -61,6 +62,28 @@ ColumnLayout {
                   + "(Super + Mayús + H la recupera).")
                 + " Super + Mayús + Espacio pasa por los tres modos; en los ajustes rápidos (Ventanas) puedes dar a un espacio otro modo durante la sesión."
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+        }
+    }
+
+    // Apps que flotan al centro (floatApps, floatAppsSize → config/apply/35-windows.py) · ui/FloatApps.qml
+    Section {
+        Layout.fillWidth: true
+        title: "Apps en ventana flotante"
+        headerRight: Mono { text: "hl.window_rule · float + center" }
+        FloatApps {
+            id: floatApps
+            Layout.fillWidth: true
+            onApply: l => Settings.set("floatApps", l)
+        }
+        LabeledRow {
+            label: "Tamaño de la ventana"
+            labelWidth: 150
+            Pills {
+                fill: false
+                model: [[0.5, "Pequeña · 50 %"], [0.65, "Mediana · 65 %"], [0.8, "Grande · 80 %"]]
+                current: Settings.get("floatAppsSize", 0.65)
+                onPicked: k => Settings.set("floatAppsSize", k)
+            }
         }
     }
 
