@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/logo.png">
+    <img alt="HyprFrijol — Productivo · Reproducible · Configurable" src="assets/brand/logo-card.png" width="760">
+  </picture>
+</p>
+
 # HyprFrijol (English summary)
 
 HyprFrijol is a from-scratch shell and rice for **Hyprland ≥ 0.57** (Lua config) built with **Quickshell**: a glassy *Aurora* style and a solid *Material* style, Spotlight, a side panel with AI and web apps, wallpaper picker, widgets, an update center with restore points, screenshots/recording, and its own greetd login. The interface and docs are in Spanish; see [README.md](README.md) for the full guide.

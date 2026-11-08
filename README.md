@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/logo.png">
+    <img alt="HyprFrijol — Productivo · Reproducible · Configurable" src="assets/brand/logo-card.png" width="760">
+  </picture>
+</p>
+
 # HyprFrijol
 
 Rice/shell propio para **Hyprland**, hecho desde cero, con dos estilos sobrios: *Aurora* (vidrio translúcido) y *Material* (Material 3, sólido); tono empresarial y minimalista, y varios agregados: Spotlight, panel flotante con IA + WhatsApp + YouTube + Pinterest, PiP mínimo, selector de fondos, widgets, centro de actualizaciones con punto de restauración, captura/grabación y login propio.
