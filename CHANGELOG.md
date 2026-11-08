@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.2] — 2026-11-07
+
+- **Dictado sin IA y en tiempo real con Vosk**: si está Vosk (`python-vosk` + `vosk-api`, ahora recomendado), cada
+  palabra aparece mientras hablas y cada frase se escribe al hacer una pausa; whisper.cpp queda como alternativa más
+  precisa, por frases (y es el que se usa mientras Vosk no esté: Ajustes › Dictado lo instala con un clic). Se retira
+  «Mejorar el texto con IA» (`dictationAI`; `hf-migrate` la quita con copia). La IA solo recibe las órdenes de voz que
+  no se entienden. Con el modelo pequeño en español (40 MB): 7,7 % de palabras erróneas en una lectura de 93 s, 33×
+  más rápido que el tiempo real en CPU (whisper «base»: 12 %).
+- **«Distro»** es la palabra para dar órdenes al dictar («Distro, sube el volumen», «oye Distro…»), en homenaje a las
+  distribuciones de Linux; se puede cambiar en Ajustes › Dictado. Quien tuviera «Frijol» sin tocar pasa a «Distro».
+- **Órdenes de voz propias**: frase → comando, app, web u otra orden (con `*` para lo que digas), y otras palabras para
+  las de serie («toca» = «reproduce»). Se comprueban escribiéndolas, sin ejecutar nada.
+
 ## [0.8.1] — 2026-11-07
 
 - **Dictado en tiempo real** (whisper.cpp residente): el texto aparece mientras hablas, en la misma posición que

@@ -1,7 +1,9 @@
 // Ajustes › Dictado — voz a texto local y comandos de voz (scripts/hf-dictate + scripts/hf-voice + modules/dictado):
 // motor (whisper.cpp, Vosk, híbrido o faster-whisper), modelos descargables a ~/.local/share/hyprfrijol/whisper con
 // progreso (o en la terminal con «Gestionar modelos»), idioma, modo del atajo (mantener / pulsar / continuo), cómo se
-// entrega el texto, puntuación, órdenes por voz (atajo propio o palabra de activación) y una zona de prueba.
+// entrega el texto, puntuación, órdenes por voz (atajo propio o palabra de activación «Distro»), órdenes propias
+// (voiceCommands: frase → comando, app, web u otra orden), sinónimos (voiceAliases) y zonas de prueba.
+// El dictado NUNCA usa IA; solo una orden que hf-voice no entienda va al asistente (voiceAiFallback).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -24,6 +26,65 @@ ColumnLayout {
     readonly property string eng: Settings.get("dictationEngine", "auto")
     readonly property bool arch: Pkg.family === "arch"
     readonly property var qs: ["qs", "-p", Paths.root + "/config/quickshell", "ipc", "call", "dictado"]
+    readonly property string voice: Paths.script("hf-voice")
+    readonly property string wake: String(Settings.get("dictationWakeWord", "Distro")).trim() || "Distro"
+    readonly property var cmds: Settings.get("voiceCommands", []) ?? []
+    readonly property var aliasMap: Settings.get("voiceAliases", ({})) ?? ({})
+    readonly property var aliasList: Object.keys(aliasMap).map(k => [k, aliasMap[k]])
+    // Vosk (tiempo real palabra a palabra): ¿falta el módulo o el modelo?
+    readonly property string voskName: Settings.get("dictationVoskModel", "vosk-model-small-es-0.42")
+    readonly property bool voskModelOk: (root.st.voskModels ?? []).some(m => m.name === root.voskName && m.installed)
+    readonly property bool voskMissing: root.st.ready !== false && root.eng !== "whisper.cpp" && root.eng !== "faster-whisper"
+                                         && (root.st.vosk === false || !root.voskModelOk) && (root.st.voskModels ?? []).length > 0
+    function installVosk() {
+        const dl = root.cmd + " download --tty " + root.voskName;
+        const mod = root.st.vosk ? "" : root.arch ? "sudo pacman -S --needed python-vosk vosk-api && " : root.cmd + " install-vosk && ";
+        Pkg.runInTerminal(mod + dl, "Dictado en tiempo real (Vosk)");
+        later.restart();
+    }
+    // palabra de activación: una o dos palabras, solo letras, 2–24 caracteres
+    function wakeError(w) {
+        const v = w.trim();
+        if (v === "") return "Escribe una palabra (por ejemplo «Distro»).";
+        if (v.length < 2 || v.length > 24) return "Entre 2 y 24 letras.";
+        if (!/^[A-Za-zÀ-ÿñÑ]+( [A-Za-zÀ-ÿñÑ]+)?$/.test(v)) return "Solo letras, una o dos palabras, sin signos.";
+        return "";
+    }
+    property string wakeErr: ""
+    function saveWake(w) {
+        wakeErr = wakeError(w);
+        if (wakeErr === "" && w.trim() !== Settings.get("dictationWakeWord", "Distro")) Settings.set("dictationWakeWord", w.trim());
+    }
+    // órdenes propias
+    property string cmdErr: ""
+    function addCmd(phrase, kind, value) {
+        const ph = phrase.trim(), v = value.trim();
+        if (ph.length < 2) { cmdErr = "Escribe la frase que dirás."; return false; }
+        if (v === "") { cmdErr = kind === "run" ? "Escribe el comando." : kind === "app" ? "Escribe la aplicación." : kind === "url" ? "Escribe la dirección." : "Escribe la orden a la que equivale."; return false; }
+        if (kind === "url" && !/^(https?:\/\/|[\w-]+\.[\w.-]+)/.test(v)) { cmdErr = "La dirección debe empezar por https:// (o ser un dominio)."; return false; }
+        if (root.cmds.some(c => String(c.phrase).trim().toLowerCase() === ph.toLowerCase())) { cmdErr = "Ya tienes una orden con esa frase."; return false; }
+        cmdErr = "";
+        Settings.set("voiceCommands", root.cmds.concat([{ "phrase": ph, "do": kind, "value": v }]));
+        return true;
+    }
+    function removeCmd(i) { const l = root.cmds.slice(); l.splice(i, 1); Settings.set("voiceCommands", l); }
+    function addAlias(word, canon) {
+        const w = word.trim().toLowerCase(), c = canon.trim().toLowerCase();
+        if (!w || !c || w === c) return false;
+        const m = Object.assign({}, root.aliasMap); m[w] = c; Settings.set("voiceAliases", m);
+        return true;
+    }
+    function removeAlias(w) { const m = Object.assign({}, root.aliasMap); delete m[w]; Settings.set("voiceAliases", m); }
+    readonly property var kindLabels: ({ run: "Ejecuta", app: "Abre la app", url: "Abre la web", orden: "Equivale a" })
+    // probar una orden escrita (no la ejecuta: solo dice qué haría)
+    property var parsed: null
+    Process {
+        id: parseProc
+        property string q: ""
+        command: [root.voice, "parse", q]
+        stdout: StdioCollector { onStreamFinished: { try { root.parsed = JSON.parse(text); } catch (e) { root.parsed = null; } } }
+    }
+    function tryText(q) { if (!q.trim()) return; parseProc.running = false; parseProc.q = q.trim(); parseProc.running = true; }
 
     function refresh() { probe.running = false; probe.running = true; lastProc.running = true; }
     Process {
@@ -151,6 +212,21 @@ ColumnLayout {
         }
     }
 
+    // ---------- Vosk: tiempo real de un clic ----------
+    Section {
+        visible: root.voskMissing
+        Layout.fillWidth: true
+        title: "Dictado en tiempo real"
+        InfoRow {
+            label: root.st.vosk === false ? "Falta Vosk" : "Falta el modelo de Vosk"
+            icon: "mic"
+            lit: false
+            sub: (root.st.vosk === false ? (root.arch ? "python-vosk y vosk-api" : "módulo vosk de Python") + (root.voskModelOk ? "" : " + modelo") : "modelo " + root.voskName)
+                 + " · palabra a palabra mientras hablas. Mientras, se dicta con whisper"
+            Button { kind: "primary"; text: "Instalar"; onClicked: root.installVosk() }
+        }
+    }
+
     RowLayout {
         Layout.fillWidth: true
         spacing: 12
@@ -162,7 +238,7 @@ ColumnLayout {
             title: "Modelo"
             headerRight: Button { text: "Gestionar modelos"; h: 26; onClicked: root.manage() }
             Repeater {
-                model: root.eng === "vosk" ? [] : (root.st.models ?? [])
+                model: root.st.engine === "vosk" ? [] : (root.st.models ?? [])
                 Item {
                     id: mrow
                     required property var modelData
@@ -223,7 +299,7 @@ ColumnLayout {
             }
             // modelos de Vosk (motor Vosk o híbrido)
             Repeater {
-                model: root.eng === "vosk" || root.eng === "hibrido" ? (root.st.voskModels ?? []) : []
+                model: root.st.engine === "vosk" || root.eng === "vosk" || root.eng === "hibrido" ? (root.st.voskModels ?? []) : []
                 Item {
                     id: vrow
                     required property var modelData
@@ -264,12 +340,8 @@ ColumnLayout {
             Timer { id: delTimer; interval: 400; onTriggered: root.refresh() }
             Button {
                 visible: (root.eng === "vosk" || root.eng === "hibrido") && root.st.vosk === false
-                text: root.arch ? "Instalar Vosk (python-vosk)" : "Instalar Vosk con pip (en la terminal)"
-                onClicked: {
-                    if (root.arch) Pkg.install([{ key: "repo", pkg: "python-vosk", name: "Vosk" }], "Instalar Vosk");
-                    else Pkg.runInTerminal(root.cmd + " install-vosk", "Instalar Vosk");
-                    later.restart();
-                }
+                text: root.arch ? "Instalar Vosk (python-vosk y vosk-api)" : "Instalar Vosk con pip (en la terminal)"
+                onClicked: root.installVosk()
             }
             Txt {
                 visible: root.dlError !== ""
@@ -279,7 +351,8 @@ ColumnLayout {
             Txt {
                 Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
                 text: (root.eng === "vosk" || root.eng === "hibrido") && !root.st.vosk
-                    ? "Vosk necesita su módulo de Python: paquete python-vosk (Arch) o «hf-deps install vosk»."
+                    ? "Vosk necesita su módulo de Python: paquetes python-vosk y vosk-api (Arch) o «hf-dictate install-vosk»."
+                    : root.st.engine === "vosk" ? "Modelos de Vosk (alphacephei.com). El pequeño (39 MB, ~300 MB de RAM) escribe palabra a palabra al instante; el grande (1,4 GB, varios GB de RAM) acierta más."
                     : root.st.engine === "faster-whisper" ? "Con faster-whisper el modelo elegido se descarga solo la primera vez que dictas."
                     : "Modelos de whisper.cpp (Hugging Face). Sin GPU, «base» escribe cada frase en ~1,5 s y «small» en ~3 s pero acierta mucho más; con GPU (ggml-vulkan) hasta «turbo» va fluido. El modelo se queda cargado mientras dictas y se descarga tras " + Math.round(Settings.get("dictationKeepLoaded", 600) / 60) + " min sin usarlo."
             }
@@ -312,10 +385,17 @@ ColumnLayout {
                 label: "Motor"
                 labelWidth: 110
                 Seg {
-                    model: [["auto", "Automático"], ["whisper.cpp", "whisper"], ["vosk", "Vosk"], ["hibrido", "Híbrido"]]
+                    model: [["auto", "Automático"], ["vosk", "Vosk"], ["whisper.cpp", "whisper"], ["hibrido", "Híbrido"]]
                     current: root.eng
                     onPicked: k => { Settings.set("dictationEngine", k); later.restart(); }
                 }
+            }
+            Txt {
+                Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
+                text: root.eng === "vosk" ? "Vosk: tiempo real, cada palabra aparece mientras la dices y cada frase se escribe al hacer una pausa."
+                    : root.eng === "whisper.cpp" ? "whisper: más preciso, por frases (cada frase se escribe ~1,5–3 s después de la pausa)."
+                    : root.eng === "hibrido" ? "Híbrido: Vosk enseña lo provisional y whisper escribe cada frase (más preciso, algo más lento)."
+                    : "Automático: Vosk si está instalado (tiempo real); si no, whisper (más preciso, por frases)."
             }
             LabeledRow {
                 label: "Idioma"
@@ -350,11 +430,6 @@ ColumnLayout {
             }
             SwRow { label: "Puntuación y mayúsculas automáticas"; sub: "comas, puntos y mayúscula al empezar frase; di «nueva línea» o «punto y aparte»"; key: "dictationPunct"; def: true }
             SwRow { label: "Ver el texto mientras hablas"; sub: "lo provisional aparece en la píldora antes de escribirse"; key: "dictationLive"; def: true }
-            SwRow {
-                label: "Mejorar el texto con IA"
-                sub: "puntuación y muletillas · escribe al terminar, no frase a frase · usa " + Settings.get("aiProvider", "claude-code")
-                key: "dictationAI"
-            }
             LinkRow { label: "Cambiar el atajo"; value: "Dictado"; section: "teclado"; sectionLabel: "Teclado y atajos"; target: "Dictado" }
         }
     }
@@ -366,11 +441,11 @@ ColumnLayout {
         headerRight: Kbd { text: "Super + Alt + V" }
         Txt {
             Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
-            text: "Con su atajo, lo que digas es una orden: «Reproduce Walk de los Foo Fighters desde YouTube», «sube el volumen al 40 %», «nueva pestaña». La píldora enseña ⌘ en lugar del micrófono, la orden que entendió y si salió bien."
+            text: "Con su atajo, lo que digas es una orden: «Reproduce Walk de los Foo Fighters desde YouTube», «sube el volumen al 40 %», «nueva pestaña». Las entiende tu equipo, sin IA; la píldora enseña ⌘ en lugar del micrófono, la orden que entendió y si salió bien."
         }
         SwRow {
             label: "Palabra de activación al dictar"
-            sub: "empieza una frase con «" + Settings.get("dictationWakeWord", "Frijol") + ", …» u «oye " + Settings.get("dictationWakeWord", "Frijol") + "» y será una orden en vez de texto"
+            sub: "empieza una frase con «" + root.wake + ", …» u «oye " + root.wake + "» y será una orden en vez de texto"
             key: "dictationWake"; def: true
         }
         LabeledRow {
@@ -378,12 +453,20 @@ ColumnLayout {
             labelWidth: 110
             hint: "dictationWakeWord"
             Field {
+                id: wakeField
                 icon: ""
-                placeholder: "Frijol"
-                text: Settings.get("dictationWakeWord", "Frijol")
-                onAccepted: Settings.set("dictationWakeWord", text.trim() || "Frijol")
-                input.onActiveFocusChanged: if (!input.activeFocus && text.trim() !== Settings.get("dictationWakeWord", "Frijol")) Settings.set("dictationWakeWord", text.trim() || "Frijol")
+                placeholder: "Distro"
+                text: Settings.get("dictationWakeWord", "Distro")
+                onAccepted: root.saveWake(text)
+                input.onTextChanged: root.wakeErr = root.wakeError(text)
+                input.onActiveFocusChanged: if (!input.activeFocus) root.saveWake(text)
             }
+            Button { visible: root.wake !== "Distro"; text: "Distro"; h: 28; onClicked: { wakeField.text = "Distro"; root.saveWake("Distro"); } }
+        }
+        Txt {
+            Layout.fillWidth: true; size: 11; wrapMode: Text.WordWrap
+            color: root.wakeErr ? Theme.danger : Theme.tv
+            text: root.wakeErr || "«Distro», en homenaje a las distribuciones de Linux. Mejor una palabra que no uses al dictar; se aceptan «oye/hey " + root.wake + "» y pequeños errores al oírla."
         }
         LabeledRow {
             label: "Música en"
@@ -403,6 +486,28 @@ ColumnLayout {
             sub: "la orden va al panel de IA; lo que cambie algo pide tu aprobación allí"
             key: "voiceAiFallback"; def: true
         }
+        // probar una orden escrita: dice qué haría, sin hacerlo
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            Field {
+                id: tryCmd
+                Layout.fillWidth: true
+                icon: "command"
+                placeholder: "Escribe una orden para ver qué haría: «toca Walk en YouTube»"
+                onAccepted: root.tryText(text)
+            }
+            Button { text: "Comprobar"; onClicked: root.tryText(tryCmd.text) }
+            Button { kind: "primary"; text: "Probar una orden"; onClicked: Quickshell.execDetached(root.qs.concat(["command"])) }
+        }
+        Txt {
+            visible: root.parsed !== null
+            Layout.fillWidth: true; size: 11.5; wrapMode: Text.WordWrap
+            color: root.parsed?.intent === "unknown" ? Theme.tv : Theme.t
+            text: !root.parsed ? "" : root.parsed.intent === "unknown"
+                ? (Settings.get("voiceAiFallback", true) ? "No es una orden conocida: iría al asistente de IA («" + root.parsed.text + "»)." : "No es una orden conocida (y el asistente está desactivado).")
+                : "Entendido: " + root.parsed.label + (root.parsed.custom ? " · orden tuya" : "")
+        }
         Repeater {
             model: root.intents
             InfoRow {
@@ -410,11 +515,90 @@ ColumnLayout {
                 label: modelData[0]; sub: modelData[1]; icon: "command"; lit: true
             }
         }
+        LinkRow { label: "Cambiar el atajo"; value: "Comando de voz"; section: "teclado"; sectionLabel: "Teclado y atajos"; target: "Comando de voz"; Layout.fillWidth: true }
+    }
+
+    // ---------- órdenes propias ----------
+    Section {
+        Layout.fillWidth: true
+        title: "Tus órdenes"
+        Txt {
+            Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
+            text: "Frases tuyas que se miran antes que las de serie. Un * recoge lo que digas en su sitio y se usa como {x}: «busca * en mi wiki» → https://wiki.example.org/?q={x}."
+        }
+        Repeater {
+            model: root.cmds
+            InfoRow {
+                required property var modelData
+                required property int index
+                label: "«" + modelData.phrase + "»"
+                sub: (root.kindLabels[modelData["do"]] ?? modelData["do"]) + " " + (modelData["do"] === "orden" ? "«" + modelData.value + "»" : modelData.value)
+                icon: modelData["do"] === "run" ? "terminal" : modelData["do"] === "url" ? "globe" : modelData["do"] === "app" ? "grid" : "command"
+                lit: true
+                IconBtn { icon: "trash"; onClicked: root.removeCmd(index) }
+            }
+        }
+        Txt { visible: root.cmds.length === 0; muted: true; size: 11.5; text: "Aún no tienes órdenes propias." }
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
-            LinkRow { label: "Cambiar el atajo"; value: "Comando de voz"; section: "teclado"; sectionLabel: "Teclado y atajos"; target: "Comando de voz"; Layout.fillWidth: true }
-            Button { kind: "primary"; text: "Probar una orden"; onClicked: Quickshell.execDetached(root.qs.concat(["command"])) }
+            Field { id: newPhrase; Layout.fillWidth: true; Layout.preferredWidth: 3; icon: "mic"; placeholder: "Cuando diga… «modo cine»" }
+            Seg {
+                id: newKind
+                fill: false
+                property string k: "run"
+                model: [["run", "Comando"], ["app", "App"], ["url", "Web"], ["orden", "Otra orden"]]
+                current: k
+                onPicked: key => k = key
+            }
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            Field {
+                id: newValue
+                Layout.fillWidth: true
+                icon: ""
+                placeholder: newKind.k === "run" ? "…ejecuta: hyprctl keyword decoration:blur:enabled false"
+                    : newKind.k === "app" ? "…abre la app: firefox, thunderbird…"
+                    : newKind.k === "url" ? "…abre: https://… ({x} = lo dicho en el *)"
+                    : "…equivale a: pon lo-fi en YouTube"
+                onAccepted: add.clicked()
+            }
+            Button {
+                id: add
+                kind: "primary"; text: "Añadir"
+                onClicked: if (root.addCmd(newPhrase.text, newKind.k, newValue.text)) { newPhrase.text = ""; newValue.text = ""; }
+            }
+        }
+        Txt { visible: root.cmdErr !== ""; Layout.fillWidth: true; size: 11; color: Theme.danger; text: root.cmdErr }
+
+        // sinónimos de las órdenes de serie
+        Txt { Layout.topMargin: 6; text: "Otras palabras para las órdenes de serie"; weight: Font.DemiBold }
+        Txt {
+            Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
+            text: "Por ejemplo «toca» → «reproduce»: «toca Walk en YouTube» se entiende como «reproduce Walk en YouTube»."
+        }
+        Repeater {
+            model: root.aliasList
+            InfoRow {
+                required property var modelData
+                label: "«" + modelData[0] + "»"
+                sub: "se entiende como «" + modelData[1] + "»"
+                icon: "command"; lit: true
+                IconBtn { icon: "trash"; onClicked: root.removeAlias(modelData[0]) }
+            }
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            Field { id: newAlias; Layout.fillWidth: true; icon: ""; placeholder: "Si digo… «toca»" }
+            Field { id: newCanon; Layout.fillWidth: true; icon: ""; placeholder: "…es como decir «reproduce»"; onAccepted: addAl.clicked() }
+            Button {
+                id: addAl
+                text: "Añadir"
+                onClicked: if (root.addAlias(newAlias.text, newCanon.text)) { newAlias.text = ""; newCanon.text = ""; }
+            }
         }
     }
 }

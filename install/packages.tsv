@@ -23,7 +23,7 @@
 # ppa:cppiber/hyprland y ppa:avengemedia/danklinux, el repodata de repo-default.voidlinux.org,
 # y repology.org/api/v1 para las versiones.
 #
-# Dictado de la ronda 9 (whisper-cpp, ggml-vulkan / libggml0-backend-vulkan, python-vosk, whisper.cpp-tools) comprobado el
+# Dictado de la ronda 9 (whisper-cpp, ggml-vulkan / libggml0-backend-vulkan, python-vosk + vosk-api, whisper.cpp-tools) comprobado el
 # 2026-11-07 con repology.org/api/v1 (arch, fedora_44, debian_unstable/14, ubuntu_26_04, opensuse_tumbleweed, void).
 #
 # Las funciones de la ronda 8 (impresoras, escáner, móvil, huella, VMs, contenedores, VPN, cortafuegos,
@@ -172,7 +172,7 @@ pw-tools	recommended	pipewire	pipewire-utils	pipewire-tools	pipewire-bin	pipewir
 ydotool	recommended	ydotool	ydotool	ydotool	ydotool	-	escribir en apps XWayland y clics simulados (si wtype no basta)	dictado	ydotool
 whisper	optional	whisper-cpp	whisper-cpp	-	whisper.cpp,whisper.cpp-tools	-	motor de dictado local whisper.cpp (whisper-server queda residente; modelos: hf-dictate manage, de huggingface.co/ggerganov/whisper.cpp)	dictado	whisper-cli,whisper-server
 whisper-gpu	optional	ggml-vulkan	-	-	libggml0-backend-vulkan	-	whisper.cpp en la GPU con Vulkan (AMD/Intel/NVIDIA; dictado con «small» o «turbo» al momento)	dictado	
-vosk	optional	python-vosk	-	-	-	-	Vosk: texto provisional al momento (motor «Vosk» o «Híbrido»); sin paquete: hf-dictate install-vosk (venv con pip en ~/.local/share/hyprfrijol/whisper/vosk-venv) · modelos de alphacephei.com/vosk/models	dictado	
+vosk	recommended	python-vosk,vosk-api	-	-	-	-	Vosk: dictado en tiempo real, palabra a palabra (motor por defecto si está; si no, whisper); sin paquete: hf-dictate install-vosk (venv con pip en ~/.local/share/hyprfrijol/whisper/vosk-venv) · modelos de alphacephei.com/vosk/models	dictado	
 # — Ajustes › Asistente de IA
 ollama	optional	ollama	ollama	ollama	-	-	IA local con Ollama (en otras distros: ollama.com/download)	ia	ollama
 # — Capturas y grabación

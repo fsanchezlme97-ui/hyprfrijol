@@ -201,6 +201,26 @@ portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si o
 
 Componente nuevo: `modules/settings/ui/ConfirmButton.qml` (acción destructiva en dos clics, en `Theme.danger`).
 
+## Dictado y comandos de voz (`sections/Dictado.qml` + `scripts/hf-dictate` + `scripts/hf-voice`)
+
+El dictado es local y **sin IA**. Solo una orden que `hf-voice` no entienda va al asistente (`voiceAiFallback`).
+
+| Clave | Por defecto | Qué hace |
+|---|---|---|
+| `dictationEngine` | `auto` | `auto` = Vosk si están `python-vosk` y el modelo (tiempo real, palabra a palabra); si no, whisper.cpp · `vosk` · `whisper.cpp` (más preciso, por frases) · `hibrido` (Vosk lo provisional, whisper cada frase) · `faster-whisper` |
+| `dictationVoskModel` | `vosk-model-small-es-0.42` | modelo de Vosk (39 MB, ~300 MB de RAM); `vosk-model-es-0.42` (1,4 GB) acierta más pero pide varios GB de RAM. Si falta Vosk, la sección ofrece «Instalar» (Arch: `pacman -S python-vosk vosk-api`; otras: `hf-dictate install-vosk`) y se dicta con whisper mientras tanto |
+| `dictationModel` | `base` | modelo de whisper.cpp (`tiny` · `base` · `small` · `medium` · `turbo`) |
+| `dictationMode` | `ptt` | `ptt` (mantener) · `toggle` · `continuo` (para tras `dictationSilenceSec` s en silencio) |
+| `dictationPauseMs` | `600` | pausa que cierra una frase (Vosk: retardo del fin de frase; whisper: VAD) |
+| `dictationLang` / `dictationOutput` / `dictationPrompt` | `es` / `escribir` / `""` | idioma, cómo se entrega el texto (escribe · pega · copia) y vocabulario para whisper |
+| `dictationPunct` / `dictationLive` | `true` / `true` | puntuación y mayúsculas automáticas («coma», «punto y aparte»…) · texto provisional en la píldora |
+| `dictationWake` / `dictationWakeWord` | `true` / `"Distro"` | «Distro, …» u «oye Distro …» al empezar una frase es una orden. Se valida en Ajustes (una o dos palabras, solo letras). `hf-migrate` cambia «Frijol» (la de antes) por «Distro» si no la habías cambiado |
+| `voiceCommands` | `[]` | órdenes propias, antes que las de serie: `{"phrase": "modo cine", "do": "run" \| "app" \| "url" \| "orden", "value": "…"}`; `*` en la frase recoge lo dicho y se usa como `{x}` en `value` |
+| `voiceAliases` | `{}` | otras palabras para las órdenes de serie: `{"toca": "reproduce"}` |
+| `voiceMusicService` / `voiceAiFallback` | `youtube` / `true` | dónde suena «pon <canción>» · lo que no entienda, al asistente |
+
+«Comprobar» (orden escrita) usa `hf-voice parse` y no ejecuta nada; «Probar una orden» abre el micrófono.
+
 ## Notificaciones (`sections/Notificaciones.qml` + `NotifRules.qml`)
 
 Como en GNOME/KDE: «No molestar» (`Notifs.setDnd`) y su horario, avisos emergentes, sonido, pantalla de

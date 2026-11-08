@@ -300,6 +300,12 @@ Como siempre, los scripts hacen el trabajo; el shell, la IA (`hf-ai`/`hf-mcp`) y
   sin uso; con un modelo grande y sin GPU, lo provisional sale de «base» en otro servidor (`live_model`). Vosk/híbrido si
   hay `python-vosk` (o `hf-dictate install-vosk`). Modos `ptt` (con `--hold`: no escribe hasta «release» por stdin),
   `toggle` y `continuo`.
+- **Sin IA en el dictado** (ronda 10): `dictationAI` retirada (hf-migrate paso 6, copia `settings.json.antes-sin-ia-dictado`).
+  `auto` prefiere **Vosk** si está instalado con su modelo: `VoskEngine.stream()` da parciales palabra a palabra y la frase
+  final con el fin de frase de Kaldi (`SetEndpointerDelays(…, dictationPauseMs, …)`), sin VAD propio ni reescrituras; si
+  falta, whisper.cpp. Wake word por defecto **«Distro»** (`hf-voice` `WAKE_ALTS`/`WAKE_LOOSE`: «oye/hey Distro», «distro,»,
+  «destro», «distrito» solo si lo que sigue es una orden conocida). `voiceCommands` y `voiceAliases` se miran antes que las
+  intenciones de serie (intención nueva `run`); están en `DENY_KEYS` de hf-ai.
 - **`scripts/hf-voice`**: intenciones en español sin IA (`parse`/`run`/`test`), YouTube (`yt-dlp --get-id`, o el primer
   `videoId` de la página de resultados, o la búsqueda), teclas al navegador con wtype. Lo demás → `sidepanel ask`.
   hf-ai/hf-mcp: acciones `youtube` y `browser` (herramientas `play_music`, `browser_control`).

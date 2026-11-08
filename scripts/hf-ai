@@ -130,7 +130,8 @@ MEDIA_OPS = {"play": "Reproducir", "pause": "Pausar", "play-pause": "Reproducir 
 # Claves de settings.json que la IA NO puede tocar aunque existan (sus propios permisos, comandos, red, seguridad)
 DENY_KEYS = re.compile(r"^(ai[A-Z]|windowMode$|monitors$|kb|binds?$|keybinds|terminal$|browser$|fileManager$|codeEditor$|textEditor$"
                        r"|office$|taskManager$|volumeMixer$|welcomeDone$|primaryMonitor$|printer|remote|vnc|cockpit|sync"
-                       r"|plugins|autostart|lock|idleLock|gpuMode|updatesSnapshot|weatherLat|weatherLon|wallhavenPurity)"
+                       r"|plugins|autostart|lock|idleLock|gpuMode|updatesSnapshot|weatherLat|weatherLon|wallhavenPurity"
+                       r"|voiceCommands|voiceAliases|voiceAiFallback)"
                        r"|(Cmd|Command|Exec|Script|Path|Paths|Url|Urls|Key|Keys|Token|Secret|Password|Env)$")
 # Etiquetas de claves frecuentes que no están en SET_KEYS
 KEY_LABELS = {"barHeight": "Alto de la barra", "fontScale": "Tamaño de letra", "uiScale": "Escala de la interfaz",

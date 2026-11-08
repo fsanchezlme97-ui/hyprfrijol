@@ -50,7 +50,7 @@ Scope {
         { key: "usuarios", label: "Usuarios", icon: "user", file: "Usuarios", sub: "AccountsService · useradd", kw: "usuarios cuenta contraseña avatar administrador" },
         { key: "virtualizacion", label: "Máquinas virtuales", icon: "cpu", file: "Virtualizacion", sub: "Cockpit · libvirt · Boxes", kw: "máquinas virtuales vm cockpit libvirt qemu kvm boxes contenedores podman distrobox" },
         { key: "accesibilidad", label: "Accesibilidad", icon: "accessibility", file: "Accesibilidad", sub: "Orca · AT-SPI · screen_shader", kw: "accesibilidad lector de pantalla orca contraste transparencia movimiento lupa zoom cursor grande filtro daltonismo teclado en pantalla dictado voz subtítulos alertas visuales audio mono" },
-        { key: "dictado", label: "Dictado", icon: "mic", file: "Dictado", sub: "whisper.cpp · local", kw: "dictado dictar voz hablar micrófono transcribir transcripción whisper superwhisper reconocimiento de voz escribir con la voz" },
+        { key: "dictado", label: "Dictado", icon: "mic", file: "Dictado", sub: "local · sin IA", kw: "dictado dictar voz hablar micrófono transcribir transcripción whisper vosk distro órdenes comandos de voz superwhisper reconocimiento de voz escribir con la voz" },
         { key: "acerca", label: "Acerca del sistema", icon: "info", file: "Acerca", sub: "fastfetch · tu perfil de escritorio", kw: "acerca sistema equipo kernel cpu gpu memoria sincronizar perfil exportar perfil" }
     ]
     readonly property var current: nav.find(n => n.key === section) ?? nav[0]

@@ -15,7 +15,9 @@ que no entiende se lo pasa al asistente (hf-ai, en el panel lateral, con sus reg
   hf-voice test                     prueba el analizador con frases de ejemplo (en seco)
 
 Ajustes: voiceAiFallback (true: lo no entendido va a la IA) · voiceMusicService youtube|music|spotify (al decir
-«pon X» sin decir dónde) · dictationWakeWord (palabra de activación, «Frijol»).
+«pon X» sin decir dónde) · dictationWakeWord (palabra de activación, «Distro»: «Distro, …», «oye Distro …») ·
+voiceCommands (órdenes propias: [{"phrase":"modo cine","do":"run|app|url|orden","value":"…"}], «*» en la frase → {x})
+· voiceAliases ({"toca":"reproduce"}: palabras tuyas para las órdenes de serie). Van antes que las de serie.
 Pruebas: HF_VOICE_OPEN="<orden>" abre las direcciones con esa orden en lugar de xdg-open (la dirección va al final);
 HF_VOICE_NO_NET=1 no consulta YouTube (usa la búsqueda).
 """
@@ -73,28 +75,105 @@ def num(w):
         return TENS[m.group(1)] + (UNITS.get(m.group(2) or "cero", 0))
     return UNITS.get(w)
 
-WAKE_DEFAULT = "frijol"
+WAKE_DEFAULT = "distro"     # en homenaje a las distribuciones de Linux; se cambia en Ajustes › Dictado
+# cómo suele escribir «Distro» el reconocedor. Las que son palabras corrientes («diestro», «distrito»…) solo valen
+# con «oye/hey» delante, con coma detrás o si lo que sigue es una orden que se entiende (wake_split).
+WAKE_ALTS = {"distro": {"distro", "distros", "distró", "dis tro", "disto", "destro", "dystro", "distra", "distrou"},
+             "frijol": {"frijol", "frijoles", "frejol", "frijo", "fri jol", "free jol", "frijolito"}}
+WAKE_LOOSE = {"distro": {"diestro", "distrito", "bistro", "dextro", "de stro", "de tro", "district"}}
+WAKE_PRE = r"(?:(?:oye|hey|ey|ok|okey|eh|hola|vale)[\s,]+)"
+
+def wake_word(word=None):
+    return fold(word or settings().get("dictationWakeWord") or WAKE_DEFAULT).strip() or WAKE_DEFAULT
+
+def _alt(words):
+    return "|".join(sorted((re.escape(a) for a in words), key=len, reverse=True))
 
 def wake_re(word=None):
-    w = fold(word or settings().get("dictationWakeWord") or WAKE_DEFAULT).strip()
-    alts = {w}
-    if w == "frijol":   # cómo lo suele escribir el reconocedor
-        alts |= {"frijol", "frijoles", "frejol", "frijo", "frijol", "fri jol", "free jol", "frío", "frijolito"}
-    alt = "|".join(sorted((re.escape(a) for a in alts), key=len, reverse=True))
-    return re.compile(r"^\W*(?:(?:oye|hey|ey|ok|okey|eh|hola)[\s,]+)?(?:" + alt + r")\b[\s,.:;!¡-]*", re.I)
+    w = wake_word(word)
+    return re.compile(r"^\W*" + WAKE_PRE + r"?(?:" + _alt({w} | WAKE_ALTS.get(w, set())) + r")\b[\s,.:;!¡-]*", re.I)
 
-def strip_wake(text, word=None):
-    """(True, resto) si la frase empieza por la palabra de activación («Frijol, …», «oye Frijol …»)."""
+def strip_wake(text, word=None, loose=False):
+    """(True, resto) si la frase empieza por la palabra de activación («Distro, …», «oye Distro …», «hey Distro»).
+    loose=True: también las parecidas sin coma (quien llama comprueba que el resto sea una orden)."""
     t = text or ""
-    m = wake_re(word).match(fold(t))
+    f = fold(t)
+    m = wake_re(word).match(f)
     if m:
         return True, t[m.end():].strip()
-    # parecida («Fijol», «Frijo»): solo si va sola al principio y seguida de coma, como se dice «Frijol, …»
-    w = fold(word or settings().get("dictationWakeWord") or WAKE_DEFAULT).strip()
-    m = re.match(r"^\W*(?:(?:oye|hey|ok)\s+)?([a-zñ]+)\s*[,:]\s*", fold(t))
+    w = wake_word(word)
+    lw = WAKE_LOOSE.get(w, set())
+    if lw:   # «oye diestro, …» o «distrito, …»
+        m = re.match(r"^\W*(?:" + WAKE_PRE + r"(?:" + _alt(lw) + r")\b|(?:" + _alt(lw) + r")\s*[,:])[\s,.:;!¡-]*", f)
+        if m:
+            return True, t[m.end():].strip()
+    # parecida («Distor», «Bistró»): sola al principio y con coma, como se dice «Distro, …»
+    m = re.match(r"^\W*" + WAKE_PRE + r"?([a-z]+)\s*[,:]\s*", f)
     if m and difflib.SequenceMatcher(None, m.group(1), w).ratio() >= 0.75:
         return True, t[m.end():].strip()
+    if loose:
+        m = re.match(r"^\W*" + WAKE_PRE + r"?([a-z]+(?: [a-z]+)?)\b[\s,.:;!¡-]*", f)
+        if m:
+            first = m.group(1).split(" ")[0]
+            cand = [m.group(1).replace(" ", ""), first]
+            if any(c in lw or difflib.SequenceMatcher(None, c, w).ratio() >= 0.8 for c in cand):
+                end = m.end() if m.group(1).replace(" ", "") in lw | {w} or difflib.SequenceMatcher(None, m.group(1).replace(" ", ""), w).ratio() >= 0.8 \
+                    else m.start(1) + len(first)
+                return True, t[end:].strip(" ,.:;")
     return False, t
+
+def wake_split(text, word=None, s=None):
+    """¿Es una orden dentro del dictado? Exacta → sí. Parecida sin coma → solo si el resto es una orden conocida."""
+    ok, rest = strip_wake(text, word)
+    if ok:
+        return True, rest
+    ok, rest = strip_wake(text, word, loose=True)
+    if ok and rest and parse(rest, s, wake=False)["intent"] not in ("unknown", "none"):
+        return True, rest
+    return False, text
+
+# ---------------------------------------------------------------- órdenes propias (Ajustes › Dictado)
+def aliases(s):
+    """voiceAliases: {"toca": "reproduce", "dale": "pon"} → palabra que dices → palabra que entiende el analizador."""
+    a = s.get("voiceAliases") or {}
+    return {fold(k).strip(): fold(v).strip() for k, v in a.items() if isinstance(k, str) and isinstance(v, str) and k.strip() and v.strip()} \
+        if isinstance(a, dict) else {}
+
+def apply_aliases(o, s):
+    """Cambia en la frase original las palabras (o grupos) de voiceAliases; se buscan sin tildes ni mayúsculas."""
+    for k, v in sorted(aliases(s).items(), key=lambda kv: -len(kv[0])):
+        spans = [m.span() for m in re.finditer(r"(?<![\w])" + re.escape(k) + r"(?![\w])", fold(o))]
+        for a, b in reversed(spans):
+            o = o[:a] + v + o[b:]
+    return o
+
+CUSTOM_KINDS = {"run": "Ejecutar", "app": "Abrir app", "url": "Abrir web", "orden": "Equivale a"}
+
+def custom(t, o, s):
+    """voiceCommands: [{"phrase":"modo cine","do":"run|app|url|orden","value":"…"}]. «*» en la frase recoge el resto
+    («busca * en mi wiki» → {x} en value). Devuelve la intención o None."""
+    for c in s.get("voiceCommands") or []:
+        if not isinstance(c, dict) or not str(c.get("phrase") or "").strip() or c.get("do") not in CUSTOM_KINDS:
+            continue
+        ph = clean(fold(str(c["phrase"])))
+        rx = r"\s*".join("(.+?)" if w == "*" else re.escape(w) for w in ph.split(" "))
+        m = re.fullmatch(rx, t)
+        x = o[m.start(1):m.end(1)].strip() if m and m.groups() else ""
+        if not m and "*" not in ph and len(ph) >= 6 and difflib.SequenceMatcher(None, ph, t).ratio() >= 0.88:
+            m = True                                   # casi igual («modo sine» → «modo cine»)
+        if not m:
+            continue
+        v = str(c.get("value") or "")
+        lab = str(c.get("label") or c["phrase"])
+        if c["do"] == "orden":
+            it = parse(v.replace("{x}", x), s, custom_ok=False)
+            return {**it, "label": f"{lab} → {it['label']}", "custom": c["phrase"]}
+        if c["do"] == "url":
+            return I("url", lab, url=v.replace("{x}", urllib.parse.quote_plus(x)), custom=c["phrase"])
+        if c["do"] == "app":
+            return I("launch", lab, app=v.replace("{x}", x), custom=c["phrase"])
+        return I("run", lab, command=v.replace("{x}", shlex.quote(x)) if x else v.replace("{x}", ""), custom=c["phrase"])
+    return None
 
 # ---------------------------------------------------------------- intenciones
 SITES = {
@@ -165,17 +244,23 @@ def music_service(word, s=None):
 
 SVC_NAMES = {"youtube": "YouTube", "music": "YouTube Music", "spotify": "Spotify"}
 
-def parse(text, s=None):
+def parse(text, s=None, wake=True, custom_ok=True):
     """Frase → intención (dict). Nunca ejecuta nada. intent == "unknown" si no la entiende."""
     s = s or settings()
     raw = text or ""
-    is_wake, raw = strip_wake(raw, s.get("dictationWakeWord"))
+    is_wake, raw = strip_wake(raw, s.get("dictationWakeWord")) if wake else (False, raw)
     o = clean(raw)
     t = fold(o)
     t = re.sub(r"^(?:por favor|porfa|oye|venga|vale|ahora)\s+", "", t)
     o = o[len(o) - len(t):] if len(t) <= len(o) else o
     t = re.sub(r"\s+(?:por favor|porfa)$", "", t)
     o = o[:len(t)]
+    if aliases(s):                                  # «toca» → «reproduce» (Ajustes › Dictado › Palabras)
+        o = apply_aliases(o, s); t = fold(o)
+    if custom_ok:                                   # órdenes propias antes que las de serie
+        c = custom(t, o, s)
+        if c:
+            return c
     # el reconocedor a veces tuerce el verbo («Repromuze», «Abrí»): se corrige la primera palabra si se parece mucho
     first = t.split(" ", 1)[0]
     if first not in VERBS and len(first) >= 4:
@@ -293,7 +378,7 @@ def parse(text, s=None):
         on = not (m.group(1) or "").startswith(("quita", "desactiva", "apaga"))
         mins = (num(m.group(2)) or 0) * (60 if (m.group(3) or "").startswith("hora") else 1) if m.group(2) else None
         return I("dnd", ("Activar" if on else "Desactivar") + " No molestar" + (f" {mins} min" if mins else ""), value=on, minutes=mins)
-    m = re.fullmatch(r"(?:cambia(?:r)?|ve|ir|pasa|salta|muevete|llevame|vamos)(?: me)? (?:al|a el|a)(?: espacio| escritorio)?(?: de trabajo)?"
+    m = re.fullmatch(r"(?:cambia(?:r)?|ve|ir|pasa|salta|muevete|llevame|vamos)(?: me)? (?:al|a el|a)(?: espacio| escritorio| escrito(?: yo)?)?(?: de trabajo)?"
                      r"(?: numero)? " + NUM_RE, t) or re.fullmatch(r"(?:escritorio|espacio)(?: de trabajo)?(?: numero)? " + NUM_RE, t)
     if m and num(m.group(1)) and 1 <= num(m.group(1)) <= 20:
         n = num(m.group(1))
@@ -517,6 +602,8 @@ def plan_of(it):
         return {"run": QS + ["ipc", "call", "shell", "open", "ia"]}
     if k == "unknown":
         return {"ai": it.get("text")}
+    if k == "run":
+        return {"run": ["sh", "-c", it["command"]]}
     return {}
 
 def execute(it, s=None, no_ai=False):
@@ -538,6 +625,9 @@ def execute(it, s=None, no_ai=False):
     if k == "screenshot":
         time.sleep(0.4)          # que se vaya la píldora
         subprocess.Popen(plan_of(it)["run"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        return {"ok": True, "msg": "Hecho"}
+    if k == "run":                     # orden propia del usuario (voiceCommands): la escribió él en Ajustes
+        subprocess.Popen(["sh", "-c", it["command"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         return {"ok": True, "msg": "Hecho"}
     if k in ("lock", "ia"):
         subprocess.Popen(plan_of(it)["run"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
@@ -564,7 +654,7 @@ def _launch_cmd(key, s):
 
 TESTS = [
     "Reproduce Walk de los Foo Fighters desde YouTube.", "Pon Bohemian Rhapsody de Queen en YouTube Music",
-    "Frijol, pon Despacito en Spotify", "Oye Frijol, pausa la música", "Siguiente canción", "Canción anterior",
+    "Distro, pon Despacito en Spotify", "Oye Distro, pausa la música", "Siguiente canción", "Canción anterior",
     "Sube el volumen", "Baja el volumen un poco", "Volumen al cincuenta por ciento", "Pon el volumen al 30 %", "Silencia",
     "Abre YouTube", "Abre elpais punto com", "Abre Firefox", "Busca recetas de paella", "Busca gatos en Wikipedia",
     "Busca la última de Rosalía en YouTube", "Nueva pestaña", "Cierra la pestaña", "Vuelve atrás", "Recarga la página",
@@ -606,8 +696,8 @@ def main(argv):
     if cmd == "browser":
         op = rest[0] if rest else ""
         print(json.dumps(browser(op, " ".join(rest[1:]), dry="--print" in flags), ensure_ascii=False)); return
-    if cmd == "wake":
-        ok, r = strip_wake(" ".join(rest))
+    if cmd == "wake":               # ¿es una orden dentro del dictado? (lo mismo que usa hf-dictate)
+        ok, r = wake_split(" ".join(rest))
         print(json.dumps({"wake": ok, "rest": r}, ensure_ascii=False)); return
     if cmd == "intents":
         print(json.dumps(INTENT_DOC, ensure_ascii=False)); return
@@ -625,7 +715,8 @@ INTENT_DOC = [
     ["Volumen y brillo", "«sube/baja el volumen» · «volumen al 40 %» · «silencia» · «activa el sonido» · «sube/baja el brillo» · «brillo al 70»"],
     ["Navegador", "«abre <web>» · «busca <algo> (en Google/Wikipedia/YouTube)» · «nueva pestaña» · «cierra la pestaña» · «atrás» · «adelante» · «recarga» · «baja/sube» · «busca <x> en la página»"],
     ["Escritorio", "«abre <app>» · «abre los ajustes» · «captura de pantalla» · «bloquea» · «no molestar» · «escritorio 3» · «cierra/maximiza la ventana» · «fondo siguiente» · «modo oscuro» · «temporizador de 10 minutos» · «cafeína»"],
-    ["Lo demás", "se lo pregunto al asistente (panel lateral), que pide aprobación para cambiar cosas"],
+    ["Tuyas", "las órdenes propias y las palabras que añadas abajo van antes que todas estas"],
+    ["Lo demás", "solo entonces se lo pregunto al asistente de IA (panel lateral), que pide aprobación para cambiar cosas"],
 ]
 
 if __name__ == "__main__":

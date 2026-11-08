@@ -26,6 +26,8 @@
 #      profile-bar,profile.lua,notify-policy}; si el perfil había puesto «no molestar» (avisos favoritos/silencio)
 #      lo quita; quita profiles, profileRules y notifyFavorites de settings.json (copia antes en
 #      settings.json.antes-sin-perfiles) y el enlace ~/.local/bin/hf-profile. No toca el modo de energía.
+#      Dictado sin IA: quita dictationAI y cambia dictationWakeWord «Frijol» (la de antes) por «Distro»
+#      (copia en settings.json.antes-sin-ia-dictado).
 #      hf-apply lo lanza solo (--retired-only) si queda algo de esto.
 set -euo pipefail
 for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
@@ -42,7 +44,7 @@ while [ $# -gt 0 ]; do
     --repo)      REPO="${2:?--repo DIR}"; shift ;;
     --repo-dest) REPO_DEST="${2:?--repo-dest DIR}"; shift ;;
     --bin)       BIN="${2:?--bin DIR}"; shift ;;
-    -h|--help)   sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)   sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Opción desconocida: $1 (usa --help)" >&2; exit 1 ;;
   esac
   shift
@@ -95,6 +97,24 @@ p = os.path.realpath(sys.argv[1])   # si settings.json es un enlace (dotfiles), 
 d = json.load(open(p))
 for k in ("profiles", "profileRules", "notifyFavorites"):
     d.pop(k, None)
+tmp = p + ".tmp"
+with open(tmp, "w") as f:
+    f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
+os.replace(tmp, p)
+PY
+  fi
+  # Dictado sin IA (dictationAI retirada) y palabra de órdenes «Frijol» → «Distro» (solo si era la de antes)
+  if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(d,dict) and ("dictationAI" in d or str(d.get("dictationWakeWord","")).strip().lower()=="frijol") else 1)' "$cfg" 2>/dev/null; then
+    local bak="$cfg.antes-sin-ia-dictado"; [ -e "$bak" ] && bak="$bak-$(date +%Y%m%d-%H%M%S)"
+    say "Dictado: quito dictationAI (el dictado ya no usa IA) y la palabra «Frijol» pasa a «Distro» en $cfg (copia: $bak)"
+    run cp -p "$cfg" "$bak"
+    [ "$DRY" = 1 ] || python3 -I - "$cfg" <<'PY'
+import json, os, sys
+p = os.path.realpath(sys.argv[1])
+d = json.load(open(p))
+d.pop("dictationAI", None)
+if str(d.get("dictationWakeWord", "")).strip().lower() == "frijol":
+    d["dictationWakeWord"] = "Distro"
 tmp = p + ".tmp"
 with open(tmp, "w") as f:
     f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")

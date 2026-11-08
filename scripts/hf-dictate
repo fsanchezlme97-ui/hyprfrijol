@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""hf-dictate — dictado local (voz a texto) y comandos de voz de hyprfrijol. Graba el micrófono, corta las frases
-por los silencios (VAD), enseña el texto provisional mientras hablas y escribe cada frase en la ventana con foco en
-cuanto la terminas. Nada sale del equipo (salvo la limpieza opcional con IA y lo que pidas al asistente).
+"""hf-dictate — dictado local (voz a texto) y comandos de voz de hyprfrijol. Graba el micrófono, enseña las palabras
+mientras hablas y escribe cada frase en la ventana con foco en cuanto haces una pausa. El dictado NUNCA usa IA (ni la
+limpieza de antes, dictationAI, retirada): el asistente solo recibe las órdenes de voz que hf-voice no entiende.
 
-Motor: whisper.cpp con whisper-server residente (el modelo se queda cargado mientras dictas y se descarga tras
-dictationKeepLoaded s sin uso; usa la GPU si ggml tiene Vulkan/CUDA/ROCm), Vosk (parciales al momento, menos
-preciso), «híbrido» (Vosk para lo provisional, whisper para la frase final) o faster-whisper (Python).
+Motor (dictationEngine; «auto» = Vosk si está instalado con su modelo, si no whisper.cpp):
+  vosk        tiempo real: Vosk reconoce mientras llega el audio (palabra a palabra) y cierra la frase él solo en las
+              pausas; cada frase se escribe al momento. Sin puntuación propia: mayúscula y punto por frase.
+  whisper.cpp más preciso, por frases: whisper-server residente (se descarga tras dictationKeepLoaded s sin uso; usa
+              la GPU si ggml tiene Vulkan/CUDA/ROCm), frases cortadas por la VAD y texto provisional cada ~0,6 s.
+  hibrido     palabras de Vosk mientras hablas y whisper corrige la frase entera antes de escribirla.
+  faster-whisper (Python, por frases).
 
   hf-dictate record [--command] [--mode ptt|toggle|continuo] [--hold] [--file clip.wav [--simulate-live]]
         graba hasta «stop» (por stdin, SIGUSR1 o `hf-dictate stop`); --command: una orden de voz (hf-voice);
@@ -14,7 +18,7 @@ preciso), «híbrido» (Vosk para lo provisional, whisper para la frase final) o
         stdin admite líneas: stop · cancel · release. Imprime eventos en líneas JSON (los lee modules/dictado):
         {"ev":"rec","kind":"dictado|comando",…} {"ev":"ready"} {"ev":"level","v":0..1,"t":s} {"ev":"speech","on":bool}
         {"ev":"partial","text":…} {"ev":"phrase","text":…,"lat":s,"how":…} {"ev":"cmd","text":…,"label":…}
-        {"ev":"cmdresult","ok":…,"msg":…} {"ev":"transcribing"} {"ev":"cleaning"} {"ev":"text","text":…}
+        {"ev":"cmdresult","ok":…,"msg":…} {"ev":"transcribing"} {"ev":"text","text":…}
         {"ev":"done","how":"escrito|pegado|copiado|comando|ninguna"} {"ev":"error","msg":…,"code":…} {"ev":"cancelled"}
   hf-dictate toggle [--command]  sin el shell: empieza o, si ya graba, para (avisos con notify-send)
   hf-dictate stop | cancel       para la grabación en curso (y transcribe) / la descarta
@@ -34,7 +38,7 @@ Ajustes (settings.json): dictationModel tiny|base|small|medium|turbo (base) · d
   dictationOutput escribir|pegar|portapapeles · dictationPunct (puntuación y mayúsculas) · dictationLive (texto
   provisional) · dictationPauseMs (silencio que cierra una frase, 700) · dictationSilenceSec (continuo: para tras
   N s callado, 5) · dictationKeepLoaded (s con el modelo cargado, 600) · dictationWake + dictationWakeWord (decir
-  «Frijol, …» para dar una orden) · dictationVoskModel · dictationAI (limpiar con hf-ai: escribe al final) ·
+  «Distro, …» para dar una orden) · dictationVoskModel ·
   dictationPrompt (vocabulario) · dictationMaxSec (120 en ptt/toggle; 600 en continuo)
 Modelos: ~/.local/share/hyprfrijol/whisper/ggml-<modelo>.bin · …/whisper/vosk/<modelo>/
 Pruebas: HF_DICTATE_OUTPUT=ninguna no escribe nada · HF_VOICE_DRY=1 no ejecuta las órdenes (hf-voice --dry-run) ·
@@ -225,8 +229,8 @@ def engine(s):
     has_v = vosk_ok() and vosk_installed(vm)
     if want == "hibrido" and has_w and has_v:
         return "hibrido"
-    if want == "vosk" and has_v:
-        return "vosk"
+    if want in ("vosk", "auto") and has_v:
+        return "vosk"             # tiempo real de verdad: es lo que se usa si está instalado
     if want in ("auto", "whisper.cpp", "hibrido") and has_w and (model_installed(wm) or want != "auto" or not has_v):
         return "whisper.cpp"
     if want in ("auto", "vosk", "hibrido") and has_v:
@@ -467,16 +471,32 @@ class VoskEngine:
     def __init__(self, s):
         self.path = vosk_path(s.get("dictationVoskModel") or "vosk-model-small-es-0.42")
         self.rec = None
+        self.pause_end = max(0.25, int(s.get("dictationPauseMs") or 600) / 1000)
     def start(self):
         import vosk
         vosk.SetLogLevel(-1)
-        self.model = vosk.Model(str(self.path))
-        self.rec = vosk.KaldiRecognizer(self.model, RATE)
+        self.vmodel = vosk.Model(str(self.path))         # (no «model»: ese nombre es el del modelo whisper en los eventos)
+        self.model = self.path.name
+        self.rec = vosk.KaldiRecognizer(self.vmodel, RATE)
+        if hasattr(self.rec, "SetEndpointerDelays"):     # vosk ≥ 0.3.45: frase cerrada tras ~0,5 s de pausa
+            try:
+                self.rec.SetEndpointerDelays(5.0, self.pause_end, 20.0)
+            except Exception:
+                pass
     def feed(self, frame):
         """→ texto provisional de la frase en curso."""
         if self.rec.AcceptWaveform(bytes(frame)):
             self.done = (getattr(self, "done", "") + " " + json.loads(self.rec.Result()).get("text", "")).strip()
         return (getattr(self, "done", "") + " " + json.loads(self.rec.PartialResult()).get("partial", "")).strip()
+    def stream(self, frame):
+        """Modo Vosk puro: (frase terminada o None, texto provisional). Vosk decide el final de frase (endpointing)."""
+        if self.rec.AcceptWaveform(bytes(frame)):
+            return json.loads(self.rec.Result()).get("text", "").strip(), ""
+        return None, json.loads(self.rec.PartialResult()).get("partial", "").strip()
+    def flush(self):
+        t = json.loads(self.rec.FinalResult()).get("text", "").strip()
+        self.rec.Reset()
+        return t
     def final(self):
         t = (getattr(self, "done", "") + " " + json.loads(self.rec.FinalResult()).get("text", "")).strip()
         self.done = ""
@@ -484,7 +504,7 @@ class VoskEngine:
         return vosk_punct(t)
     def transcribe(self, pcm, prompt=""):
         import vosk
-        r = vosk.KaldiRecognizer(self.model, RATE)
+        r = vosk.KaldiRecognizer(self.vmodel, RATE)
         r.AcceptWaveform(bytes(pcm))
         return vosk_punct(json.loads(r.FinalResult()).get("text", ""))
     def close(self):
@@ -583,17 +603,6 @@ def output(text, s=None, first=True):
         return "copiado"
     return "nada"
 
-def ai_clean(text):
-    instr = ("Eres un corrector de dictados. Devuelve SOLO el texto corregido, sin comillas ni comentarios: arregla "
-             "puntuación, mayúsculas, muletillas («eh», «este…») y errores evidentes de reconocimiento, sin cambiar el "
-             "sentido ni el idioma ni añadir nada.")
-    try:
-        r = subprocess.run([str(ROOT / "scripts/hf-ai"), "transform", instr], input=text, capture_output=True, text=True, timeout=45)
-        out = r.stdout.strip()
-        return out if r.returncode == 0 and out and len(out) < len(text) * 3 + 40 else ""
-    except Exception:
-        return ""
-
 def voice_command(text, s):
     """Pasa la orden a hf-voice (en seco con HF_VOICE_DRY=1) → dict."""
     args = [str(ROOT / "scripts/hf-voice"), "run", text] + (["--dry-run"] if os.environ.get("HF_VOICE_DRY") else [])
@@ -653,7 +662,6 @@ class Session:
         self.live_pace = live_pace
         self.punct = s.get("dictationPunct", True) is not False
         self.live = s.get("dictationLive", True) is not False
-        self.ai = bool(s.get("dictationAI")) and kind == "dictado"
         self.wake = s.get("dictationWake", True) is not False
         self.pause = max(250, int(s.get("dictationPauseMs") or 700)) / 1000
         self.silence = max(1.5, float(s.get("dictationSilenceSec") or 5))
@@ -678,6 +686,7 @@ class Session:
         self.pending = []          # trozos que esperan a «release»
         self.hows = []
         self.phrases = 0
+        self.phrases_heard = 0
         self.cmd_done = False
         self.errors = []
         self.eng = None
@@ -699,7 +708,7 @@ class Session:
         else:
             self.eng = WhisperEngine(self.s)
             lm = live_model(self.s)
-            if lm != self.eng.model and self.live and not self.ai:
+            if lm != self.eng.model and self.live:
                 self.live_eng = WhisperEngine(self.s, lm)       # lo provisional en otro servidor, más ligero
             server_stop(keep=(self.eng.model, lm))
         self.live_eng = self.live_eng or self.eng
@@ -770,9 +779,12 @@ class Session:
         if pid == self.phrase_id and t and not hallucination(t, len(pcm) / 2 / RATE):
             emit("partial", text=t)
 
-    def do_final(self, pid, pcm, speech_s, end_wall):
+    def do_final(self, pid, pcm, speech_s, end_wall, text=None):
         if self.cancel.is_set():
             return
+        if text is not None:                           # Vosk puro: la frase ya viene reconocida
+            text = vosk_punct(text) if self.punct else text
+            return self.handle_text(text, speech_s, end_wall)
         if os.environ.get("HF_DICTATE_DUMP"):          # depurar: guarda el audio de cada frase
             pathlib.Path(os.environ["HF_DICTATE_DUMP"], f"frase-{pid:03d}.wav").write_bytes(wav_bytes(pcm))
         if self.vosk and self.eng is self.vosk:
@@ -782,7 +794,10 @@ class Session:
         if hallucination(text, speech_s):
             emit("phrase", text="", skipped=True, lat=round(time.time() - end_wall, 2))
             return
-        if self.cancel.is_set():
+        return self.handle_text(text, speech_s, end_wall)
+
+    def handle_text(self, text, speech_s, end_wall):
+        if self.cancel.is_set() or not text.strip():
             return
         lat = round(time.time() - end_wall, 2)
         is_cmd = self.kind == "comando"
@@ -798,7 +813,7 @@ class Session:
         if sp is not None and sp.startswith((".", ",", ":", ";", "?", "…")):
             piece = sp
         self.phrases += 1
-        if self.ai or not self.released.is_set():
+        if not self.released.is_set():
             self.pending.append(piece)
             emit("phrase", text=piece, lat=lat, how="espera")
             return
@@ -817,14 +832,14 @@ class Session:
         return how
 
     def flush(self):
-        if self.pending and not self.ai:
+        if self.pending:
             piece = "".join(self.pending); self.pending = []
             self.deliver(piece)
 
     def run_command(self, text, lat):
         text = text.strip().strip(".").strip()
         if not text:
-            emit("cmdresult", ok=False, msg="Di la orden después de «" + (self.s.get("dictationWakeWord") or "Frijol") + "»", text="")
+            emit("cmdresult", ok=False, msg="Di la orden después de «" + (self.s.get("dictationWakeWord") or "Distro") + "»", text="")
             return
         self.cmd_done = True
         emit("cmd", text=text, lat=lat)
@@ -874,8 +889,8 @@ class Session:
             threading.Thread(target=self.stdin_loop, daemon=True).start()
         wk = threading.Thread(target=self.worker, daemon=True); wk.start()
         threading.Thread(target=self.partial_worker, daemon=True).start()
-        emit("rec", engine=eng_name, model=self.s.get("dictationModel") or "base", kind=self.kind, mode=self.mode,
-             live=self.live and not self.ai, hold=self.hold, file=bool(self.src))
+        emit("rec", engine=eng_name, model=(self.s.get("dictationVoskModel") or "vosk-model-small-es-0.42") if eng_name == "vosk" else self.s.get("dictationModel") or "base", kind=self.kind, mode=self.mode,
+             live=self.live, hold=self.hold, file=bool(self.src))
         try:
             self.capture()
         finally:
@@ -899,11 +914,6 @@ class Session:
                 emit("error", msg="No te oí: prueba otra vez", code="silence" if self.peak < 0.12 else "empty"); return 1
             emit("done", how="comando"); return 0
         self.released.set()
-        if self.ai and self.pending:
-            full = "".join(self.pending).strip(); self.pending = []
-            emit("cleaning")
-            full = ai_clean(full) or full
-            self.deliver(full)
         self.flush()
         full = self.typed.strip()
         if not full:
@@ -947,6 +957,7 @@ class Session:
         last_partial = 0.0
         nframe = 0
         self.peak = 0.0
+        vspeech, vframes, last_pt, backlog = False, 0, "", []      # modo Vosk puro
         while not self.stop.is_set():
             if ORPHAN["v"] or (self.src is None and os.getppid() != ppid):
                 self.cancel.set(); self.stop.set(); break
@@ -982,6 +993,42 @@ class Session:
             # --- VAD por energía con suelo de ruido adaptable
             thr_on = max(floor + 11, -50.0)
             thr_off = thr_on - 4
+            if self.eng is not None and self.eng is self.vosk:
+                # Vosk puro: todo el audio va al reconocedor, que da las palabras al momento y cierra las frases
+                voiced = db > (thr_off if vspeech else thr_on)
+                if not vspeech:
+                    floor = floor * 0.97 + db * 0.03 if db < floor + 8 else floor
+                    floor = min(max(floor if db >= floor else db * 0.4 + floor * 0.6, -80.0), -32.0)
+                if voiced:
+                    last_voice_t = time.time()
+                    if not vspeech:
+                        vspeech = True; emit("speech", on=True)
+                    vframes += 1
+                elif vspeech and time.time() - last_voice_t > 0.4:
+                    vspeech = False; emit("speech", on=False)
+                backlog.append(fr)
+                if not self.ready.is_set() or self.errors:
+                    if self.errors:
+                        break
+                    continue
+                for b in backlog:
+                    done, pt = self.vosk.stream(b)
+                    if done is not None:
+                        if done:
+                            self.jobs.put((0, b"", vframes * FRAME_S, last_voice_t, done))
+                            self.phrases_heard += 1
+                        vframes = 0; last_pt = ""
+                        if self.kind == "comando" and done:
+                            self.stop.set()
+                    elif pt and pt != last_pt and self.live:
+                        last_pt = pt
+                        emit("partial", text=pt)
+                backlog.clear()
+                if (self.mode == "continuo" or self.kind == "comando") and self.src is None:
+                    limit = self.silence if (self.phrases_heard or self.cmd_done) else max(self.silence, 8.0 if self.kind == "dictado" else 6.0)
+                    if time.time() - last_voice_t > limit and self.jobs.empty() and not self.busy and not last_pt:
+                        break
+                continue
             if phrase is None:
                 floor = floor * 0.97 + db * 0.03 if db < floor + 8 else floor
                 floor = min(max(floor if db >= floor else db * 0.4 + floor * 0.6, -80.0), -32.0)
@@ -1023,13 +1070,21 @@ class Session:
                     break                            # una orden = una frase
                 continue
             # lo provisional: cada 0,6 s de voz nueva si el motor está libre
-            if self.live and not self.vosk and not self.ai and time.time() - last_partial > 0.6 and plen > 0.5:
+            if self.live and not self.vosk and time.time() - last_partial > 0.6 and plen > 0.5:
                 with self.cv:
                     if self.partial_free():
                         self.partial_job = (self.phrase_id, bytes(phrase))
                         last_partial = time.time()
         if phrase is not None and not self.cancel.is_set() and speech_frames >= 8:
             self.finalize(phrase, speech_frames * FRAME_S, silence_frames * FRAME_S)
+        if self.eng is not None and self.eng is self.vosk and self.ready.is_set() and not self.errors and not self.cancel.is_set():
+            for b in backlog:
+                done, _ = self.vosk.stream(b)
+                if done:
+                    self.jobs.put((0, b"", vframes * FRAME_S, last_voice_t, done))
+            rest = self.vosk.flush()                    # lo último que quedaba a medias
+            if rest:
+                self.jobs.put((0, b"", vframes * FRAME_S, last_voice_t, rest))
         self.capture_done.set()
         if proc:
             try:
@@ -1056,7 +1111,7 @@ def wake_split(text, s):
         ld = importlib.machinery.SourceFileLoader("hf_voice", str(ROOT / "scripts/hf-voice"))
         spec = importlib.util.spec_from_loader("hf_voice", ld)
         mod = importlib.util.module_from_spec(spec); ld.exec_module(mod)
-        return mod.strip_wake(text, s.get("dictationWakeWord"))
+        return mod.wake_split(text, s.get("dictationWakeWord"), s)
     except Exception:
         return False, text
 

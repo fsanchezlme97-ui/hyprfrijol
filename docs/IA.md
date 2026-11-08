@@ -123,6 +123,15 @@ Claves de `set`: `estilo`, `colorMode`, `palette`, `themeMode`, `barPos`, `barMo
 - **Deshacer** → `hf-ai undo <id>`: restaura los ajustes tocados, el fondo, «no molestar» y el espacio.
 - Los comandos `run` nunca se ejecutan solos: hay que confirmar y se abren en la terminal (`kitty`).
 
+### Voz: solo las órdenes que no se entienden
+
+El **dictado nunca usa IA** (la antigua limpieza `dictationAI` se retiró; `hf-migrate --retired-only` quita la clave con
+copia en `settings.json.antes-sin-ia-dictado`). Las órdenes de voz («Distro, …» al dictar, o Super+Alt+V) las entiende
+`scripts/hf-voice` sin IA: primero las órdenes propias (`voiceCommands`) y los sinónimos (`voiceAliases`), luego las
+de serie. Solo lo que no entiende va al panel (`qs ipc call sidepanel ask`), si `voiceAiFallback` está activo, y lo que
+cambie algo pasa por la aprobación de siempre. `voiceCommands`, `voiceAliases` y `voiceAiFallback` están en `DENY_KEYS`:
+el asistente no puede crearse órdenes que ejecuten comandos.
+
 ### Aprobación
 
 - La tarjeta del plan enseña **qué cambia** en cada paso (`plan[i].preview`: «abajo → arriba», la ventana, la carpeta…).

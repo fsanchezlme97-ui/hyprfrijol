@@ -25,7 +25,7 @@ SETTINGS = USER / "settings.json"
 # Primera vez tras el cambio de nombre (hypr-liquid → hyprfrijol): mueve las carpetas antiguas y deja enlaces
 if any((HOME / d / "hypr-liquid").is_dir() and not (HOME / d / "hypr-liquid").is_symlink() for d in (".config", ".local/state", ".local/share", ".cache")):
     subprocess.run([str(ROOT / "scripts/hf-migrate"), "--dirs-only", "--quiet"], check=False)
-# Perfiles de actividad retirados: limpia su estado y sus claves de settings.json (hf-migrate, paso 6)
+# Funciones retiradas (perfiles de actividad, IA en el dictado) y la palabra «Frijol» → «Distro»: hf-migrate, paso 6
 def _profiles_left():
     if any((STATE / f).exists() for f in ("profile", "profile-bar", "profile.lua", "notify-policy")):
         return True
@@ -33,7 +33,9 @@ def _profiles_left():
         t = SETTINGS.read_text()
     except Exception:
         return False
-    return any(f'"{k}"' in t for k in ("profiles", "profileRules", "notifyFavorites"))
+    if any(f'"{k}"' in t for k in ("profiles", "profileRules", "notifyFavorites", "dictationAI")):
+        return True
+    return '"dictationWakeWord": "Frijol"' in t   # nombre de antes: pasa a «Distro» (hf-migrate, paso 6)
 if _profiles_left():
     subprocess.run([str(ROOT / "scripts/hf-migrate"), "--retired-only", "--quiet"], check=False)
 

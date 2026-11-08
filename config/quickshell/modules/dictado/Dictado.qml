@@ -2,7 +2,7 @@
 // (Super + Alt + V). Modo «ptt»: hablar mientras se mantiene (un toque corto deja el micrófono abierto hasta volver a
 // pulsar); «toggle»: cada pulsación empieza/termina; «continuo»: empieza al pulsar y para solo tras unos segundos
 // callado. Mientras hablas se ve el texto provisional y cada frase se escribe al terminarla (scripts/hf-dictate:
-// VAD + whisper-server residente). Al dictar, «Frijol, …» al principio de una frase es una orden (dictationWake);
+// VAD + whisper-server residente). Al dictar, «Distro, …» al principio de una frase es una orden (dictationWake);
 // las órdenes las entiende scripts/hf-voice (sin IA) y lo demás va al asistente.
 // La píldora va donde el OSD y con su estilo (services/OsdStack.qml): pegada al borde y el OSD se aparta.
 // IPC:  qs -p <repo>/config/quickshell ipc call dictado toggle|start|stop|cancel|state|command
@@ -20,7 +20,7 @@ import "../../services"
 
 Scope {
     id: root
-    // idle | rec | trans | clean | cmd | done | error
+    // idle | rec | trans | cmd | done | error  (el dictado no usa IA: sin fase de «mejorar»)
     property string phase: "idle"
     property string kind: "dictado"         // dictado | comando
     property string msg: ""
@@ -86,7 +86,6 @@ Scope {
             else cmdHider.restart();
             break;
         case "transcribing": phase = "trans"; break;
-        case "cleaning": phase = "clean"; break;
         case "text": committed = j.text; break;
         case "done":
             if (j.how === "comando") {          // solo hubo órdenes: se queda el resultado un momento
@@ -111,7 +110,7 @@ Scope {
         command: root.args
         stdinEnabled: true
         stdout: SplitParser { onRead: l => { try { root.onEvent(JSON.parse(l)); } catch (e) {} } }
-        onExited: if (["rec", "trans", "clean", "cmd"].includes(root.phase)) { root.phase = "idle"; }
+        onExited: if (["rec", "trans", "cmd"].includes(root.phase)) { root.phase = "idle"; }
     }
     Timer { id: hider; interval: 1600; onTriggered: root.phase = "idle" }
     Timer { id: cmdHider; interval: 3000; onTriggered: { root.cmdText = ""; root.cmdMsg = ""; } }
@@ -180,19 +179,18 @@ Scope {
                                       : root.phase === "rec" && !isCmd ? Theme.danger : Theme.p
         readonly property string iconName: root.cmdMsg ? (root.cmdOk ? "check" : "alert")
                                          : root.phase === "done" ? "check" : root.phase === "error" ? "alert"
-                                         : root.phase === "clean" ? "sparkle" : isCmd ? "command" : "mic"
+                                         : isCmd ? "command" : "mic"
         readonly property string mmss: Math.floor(root.secs / 60) + ":" + String(Math.floor(root.secs % 60)).padStart(2, "0")
         // texto principal y secundario de la píldora
         readonly property string mainText: root.cmdText !== "" && root.phase !== "error" ? root.cmdText
             : root.phase === "rec" ? (root.partial || (root.committed ? root.committed.trim().slice(-120) : ""))
             : root.phase === "trans" ? (root.partial || "Transcribiendo…")
-            : root.phase === "clean" ? "Mejorando con IA…"
             : root.phase === "cmd" ? root.cmdText
             : root.msg
         readonly property string hint: root.phase !== "rec" ? ""
             : !root.ready ? "Preparando el micrófono…"
             : root.kind === "comando" ? "Di una orden: «pon Walk de Foo Fighters en YouTube»"
-            : Settings.get("dictationWake", true) ? "Habla… · «" + Settings.get("dictationWakeWord", "Frijol") + ", …» para una orden"
+            : Settings.get("dictationWake", true) ? "Habla… · «" + (String(Settings.get("dictationWakeWord", "Distro")).trim() || "Distro") + ", …» para una orden"
             : "Habla…"
         readonly property string sub: root.cmdMsg !== "" ? root.cmdMsg
             : root.phase === "cmd" ? "Haciéndolo…"
@@ -253,7 +251,7 @@ Scope {
                 }
                 // puntos mientras transcribe o ejecuta
                 Row {
-                    visible: root.phase === "trans" || root.phase === "clean" || root.phase === "cmd" || (root.cmdText !== "" && root.cmdMsg === "")
+                    visible: root.phase === "trans" || root.phase === "cmd" || (root.cmdText !== "" && root.cmdMsg === "")
                     spacing: 4
                     Repeater {
                         model: 3
@@ -312,7 +310,7 @@ Scope {
                 }
                 // cancelar
                 Rectangle {
-                    visible: root.phase === "rec" || root.phase === "trans" || root.phase === "clean"
+                    visible: root.phase === "rec" || root.phase === "trans"
                     implicitWidth: 24; implicitHeight: 24; radius: 12
                     color: xma.containsMouse ? Theme.fill2 : "transparent"
                     Icon { anchors.centerIn: parent; name: "x"; size: 12; color: Theme.tv }
