@@ -29,6 +29,9 @@ PanelWindow {
     surfaceFormat.opaque: false
 
     property bool showA: true
+    // Ya se ve algo (Splash.qml espera a esto): la imagen cargada o, con vídeo, el fotograma/mpvpaper detrás
+    readonly property bool ready: wpLoaded && (wp.video || a.status === Image.Ready || b.status === Image.Ready || win.image === "")
+    property bool wpLoaded: false
     readonly property string outName: screen?.name ?? ""
     // Fondo propio de esta pantalla, si lo tiene
     readonly property string ownImage: (wp.monitors ?? {})[outName] ?? ""
@@ -57,7 +60,8 @@ PanelWindow {
         watchChanges: true
         printErrors: false
         onFileChanged: { win.changedSinceShown = true; reload(); }
-        onLoaded: { win.apply(); if (win.primary) { win.sentPause = false; pauseRe.restart(); } }
+        onLoaded: { win.wpLoaded = true; win.apply(); if (win.primary) { win.sentPause = false; pauseRe.restart(); } }
+        onLoadFailed: win.wpLoaded = true
         JsonAdapter {
             id: wp
             property string image: ""

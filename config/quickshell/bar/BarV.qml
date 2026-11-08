@@ -21,7 +21,7 @@ Item {
     readonly property real chipsTop: colMain.y + gap.y + gap.height
     readonly property real statusTop: colMain.y + status.y
     readonly property bool anyChip: statusTop - chipsTop > 12
-    readonly property real gapS: 24
+    readonly property real gapS: 20
     BarPill { id: pillB; bar: root.barWindow; visible: root.islands && root.anyChip; y: root.chipsTop - 6; width: parent.width; height: root.statusTop - root.gapS + 6 - y }
     BarPill { id: pillS; bar: root.barWindow; visible: root.islands; y: root.statusTop - 6; width: parent.width; height: parent.height - y }
     readonly property Item topEnd: wsV.visible ? wsV : appsV
@@ -43,6 +43,7 @@ Item {
         // Utilidades
         PomodoroChip { visible: Settings.barHas("pomodoro"); Layout.alignment: Qt.AlignHCenter; vertical: true }
         CaffeineChip { visible: Settings.barHas("cafeina"); Layout.alignment: Qt.AlignHCenter; vertical: true }
+        BongoChip { visible: Settings.barHas("bongo"); Layout.alignment: Qt.AlignHCenter; vertical: true }
         IconBtn { visible: Settings.barHas("portapapeles"); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26; icon: "clipboard"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // Spotlight en modo portapapeles
         IconBtn { visible: Settings.barHas("ia"); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26; icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") }
         IconBtn { visible: Settings.barHas("ajustes"); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26; icon: "gear"; onClicked: Shell.open("ajustesapp") }   // Ajustes (tuerca)

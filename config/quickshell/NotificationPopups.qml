@@ -33,10 +33,12 @@ PanelWindow {
     anchors { top: win.atTop; bottom: !win.atTop; right: !win.atLeft && !win.centered; left: win.atLeft }
     margins { top: 10; bottom: 10; right: 8; left: 8 }
     implicitWidth: 340
-    implicitHeight: Math.max(1, column.implicitHeight)
+    // Nunca más alto que la pantalla (menos la barra): si se acumulan muchos avisos, la pila se desplaza
+    readonly property real maxH: Math.max(160, (win.screen?.height ?? 900) - Settings.barEdge - 28)
+    implicitHeight: Math.max(1, Math.min(column.implicitHeight, maxH))
     color: "transparent"
     visible: Notifs.popups.length > 0 && !Shell.focusMode && Shell.view !== "ajustes"
-    mask: Region { item: column }
+    mask: Region { item: flick }
     property bool replying: false
     onGroupsChanged: {   // olvida los grupos que ya no están
         const keys = groups.map(g => g.key), e = {};
@@ -44,83 +46,98 @@ PanelWindow {
         expanded = e;
     }
 
-    Column {
-        id: column
-        width: parent.width
-        spacing: 6
-        anchors.bottom: win.atTop ? undefined : parent.bottom
-        anchors.top: win.atTop ? parent.top : undefined
+    Flickable {
+        id: flick
+        anchors.fill: parent
+        contentWidth: width
+        contentHeight: column.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        interactive: contentHeight > height + 1
+        // abajo, el más reciente va pegado a la barra: si no cabe, se queda a la vista lo último
+        function stick(): void {
+            contentY = win.atTop ? Math.min(contentY, Math.max(0, contentHeight - height)) : Math.max(0, contentHeight - height);
+        }
+        onContentHeightChanged: if (!moving) stick()
+        onHeightChanged: stick()
+        ScrollHint { flick: flick; inset: 0 }
 
-        Repeater {
-            // abajo, el más reciente pegado a la barra; arriba, el más reciente arriba
-            model: win.atTop ? win.shownGroups : win.shownGroups.slice().reverse()
-            Column {
-                id: grp
-                required property var modelData
-                readonly property bool open: !!win.expanded[modelData.key] && modelData.items.length > 1
-                width: column.width
-                spacing: 6
+        Column {
+            id: column
+            width: flick.width
+            spacing: 6
 
-                // Cabecera del grupo desplegado: app · cuántos · contraer · descartar todos
-                Rectangle {
-                    visible: grp.open
-                    width: parent.width
-                    height: 30
-                    radius: Theme.r(8)
-                    color: Theme.glassPopup
-                    border.width: Theme.borderWidth; border.color: Theme.border
-                    RowLayout {
-                        anchors { fill: parent; leftMargin: 12; rightMargin: 4 }
-                        spacing: 6
-                        Txt { Layout.fillWidth: true; text: grp.modelData.app + " · " + grp.modelData.items.length; weight: Font.DemiBold; size: 11.5 }
-                        IconBtn { implicitWidth: 24; implicitHeight: 22; icon: "chevron_down"; iconSize: 11; fg: Theme.tv; tooltip: "Agrupar"; onClicked: win.toggle(grp.modelData.key) }
-                        IconBtn { implicitWidth: 24; implicitHeight: 22; icon: "x"; iconSize: 11; fg: Theme.tv; tooltip: "Descartar todos"; onClicked: Notifs.dismissAll(grp.modelData.items) }
-                    }
-                }
+            Repeater {
+                // abajo, el más reciente pegado a la barra; arriba, el más reciente arriba
+                model: win.atTop ? win.shownGroups : win.shownGroups.slice().reverse()
+                Column {
+                    id: grp
+                    required property var modelData
+                    readonly property bool open: !!win.expanded[modelData.key] && modelData.items.length > 1
+                    width: column.width
+                    spacing: 6
 
-                Repeater {
-                    model: grp.open ? (win.atTop ? grp.modelData.items : grp.modelData.items.slice().reverse()) : grp.modelData.items.slice(0, 1)
-                    NotifCard {
-                        id: card
-                        required property var modelData
-                        n: modelData
-                        mode: "toast"
-                        width: column.width
-                        stack: grp.open ? 0 : grp.modelData.items.length - 1
-                        onStackToggled: win.toggle(grp.modelData.key)
-                        // la pila se recrea al cambiar: solo entra animado lo recién llegado
-                        readonly property bool fresh: Date.now() - (Notifs.arrived[n?.id] ?? 0) < 600
-                        opacity: fresh ? 0 : 1
-                        x: fresh ? (win.atLeft ? -24 : win.centered ? 0 : 24) : 0
-                        Component.onCompleted: { opacity = 1; x = 0; }
-                        Behavior on opacity { NumberAnimation { duration: Theme.durIn; easing.type: Easing.OutCubic } }
-                        Behavior on x { NumberAnimation { duration: Theme.durIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
-                        Timer {
-                            running: !card.critical && !card.hovered && !win.replying && !grp.open
-                            // lo que le queda desde que llegó (la pila se recrea al cambiar y no debe reiniciar la cuenta)
-                            interval: Math.max(1200, (card.n.expireTimeout > 0 ? card.n.expireTimeout : Settings.get("notifyTimeout", Notifs.defaultTimeout / 1000) * 1000)
-                                                     - (Date.now() - (Notifs.arrived[card.n.id] ?? Date.now())))
-                            // la pila entera se va con su último aviso (los urgentes se quedan)
-                            onTriggered: { for (const x of grp.modelData.items) if (!Notifs.isCritical(x)) Notifs.hidePopup(x); }
+                    // Cabecera del grupo desplegado: app · cuántos · contraer · descartar todos
+                    Rectangle {
+                        visible: grp.open
+                        width: parent.width
+                        height: 30
+                        radius: Theme.r(8)
+                        color: Theme.glassPopup
+                        border.width: Theme.borderWidth; border.color: Theme.border
+                        RowLayout {
+                            anchors { fill: parent; leftMargin: 12; rightMargin: 4 }
+                            spacing: 6
+                            Txt { Layout.fillWidth: true; text: grp.modelData.app + " · " + grp.modelData.items.length; weight: Font.DemiBold; size: 11.5 }
+                            IconBtn { implicitWidth: 24; implicitHeight: 22; icon: "chevron_down"; iconSize: 11; fg: Theme.tv; tooltip: "Agrupar"; onClicked: win.toggle(grp.modelData.key) }
+                            IconBtn { implicitWidth: 24; implicitHeight: 22; icon: "x"; iconSize: 11; fg: Theme.tv; tooltip: "Descartar todos"; onClicked: Notifs.dismissAll(grp.modelData.items) }
                         }
-                        HoverHandler { onHoveredChanged: win.replying = hovered && (card.n?.hasInlineReply ?? false) }
+                    }
+
+                    Repeater {
+                        model: grp.open ? (win.atTop ? grp.modelData.items : grp.modelData.items.slice().reverse()) : grp.modelData.items.slice(0, 1)
+                        NotifCard {
+                            id: card
+                            required property var modelData
+                            n: modelData
+                            mode: "toast"
+                            width: column.width
+                            stack: grp.open ? 0 : grp.modelData.items.length - 1
+                            onStackToggled: win.toggle(grp.modelData.key)
+                            // la pila se recrea al cambiar: solo entra animado lo recién llegado
+                            readonly property bool fresh: Date.now() - (Notifs.arrived[n?.id] ?? 0) < 600
+                            opacity: fresh ? 0 : 1
+                            x: fresh ? (win.atLeft ? -24 : win.centered ? 0 : 24) : 0
+                            Component.onCompleted: { opacity = 1; x = 0; }
+                            Behavior on opacity { NumberAnimation { duration: Theme.durIn; easing.type: Easing.OutCubic } }
+                            Behavior on x { NumberAnimation { duration: Theme.durIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                            Timer {
+                                running: !card.critical && !card.hovered && !win.replying && !grp.open
+                                // lo que le queda desde que llegó (la pila se recrea al cambiar y no debe reiniciar la cuenta)
+                                interval: Math.max(1200, (card.n.expireTimeout > 0 ? card.n.expireTimeout : Settings.get("notifyTimeout", Notifs.defaultTimeout / 1000) * 1000)
+                                                         - (Date.now() - (Notifs.arrived[card.n.id] ?? Date.now())))
+                                // la pila entera se va con su último aviso (los urgentes se quedan)
+                                onTriggered: { for (const x of grp.modelData.items) if (!Notifs.isCritical(x)) Notifs.hidePopup(x); }
+                            }
+                            HoverHandler { onHoveredChanged: win.replying = hovered && (card.n?.hasInlineReply ?? false) }
+                        }
                     }
                 }
             }
-        }
 
-        // «+N avisos más» → centro de notificaciones
-        Rectangle {
-            visible: win.hiddenCount > 0
-            anchors.horizontalCenter: parent.horizontalCenter
-            height: 26
-            width: moreT.implicitWidth + 24
-            radius: 13
-            color: Theme.glassPopup
-            border.width: Theme.borderWidth; border.color: Theme.border
-            Txt { id: moreT; anchors.centerIn: parent; size: 11.5; weight: Font.Medium
-                  text: "+" + win.hiddenCount + (win.hiddenCount === 1 ? " aviso más" : " avisos más") + " · ver todos" }
-            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Shell.open("notificaciones") }
+            // «+N avisos más» → centro de notificaciones
+            Rectangle {
+                visible: win.hiddenCount > 0
+                anchors.horizontalCenter: parent.horizontalCenter
+                height: 26
+                width: moreT.implicitWidth + 24
+                radius: 13
+                color: Theme.glassPopup
+                border.width: Theme.borderWidth; border.color: Theme.border
+                Txt { id: moreT; anchors.centerIn: parent; size: 11.5; weight: Font.Medium
+                      text: "+" + win.hiddenCount + (win.hiddenCount === 1 ? " aviso más" : " avisos más") + " · ver todos" }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Shell.open("notificaciones") }
+            }
         }
     }
 }

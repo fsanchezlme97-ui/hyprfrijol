@@ -14,8 +14,10 @@ ShellRoot {
         Scope {
             id: perScreen
             required property var modelData
-            Wallpaper { screen: perScreen.modelData }
+            Wallpaper { id: wall; screen: perScreen.modelData }
             Bar { screen: perScreen.modelData }
+            // Pantalla de carga al iniciar sesión (logo + barrita) hasta que el fondo se ve
+            Splash { screen: perScreen.modelData; ready: wall.ready }
         }
     }
 

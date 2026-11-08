@@ -20,6 +20,7 @@
 | `components/Overlay` | base de todo panel emergente (vista, posición, Esc/clic fuera, animación softUp, márgenes de barra) |
 | `components/Glass` | superficie de vidrio (`kind`: bar/panel/popup/fill) |
 | `components/Txt, Icon, Btn, IconBtn, Segmented, Toggle, Tile, SliderBar, Field, Divider, SectionLabel, Kbd` | controles del diseño |
+| `components/ScrollHint` | barra de desplazamiento fina para cualquier Flickable (`ScrollHint { flick: lista }`, `horizontal: true`) |
 | `components/Icons` | iconos del diseño por nombre; o `Icon { svg: '<path …/>' }` copiando el SVG del diseño |
 | `services/` | `Audio`, `Net`, `Bt`, `Battery` (+ modo de energía), `Brightness`, `Media`, `Pomodoro`, `Time`, `Clip` (historial del portapapeles y fijados), `DockPins` (apps fijadas en el dock), `OsLogo` (logo de la distro en monocromo vía `scripts/hf-oslogo`; `HF_OS_LOGO=fedora` lo simula) |
 | `modules/capture/Loupe` | lupa de píxeles sobre una pantalla congelada (`hf-capture freeze <salida>` → PNG temporal); la usan Captura y el Selector de color (`modules/colorpicker`, vista `color`) |
@@ -72,6 +73,7 @@ Las vistas que solo hacen falta abiertas se crean al abrirlas y se destruyen un 
   cerrada, sepáralo.
 - **Depurar**: `lazyModules: false` (Ajustes › Energía y rendimiento › Memoria del escritorio) lo carga todo al
   arrancar, como antes.
+- **Pantalla de carga** (`Splash.qml`): `HF_SPLASH_HOLD=30000 dev/try.sh -w 1` la deja visible para capturarla.
 - **Medir**: `HF_PROBE_OPEN=1` activa `components/OpenProbe.qml`, que escribe en `qs log` líneas como
   `[probe] spotlight visible=40ms frames=24 maxGap=17ms slow=0`. Mide el tiempo desde `Shell.open` hasta el primer
   fotograma y los saltos durante la animación de entrada. La memoria se mide con `/proc/<pid>/smaps_rollup` del `qs`

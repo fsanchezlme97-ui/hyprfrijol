@@ -676,10 +676,18 @@ def gtk_css(c, S=None, s=None):
     if est == "skysoul" and S.get("blur"):
         W = "#FFFFFF"
         win = mix(c["s1"], W, .4) if LT else c["s1"]
+
+        def qcss(a8):   # #AARRGGBB del shell (S) → rgba() de CSS
+            a8 = (a8 or "#00000000").lstrip("#")
+            return _css("#" + a8[2:], int(a8[:2], 16) / 255)
+        # El mismo cristal que los paneles del shell (Glass.qml): poca opacidad sobre el desenfoque de Hyprland,
+        # esmerilado más claro arriba (sheen) y un resplandor del acento en una esquina (tint). Antes las apps
+        # eran solo un color translúcido y, con el contenido encima (view), el fondo apenas se veía desenfocado.
+        sheen, tint = qcss(S.get("sheen")), qcss(S.get("tint"))
         out += [
             "/* SkySoul: cristal */",
-            f"@define-color window_bg_color {_css(win, .66 if LT else .52)};",
-            f"@define-color view_bg_color {_css(W, .30) if LT else _css(c['s1'], .22)};",
+            f"@define-color window_bg_color {_css(win, .58 if LT else .40)};",
+            f"@define-color view_bg_color {_css(W, .16) if LT else _css(W, .02)};",
             f"@define-color headerbar_bg_color {_css(W, .18 if LT else .025)};",
             "@define-color headerbar_backdrop_color @headerbar_bg_color;",
             f"@define-color headerbar_shade_color {_css(W, .45) if LT else _css(W, .05)};",
@@ -696,7 +704,12 @@ def gtk_css(c, S=None, s=None):
             f"@define-color dialog_bg_color {_css(win, .86 if LT else .78)};",
             f"@define-color borders {_css(W, .45) if LT else _css(W, .07)};",
             f"@define-color shade_color {_css('#000000', .05 if LT else .18)};",
-            "window.background, window.background.csd { background-color: @window_bg_color; }",
+            "window.background, window.background.csd { background-color: @window_bg_color; "
+            f"background-image: radial-gradient(circle at 92% 0%, {tint}, transparent 55%), "
+            f"linear-gradient(to bottom, {sheen}, transparent 30%); }}",
+            # popovers y diálogos: el mismo cristal, algo más opaco para leer bien
+            "popover > contents, dialog-host > dialog.background, window.dialog.background { "
+            f"background-image: linear-gradient(to bottom, {sheen}, transparent 40%); }}",
             "headerbar, .top-bar, .bottom-bar, toolbarview > .top-bar headerbar { box-shadow: none; }",
             "separator { background-color: @borders; }",
             "",

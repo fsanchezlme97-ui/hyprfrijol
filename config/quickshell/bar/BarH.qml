@@ -39,7 +39,7 @@ Item {
     readonly property bool anyChip: statusBox.x > 4
     BarPill { id: pillR; bar: root.barWindow; visible: root.islands && root.anyChip; x: right.x - 4; height: parent.height; width: root.statusX - root.gapS - x + 4 }
     BarPill { id: pillS; bar: root.barWindow; visible: root.islands; x: root.anyChip ? root.statusX - 4 : right.x - 4; height: parent.height; width: parent.width - x }
-    readonly property real gapS: 22
+    readonly property real gapS: 16          // hueco entre las islas de chips y de estado (8 px visibles)
 
     RowLayout {
         id: left
@@ -66,7 +66,7 @@ Item {
     }
 
     readonly property bool hasInfo: Settings.barHas("clima") || Settings.barHas("recursos") || Settings.barHas("impresora")
-    readonly property bool hasUtil: pomo.visible || cafe.visible || clipBtn.visible || aiBtn.visible || gearBtn.visible || tray.visible
+    readonly property bool hasUtil: pomo.visible || cafe.visible || bongo.visible || clipBtn.visible || aiBtn.visible || gearBtn.visible || tray.visible
     RowLayout {
         id: right
         x: root.compact ? (wave.active ? wave.x + wave.width + root.gapC : left.x + left.implicitWidth + root.gapC) : parent.width - implicitWidth - 3
@@ -83,6 +83,7 @@ Item {
         Divider { visible: root.hasInfo && root.hasUtil; Layout.leftMargin: 4; Layout.rightMargin: 4 }
         PomodoroChip { id: pomo; visible: Settings.barHas("pomodoro") }
         CaffeineChip { id: cafe; visible: Settings.barHas("cafeina") }
+        BongoChip { id: bongo; visible: Settings.barHas("bongo") }   // gato bongo: golpea al escribir
         IconBtn { id: clipBtn; visible: Settings.barHas("portapapeles"); icon: "clipboard"; tooltip: "Portapapeles"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // abre Spotlight en modo portapapeles
         IconBtn { id: aiBtn; visible: Settings.barHas("ia"); icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") }
         IconBtn { id: gearBtn; visible: Settings.barHas("ajustes"); icon: "gear"; onClicked: Shell.open("ajustesapp") }   // Ajustes (tuerca; opcional, ya está en el panel)

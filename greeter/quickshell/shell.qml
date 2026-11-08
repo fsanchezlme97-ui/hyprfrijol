@@ -422,18 +422,17 @@ ShellRoot {
     function succeed(): void {
         remember();
         phase = "busy";
-        step = 0;
+        step = 1;
         stepTimer.restart();
+        // La sesión arranca ya: antes se esperaba a que pasaran los cuatro mensajes (≈2,6 s de espera de adorno).
+        // Los mensajes siguen avanzando mientras greetd cierra el login.
+        Qt.callLater(root.launch);
     }
     Timer {
         id: stepTimer
-        interval: 650
+        interval: 450
         repeat: true
-        onTriggered: {
-            if (root.step < root.steps.length - 1) { root.step++; return; }
-            stop();
-            root.launch();
-        }
+        onTriggered: { if (root.step < root.steps.length - 1) root.step++; else stop(); }
     }
     function launch(): void {
         const s = session;

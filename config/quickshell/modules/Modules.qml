@@ -66,7 +66,10 @@ Scope {
 
     // ── Diferidos: se crean al abrir su vista ──
     LazyView { id: spotView; views: ["spotlight"]; warm: true; Spotlight {} }   // el más usado: tras la 1.ª vez se queda
-    LazyView { views: ["ajustes"]; grace: 120000; QuickSettings {} }      // centro de control: ajustes rápidos + notificaciones + agenda
+    LazyView { views: ["ajustes"]; grace: 120000; warm: true; QuickSettings {} }      // centro de control: ajustes rápidos + notificaciones + agenda (se queda, como Spotlight)
+    // Los dos paneles que más se abren, ya listos poco después de entrar (en segundo plano, sin bloquear): la primera
+    // apertura con el teclado tardaba ~220 ms en crearlos; precargados, ~50 ms. Con lazyModules = false ya lo están.
+    Timer { interval: 6000; running: Shell.lazyModules; onTriggered: { Shell.preload("spotlight"); Shell.preload("ajustes"); } }
     LazyView { views: ["energia"]; Energia {} }
     LazyView { views: ["fondos"]; WallpaperSelector {} }
     LazyView { id: capView; views: ["captura"]; keep: item?.busyState ?? false; Capture {} }

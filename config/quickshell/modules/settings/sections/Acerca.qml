@@ -27,7 +27,9 @@ RowLayout {
             + "echo \"mem=$(awk '/MemTotal/{printf \"%.0f GB\", $2/1048576}' /proc/meminfo)\"; "
             + "echo \"disk=$(df -h / | awk 'NR==2{print $2\" · \"$5\" usado\"}') · $(findmnt -no FSTYPE /)\"; "
             + "echo \"updated=$(grep -a 'starting full system upgrade' /var/log/pacman.log 2>/dev/null | tail -1 | cut -c2-17)\"; "
-            + "echo \"git=$(git -C ~/.config/hyprfrijol remote get-url origin 2>/dev/null)\"; echo \"gitrepo=$([ -d ~/.config/hyprfrijol/.git ] && echo si)\""]
+            + "echo \"git=$(git -C ~/.config/hyprfrijol remote get-url origin 2>/dev/null)\"; echo \"gitrepo=$([ -d ~/.config/hyprfrijol/.git ] && echo si)\"; "
+            // versión de HyprFrijol: la más nueva del CHANGELOG (o, si no está, la etiqueta de git)
+            + "r=\"$0\"; v=$(grep -m1 -o '^## \\[[0-9.]*\\]' \"$r/CHANGELOG.md\" 2>/dev/null | tr -d '#[] '); [ -n \"$v\" ] || v=$(git -C \"$r\" describe --tags --abbrev=0 2>/dev/null); echo \"hf=${v#v}\"", Paths.root]
         stdout: StdioCollector {
             onStreamFinished: {
                 const o = {};
@@ -37,7 +39,7 @@ RowLayout {
         }
     }
     function fmtDate(s) { if (!s) return "—"; const d = new Date(s.replace(" ", "T")); return isNaN(d) ? s : Qt.locale("es_ES").toString(d, "d MMM yyyy · HH:mm"); }
-    readonly property string report: "Sistema: " + (sys.distro ?? "") + "\nKernel: " + (sys.kernel ?? "") + "\nEscritorio: Hyprland " + (sys.hypr ?? "") + " + Quickshell " + (sys.qs ?? "") + " (HyprFrijol)"
+    readonly property string report: "Sistema: " + (sys.distro ?? "") + "\nKernel: " + (sys.kernel ?? "") + "\nEscritorio: Hyprland " + (sys.hypr ?? "") + " + Quickshell " + (sys.qs ?? "") + " (HyprFrijol " + (sys.hf ?? "") + ")"
         + "\nProcesador: " + (sys.cpu ?? "") + "\nGráficos: " + (sys.gpu ?? "") + "\nMemoria: " + (sys.mem ?? "") + "\nAlmacenamiento: " + (sys.disk ?? "")
         + "\nEstilo: " + Theme.estilo + " · " + Theme.paletteName
 
@@ -47,13 +49,33 @@ RowLayout {
         Layout.preferredWidth: 1
         Layout.alignment: Qt.AlignTop
         pad: 18
+        // Logo de HyprFrijol (assets/brand): letras blancas en tema oscuro; en claro, la tarjeta oscura del README
+        Image {
+            id: logo
+            Layout.fillWidth: true
+            Layout.preferredHeight: Math.round(width * (Theme.light ? 500 / 1400 : 256 / 920))
+            Layout.maximumHeight: 150
+            fillMode: Image.PreserveAspectFit
+            horizontalAlignment: Image.AlignHCenter
+            source: "file://" + Paths.assets + "/brand/" + (Theme.light ? "logo-card.png" : "logo-wide.png")
+            sourceSize.width: 920
+            asynchronous: true
+            smooth: true; mipmap: true
+            visible: status === Image.Ready
+        }
+        Txt {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.bottomMargin: 8
+            text: root.sys.hf ? "Versión " + root.sys.hf : ""
+            muted: true; size: 11.5; tabular: true
+        }
         RowLayout {
             Layout.fillWidth: true
             Layout.bottomMargin: 6
             spacing: 14
             Rectangle {
                 implicitWidth: 52; implicitHeight: 52; radius: Theme.r(10); color: Theme.pc
-                Rectangle { anchors.centerIn: parent; width: 26; height: 26; radius: 13; color: "transparent"; border.width: 5; border.color: Theme.p }
+                Icon { anchors.centerIn: parent; name: "monitor"; size: 26; color: Theme.pcText }
             }
             ColumnLayout {
                 Layout.fillWidth: true; spacing: 2
@@ -75,7 +97,7 @@ RowLayout {
         }
         Kv { k: "Sistema"; v: root.sys.distro ?? "…" }
         Kv { k: "Kernel"; v: root.sys.kernel ?? "…" }
-        Kv { k: "Escritorio"; v: "Hyprland " + (root.sys.hypr ?? "") + " + HyprFrijol" }
+        Kv { k: "Escritorio"; v: "HyprFrijol " + (root.sys.hf ?? "") + " · Hyprland " + (root.sys.hypr ?? "") }
         Kv { k: "Quickshell"; v: root.sys.qs ?? "…" }
         Kv { k: "Procesador"; v: root.sys.cpu ?? "…" }
         Kv { k: "Gráficos"; v: root.sys.gpu ?? "…" }

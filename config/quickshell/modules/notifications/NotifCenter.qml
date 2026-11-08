@@ -37,7 +37,7 @@ Glass {
     readonly property var histApps: {
         const seen = {}, out = [];
         for (const h of Notifs.history) { const k = (h.app || "").toLowerCase(); if (!seen[k]) { seen[k] = 1; out.push({ key: k, app: h.app || "Sistema" }); } }
-        return out.slice(0, 12);
+        return out.slice(0, 30);   // la fila de filtros se desplaza si no caben
     }
     readonly property var histRows: {
         const q = win.query.trim().toLowerCase();
@@ -136,10 +136,11 @@ Glass {
                 visible: Notifs.count > 0
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                implicitHeight: Math.min(list.implicitHeight, 460)
+                implicitHeight: list.implicitHeight          // el panel pone el tope (QuickSettings: notifRoom)
                 contentHeight: list.implicitHeight
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
+                ScrollHint { flick: flick; inset: 0 }
                 ColumnLayout {
                     id: list
                     width: flick.width
@@ -224,20 +225,42 @@ Glass {
                 placeholder: "Buscar en el historial…"
                 onTextChanged: win.query = text
             }
-            Flow {
+            // Filtros por app: una sola fila; si no caben, se desplaza en horizontal (rueda o arrastrar)
+            Flickable {
+                id: chipsFlick
                 visible: win.histApps.length > 1
                 Layout.fillWidth: true
-                spacing: 5
-                Repeater {
-                    model: [{ key: "", app: "Todas" }].concat(win.histApps)
-                    Rectangle {
-                        required property var modelData
-                        readonly property bool on: win.appFilter === modelData.key
-                        implicitHeight: 22; implicitWidth: fT.implicitWidth + 16; radius: Theme.ctl(22)
-                        color: on ? Theme.pc : fMa.containsMouse ? Theme.fill2 : "transparent"
-                        border.width: on ? 0 : 1; border.color: Theme.ov
-                        Txt { id: fT; anchors.centerIn: parent; text: parent.modelData.app; size: 11; weight: Font.Medium; color: parent.on ? Theme.pcText : Theme.t }
-                        MouseArea { id: fMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.appFilter = parent.on ? "" : parent.modelData.key }
+                implicitHeight: chipsRow.implicitHeight + (contentWidth > width ? 8 : 0)
+                contentWidth: chipsRow.implicitWidth
+                contentHeight: height
+                flickableDirection: Flickable.HorizontalFlick
+                boundsBehavior: Flickable.StopAtBounds
+                interactive: contentWidth > width
+                clip: true
+                // la rueda vertical también desplaza la fila
+                WheelHandler {
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    enabled: chipsFlick.interactive
+                    onWheel: e => {
+                        const d = e.angleDelta.x !== 0 ? -e.angleDelta.x : -e.angleDelta.y;
+                        chipsFlick.contentX = Math.max(0, Math.min(chipsFlick.contentWidth - chipsFlick.width, chipsFlick.contentX + d * 0.6));
+                    }
+                }
+                ScrollHint { flick: chipsFlick; horizontal: true; inset: 0 }
+                Row {
+                    id: chipsRow
+                    spacing: 5
+                    Repeater {
+                        model: [{ key: "", app: "Todas" }].concat(win.histApps)
+                        Rectangle {
+                            required property var modelData
+                            readonly property bool on: win.appFilter === modelData.key
+                            implicitHeight: 22; implicitWidth: fT.implicitWidth + 16; radius: Theme.ctl(22)
+                            color: on ? Theme.pc : fMa.containsMouse ? Theme.fill2 : "transparent"
+                            border.width: on ? 0 : 1; border.color: Theme.ov
+                            Txt { id: fT; anchors.centerIn: parent; text: parent.modelData.app; size: 11; weight: Font.Medium; color: parent.on ? Theme.pcText : Theme.t }
+                            MouseArea { id: fMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.appFilter = parent.on ? "" : parent.modelData.key }
+                        }
                     }
                 }
             }
@@ -262,10 +285,11 @@ Glass {
                 visible: win.histRows.length > 0
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                implicitHeight: Math.min(hlist.implicitHeight, 460)
+                implicitHeight: hlist.implicitHeight
                 contentHeight: hlist.implicitHeight
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
+                ScrollHint { flick: hflick; inset: 0 }
                 ColumnLayout {
                     id: hlist
                     width: hflick.width

@@ -153,6 +153,7 @@ Overlay {
 
             // ═══ Tarjeta principal ═══
             Glass {
+                id: mainCard
                 kind: "panel"
                 Layout.fillWidth: true
                 Layout.preferredHeight: main.implicitHeight + 24
@@ -434,6 +435,7 @@ Overlay {
 
             // ═══ Teléfono (Valent · scrcpy) ═══
             Glass {
+                id: phoneCard
                 kind: "panel"
                 visible: win.phoneBackend !== "" || win.adbState !== ""
                 Layout.fillWidth: true
@@ -524,11 +526,16 @@ Overlay {
             }
 
             // ═══ Notificaciones (el sitio que sobre) ═══
+            // Nunca más alta que el hueco bajo los ajustes rápidos: con muchos avisos, la lista se desplaza dentro
+            // en lugar de salirse por debajo de la pantalla (la agenda sigue debajo, desplazando la columna)
+            readonly property real notifRoom: flick.height - mainCard.height - (phoneCard.visible ? phoneCard.height + spacing : 0) - spacing
             NotifCenter {
                 id: notif
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.minimumHeight: Math.min(implicitHeight, 260)
+                Layout.maximumHeight: Math.max(260, col.notifRoom)
+                Layout.preferredHeight: Math.min(implicitHeight, Math.max(260, col.notifRoom))
             }
 
             // ═══ Agenda ═══

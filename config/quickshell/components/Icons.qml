@@ -90,6 +90,12 @@ Singleton {
         "hdmi": '<path d="M3 8h18v5l-3 3H6l-3-3z"/><path d="M7 11h10"/>',
         "mic": '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',
         "cpu": '<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
+        // RAM: módulo de memoria con sus chips y contactos
+        "ram": '<rect x="2.5" y="7" width="19" height="9" rx="1.5"/><path d="M6.5 10v3M10 10v3M14 10v3M17.5 10v3M5 16v3M9 16v3M15 16v3M19 16v3"/>',
+        // GPU: tarjeta gráfica con ventilador
+        "gpu": '<path d="M2.5 5h1.5v14"/><rect x="4" y="7" width="17.5" height="10" rx="1.5"/><circle cx="10" cy="12" r="2.8"/><path d="M16 10h2.5M16 14h2.5M7 17v2.5M13 17v2.5"/>',
+        // Disco: unidad con su luz
+        "disk": '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 14h18"/><circle cx="17" cy="16.5" r=".6" fill="currentColor"/>',
         "thermometer": '<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/>',
         "cloud": '<path d="M7 18a5 5 0 1 1 .9-9.9A6 6 0 0 1 19 10a4 4 0 0 1-1 8z"/>',
         "printer": '<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',

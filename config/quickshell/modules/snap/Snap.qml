@@ -180,17 +180,38 @@ Overlay {
     onWarmChanged: if (shown && !target) target = HyprClients.activeAddress
 
     // Atajos de teclado globales (Super + flechas)
-    function quick(z): void {
-        const a = HyprClients.activeAddress;
-        if (a) putWindow(a, z);
+    // Super + flechas. En un espacio en mosaico la ventana se queda en el mosaico: ← → la cambian de sitio con la
+    // vecina (y si flotaba por un acople anterior, vuelve al mosaico), ↑ la maximiza dentro del mosaico y ↓ deshace
+    // eso. Antes la sacaba a flotante con media pantalla y perdía su sitio. En un espacio flotante, acopla a zonas.
+    function tiledHere(c): bool { return !!c && !WinMode.isFloat(c.workspace?.id ?? 0) && !WinMode.isFloatApp(c.class); }
+    function arrow(dir: string, z): void {
+        const a = HyprClients.activeAddress, c = HyprClients.client(a);
+        if (!c) return;
+        if (!tiledHere(c)) {
+            if (dir === "d") unsnap(a); else putWindow(a, z);
+            return;
+        }
+        const w = 'window = "address:' + a + '"';
+        const maxed = ((c.fullscreen ?? 0) & 1) !== 0;
+        if (dir === "u") {
+            if (c.floating) Shell.dispatch('hl.dsp.window.float({ action = "disable", ' + w + ' })');
+            if (!maxed) Shell.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })');
+        } else if (dir === "d") {
+            if (maxed) Shell.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })');
+            else if (c.floating) Shell.dispatch('hl.dsp.window.float({ action = "disable", ' + w + ' })');
+        } else {
+            if (maxed) Shell.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })');
+            if (c.floating) {   // acoplada antes (flotante): de vuelta a su sitio en el mosaico
+                const g = Object.assign({}, prevGeom); delete g[HyprClients.norm(a)]; prevGeom = g;
+                Shell.dispatch('hl.dsp.window.float({ action = "disable", ' + w + ' })');
+            } else Shell.dispatch('hl.dsp.window.move({ direction = "' + dir + '" })');
+        }
+        HyprClients.refresh();
     }
-    GlobalShortcut { appid: "hf"; name: "snapleft"; description: "HyprFrijol: acoplar a la izquierda"; onPressed: win.quick([0, 0, .5, 1]) }
-    GlobalShortcut { appid: "hf"; name: "snapright"; description: "HyprFrijol: acoplar a la derecha"; onPressed: win.quick([.5, 0, .5, 1]) }
-    GlobalShortcut { appid: "hf"; name: "snapup"; description: "HyprFrijol: ocupar toda el área"; onPressed: win.quick([0, 0, 1, 1]) }
-    GlobalShortcut {
-        appid: "hf"; name: "snapdown"; description: "HyprFrijol: restaurar la ventana"
-        onPressed: { const a = HyprClients.activeAddress; if (a) win.unsnap(a); }
-    }
+    GlobalShortcut { appid: "hf"; name: "snapleft"; description: "HyprFrijol: a la izquierda (mosaico) / acoplar a la izquierda"; onPressed: win.arrow("l", [0, 0, .5, 1]) }
+    GlobalShortcut { appid: "hf"; name: "snapright"; description: "HyprFrijol: a la derecha (mosaico) / acoplar a la derecha"; onPressed: win.arrow("r", [.5, 0, .5, 1]) }
+    GlobalShortcut { appid: "hf"; name: "snapup"; description: "HyprFrijol: maximizar / ocupar toda el área"; onPressed: win.arrow("u", [0, 0, 1, 1]) }
+    GlobalShortcut { appid: "hf"; name: "snapdown"; description: "HyprFrijol: restaurar la ventana"; onPressed: win.arrow("d", null) }
 
     MouseArea { anchors.fill: parent; onClicked: Shell.close() }
 

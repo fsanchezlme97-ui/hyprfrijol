@@ -227,6 +227,7 @@ RowLayout {
         SwRow { label: "Bajar calidad con batería"; sub: "Quita el desenfoque al desconectar el cargador"; key: "blurOnBattery"; def: true }
         SwRow { label: "Quitar efectos en juegos"; sub: "pantalla completa sin desenfoque ni sombras"; key: "gameNoFx"; def: true }
         SwRow { label: "Ajustar según la GPU"; sub: "Detecta equipos modestos y elige solo"; key: "blurAuto"; def: true }
+        SwRow { label: "Pantalla de carga al entrar"; sub: "el logo mientras el fondo y la barra terminan de cargar (1 s o menos)"; key: "startSplash"; def: true }
     }
     Section {
         Layout.fillWidth: true

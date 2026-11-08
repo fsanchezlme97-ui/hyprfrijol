@@ -4,7 +4,7 @@
 // Estilo (barStatsStyle):
 //   barras   barritas de cada medida + el % de la primera (por defecto)
 //   grafica  gráfica del último minuto de la primera medida + su valor
-//   texto    «CPU 12 % · RAM 40 % …»
+//   texto    icono de cada medida + su %: «[cpu] 12 %  [ram] 40 % …»
 // La temperatura y la red (↓ bajada ↑ subida) se añaden como texto en los tres estilos.
 // Clic: ventana «Sistema» (núcleos, cada GPU, procesos, discos y red). En la barra vertical, barritas y % apilados.
 import QtQuick
@@ -25,10 +25,10 @@ BarChip {
     // medidas con barra (0–1), en el orden de la lista
     readonly property var meters: {
         const all = {
-            cpu: { k: "cpu", l: "CPU", v: SysStats.cpu / 100, c: Theme.p, h: SysStats.cpuHist },
-            ram: { k: "ram", l: "RAM", v: ram, c: Theme.ter, h: SysStats.memHist },
-            gpu: { k: "gpu", l: "GPU", v: Math.max(0, SysStats.gpu) / 100, c: Theme.tv, h: SysStats.gpuHist },
-            disco: { k: "disco", l: "Disco", v: disk, c: Theme.o, h: SysStats.diskHist }
+            cpu: { k: "cpu", l: "CPU", i: "cpu", v: SysStats.cpu / 100, c: Theme.p, h: SysStats.cpuHist },
+            ram: { k: "ram", l: "RAM", i: "ram", v: ram, c: Theme.ter, h: SysStats.memHist },
+            gpu: { k: "gpu", l: "GPU", i: "gpu", v: Math.max(0, SysStats.gpu) / 100, c: Theme.tv, h: SysStats.gpuHist },
+            disco: { k: "disco", l: "Disco", i: "disk", v: disk, c: Theme.o, h: SysStats.diskHist }
         };
         return show.filter(k => all[k] && (k !== "gpu" || gpuOk)).map(k => all[k]);
     }
@@ -74,7 +74,7 @@ BarChip {
                 required property int index
                 spacing: 4
                 Layout.leftMargin: index > 0 ? 3 : 0
-                Txt { text: parent.modelData.l; muted: true; size: 11; anchors.baseline: v.baseline }
+                Icon { name: parent.modelData.i; size: 13; color: Theme.tv; anchors.verticalCenter: v.verticalCenter }
                 Txt { id: v; text: chip.pct(parent.modelData.v); tabular: true; color: parent.modelData.v > 0.9 ? Theme.danger : Theme.t }
             }
         }

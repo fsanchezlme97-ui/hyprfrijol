@@ -3,6 +3,30 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.4] — 2026-11-08
+
+- **Entrar es ~2,5 s más rápido**: el login esperaba a que pasaran sus cuatro mensajes («Comprobando…»,
+  «Bienvenido»…) antes de arrancar la sesión; ahora arranca en cuanto la contraseña es correcta.
+- **Pantalla de carga al entrar**: el logo de HyprFrijol y una barrita mientras el fondo y la barra terminan de
+  cargar (un segundo o menos; solo al iniciar sesión, no al reiniciar el shell). Se quita en Ajustes › Energía y
+  rendimiento › «Pantalla de carga al entrar».
+- **Logo de HyprFrijol en Ajustes › Acerca del sistema**, con la versión instalada.
+- **Centro de control más rápido**: Spotlight y el centro de control se precargan en segundo plano poco después de
+  entrar y el centro se queda cargado (la primera apertura con el teclado tardaba ~220 ms; ahora ~50 ms).
+- **Muchas notificaciones sin salirse de la pantalla**: en el centro de control la lista ocupa el hueco que queda bajo
+  los ajustes rápidos y se desplaza por dentro (con barra fina); la pila de avisos emergentes tampoco pasa del alto
+  de la pantalla. Los filtros por app del historial van en una sola fila que se desplaza en horizontal.
+- **Gato bongo** (Ajustes › Barra › «Gato bongo»): un gatito en la barra que golpea la mesa con la pata izquierda o
+  derecha al escribir. `scripts/hf-bongo` solo dice la mano, nunca la tecla, y no guarda nada; necesita estar en el
+  grupo `input`. Clic: dormirlo.
+- **Iconos en vez de «CPU», «GPU» y «RAM»** en el chip de sistema de la barra (estilo texto).
+- **Super + flechas respetan el mosaico**: ← → cambian la ventana de sitio con la vecina sin cambiar su tamaño, ↑ la
+  maximiza dentro del mosaico y ↓ lo deshace (antes la sacaban a flotante con media pantalla). Una ventana que flotaba
+  por un acople anterior vuelve al mosaico. En los espacios flotantes siguen acoplando a mitades.
+- **Islas de la barra más juntas**: la de los chips (clima, sistema, pomodoro, cafeína…) y la del estado.
+- **Apps GTK de cristal de verdad en SkySoul**: además del desenfoque, el mismo esmerilado claro arriba y el
+  resplandor del acento que los paneles del shell, y menos capas opacas encima (antes se veían solo translúcidas).
+
 ## [0.8.3] — 2026-11-08
 
 - **Login arreglado**: la sesión ya no vuelve al login nada más entrar. greetd (con `source_profile`) unía los
