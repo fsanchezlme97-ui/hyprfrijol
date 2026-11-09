@@ -177,7 +177,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 6
                     Repeater {
-                        model: [["fullscreen", "Pantalla completa"], ["bateria", "Con batería"], ["maximizada", "Ventana maximizada"], ["juego", "Con un juego abierto"], ["foco", "Sin distracciones"]]
+                        model: [["fullscreen", "Pantalla completa"], ["bateria", "Con batería"], ["maximizada", "Ventana maximizada"], ["cubierto", "Tapado por ventanas"], ["juego", "Con un juego abierto"], ["foco", "Sin distracciones"]]
                         Chip {
                             required property var modelData
                             readonly property var list: Settings.get("wallpaperPauseOn", ["fullscreen", "bateria", "juego"])

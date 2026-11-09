@@ -9,6 +9,9 @@
 //                        mobileHost, p. ej. m.youtube.com); al ensancharla vuelve a la de escritorio
 //   minWidth             ancho CSS que necesita la web de escritorio: el zoom nunca deja menos (si la ventana es más
 //                        estrecha se reduce) → sin barra horizontal (WhatsApp Web fija min-width: 748px por debajo)
+//   oneColumn            (WhatsApp) en anchos estrechos, una sola columna como en el móvil: la lista de chats o el
+//                        chat abierto, con «←» para volver; sin el mínimo de 748 px (no hace falta encoger el zoom).
+//                        Escribe en $XDG_RUNTIME_DIR/hf-webapp/<clave>.layout si encontró la estructura (sin contenido)
 //   zoom                 factor del usuario por web: Ctrl + / Ctrl − / Ctrl 0 en la ventana o Ajustes › Web apps; se
 //                        guarda en <perfil>/zoom (lo escribe también `hf-webapp cmd <clave> zoom <f>`)
 // Tema: prefers-color-scheme lo pone hf-webapp (Chromium) según el tema del escritorio; aquí se pinta el fondo con el
@@ -19,6 +22,9 @@
 // Nombre de la aplicación = nombre de la web app → su reproductor MPRIS se llama «YouTube» (no «Qml Runtime»).
 // Órdenes: el panel escribe "<n> <orden> [arg]" en $XDG_RUNTIME_DIR/hf-webapp/<clave>.cmd
 //   toggle · pause · pipon/pipoff (solo el vídeo) · back · forward · reload · home · zoom <f> · external · url <dirección>
+//   shown · hidden: el panel la trae a la vista o la guarda en su espacio especial. La página no se entera sola
+//   (Chromium la cree siempre visible): con «hidden» se le dice que está oculta → WhatsApp, Gmail… avisan de lo
+//   que llega; con «shown» se fuerza a repintar (YouTube se quedaba en negro hasta mover el ratón encima).
 import QtQuick
 import QtQuick.Window
 import QtCore
@@ -46,7 +52,7 @@ Window {
     readonly property bool compact: width < 720
     readonly property string layout: String(cfg.layout || "escritorio")
     readonly property bool mobile: layout === "movil" && compact
-    readonly property real minW: mobile ? 0 : Number(cfg.minWidth || 0)
+    readonly property real minW: mobile || cfg.oneColumn === true ? 0 : Number(cfg.minWidth || 0)
     // en el panel lateral se parte del 90 % (la columna es estrecha); en ventana propia, del 100 %
     property real userZoom: Math.max(0.3, Math.min(3, Number(cfg.zoom || (mode === "panel" ? 0.9 : 1))))
     // Zoom efectivo: el del usuario, salvo que deje la página más estrecha que minWidth (px CSS = ancho / zoom)
@@ -220,7 +226,7 @@ Window {
                 } else win.external(req.requestedUrl);
             }
             onFullScreenRequested: req => req.accept()
-            onLoadingChanged: r => { if (r.status === WebEngineView.LoadSucceededStatus) { win.loadedOnce = true; win.injectCss(); } }
+            onLoadingChanged: r => { if (r.status === WebEngineView.LoadSucceededStatus) { win.loadedOnce = true; win.injectCss(); if (win.pageHidden) win.applyVisibility(); if (win.cfg.oneColumn === true) { oneColRetry.n = 0; oneColRetry.restart(); } } }
             // Sonido (vídeo reproduciéndose): hf-webapp lo deja en $XDG_RUNTIME_DIR/hf-webapp/<clave>.audible (PiP automático)
             onRecentlyAudibleChanged: console.warn("HLAUDIBLE\t" + (recentlyAudible ? 1 : 0) + "\t")
         }
@@ -254,6 +260,83 @@ Window {
         }
     }
 
+    // ---- WhatsApp a una columna (cfg.oneColumn). Sin clases fijas (WhatsApp las cambia): parte de #side (lista de chats),
+    // sube hasta el elemento cuyo hermano a la derecha es la zona del chat y marca los dos paneles con data-hf-pane.
+    readonly property string oneColJs: "(function(){if(window.__hfOneCol){window.__hfOneCol();return JSON.stringify(window.__hfOneColState||{})}"
+        + "var st=document.createElement('style');st.id='hf-onecol';st.textContent="
+        + "'html[data-hf-narrow] [data-hf-chain]{min-width:0!important}"
+        + "html[data-hf-narrow] [data-hf-pane]{flex:1 1 auto!important;max-width:none!important;width:auto!important;min-width:0!important}"
+        // Sin chat abierto, solo la lista; con uno abierto, la lista arriba y el chat abajo, mitad y mitad (el chat se
+        // coloca encima de la mitad inferior: el contenedor común también lleva la barra de iconos de la izquierda)
+        + "html[data-hf-narrow]:not([data-hf-chat]) [data-hf-pane=main]{display:none!important}"
+        + "html[data-hf-narrow][data-hf-chat] [data-hf-split]{position:relative!important}"
+        + "html[data-hf-narrow][data-hf-chat] [data-hf-pane=side]{height:50%!important;max-height:50%!important;align-self:flex-start!important}"
+        + "html[data-hf-narrow][data-hf-chat] [data-hf-pane=main]{position:absolute!important;left:var(--hf-railw,0px)!important;right:0!important;"
+        + "bottom:0!important;top:auto!important;height:50%!important;max-height:50%!important;border-top:1px solid rgba(127,127,127,.28)!important;z-index:1}"
+        // Los «cajones» (perfil, nuevo chat, info del contacto…) llevan un borde de 1 px que en una columna quedaba
+        // en medio como una línea vertical. Solo se quita el borde: tocar su flex encogía el chat a la mitad.
+        + "html[data-hf-narrow] [data-testid^=drawer-]{border-left:0!important;border-right:0!important}"
+        + "#hf-back{display:none;flex:none;width:36px;height:36px;margin:0 2px 0 -6px;border:0;border-radius:50%;background:transparent;"
+        + "color:inherit;font-size:20px;line-height:36px;cursor:pointer;align-self:center}#hf-back:hover{background:rgba(127,127,127,.18)}"
+        + "html[data-hf-narrow] #hf-back{display:block}';(document.head||document.documentElement).appendChild(st);"
+        + "var P=null,t=0;function find(){var s=document.getElementById('side');if(!s)return null;var n=s;"
+        + "while(n.parentElement&&n.parentElement!==document.body){var p=n.parentElement,r=n.getBoundingClientRect();"
+        + "var m=[].slice.call(p.children).filter(function(c){return c!==n&&c.getBoundingClientRect().left>=r.right-4&&c.getBoundingClientRect().width>120})[0];"
+        + "if(m){var ch=[],a=p;while(a&&a!==document.body){ch.push(a);a=a.parentElement}return{side:n,main:m,chain:ch}}n=p}return null}"
+        + "function apply(){var h=document.documentElement,narrow=window.innerWidth<900;h.toggleAttribute('data-hf-narrow',narrow);"
+        + "if(!P||!P.side.isConnected||!P.main.isConnected){if(P){P.side.removeAttribute('data-hf-pane');P.main.removeAttribute('data-hf-pane')}"
+        + "h.removeAttribute('data-hf-narrow');P=find();h.toggleAttribute('data-hf-narrow',narrow);"
+        + "if(P){P.side.setAttribute('data-hf-pane','side');P.main.setAttribute('data-hf-pane','main');P.chain.forEach(function(e){e.setAttribute('data-hf-chain','')});"
+        + "P.side.parentElement.setAttribute('data-hf-split','')}}"
+        + "if(P){var sp0=P.side.parentElement;sp0.style.setProperty('--hf-railw',Math.max(0,Math.round(P.side.getBoundingClientRect().left-sp0.getBoundingClientRect().left))+'px')}"
+        + "var chat=!!document.getElementById('main')||!!window.__hfForceChat;h.toggleAttribute('data-hf-chat',chat);"
+        + "var hd=document.querySelector('#main header');if(hd&&!document.getElementById('hf-back')){var b=document.createElement('button');b.id='hf-back';b.title='Cerrar el chat';b.textContent='\\u2715';"
+        + "b.onclick=function(e){e.stopPropagation();var o={key:'Escape',code:'Escape',keyCode:27,which:27,bubbles:true};"
+        + "(document.activeElement||document.body).dispatchEvent(new KeyboardEvent('keydown',o));document.body.dispatchEvent(new KeyboardEvent('keydown',o))};hd.insertBefore(b,hd.firstChild)}"
+        + "var sp=P&&P.side.parentElement;window.__hfOneColState={found:!!P,narrow:narrow,chat:chat,width:window.innerWidth,"
+        + "split:sp?{disp:getComputedStyle(sp).display,grid:getComputedStyle(sp).gridTemplateColumns.slice(0,60),kids:[].map.call(sp.children,function(c){var r=c.getBoundingClientRect();"
+        + "return (c.id||c.getAttribute('data-testid')||c.getAttribute('data-hf-pane')||c.tagName)+':'+getComputedStyle(c).position+':'+Math.round(r.left)+'+'+Math.round(r.width)+'x'+Math.round(r.height)})}:null}}"
+        + "window.__hfOneCol=apply;new MutationObserver(function(){clearTimeout(t);t=setTimeout(apply,150)}).observe(document.body,{childList:true,subtree:true});"
+        + "window.addEventListener('resize',function(){clearTimeout(t);t=setTimeout(apply,150)});apply();return JSON.stringify(window.__hfOneColState)})()"
+    function oneCol() {
+        if (cfg.oneColumn !== true) return;
+        viewLoader.item?.runJavaScript(oneColJs, r => {
+            if (!runtime || !r) return;
+            const x = new XMLHttpRequest();
+            x.open("PUT", "file://" + runtime + "/" + key + ".layout");
+            x.send(String(r));
+        });
+    }
+    // WhatsApp monta su interfaz un rato después de cargar: se intenta varias veces hasta encontrarla
+    Timer { id: oneColRetry; interval: 2500; repeat: true; property int n: 0; onTriggered: { win.oneCol(); if (++n >= 12) stop(); } }
+
+    // ---- visible / oculta (órdenes shown / hidden del panel)
+    property bool pageHidden: false
+    function applyVisibility() {
+        viewLoader.item?.runJavaScript("(function(h){var V=window.__hfVis;if(!V){V=window.__hfVis={h:false};"
+            + "Object.defineProperty(document,'hidden',{configurable:true,get:function(){return V.h}});"
+            + "Object.defineProperty(document,'visibilityState',{configurable:true,get:function(){return V.h?'hidden':'visible'}});"
+            + "var hf=Document.prototype.hasFocus;document.hasFocus=function(){return !V.h&&hf.call(document)};}"
+            + "if(V.h!==h){V.h=h;document.dispatchEvent(new Event('visibilitychange'));window.dispatchEvent(new Event(h?'blur':'focus'));}"
+            + "})(" + (pageHidden ? "true" : "false") + ")");
+    }
+    // Repintado al volver a la vista: unos cuantos fotogramas pedidos a Qt y un cambio invisible en la página para
+    // que Chromium componga uno nuevo (antes hacía falta mover el ratón por encima)
+    Timer {
+        id: repaint
+        property int n: 0
+        interval: 70; repeat: true
+        onTriggered: {
+            // Cambiar el tamaño de la vista 1 px y devolverlo obliga a Chromium a componer un cuadro nuevo (lo que
+            // antes solo conseguía el ratón); entre medias, cuadros pedidos a Qt
+            if (n === 0 || n === 6) viewLoader.anchors.rightMargin = 1;
+            else if (n === 1 || n === 7) viewLoader.anchors.rightMargin = 0;
+            win.requestUpdate();
+            if (++n >= 12) { viewLoader.anchors.rightMargin = 0; stop(); }
+        }
+    }
+    function nudge() { repaint.n = 0; repaint.restart(); }
+
     // Órdenes del panel
     property int lastSeq: -1
     function command(line) {
@@ -285,9 +368,60 @@ Window {
         else if (cmd === "zoom" && +arg > 0) win.setZoom(+arg);
         else if (cmd === "external") win.external(view.url);
         else if (cmd === "url" && arg) view.url = arg;
+        else if (cmd === "shown") { win.pageHidden = false; win.applyVisibility(); win.nudge(); Qt.callLater(win.oneCol); }
+        else if (cmd === "hidden") { win.pageHidden = true; win.applyVisibility(); }
+        // Diagnóstico de maquetación: qué elementos hay en un punto (px CSS). Solo estructura (etiqueta, tamaño, bordes,
+        // posición), nunca texto: va a $XDG_RUNTIME_DIR/hf-webapp/<clave>.probe
+        // Prueba del reparto lista/chat sin abrir un chat: «probe forcechat on|off», «probe panes» (solo rectángulos)
+        else if (cmd === "probe" && /^forcechat (on|off)$/.test(arg))
+            view.runJavaScript("window.__hfForceChat=" + (arg.endsWith("on") ? "true" : "false") + ";window.__hfOneCol&&window.__hfOneCol()");
+        else if (cmd === "probe" && arg === "panes") {
+            view.runJavaScript("JSON.stringify([].map.call(document.querySelectorAll('[data-hf-pane]'),function(e){var r=e.getBoundingClientRect();"
+                + "return e.getAttribute('data-hf-pane')+' x'+Math.round(r.left)+' y'+Math.round(r.top)+' w'+Math.round(r.width)+' h'+Math.round(r.height)+' '+getComputedStyle(e).display}))", res => {
+                const x = new XMLHttpRequest();
+                x.open("PUT", "file://" + win.runtime + "/" + win.key + ".probe");
+                x.send(String(res));
+            });
+        }
+        else if (cmd === "probe" && arg === "lines") {
+            // Barrido: elementos (y ::before/::after) que pintan una línea vertical alta — bordes laterales,
+            // cajas de ≤3 px de ancho o sombras — con su posición. Sin texto.
+            view.runJavaScript("(function(){var H=innerHeight*0.3,out=[];function px(v){return parseFloat(v)||0}"
+                + "function d(e){return e.tagName.toLowerCase()+(e.id?'#'+e.id:'')+(e.getAttribute('data-testid')?'['+e.getAttribute('data-testid')+']':'')"
+                + "+(e.getAttribute('data-hf-pane')?'{'+e.getAttribute('data-hf-pane')+'}':'')}"
+                + "document.querySelectorAll('*').forEach(function(e){var r=e.getBoundingClientRect();if(r.height<H||r.width===0)return;"
+                + "var c=getComputedStyle(e);if(c.visibility==='hidden'||c.display==='none')return;"
+                + "var why=[];if(px(c.borderLeftWidth)>0&&c.borderLeftStyle!=='none')why.push('bl '+c.borderLeftWidth+' '+c.borderLeftColor+' @'+Math.round(r.left));"
+                + "if(px(c.borderRightWidth)>0&&c.borderRightStyle!=='none')why.push('br '+c.borderRightWidth+' '+c.borderRightColor+' @'+Math.round(r.right));"
+                + "if(r.width<=3)why.push('thin bg '+c.backgroundColor+' @'+Math.round(r.left));"
+                + "if(c.boxShadow!=='none')why.push('shadow '+c.boxShadow.slice(0,50)+' @'+Math.round(r.left)+'-'+Math.round(r.right));"
+                + "['::before','::after'].forEach(function(p){var s=getComputedStyle(e,p);if(s.content==='none'||s.display==='none')return;"
+                + "if(px(s.width)<=3||px(s.borderLeftWidth)>0||px(s.borderRightWidth)>0)why.push(p+' w'+s.width+' h'+s.height+' pos '+s.position+' l'+s.left+' r'+s.right+' bg '+s.backgroundColor+' bl'+s.borderLeftWidth+' br'+s.borderRightWidth)});"
+                + "if(why.length)out.push(d(e)+' x'+Math.round(r.left)+' w'+Math.round(r.width)+' h'+Math.round(r.height)+' :: '+why.join(' | '))});"
+                + "return 'vw '+innerWidth+'\\n'+out.slice(0,60).join('\\n')})()", res => {
+                const x = new XMLHttpRequest();
+                x.open("PUT", "file://" + win.runtime + "/" + win.key + ".probe");
+                x.send(String(res));
+            });
+        }
+        else if (cmd === "probe") {
+            const xy = arg.split(/\s+/).map(Number);
+            view.runJavaScript("(function(x,y){return JSON.stringify(document.elementsFromPoint(x,y).slice(0,14).map(function(e){"
+                + "var c=getComputedStyle(e),r=e.getBoundingClientRect();return{tag:e.tagName.toLowerCase(),id:e.id||undefined,"
+                + "role:e.getAttribute('role')||undefined,testid:e.getAttribute('data-testid')||undefined,pane:e.getAttribute('data-hf-pane')||undefined,"
+                + "x:Math.round(r.left),w:Math.round(r.width),h:Math.round(r.height),pos:c.position,disp:c.display,"
+                + "bl:c.borderLeftWidth+' '+c.borderLeftColor,br:c.borderRightWidth+' '+c.borderRightColor,bg:c.backgroundColor,"
+                + "bgi:c.backgroundImage.slice(0,60),shadow:c.boxShadow.slice(0,60),before:getComputedStyle(e,'::before').content,"
+                + "after:getComputedStyle(e,'::after').content,cls:(e.className&&e.className.baseVal===undefined?String(e.className):'').slice(0,80)}}))})("
+                + (xy[0] || 0) + "," + (xy[1] || 0) + ")", res => {
+                const x = new XMLHttpRequest();
+                x.open("PUT", "file://" + win.runtime + "/" + win.key + ".probe");
+                x.send(String(res));
+            });
+        }
     }
     Timer {
-        interval: 400; running: win.runtime !== ""; repeat: true
+        interval: 200; running: win.runtime !== ""; repeat: true; triggeredOnStart: true
         onTriggered: {
             const x = new XMLHttpRequest();
             x.onreadystatechange = () => { if (x.readyState === XMLHttpRequest.DONE && x.responseText) win.command(x.responseText); };

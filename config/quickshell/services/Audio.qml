@@ -3,7 +3,8 @@ pragma Singleton
 // Listas para los selectores (components/AudioDevices.qml y AudioStreams.qml):
 //   sinks / sources (dispositivos), streams (apps reproduciendo), kind(n) → "bluetooth" | "headphones" |
 //   "hdmi" | "usb" | "speakers" | "mic" | "webcam", kindIcon(n), kindLabel(n), nodeName(n), appName(s), appIcon(s),
-//   setDefault(n) y refreshPorts() (puerto activo de cada salida con «pactl -f json list sinks», solo lectura).
+//   setDefault(n), refreshPorts() (puerto activo de cada salida con «pactl -f json list sinks») y portSets/setPort()
+//   para elegir entre parlante y auricular de la misma tarjeta (scripts/hf-audio).
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -57,6 +58,14 @@ Singleton {
     }
     // puerto activo (pactl) por nombre de salida: { "alsa_output…": "headphones" | "lineout" | "speaker" | "hdmi" … }
     property var ports: ({})
+    // puertos elegibles por salida: { "alsa_output…": { active: "analog-output-headphones", list: [{ name, label, type }] } }
+    // (solo si tiene 2 o más disponibles: parlante + auricular en la misma tarjeta)
+    property var portSets: ({})
+    function setPort(sinkName: string, port: string): void {
+        Quickshell.execDetached([Paths.script("hf-audio"), "port", sinkName, port]);
+        portRefresh.restart();
+    }
+    Timer { id: portRefresh; interval: 400; onTriggered: root.refreshPorts() }
     function refreshPorts(): void { if (!portProc.running) portProc.running = true; }
     Process {
         id: portProc
@@ -64,13 +73,18 @@ Singleton {
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    const m = {};
+                    const m = {}, ps = {};
                     for (const s of JSON.parse(text)) {
                         const p = (s.ports ?? []).find(x => x.name === s.active_port);
                         m[s.name] = String((p?.type ?? "") + " " + (s.active_port ?? "")).toLowerCase();
+                        const av = (s.ports ?? []).filter(x => x.availability !== "not available");
+                        if (av.length > 1)
+                            ps[s.name] = { active: s.active_port, list: av.map(x => ({ name: x.name, type: x.type,
+                                label: x.type === "Line" ? "Parlante (línea)" : x.type === "Speaker" ? "Parlante" : x.description })) };
                     }
                     root.ports = m;
-                } catch (e) { root.ports = {}; }
+                    root.portSets = ps;
+                } catch (e) { root.ports = {}; root.portSets = {}; }
             }
         }
     }

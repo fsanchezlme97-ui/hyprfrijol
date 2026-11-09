@@ -156,13 +156,13 @@ PanelWindow {
     readonly property var tabs: {
         const tones = ["pc", "ter", "sc"];
         const out = [];
-        if (enabledApps.includes("ia")) out.push({ key: "ia", glyph: "", label: "IA", tone: "p" });
+        if (enabledApps.includes("ia")) out.push({ key: "ia", glyph: "", label: String(Settings.get("aiName", "") ?? "").trim() || "IA", tone: "p" });
         webapps.forEach((w, i) => {
             if (!w?.key || !enabledApps.includes(w.key)) return;
             const n = String(w.name || w.key);
             out.push({ key: w.key, glyph: n.charAt(0).toUpperCase(), label: n, tone: builtinTones[w.key] ?? tones[i % 3], icon: WebApps.iconOf(w) });
         });
-        return out.length ? out : [{ key: "ia", glyph: "", label: "IA", tone: "p" }];
+        return out.length ? out : [{ key: "ia", glyph: "", label: String(Settings.get("aiName", "") ?? "").trim() || "IA", tone: "p" }];
     }
     readonly property var tabKeys: tabs.map(t => t.key)
     readonly property var webKeys: tabKeys.filter(k => k !== "ia")
@@ -180,10 +180,11 @@ PanelWindow {
     readonly property real mB: barPos === "abajo" ? barEdge : gap
     readonly property bool onLeft: Settings.get("sideSide", "derecha") === "izquierda"
     readonly property real mR: (onLeft ? barPos === "izquierda" : barPos === "derecha") ? barEdge : gap     // margen del lado del panel
-    // Ancho del asistente (sideWidth): "tercio" (por defecto, el mismo que las web apps) o px
-    readonly property var sideWidthPref: Settings.get("sideWidth", "tercio")
-    readonly property real baseW: sideWidthPref === "tercio" || !(Number(sideWidthPref) > 0)
-        ? WebApps.third(screen?.width ?? 1920) : Math.max(320, Math.min(720, Number(sideWidthPref)))
+    // Ancho del asistente y de las web apps (sideWidth): "centro" (por defecto, el del centro de control: 404 px),
+    // "tercio" (un tercio de la pantalla) o px
+    readonly property var sideWidthPref: Settings.get("sideWidth", "centro")
+    readonly property real baseW: sideWidthPref === "tercio" ? WebApps.third(screen?.width ?? 1920)
+        : Number(sideWidthPref) > 0 ? Math.max(320, Math.min(720, Number(sideWidthPref))) : 404
     // Cada web app tiene su ancho (WebApps.panelWidth: por defecto un tercio de la pantalla, una columna de un mosaico
     // de 3). Fijado, el panel mide siempre ese tercio en todas las pestañas: el reparto del mosaico no salta al cambiar
     // de pestaña y las demás ventanas se reparten los otros dos tercios.
@@ -323,14 +324,23 @@ PanelWindow {
                 const c = win.webClient(k);
                 const want = win.shown && win.tab === k && win.webKeys.includes(k);
                 if (!c) {
+                    // sin ventana (cerrada o reiniciada): la próxima vez se le vuelve a decir si se ve
+                    if (visSent[k] !== undefined) { const m = Object.assign({}, visSent); delete m[k]; visSent = m; }
                     if (want && !win.starting[k] && !win.inBrowser(k)) start(k);
                     continue;
                 }
                 // Ya tiene ventana: si se cierra, la próxima apertura la vuelve a lanzar (sin esperar al plazo)
                 if (win.starting[k]) { const s = Object.assign({}, win.starting); delete s[k]; win.starting = s; }
-                if (win.detached[k] || win.webPip === k) continue;
-                if (want && t) show(c, t); else hide(c);
+                if (win.detached[k] || win.webPip === k) { vis(k, "shown"); continue; }
+                if (want && t) { show(c, t); vis(k, "shown"); } else { hide(c); vis(k, "hidden"); }
             }
+        }
+        // Le dice a la página si se ve (repinta al instante) o está guardada (así avisa de lo que llega): solo al cambiar
+        property var visSent: ({})
+        function vis(k, v) {
+            if (visSent[k] === v) return;
+            const m = Object.assign({}, visSent); m[k] = v; visSent = m;
+            win.webCmd(k, v);
         }
         function start(k) {
             const s = Object.assign({}, win.starting); s[k] = true; win.starting = s;
@@ -372,6 +382,21 @@ PanelWindow {
         return w.nav ?? (WebApps.preset(w)?.cat !== "Mensajería");
     }
     function webCmd(k, c) { Quickshell.execDetached([Paths.script("hf-webapp"), "cmd", k, c]); }
+    // Zoom de la web app activa (cabecera): el mismo que Ctrl + / Ctrl − y Ajustes › Web apps, guardado por web
+    FileView {
+        id: zoomFile
+        path: win.web ? Paths.home + "/.local/share/hyprfrijol/webapps/" + win.tab + "/zoom" : ""
+        watchChanges: true; printErrors: false
+        onFileChanged: reload()
+    }
+    readonly property real zoomNow: {
+        const z = parseFloat(zoomFile.text());
+        return z > 0 ? z : Number(webConf(tab)?.zoom ?? WebApps.panelZoom);
+    }
+    function setZoom(z: real): void {
+        z = Math.round(Math.max(0.5, Math.min(2, z)) * 10) / 10;
+        Quickshell.execDetached([Paths.script("hf-webapp"), "cmd", tab, "zoom", String(z)]);
+    }
 
     // Cerrar las que no se usan (campo «unload» en minutos, 0 = nunca, por defecto nunca): libera memoria. Solo las del
     // panel; nunca la que está a la vista, en PiP, desacoplada o sonando (eso lo mira hf-webapp idle-stop).
@@ -534,6 +559,25 @@ PanelWindow {
                         icon: "chevron_right"; iconSize: 14; implicitWidth: 26; implicitHeight: 26
                         tooltip: "Adelante (Alt + →)"
                         onClicked: win.webCmd(win.tab, "forward")
+                    }
+                    // Zoom: − 90 % +  (clic en el número: 100 %; rueda encima: ±10 %)
+                    Rectangle {
+                        visible: win.web && win.current !== null
+                        implicitWidth: zRow.implicitWidth + 4; implicitHeight: 24
+                        radius: Theme.ctl(24); color: Theme.fill2
+                        Row {
+                            id: zRow
+                            anchors.centerIn: parent
+                            IconBtn { icon: "minus"; iconSize: 11; implicitWidth: 22; implicitHeight: 22; tooltip: "Reducir (Ctrl −)"; onClicked: win.setZoom(win.zoomNow - 0.1) }
+                            Txt {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 34; horizontalAlignment: Text.AlignHCenter
+                                text: Math.round(win.zoomNow * 100) + "%"; size: 10.5; tabular: true; muted: true
+                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: win.setZoom(1)
+                                            onWheel: w => win.setZoom(win.zoomNow + (w.angleDelta.y > 0 ? 0.1 : -0.1)) }
+                            }
+                            IconBtn { icon: "plus"; iconSize: 11; implicitWidth: 22; implicitHeight: 22; tooltip: "Ampliar (Ctrl +)"; onClicked: win.setZoom(win.zoomNow + 0.1) }
+                        }
                     }
                     IconBtn {
                         visible: win.tab === "yt" && win.docked && win.pipBtn

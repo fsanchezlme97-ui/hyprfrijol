@@ -1,4 +1,6 @@
-// Onda de audio en el centro de la barra (cava, 48 bandas a 60 fps).
+// Onda de audio en el centro de la barra (cava, 48 bandas a 30 fps).
+// Rendimiento: «barras» son 48 rectángulos que pinta la GPU (antes un Canvas pintado por la CPU y subido como imagen
+// en cada fotograma: ~6 % de CPU con música); «onda» y «línea» siguen en Canvas. Todo se mueve a 30 fps.
 // Estilos (Ajustes › Barra › Onda de audio, ajuste "waveStyle"):
 //   barras  barras redondeadas simétricas con degradado primario → terciario (por defecto)
 //   onda    curva suave rellena, simétrica
@@ -35,11 +37,17 @@ Rectangle {
     Component.onCompleted: Cava.users++
     Component.onDestruction: Cava.users--
 
+    readonly property bool gpuBars: kind === "barras"
     FrameAnimation {
         running: root.visible && (Cava.active || root.peak > 0.002)
+        property real acc: 0
         onTriggered: {
+            // 30 fps: un fotograma de cada dos (con el tiempo acumulado, para que la caída no se ralentice)
+            acc += frameTime;
+            if (acc < 1 / 32) return;
             const src = Cava.bars, d = root.disp;
-            const dt = Math.min(0.05, frameTime);
+            const dt = Math.min(0.08, acc);
+            acc = 0;
             const up = 1 - Math.exp(-dt * 38), down = 1 - Math.exp(-dt * 9);
             let pk = 0;
             for (let i = 0; i < root.n; i++) {
@@ -52,12 +60,55 @@ Rectangle {
             const idle = !root.live && pk < 0.01;
             if (idle && root.idlePainted) return;
             root.idlePainted = idle;
-            cv.requestPaint();
+            if (root.gpuBars) root.layoutBars(idle); else cv.requestPaint();
         }
+    }
+
+    // ---- «barras» en la GPU: alto de cada rectángulo puesto a mano (sin 48 enlaces que se reevalúen)
+    readonly property real barsH: height - 6
+    function barColor(f: real): color {
+        const p = Theme.p, t = Theme.ter;
+        if (f < 0.5) return Qt.rgba(p.r, p.g, p.b, 0.75 + f * 0.5);
+        const k = (f - 0.5) * 2;
+        return Qt.rgba(p.r + (t.r - p.r) * k, p.g + (t.g - p.g) * k, p.b + (t.b - p.b) * k, 1 - 0.15 * k);
+    }
+    function amp(i: int): real { return Math.pow(Math.min(1, disp[i] * 1.15), 0.8); }
+    function layoutBars(idle: bool): void {
+        for (let i = 0; i < n; i++) {
+            const it = bars.itemAt(i);
+            if (!it) continue;
+            if (idle) { it.visible = i % 2 === 0; it.height = 2.2; it.opacity = 0.45; continue; }
+            it.visible = true; it.opacity = 1;
+            it.height = Math.max(2.6, amp(i) * (barsH - 2));
+        }
+    }
+    Item {
+        id: barsBox
+        visible: root.gpuBars
+        anchors.centerIn: parent
+        width: root.waveW
+        height: root.barsH
+        Repeater {
+            id: bars
+            model: root.gpuBars ? root.n : 0
+            Rectangle {
+                required property int index
+                x: index * (root.bw + root.gap)
+                anchors.verticalCenter: parent.verticalCenter
+                width: root.bw; height: 2.2
+                radius: width / 2
+                visible: index % 2 === 0
+                opacity: 0.45
+                // degradado de la barra entera, como el del Canvas: primario 75 % → primario → terciario 85 %
+                color: root.barColor(index / (root.n - 1))
+            }
+        }
+        Component.onCompleted: root.layoutBars(true)
     }
 
     Canvas {
         id: cv
+        visible: !root.gpuBars
         anchors.centerIn: parent
         width: root.waveW
         height: parent.height - 6
@@ -113,7 +164,7 @@ Rectangle {
         }
     }
     Connections { target: Theme; function onPChanged() { cv.requestPaint(); } function onTerChanged() { cv.requestPaint(); } }
-    onKindChanged: cv.requestPaint()
+    onKindChanged: { idlePainted = false; if (gpuBars) Qt.callLater(() => layoutBars(!live)); else cv.requestPaint(); }
 
     HoverHandler { id: hover; onHoveredChanged: if (hovered) Shell.preload("musica") }
     MouseArea {

@@ -4,6 +4,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import ".."
 
 Singleton {
     id: root
@@ -31,7 +32,7 @@ Singleton {
     Process {
         id: monitor
         running: true
-        command: ["nmcli", "monitor"]
+        command: Paths.reaper.concat(["nmcli", "monitor"])
         stdout: SplitParser { onRead: _ => soon.restart() }
         // NetworkManager reiniciado o nmcli que falta: se reintenta, sin agobiar
         onRunningChanged: if (!running) retry.start()

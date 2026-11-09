@@ -12,6 +12,7 @@
   "activeBorder": "sutil",
   "barPos": "arriba",
   "barMode": "archipielago",
+  "barRoundExtra": 2,
   "gapsIn": 1,
   "gapsOut": 1,
   "pipSize": "pequeno",
@@ -77,6 +78,8 @@
   "aiModel": "",
   "aiEndpoint": "",
   "aiKeyEnv": "HF_AI_KEY",
+  "aiName": "",
+  "aiPersona": "",
   "aiContextWindow": true,
   "aiContextClipboard": true,
   "aiContextCapture": true,
@@ -101,7 +104,7 @@
   "sidePanelApps": [
     "ia"
   ],
-  "sideWidth": "tercio",
+  "sideWidth": "centro",
   "sideSide": "izquierda",
   "sidePanelPinned": false,
   "monoFondo": true,

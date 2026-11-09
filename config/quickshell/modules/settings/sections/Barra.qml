@@ -90,6 +90,17 @@ ColumnLayout {
                 }
             }
         }
+        // Píldoras (isla / archipiélago): esquinas a partir de las de las ventanas, como mucho +4 px (no rompe el estilo)
+        LabeledRow {
+            visible: root.mode === "archipielago" || root.mode === "isla"
+            label: "Esquinas"; labelWidth: 60
+            Seg {
+                readonly property int win: Settings.get("rounding", null) ?? Theme.winRadius
+                model: [[0, "Como las ventanas (" + win + " px)"], [2, (win + 2) + " px"], [4, (win + 4) + " px"]]
+                current: Settings.get("barRoundExtra", 2)
+                onPicked: k => Settings.set("barRoundExtra", k)
+            }
+        }
     }
     Section {
         Layout.fillWidth: true

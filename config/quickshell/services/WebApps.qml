@@ -73,11 +73,12 @@ Singleton {
         a = find(a);
         if (!a) return base;
         const v = a.panelWidth ?? "auto";
-        const w = v === "panel" ? base : Number(v) > 0 ? Number(v) : third(monW);
+        // "auto"/"panel": el ancho del panel (Ajustes › Panel lateral › Ancho); "tercio": un tercio de la pantalla
+        const w = v === "tercio" ? third(monW) : Number(v) > 0 ? Number(v) : base;
         const max = Math.max(base, Math.floor((Number(monW) || 1920) * 0.5));
         return Math.round(Math.max(320, Math.min(w, max)));
     }
-    readonly property var widths: [["auto", "Un tercio"], ["panel", "Como el panel"], [600, "600 px"], [800, "800 px"]]
+    readonly property var widths: [["auto", "Como el panel"], ["tercio", "Un tercio"], [600, "600 px"], [800, "800 px"]]
     // Pestaña del panel lateral activada/desactivada (Ajustes › Panel lateral): «panel» al activarla; al quitarla, el
     // modo de antes (sin «mode» → navegador, como siempre)
     function setPanelMode(k, on): void {

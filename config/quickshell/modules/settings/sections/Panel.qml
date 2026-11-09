@@ -65,7 +65,7 @@ ColumnLayout {
             Button { kind: "link"; text: "+ Añadir una web app"; onClicked: settingsSection("webapps") }
             LabeledRow {
                 label: "Ancho"; labelWidth: 60
-                Seg { model: [["tercio", "Un tercio"], [400, "400 px"], [480, "480 px"]]; current: Settings.get("sideWidth", "tercio"); onPicked: k => Settings.set("sideWidth", k) }
+                Seg { model: [["centro", "Como el centro"], [480, "480 px"], ["tercio", "Un tercio"]]; current: Settings.get("sideWidth", "centro"); onPicked: k => Settings.set("sideWidth", k) }
             }
             LabeledRow {
                 label: "Lado"; labelWidth: 60

@@ -11,7 +11,7 @@ import "../services"
 BarChip {
     id: chip
     popup: "w-pomodoro"
-    readonly property color modeColor: Pomodoro.mode === "foco" ? Theme.p : Pomodoro.mode === "largo" ? Theme.tv : Theme.ter
+    readonly property color modeColor: Pomodoro.mode === "foco" ? Theme.p : Pomodoro.mode === "largo" ? Theme.tv : Pomodoro.isTimer ? Theme.sc : Theme.ter
     implicitHeight: vertical ? vcol.implicitHeight + 10 : 22
     implicitWidth: vertical ? 26 : r.implicitWidth + 14
     onRightClicked: Pomodoro.reset()

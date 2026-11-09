@@ -28,8 +28,8 @@ Scope {
         { key: "enfoque", label: "Enfoque y pomodoro", icon: "focus", file: "Enfoque", sub: "pomodoro + modo foco", kw: "pomodoro foco descanso ciclos sin distracciones ocultar barra gaps silenciar notificaciones sonido bloquear apps" },
         { key: "ia", label: "Asistente de IA", icon: "ai", file: "IA", sub: "servicio local del asistente", kw: "ia asistente claude ollama proveedor modelo servidor api clave permisos portapapeles terminal spotlight historial" },
         { key: "panel", label: "Panel lateral y PiP", icon: "pip", file: "Panel", sub: "window_rule · pin · float", kw: "panel lateral pip imagen en imagen ancho lado esquina margen opacidad vídeos transparente videollamadas meet teams reproductores spotify" },
-        { key: "plugins", label: "Plugins", icon: "puzzle", file: "Plugins", sub: "hyprpm · plugins de Hyprland", kw: "plugins hyprpm extensiones módulos hyprbars hyprexpo hyprspace hyprfocus hyprglass hyprgrass cursores barras de título vista de espacios" },
-        { key: "omarchy", label: "Plugins de Omarchy", icon: "puzzle", file: "PluginsOmarchy", sub: "hf-plugin · widgets, paneles y temas de Omarchy", kw: "omarchy plugins quickshell widgets barra panel superposición servicio temas colors.toml importar paleta marketplace probado" },
+        { key: "plugins", label: "Plugins", icon: "puzzle", file: "Plugins", sub: "Hyprland (hyprpm) y Omarchy", kw: "plugins hyprpm omarchy hf-plugin widgets temas extensiones módulos hyprbars hyprexpo hyprspace hyprfocus hyprglass hyprgrass cursores barras de título vista de espacios" },
+        { key: "omarchy", label: "Plugins de Omarchy", icon: "puzzle", file: "PluginsOmarchy", under: "plugins", sub: "hf-plugin · widgets, paneles y temas de Omarchy", kw: "omarchy plugins quickshell widgets barra panel superposición servicio temas colors.toml importar paleta marketplace probado" },
         { key: "aplicaciones", label: "Aplicaciones", icon: "package", file: "Aplicaciones", sub: "centro de aplicaciones · bienvenida", kw: "aplicaciones apps instalar programas tienda software herramientas catálogo bienvenida asistente inicial flathub aur" },
         { key: "webapps", label: "Web apps", icon: "globe", file: "WebApps", sub: "~/.local/share/applications", kw: "web apps whatsapp youtube gmail atajo" },
         { key: "pantallas", label: "Pantallas", icon: "monitor", file: "Pantallas", sub: "hyprctl monitors · hl.monitor", sep: true, kw: "pantalla monitor resolución frecuencia hz escala orientación girar rotar principal identificar disposición vrr hdr duplicar luz nocturna hyprsunset temperatura amanecer atardecer" },
@@ -303,8 +303,9 @@ Scope {
                             ColumnLayout {
                                 id: it
                                 required property var modelData
-                                readonly property bool on: root.section === modelData.key
-                                readonly property bool shown: navList.matches(modelData)
+                                readonly property bool on: root.section === modelData.key || root.current.under === modelData.key
+                                // las subsecciones (under) no van en la lista: se llega por las pestañas de su sección
+                                readonly property bool shown: !modelData.under && navList.matches(modelData)
                                 visible: shown
                                 Layout.fillWidth: true
                                 spacing: 0

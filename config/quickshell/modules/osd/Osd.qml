@@ -153,7 +153,7 @@ PanelWindow {
     // `sleep`) y solo escribe cuando cambia. El glob se expande en cada vuelta: sigue los teclados que se conectan.
     Process {
         running: true
-        command: ["bash", "-c", "exec 3<> <(:); last=; while :; do v=0; for f in /sys/class/leds/*::capslock/brightness; do read -r b < \"$f\" 2>/dev/null && [ \"${b:-0}\" != 0 ] && v=1; done; [ \"$v\" != \"$last\" ] && { echo $v; last=$v; }; read -t 0.3 -u 3; done"]
+        command: Paths.reaper.concat(["bash", "-c", "exec 3<> <(:); last=; while :; do v=0; for f in /sys/class/leds/*::capslock/brightness; do read -r b < \"$f\" 2>/dev/null && [ \"${b:-0}\" != 0 ] && v=1; done; [ \"$v\" != \"$last\" ] && { echo $v; last=$v; }; read -t 0.3 -u 3; done"])
         stdout: SplitParser {
             onRead: data => {
                 const on = data.trim() === "1";

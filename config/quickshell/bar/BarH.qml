@@ -83,12 +83,14 @@ Item {
         // Utilidades
         Divider { visible: root.hasInfo && root.hasUtil; Layout.leftMargin: 4; Layout.rightMargin: 4 }
         PomodoroChip { id: pomo; visible: Settings.barHas("pomodoro") }
+        BongoChip { id: bongo; visible: Settings.barHas("bongo") }   // gato bongo: golpea al escribir (junto al pomodoro)
         CaffeineChip { id: cafe; visible: Settings.barHas("cafeina") }
-        BongoChip { id: bongo; visible: Settings.barHas("bongo") }   // gato bongo: golpea al escribir
         IconBtn { id: clipBtn; visible: Settings.barHas("portapapeles"); icon: "clipboard"; tooltip: "Portapapeles"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // abre Spotlight en modo portapapeles
         IconBtn { id: aiBtn; visible: Settings.barHas("ia"); icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") }
         IconBtn { id: gearBtn; visible: Settings.barHas("ajustes"); icon: "gear"; onClicked: Shell.open("ajustesapp") }   // Ajustes (tuerca; opcional, ya está en el panel)
         OmarchySlot { barWindow: root.barWindow; place: "derecha" }     // widgets de plugins de Omarchy (omarchyBarSlot)
+        // Separa los botones propios (asistente, ajustes…) de los iconos de las apps (bandeja)
+        Divider { visible: tray.visible && (pomo.visible || cafe.visible || bongo.visible || clipBtn.visible || aiBtn.visible || gearBtn.visible); Layout.leftMargin: 4; Layout.rightMargin: 0 }
         Tray { id: tray; barWindow: root.barWindow; visible: Settings.get("barTray", true) && any; Layout.leftMargin: 4 }
         // Estado: privacidad + red, sonido, batería, notificaciones y reloj (un solo botón: centro de control)
         Item {

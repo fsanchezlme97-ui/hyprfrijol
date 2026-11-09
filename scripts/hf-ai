@@ -13,6 +13,7 @@
   hf-ai approvals            lo «aprobado siempre» (aiAlwaysApprove) con su nombre en español
   hf-ai summon               atajo Super+Ctrl+A: guarda la ventana activa (y su captura) y abre el asistente con ella
   hf-ai timers               temporizadores en marcha (acción "timer")
+  hf-ai timer start <min> [etiqueta] | timer cancel <id|all>   temporizador a mano (ventana del pomodoro)
   hf-ai handoff '<json>'     copia la conversación y la abre en Claude Desktop (o `claude` en kitty)
   hf-ai attach <origen>…     adjunta imágenes al chat: clipboard | pick (selector de archivos) | - (base64 por stdin)
                              | ruta | file://… | https://…  → {"images": [rutas], "error": …}
@@ -243,7 +244,29 @@ def can_read(s=None):
     s = s or settings()
     return s.get("aiReadDesktop", True) is not False
 
+PERSONA_MAX = 2000
+
+def persona_doc(s=None):
+    """Ajustes › IA › Personalidad: nombre (aiName) e instrucciones propias (aiPersona). Se AÑADEN al prompt base;
+    la IA no puede cambiarlas (DENY_KEYS ^ai[A-Z])."""
+    s = s or settings()
+    name = re.sub(r"\s+", " ", str(s.get("aiName") or "")).strip()[:40]
+    pers = str(s.get("aiPersona") or "").strip()[:PERSONA_MAX]
+    out = []
+    if name:
+        out.append(f"Te llamas «{name}». Si te preguntan tu nombre, ese es; si el usuario empieza con «{name}, …», "
+                   "te está hablando a ti.")
+    if pers:
+        out.append("Instrucciones del usuario sobre tu personalidad y tu manera de hablar (tono, idioma, largo de las "
+                   "respuestas, trato…). Síguelas, salvo en las reglas de acciones, permisos y formato de arriba, que "
+                   "mandan siempre:\n" + pers)
+    return ("\n\n" + "\n\n".join(out)) if out else ""
+
 def system_prompt(s=None):
+    s = s or settings()
+    return system_prompt_base(s) + persona_doc(s)
+
+def system_prompt_base(s=None):
     s = s or settings()
     shell, term = allowed(s)
     read = QUERY_DOC if can_read(s) else ""
@@ -2169,6 +2192,20 @@ def main(argv):
         out = [{"kind": k, "label": kind_label(k)} for k in (settings().get("aiAlwaysApprove") or [])]
     elif cmd == "timers":
         out = timers_list()
+    elif cmd == "timer":
+        # hf-ai timer start <min> [etiqueta…] · hf-ai timer cancel <id|all>
+        if arg == "start" and len(rest) > 1:
+            try:
+                mins = float(rest[1].replace(",", "."))
+            except ValueError:
+                raise SystemExit("minutos no válidos: " + rest[1])
+            if not 0 < mins <= 24 * 60:
+                raise SystemExit("minutos fuera de rango (0–1440)")
+            out = {"id": timer_start(mins, " ".join(rest[2:]).strip()[:60]), "timers": timers_list()}
+        elif arg == "cancel" and len(rest) > 1:
+            timer_cancel(rest[1]); out = {"timers": timers_list()}
+        else:
+            raise SystemExit("uso: hf-ai timer start <min> [etiqueta] | hf-ai timer cancel <id|all>")
     elif cmd == "handoff":
         out = do_handoff(json.loads(arg or "{}"))
     elif cmd == "attach":

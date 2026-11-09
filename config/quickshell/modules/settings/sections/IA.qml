@@ -1,5 +1,5 @@
 // Ajustes › Asistente de IA — proveedor/modelo/servidor (los usa scripts/hf-ai: aiProvider, aiModel, aiEndpoint,
-// aiKeyEnv) y permisos del asistente (aiContextWindow, aiContextClipboard…).
+// aiKeyEnv), personalidad (aiName, aiPersona) y permisos del asistente (aiContextWindow, aiContextClipboard…).
 // Gemini: la clave se guarda con `hf-ai key set gemini` (llavero con secret-tool o ~/.config/hyprfrijol/secrets,
 // nunca en settings.json); la lista de modelos sale de `hf-ai models gemini` y «Probar conexión» de `hf-ai test`.
 import QtQuick
@@ -224,6 +224,77 @@ ColumnLayout {
             SwRow { label: "Confirmar antes de aplicar cambios"; sub: "y siempre se pueden deshacer"; key: "aiConfirm"; def: true }
             SwRow { label: "Responder desde Spotlight"; sub: "escribe ? y tu pregunta"; key: "aiSpotlight"; def: true }
             SwRow { label: "Guardar historial de conversaciones"; sub: "~/.local/share/hyprfrijol/ai"; key: "aiHistory"; def: true }
+        }
+    }
+
+    // Personalidad (aiName, aiPersona): scripts/hf-ai persona_doc las AÑADE al prompt base, que no se puede
+    // sustituir (sus reglas de acciones y permisos mandan siempre). La IA no puede tocarlas (DENY_KEYS ^ai[A-Z]).
+    Section {
+        Layout.fillWidth: true
+        title: "Personalidad"
+        headerRight: Button {
+            visible: Settings.get("aiName", "") !== "" || Settings.get("aiPersona", "") !== ""
+            text: "Restablecer"; h: 26
+            onClicked: { Settings.set("aiName", ""); Settings.set("aiPersona", ""); persona.text = ""; nameField.text = ""; }
+        }
+        LabeledRow {
+            label: "Nombre"
+            labelWidth: 120
+            hint: "aiName"
+            Field {
+                id: nameField
+                icon: ""
+                placeholder: "Sin nombre (Tu asistente del escritorio)"
+                text: Settings.get("aiName", "")
+                input.maximumLength: 40
+                onAccepted: Settings.set("aiName", text.trim())
+                input.onActiveFocusChanged: if (!input.activeFocus && text.trim() !== Settings.get("aiName", "")) Settings.set("aiName", text.trim())
+            }
+        }
+        Txt {
+            Layout.fillWidth: true
+            text: "Cómo quieres que sea: tono, trato, idioma, si responde corto o largo, en qué te conoce… Se suma a sus instrucciones de siempre; lo que pidas aquí no le quita los permisos ni la confirmación de cambios."
+            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+        }
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: Math.max(84, Math.min(220, persona.contentHeight + 18))
+            radius: Theme.r(8)
+            color: Theme.fill2
+            border.width: persona.activeFocus && Theme.estilo === "flat" ? 2 : 0
+            border.color: Theme.p
+            TextEdit {
+                id: persona
+                anchors { fill: parent; margins: 9 }
+                wrapMode: TextEdit.Wrap
+                color: Theme.t
+                selectionColor: Theme.pc
+                selectedTextColor: Theme.pcText
+                font.family: Theme.font
+                font.pixelSize: Theme.px(12.5)
+                clip: true
+                text: Settings.get("aiPersona", "")
+                function save(): void {
+                    const t = text.trim().slice(0, 2000);
+                    if (t !== Settings.get("aiPersona", "")) Settings.set("aiPersona", t);
+                }
+                onTextChanged: if (activeFocus) personaSave.restart()
+                onActiveFocusChanged: if (!activeFocus) save()
+                Txt {
+                    visible: persona.text === ""
+                    width: parent.width
+                    wrapMode: Text.WordWrap; elide: Text.ElideNone
+                    text: "Ejemplo: Háblame de tú y con humor, como un amigo. Respuestas cortas. Me llamo Fer y programo en Python."
+                    muted: true; size: 12
+                }
+            }
+            Timer { id: personaSave; interval: 800; onTriggered: persona.save() }
+        }
+        Txt {
+            Layout.alignment: Qt.AlignRight
+            visible: persona.text.length > 1500
+            text: persona.text.length + " / 2000"
+            size: 11; color: persona.text.length > 2000 ? Theme.ter : Theme.tv
         }
     }
 

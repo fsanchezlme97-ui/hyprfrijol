@@ -169,11 +169,17 @@ Singleton {
     function previewOf(n): string {
         if (!n || tone(n) === "pc") return "";
         const img = String(n.image ?? "");
-        if (img.startsWith("image://qsimage") || img.startsWith("file:")) return img;
-        if (img.startsWith("image://icon//")) return "file://" + img.slice("image://icon/".length);
-        const ic = String(n.appIcon ?? "");
-        if (/^(file:\/\/)?\/.*\.(jpe?g|png|webp|avif)$/i.test(ic) && !/\/icons\/|\/pixmaps\//.test(ic)) return ic.startsWith("/") ? "file://" + ic : ic;
-        return "";
+        if (img.startsWith("image://qsimage")) return img;          // imagen en bruto (image-data): contenido
+        // Una ruta que es el icono de la app (kitty: /usr/lib/kitty/logo/kitty.png) NO es contenido: solo cuentan las
+        // imágenes de carpetas del usuario o temporales (capturas de grimblast, descargas…)
+        const content = (u) => {
+            const path = String(u).replace(/^image:\/\/icon\//, "").replace(/^file:\/\//, "");
+            return path.startsWith("/") && /\.(jpe?g|png|webp|avif|gif|bmp)$/i.test(path)
+                && /^\/(home|tmp|run\/user|var\/tmp)\//.test(path)
+                && !/\/(icons|pixmaps|logo|logos)\/|\/\.local\/share\/(icons|applications)\//i.test(path)
+                ? "file://" + path : "";
+        };
+        return content(img) || content(n.appIcon ?? "");
     }
     // Texto sin etiquetas (búsqueda, historial, resumen para la IA)
     function plain(s): string { return String(s ?? "").replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'"); }
@@ -190,7 +196,7 @@ Singleton {
         if (!uid) { uid = Date.now().toString(36) + "-" + n.id; const h = Object.assign({}, huid); h[n.id] = uid; huid = h; }
         const e = { uid: uid, app: appOf(n), key: keyOf(n), entry: n.desktopEntry || "",
                     icon: icon.startsWith("image://qsimage") ? "" : icon,
-                    image: img.startsWith("file:") ? img : img.startsWith("image://icon//") ? "file://" + img.slice("image://icon/".length) : "",
+                    image: img.startsWith("image://qsimage") ? "" : root.previewOf(n),
                     summary: plain(n.summary).slice(0, 300), body: plain(n.body).slice(0, 1200),
                     urgency: isCritical(n) ? 2 : n.urgency === NotificationUrgency.Low ? 0 : 1, t: Date.now() };
         history = [e].concat(history.filter(h => h.uid !== uid)).slice(0, 300);

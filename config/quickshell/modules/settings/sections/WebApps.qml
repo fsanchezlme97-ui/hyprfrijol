@@ -146,6 +146,7 @@ ColumnLayout {
             Txt { Layout.fillWidth: true; text: "App"; muted: true; size: 11.5 }
             Txt { Layout.preferredWidth: 170; text: "Se abre en"; muted: true; size: 11.5 }
             Txt { Layout.preferredWidth: 60; text: "Avisos"; muted: true; size: 11.5; horizontalAlignment: Text.AlignHCenter }
+            Txt { Layout.preferredWidth: 112; text: "Cerrar si no la usas"; muted: true; size: 11.5; elide: Text.ElideRight }
             Item { Layout.preferredWidth: 88 }
         }
 
@@ -160,6 +161,8 @@ ColumnLayout {
                 readonly property bool open: root.expanded === modelData.key
                 readonly property var preset: WebApps.preset(modelData)
                 readonly property string kb: String(modelData.keybind ?? "")
+                // Cerrar por no usarla: solo las del panel y nunca las de mensajería (WhatsApp, Telegram…: no avisarían)
+                readonly property bool canUnload: mode === "panel" && preset?.cat !== "Mensajería"
                 // Zoom guardado por web (Ctrl +/− en la ventana o aquí); si no hay, el de Ajustes
                 FileView { id: zoomFile; path: Paths.home + "/.local/share/hyprfrijol/webapps/" + row.modelData.key + "/zoom"; watchChanges: true; printErrors: false; onFileChanged: reload() }
                 readonly property real zoomNow: parseFloat(zoomFile.text()) > 0 ? parseFloat(zoomFile.text()) : (modelData.zoom ?? (mode === "panel" ? WebApps.panelZoom : 1))
@@ -206,6 +209,18 @@ ColumnLayout {
                         onPicked: k => root.update(row.index, { mode: k })
                     }
                     Item { Layout.preferredWidth: 60; implicitHeight: 26; Sw { anchors.centerIn: parent; checked: row.modelData.notify !== false; onToggled: v => root.update(row.index, { notify: v }) } }
+                    Item {
+                        Layout.preferredWidth: 112; implicitHeight: 30
+                        Dropdown {
+                            visible: row.canUnload
+                            anchors.fill: parent
+                            h: 30
+                            model: [["0", "Nunca"], ["15", "A los 15 min"], ["30", "A los 30 min"], ["60", "A la hora"]]
+                            current: String(row.modelData.unload ?? 0)
+                            onPicked: k => root.update(row.index, { unload: +k })
+                        }
+                        Txt { visible: !row.canUnload; anchors.centerIn: parent; text: "—"; muted: true }
+                    }
                     RowLayout {
                         Layout.preferredWidth: 88; spacing: 2
                         IconBtn { icon: "external"; implicitWidth: 28; implicitHeight: 28; tooltip: "Abrir"; onClicked: WebApps.open(row.modelData.key) }

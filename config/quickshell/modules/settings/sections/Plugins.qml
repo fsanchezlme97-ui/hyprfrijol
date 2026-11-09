@@ -16,6 +16,7 @@ import "../ui"
 ColumnLayout {
     id: root
     spacing: 12
+    PluginsTabs { current: "plugins" }   // Hyprland | Omarchy (una sola entrada en la lista)
     property string tab: "todos"
     property string cat: "todo"
     property bool hasHyprpm: true

@@ -14,6 +14,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import ".."
 
 Singleton {
     id: root
@@ -93,7 +94,7 @@ Singleton {
     Process {
         id: proc
         running: root.users > 0
-        command: ["bash", "-c", `
+        command: Paths.reaper.concat(["bash", "-c", `
             # Un solo bash en marcha (antes un sh nuevo cada 2 s): escribe un bloque por vuelta terminado en «end» y espera con
             # \`read -t\` (sin sleep). Casi todo con builtins; los drivers de cada gráfica se leen una vez; df cada 30 s.
             detail=$1; exec 3<> <(:); i=0
@@ -148,7 +149,7 @@ Singleton {
               i=$((i + 1))
               read -t 2 -u 3
             done
-        `, "bash", root.detailOn ? "1" : "0"]
+        `, "bash", root.detailOn ? "1" : "0"])
         property string buf: ""
         stdout: SplitParser {
             onRead: line => {

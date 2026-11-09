@@ -32,13 +32,17 @@ ColumnLayout {
             id: row
             required property var modelData
             readonly property bool on: root.current === modelData
+            // Parlante / auricular de la misma tarjeta: switch bajo la salida activa
+            readonly property var portSet: root.output && on ? (Audio.portSets[modelData.name] ?? null) : null
+            readonly property real baseH: root.compact ? 30 : 44
             Layout.fillWidth: true
-            implicitHeight: root.compact ? 30 : 44
+            implicitHeight: baseH + (portSet ? (root.compact ? 30 : 36) : 0)
             radius: root.compact ? Theme.r(5) : Theme.r(6)
             color: on && !root.compact ? Theme.selBg : ma.containsMouse ? (root.compact ? Theme.s1 : Qt.alpha(Theme.t, 0.05)) : "transparent"
             Behavior on color { ColorAnimation { duration: Theme.dur } }
             RowLayout {
-                anchors { fill: parent; leftMargin: root.compact ? 8 : 10; rightMargin: root.compact ? 8 : 10 }
+                anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: root.compact ? 8 : 10; rightMargin: root.compact ? 8 : 10 }
+                height: row.baseH
                 spacing: root.compact ? 8 : 12
                 Rectangle {
                     visible: !root.compact
@@ -71,8 +75,35 @@ ColumnLayout {
             }
             MouseArea {
                 id: ma
-                anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                anchors { left: parent.left; right: parent.right; top: parent.top }
+                height: row.baseH
+                hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                 onClicked: Audio.setDefault(row.modelData)
+            }
+            Row {
+                visible: !!row.portSet
+                anchors { left: parent.left; right: parent.right; bottom: parent.bottom; bottomMargin: root.compact ? 4 : 6
+                          leftMargin: root.compact ? 28 : 50; rightMargin: root.compact ? 8 : 10 }
+                spacing: 4
+                Repeater {
+                    model: row.portSet?.list ?? []
+                    Rectangle {
+                        id: chip
+                        required property var modelData
+                        readonly property bool act: row.portSet?.active === modelData.name
+                        width: chipTxt.implicitWidth + 30; height: 22; radius: Theme.ctl(22)
+                        color: act ? Theme.p : chipMa.containsMouse ? Qt.alpha(Theme.t, 0.10) : Theme.fill2
+                        Row {
+                            anchors.centerIn: parent; spacing: 5
+                            Icon { anchors.verticalCenter: parent.verticalCenter; size: 12; color: chip.act ? Theme.pText : Theme.tv
+                                   name: chip.modelData.type === "Headphones" ? "headphones" : "speaker" }
+                            Txt { id: chipTxt; anchors.verticalCenter: parent.verticalCenter; text: chip.modelData.label; size: 11
+                                  color: chip.act ? Theme.pText : Theme.t }
+                        }
+                        MouseArea { id: chipMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                    onClicked: if (!chip.act) Audio.setPort(row.modelData.name, chip.modelData.name) }
+                    }
+                }
             }
         }
     }

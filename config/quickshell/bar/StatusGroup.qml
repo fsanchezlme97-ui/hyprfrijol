@@ -97,14 +97,17 @@ Rectangle {
         const p = it.mapToItem(root, 0, 0);
         return vertical ? p.y + it.height + 4 : p.x + it.width + 5;
     }
-    readonly property real cut1: { box.width; box.height; return edgeAfter(iconsItem); }
-    readonly property real cut2: { box.width; box.height; return bellItem.visible ? edgeAfter(bellItem) : cut1; }
+    // Se recalculan también cuando el grupo cambia de tamaño o la fila se recoloca: antes solo con el tamaño de la fila,
+    // y si se calculaba antes de que el grupo tuviera su ancho final (fila centrada con x negativa) la zona de la
+    // campana quedaba corrida a la izquierda, ENCIMA de la bandeja (clic en un icono de la bandeja → avisos)
+    readonly property real cut1: { box.width; box.height; box.x; box.y; root.width; root.height; iconsItem.x; iconsItem.width; return Math.max(0, edgeAfter(iconsItem)); }
+    readonly property real cut2: { box.width; box.height; box.x; box.y; root.width; root.height; bellItem.x; return bellItem.visible ? Math.max(cut1, edgeAfter(bellItem)) : cut1; }
     MouseArea {
         id: mIcons
         x: 0; y: 0
         readonly property bool alone: !root.showBell && !root.showClock
-        width: root.vertical || alone ? root.width : root.cut1
-        height: !root.vertical || alone ? root.height : root.cut1
+        width: root.vertical || alone ? root.width : Math.min(root.width, root.cut1)
+        height: !root.vertical || alone ? root.height : Math.min(root.height, root.cut1)
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.RightButton
@@ -116,7 +119,7 @@ Rectangle {
         visible: root.showBell
         x: root.vertical ? 0 : root.cut1
         y: root.vertical ? root.cut1 : 0
-        readonly property real len: root.showClock ? root.cut2 - root.cut1 : (root.vertical ? root.height : root.width) - root.cut1
+        readonly property real len: Math.max(0, root.showClock ? root.cut2 - root.cut1 : (root.vertical ? root.height : root.width) - root.cut1)
         width: root.vertical ? root.width : len
         height: root.vertical ? len : root.height
         hoverEnabled: true
@@ -129,8 +132,8 @@ Rectangle {
         visible: root.showClock
         x: root.vertical ? 0 : root.cut2
         y: root.vertical ? root.cut2 : 0
-        width: root.vertical ? root.width : root.width - root.cut2
-        height: root.vertical ? root.height - root.cut2 : root.height
+        width: root.vertical ? root.width : Math.max(0, root.width - root.cut2)
+        height: root.vertical ? Math.max(0, root.height - root.cut2) : root.height
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: root.open("agenda")

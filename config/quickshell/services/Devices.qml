@@ -64,7 +64,7 @@ Singleton {
     Process {
         id: watch
         running: true
-        command: [Paths.script("hf-devices"), "watch"]
+        command: Paths.reaper.concat([Paths.script("hf-devices"), "watch"])
         stdout: SplitParser {
             onRead: data => {
                 try { const j = JSON.parse(data); root.list = (j.devices ?? []).filter(d => d.removable); } catch (e) {}

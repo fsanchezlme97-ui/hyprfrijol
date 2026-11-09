@@ -1,5 +1,5 @@
 pragma Singleton
-// Una sola instancia de cava para todas las barras: entrega `count` valores 0–1 a 60 fps.
+// Una sola instancia de cava para todas las barras: entrega `count` valores 0–1 a 30 fps.
 // Se detiene sola tras unos segundos de silencio sin música (ahorra CPU) y vuelve al sonar algo.
 import QtQuick
 import Quickshell
@@ -17,7 +17,7 @@ Singleton {
 
     Process {
         running: root.active
-        command: ["cava", "-p", Paths.root + "/config/cava/hf-bar.conf"]
+        command: Paths.reaper.concat(["cava", "-p", Paths.root + "/config/cava/hf-bar.conf"])
         stdout: SplitParser {
             onRead: data => {
                 const v = data.split(";");

@@ -33,6 +33,7 @@ Item {
     // [{ role: "user"|"ai", text, images, actions, labels, code, state: ""|"applied"|"discarded"|"undone", undo, error, confirm }]
     property var messages: []
     property bool busy: false
+    readonly property string aiName: String(Settings.get("aiName", "") ?? "").trim()
     property bool useWindow: Settings.get("aiContextWindow", true)
     property bool useClipboard: Settings.get("aiContextClipboard", true)
     property string captureText: ""
@@ -667,7 +668,7 @@ print(json.dumps(out[:300]))
                         }
                         ColumnLayout {
                             spacing: 0
-                            Txt { text: "Tu asistente del escritorio"; size: 14; weight: Font.DemiBold }
+                            Txt { text: root.aiName ? root.aiName + ", tu asistente del escritorio" : "Tu asistente del escritorio"; size: 14; weight: Font.DemiBold }
                             Txt { text: "Esto es lo que puede hacer"; size: 11.5; muted: true }
                         }
                     }
@@ -727,7 +728,7 @@ print(json.dumps(out[:300]))
                     implicitWidth: 40; implicitHeight: 40; radius: Theme.r(11); color: Theme.pc
                     Icon { anchors.centerIn: parent; name: "ai"; size: 18; color: Theme.pcText }
                 }
-                Txt { Layout.alignment: Qt.AlignHCenter; text: "¿En qué te ayudo?"; size: 15; weight: Font.DemiBold }
+                Txt { Layout.alignment: Qt.AlignHCenter; text: root.aiName ? "Soy " + root.aiName + ". ¿En qué te ayudo?" : "¿En qué te ayudo?"; size: 15; weight: Font.DemiBold }
                 Txt {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter

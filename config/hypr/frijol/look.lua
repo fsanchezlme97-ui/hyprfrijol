@@ -71,4 +71,7 @@ hl.animation({ leaf = "layersOut",   enabled = true, speed = 2.2, bezier = "sali
 -- Todas usan el espacio de nombres "hf-…"; el fondo de pantalla no lleva blur.
 hl.layer_rule({ match = { namespace = "^hf-.*" }, blur = true, blur_popups = true, ignore_alpha = 0.2 })
 hl.layer_rule({ match = { namespace = "^hf-wallpaper$" }, blur = false, no_anim = true })
+-- Fondos en movimiento: sin fundido de capa. Con él, al cambiar de vídeo el nuevo entraba transparente sobre el viejo
+-- y el viejo salía con otro fundido: a medio camino se veía negro (o los dos mezclados)
+hl.layer_rule({ match = { namespace = "^(mpvpaper|linux-wallpaperengine)$" }, blur = false, no_anim = true })
 hl.layer_rule({ match = { namespace = "^hf-notifications$" }, animation = "slide right" })

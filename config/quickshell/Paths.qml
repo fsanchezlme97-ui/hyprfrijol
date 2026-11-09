@@ -14,4 +14,7 @@ Singleton {
     readonly property string pictures: home + "/Imágenes"
 
     function script(name: string): string { return scripts + "/" + name; }
+    // Prefijo para procesos que no acaban solos (escuchas, bucles): mueren con el shell aunque este caiga o se
+    // reinicie (antes `nmcli monitor` y `hf-devices watch` quedaban huérfanos en cada reinicio)
+    readonly property var reaper: ["setpriv", "--pdeathsig", "TERM", "--"]
 }

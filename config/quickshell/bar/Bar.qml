@@ -55,7 +55,16 @@ PanelWindow {
     // Para que los textos escalados se vean nítidos (Txt usa QtRendering si la ventana lo pide)
     readonly property bool textScaled: Math.abs(k - 1) > 0.01
     // Píldoras (isla / archipiélago): radio en px del contenido (que va escalado ×k) y destello de visualBell
-    readonly property real pillRadius: Math.min(Theme.barRadius * 2, thickness / 2) / k
+    // Esquinas de las ventanas (Ajustes › Apariencia › Esquinas: decoration:rounding, px físicos) + 0/2/4 px
+    // (Ajustes › Barra › Esquinas: barRoundExtra, por defecto +2: un poco más suaves sin salirse del estilo)
+    readonly property real pillRadius: Math.min((Settings.get("rounding", null) ?? Theme.winRadius)
+        + Math.max(0, Math.min(4, Number(Settings.get("barRoundExtra", 2)) || 0)), thickness / 2) / k
+    // Mismo filo que una ventana sin foco (hf-apply active_border → inactive_border)
+    readonly property string borderMode: Settings.get("activeBorder", "sutil")
+    readonly property real pillBorderW: (borderMode === "ninguno" ? 0 : borderMode === "color" ? 2 : 1) / k
+    readonly property color pillBorder: borderMode === "color" ? Qt.alpha(Theme.ov, 0.7)
+        : Theme.glassy && Theme.blur ? Qt.alpha("#FFFFFF", Theme.light ? 0.28 : 0.05)
+        : Qt.alpha(Theme.ov, Theme.light ? 0.45 : 0.35)
     readonly property real bellLevel: bell.opacity
     // Rectángulo de la píldora i del archipiélago en px de la ventana (vacío si no toca)
     function pillRect(i: int): var {

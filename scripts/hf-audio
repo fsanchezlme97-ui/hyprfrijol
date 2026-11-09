@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# hf-audio — salidas de una misma tarjeta (p. ej. parlante en la «línea de salida» trasera y auricular en el jack
+# frontal). Al enchufar el auricular, el chip silencia solo el parlante (Auto-Mute); con esto se elige a mano.
+# Lo usa el selector de salidas (components/AudioDevices.qml).
+#
+#   hf-audio port <sink> <puerto>   activa ese puerto; si no es de auriculares, apaga el Auto-Mute de la tarjeta
+#                                   para que el parlante suene aunque el auricular siga enchufado
+#   hf-audio ports                  puertos de cada salida (JSON de pactl, resumido)
+set -uo pipefail
+case "${1:-}" in
+  port)
+    sink=${2:?sink}; port=${3:?puerto}
+    pactl set-sink-port "$sink" "$port" || exit 1
+    card=$(pactl -f json list sinks 2>/dev/null | jq -r --arg s "$sink" '.[] | select(.name == $s) | .properties["alsa.card"] // empty')
+    type=$(pactl -f json list sinks 2>/dev/null | jq -r --arg s "$sink" --arg p "$port" '.[] | select(.name == $s) | .ports[] | select(.name == $p) | .type')
+    if [ -n "$card" ] && amixer -c "$card" sget 'Auto-Mute Mode' >/dev/null 2>&1; then
+      # Auriculares: vuelve el comportamiento normal (al desenchufar suena el parlante); otro puerto: sin silencio automático
+      [ "$type" = Headphones ] && m=Enabled || m=Disabled
+      amixer -q -c "$card" sset 'Auto-Mute Mode' "$m" 2>/dev/null
+    fi ;;
+  ports)
+    pactl -f json list sinks 2>/dev/null | jq -c '[.[] | {name, active_port, ports: [.ports[] | {name, description, type, availability}]}]' ;;
+  *) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

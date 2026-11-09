@@ -16,6 +16,7 @@ import Quickshell
 import Quickshell.Io
 import ".."
 import "../components"
+import "../services"
 import "spotlight"
 import "power"
 import "lock"
@@ -47,6 +48,8 @@ import "devices"
 import "downloads"
 
 Scope {
+    // Alarmas: tienen que sonar aunque nunca se abra su ventana (el singleton se crea al nombrarlo)
+    readonly property int alarmsAlive: Alarms.count
     // ── Siempre cargados ──
     Lock {}
     Focus {}

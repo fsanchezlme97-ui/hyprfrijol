@@ -7,7 +7,7 @@
 // Si el fondo es un vídeo que reproduce mpvpaper, esta capa se oculta.
 // Ajustes › Fondos: wallpaperTransition ("fundido" | "ninguna"), wallpaperNoFullscreen (la rotación espera a que no
 // haya nada en pantalla completa), wallpaperPauseOn (pausa el fondo en movimiento: fullscreen | bateria | maximizada |
-// juego | foco). wallpaperMotion / wallpaperMotionKind / wallpaperFps los aplica hf-wallpaper.
+// cubierto (alguna ventana en mosaico: casi no se ve) | juego | foco). wallpaperMotion / wallpaperMotionKind / wallpaperFps los aplica hf-wallpaper.
 import QtQuick
 import QtQuick.Effects
 import Quickshell
@@ -85,15 +85,22 @@ PanelWindow {
         id: stack
         anchors.fill: parent
         visible: !wp.video || win.ownImage !== ""
+        // Fundido sin huecos: la imagen nueva aparece ENCIMA y la anterior sigue opaca debajo hasta que la nueva está
+        // entera. Antes las dos se cruzaban (1→0 y 0→1) y a medio camino se veía lo de detrás: negro, o el vídeo viejo.
         Layer {
             id: a
-            opacity: win.showA ? 1 : 0
+            z: win.showA ? 1 : 0
+            opacity: win.showA ? 1 : (b.opacity >= 1 ? 0 : 1)
             onStatusChanged: if (status === Image.Ready && !win.showA) win.showA = true
+            // ya tapada del todo: se suelta la imagen anterior (≈ 9 MB a 1920×1200, más su textura)
+            onOpacityChanged: if (opacity === 0 && !win.showA) source = ""
         }
         Layer {
             id: b
-            opacity: win.showA ? 0 : 1
+            z: win.showA ? 0 : 1
+            opacity: win.showA ? (a.opacity >= 1 ? 0 : 1) : 1
             onStatusChanged: if (status === Image.Ready && win.showA) win.showA = false
+            onOpacityChanged: if (opacity === 0 && win.showA) source = ""
         }
         // Blanco y negro (modo mono), con transición suave
         layer.enabled: win.mono || satAnim.running
@@ -110,6 +117,8 @@ PanelWindow {
     readonly property var shownClients: HyprClients.clients.filter(c => visibleWs.includes(c.workspace?.id))
     readonly property bool anyFullscreen: shownClients.some(c => ((c.fullscreen ?? 0) & 2) !== 0)
     readonly property bool anyMaximized: shownClients.some(c => ((c.fullscreen ?? 0) & 1) !== 0)
+    // Cubierto: alguna ventana en mosaico en un espacio visible (el mosaico llena la pantalla; solo asoman los huecos)
+    readonly property bool anyTiled: shownClients.some(c => !c.floating && !c.hidden)
 
     // ── Pausar el fondo en movimiento (solo la primera pantalla; mpvpaper es uno para todas) ──
     readonly property var pauseOn: {
@@ -121,6 +130,7 @@ PanelWindow {
     readonly property bool paused: wp.video && (
         (pauseOn.includes("fullscreen") && anyFullscreen) ||
         (pauseOn.includes("maximizada") && anyMaximized) ||
+        (pauseOn.includes("cubierto") && anyTiled) ||
         (pauseOn.includes("bateria") && Battery.onBattery) ||
         (pauseOn.includes("juego") && anyGame) ||
         (pauseOn.includes("foco") && Shell.focusMode))

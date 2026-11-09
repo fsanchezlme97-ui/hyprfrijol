@@ -3,6 +3,61 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.7] — 2026-11-09
+
+- **Personalidad del asistente** (Ajustes › IA › Personalidad): ponle **nombre** (sale en la pestaña del panel y
+  en la bienvenida, y sabe que se llama así) y escribe **cómo quieres que sea**: tono, trato, idioma, largo de las
+  respuestas… Se suma a sus instrucciones de siempre; no le quita permisos ni la confirmación de cambios, y él no
+  puede cambiarla.
+- **Pomodoro, temporizador y alarmas** en la ventana del chip, ordenada en tres pestañas:
+  - **Pomodoro**: bloque (Foco / Descanso / Largo) y rondas arriba, el anillo, «¿En qué te vas a concentrar?»
+    (opcional), y debajo las duraciones y opciones.
+  - **Temporizador**: cuenta atrás suelta con minutos rápidos (1 min – 1 h, se recuerdan) o ±1 min, «¿Qué te
+    recuerdo?» opcional y alarma con aviso urgente («Repetir») al acabar. Los temporizadores del asistente se ven
+    (y se cancelan) ahí. IPC: `pomodoro timer <min> <actividad>`.
+  - **Alarmas** (nuevo): a una hora del día, una sola vez o los días que marques (L M X J V S D), con etiqueta.
+    Suenan con aviso urgente que trae «Posponer 5 min» y «Detener»; las de una vez se apagan solas. IPC:
+    `alarms add <HH:MM> <etiqueta>` · `list` · `remove <id>`.
+- **Parlante o auricular, a mano** (Ajustes › Sonido y ajustes rápidos): si tu salida tiene los dos en la misma
+  tarjeta (línea trasera + jack frontal), debajo sale un interruptor «Parlante (línea) | Auriculares». Elegir el
+  parlante con el auricular enchufado desactiva el silencio automático del chip para que suene igual
+  (`scripts/hf-audio`; necesita `amixer` para eso).
+- **Web apps**:
+  - **Zoom en la cabecera del panel** (− 90 % +; clic en el número: 100 %; rueda encima), el mismo de Ctrl + / Ctrl −.
+  - **YouTube (y las demás) ya no se quedan en negro** al volver a su pestaña hasta mover el ratón: se fuerza a
+    Chromium a pintar al traerlas.
+  - **Avisos con la web app escondida**: la página ahora sabe cuándo está guardada (antes se creía siempre a la
+    vista y WhatsApp no avisaba de nada).
+  - **Panel lateral más estrecho**: por defecto mide lo mismo que el centro de control (404 px); en Ajustes › Panel
+    lateral › Ancho también hay 480 px y un tercio de la pantalla. Las web apps lo siguen salvo que tengan su
+    propio ancho («Un tercio», 600 u 800 px en Ajustes › Web apps).
+  - **WhatsApp en el panel estrecho**: la lista de chats arriba y el chat abierto abajo, mitad y mitad (con «✕»
+    para cerrarlo); sin chat abierto, la lista ocupa todo. Sin encoger el zoom para caber ni la línea vertical que
+    quedaba en medio.
+  - **Cerrar si no la usas** (Ajustes › Web apps): columna Nunca / 15 / 30 / 60 min en cada fila del panel lateral;
+    no aparece en las de mensajería.
+- **Fondos en movimiento**:
+  - **Sin pantallazo negro al cambiar de vídeo**: el nuevo se pone encima del viejo cuando ya pinta (antes entraba
+    con un fundido de capa de Hyprland y a medio camino se veía negro o los dos mezclados). Entre imágenes, la nueva
+    aparece encima de la anterior sin dejar ver lo de detrás.
+  - **Vídeos a la medida de tu pantalla**: un fondo 4K se convierte una vez, en segundo plano, a la altura de la
+    pantalla y a los fps elegidos (caché en `~/.cache/hyprfrijol/wallpapers-scaled`); mpvpaper decodifica hasta 4
+    veces menos píxeles. `wallpaperScale: false` lo desactiva.
+  - **Pausar cuando está tapado por ventanas** (Ajustes › Fondos): nueva opción, apagada por defecto.
+- **Menos CPU**: la onda de audio de la barra pinta sus barras en la GPU y a 30 fps (con música, el shell pasó de
+  ~8 % a ~4 %, cava de 1,3 % a 0,7 %).
+- **Sin procesos huérfanos al reiniciar el shell**: `nmcli monitor`, `hf-devices watch`, cava y los bucles de la
+  barra mueren con él (antes se quedaba una copia por cada reinicio).
+- **Avisos de kitty** (y de apps cuyo icono es una ruta): ya no se toman por avisos con imagen.
+- **Barra**:
+  - La zona de la campana ya no tapa la bandeja: al pulsar un icono de la bandeja (p. ej. actualizaciones) se abre
+    su menú y no el centro de notificaciones.
+  - **Cápsulas (archipiélago / isla) con las esquinas de las ventanas** y el mismo filo que una ventana sin foco;
+    Ajustes › Barra › Esquinas les da +0, +2 (por defecto) o +4 px sobre las de las ventanas.
+  - **Bongo Cat junto al pomodoro** y un separador entre los botones propios (asistente, ajustes) y los iconos de
+    las apps (bandeja).
+- **Ajustes**: «Plugins de Omarchy» pasa a ser una pestaña dentro de Plugins (Hyprland · Omarchy).
+
 ## [0.8.6] — 2026-11-08
 
 - **El login recuerda tu usuario y tu sesión**: el usuario del greeter tiene la carpeta personal en `/` y no podía
