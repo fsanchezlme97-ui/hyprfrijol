@@ -148,18 +148,19 @@ PanelWindow {
         target: Brightness
         function onValueChanged() { if (Brightness.available) win.show("brillo"); }
     }
-    // Bloq Mayús: LED del teclado en /sys/class/leds/*::capslock
+    // Bloq Mayús: LED del teclado en /sys/class/leds/*::capslock. Antes era un `sh | cat | sort | head` cada 300 ms
+    // (≈13 procesos por segundo todo el día); ahora un solo bash que lee con builtins, espera con `read -t` (sin
+    // `sleep`) y solo escribe cuando cambia. El glob se expande en cada vuelta: sigue los teclados que se conectan.
     Process {
-        id: capsProc
-        command: ["sh", "-c", "cat /sys/class/leds/*::capslock/brightness 2>/dev/null | sort -r | head -n1"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const on = text.trim() !== "" && text.trim() !== "0";
+        running: true
+        command: ["bash", "-c", "exec 3<> <(:); last=; while :; do v=0; for f in /sys/class/leds/*::capslock/brightness; do read -r b < \"$f\" 2>/dev/null && [ \"${b:-0}\" != 0 ] && v=1; done; [ \"$v\" != \"$last\" ] && { echo $v; last=$v; }; read -t 0.3 -u 3; done"]
+        stdout: SplitParser {
+            onRead: data => {
+                const on = data.trim() === "1";
                 if (on !== win.caps) { win.caps = on; win.show("mayus"); }
             }
         }
     }
-    Timer { running: true; repeat: true; interval: 300; onTriggered: capsProc.running = true }
 
     IpcHandler {
         target: "osd"

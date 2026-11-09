@@ -18,7 +18,7 @@
 // Microsoft…) en una ventanita propia para no romper el acceso.
 // Nombre de la aplicación = nombre de la web app → su reproductor MPRIS se llama «YouTube» (no «Qml Runtime»).
 // Órdenes: el panel escribe "<n> <orden> [arg]" en $XDG_RUNTIME_DIR/hf-webapp/<clave>.cmd
-//   toggle · pause · pipon/pipoff (solo el vídeo) · back · reload · home · zoom <f> · external · url <dirección>
+//   toggle · pause · pipon/pipoff (solo el vídeo) · back · forward · reload · home · zoom <f> · external · url <dirección>
 import QtQuick
 import QtQuick.Window
 import QtCore
@@ -231,6 +231,7 @@ Window {
     Shortcut { sequences: [StandardKey.ZoomOut]; onActivated: win.setZoom(win.userZoom - 0.1) }
     Shortcut { sequence: "Ctrl+0"; onActivated: win.setZoom(1) }
     Shortcut { sequences: ["Alt+Left", StandardKey.Back]; onActivated: viewLoader.item?.goBack() }
+    Shortcut { sequences: ["Alt+Right", StandardKey.Forward]; onActivated: viewLoader.item?.goForward() }
     Shortcut { sequences: ["Ctrl+R", "F5"]; onActivated: viewLoader.item?.reload() }
 
     Component {
@@ -275,9 +276,10 @@ Window {
             + "const st=document.createElement('style');st.id='hf-pip';st.textContent='#masthead-container,ytd-masthead,.ytp-chrome-top,"
             + ".ytp-chrome-bottom,.ytp-gradient-top,.ytp-gradient-bottom,ytm-mobile-topbar-renderer,#header-bar,ytm-pivot-bar-renderer,"
             + ".player-controls-background,.player-controls-content{display:none!important}';document.head.appendChild(st);})()");
-        else if (cmd === "pipoff") view.runJavaScript("(()=>{const v=document.querySelector('video[data-hf-style]');"
+        else if (cmd === "pipoff") view.runJavaScript("(()=>{const v=document.querySelector('video[data-hl-style]');"
             + "if(v){v.setAttribute('style',v.dataset.hlStyle);delete v.dataset.hlStyle;}document.documentElement.style.overflow='';document.getElementById('hf-pip')?.remove();})()");
         else if (cmd === "back") view.goBack();
+        else if (cmd === "forward") view.goForward();
         else if (cmd === "reload") view.reload();
         else if (cmd === "home") view.url = win.homeUrl;
         else if (cmd === "zoom" && +arg > 0) win.setZoom(+arg);

@@ -11,6 +11,16 @@ HyprFrijol is a from-scratch shell and rice for **Hyprland ≥ 0.57** (Lua confi
 
 It runs as a **separate session** from the repo folder and never touches `~/.config/hypr`, `~/.config/quickshell` or `~/.config/matugen`.
 
+## Screenshots
+
+Real 1920×1080 captures of HyprFrijol 0.8.6 with the default settings (Oxocarbon palette, Material style) and a [Wallhaven](https://wallhaven.cc/w/3q23od) wallpaper (not bundled). More in the [Spanish README](README.md#capturas).
+
+| | |
+|---|---|
+| ![Desktop with the archipelago bar](docs/capturas/escritorio.webp) | ![kitty with fastfetch and btop](docs/capturas/terminal.webp) |
+| ![Control center](docs/capturas/centro-de-control.webp) | ![Spotlight](docs/capturas/spotlight.webp) |
+| ![AI assistant side panel](docs/capturas/asistente-ia.webp) | ![Workspace overview](docs/capturas/vista-general.webp) |
+
 ## Install
 
 Works on any distro, including minimal/server installs **without a desktop environment** (no Xorg, no display manager, no audio stack): the installer adds the packages, enables logind/PipeWire/NetworkManager (without silently replacing another network stack) and sets up the session.

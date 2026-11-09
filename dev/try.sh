@@ -47,11 +47,19 @@ cleanup() {
     local hp bus q
     hp=$(jq -r .pid <<<"${I:-}" 2>/dev/null)
     bus=$(tr '\0' '\n' < "/proc/${hp:-0}/environ" 2>/dev/null | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')
+    on_bus() { { tr '\0' '\n' < "/proc/$1/environ"; } 2>/dev/null | grep -qxF "DBUS_SESSION_BUS_ADDRESS=$bus"; }
+    # Los portales primero, con su Hyprland aún vivo: si este se va antes, xdg-desktop-portal-hyprland da
+    # segfault al salir (cientos de volcados en /var/lib/systemd/coredump)
+    if [ -n "$bus" ]; then
+      for q in $(pgrep -u "$(id -u)" -f '^/usr/lib/xdg-desktop-portal'); do on_bus "$q" && kill "$q" 2>/dev/null; done
+      sleep 0.3
+    fi
     [ -n "${SIG:-}" ] && HYPRLAND_INSTANCE_SIGNATURE=$SIG hyprctl dispatch 'hl.dsp.exit()' >/dev/null 2>&1
     sleep 1; kill "$PID" 2>/dev/null; sleep 0.5; kill -9 "$PID" 2>/dev/null
+    [ -n "${SIG:-}" ] && rm -rf "${XDG_RUNTIME_DIR:-/tmp}/hf-webapp-$SIG"   # web apps de la prueba (hf-webapp con HF_NESTED)
     if [ -n "$bus" ]; then
       for q in $(pgrep -u "$(id -u)"); do
-        tr '\0' '\n' < "/proc/$q/environ" 2>/dev/null | grep -qxF "DBUS_SESSION_BUS_ADDRESS=$bus" && kill "$q" 2>/dev/null
+        on_bus "$q" && kill "$q" 2>/dev/null
       done
     fi
   fi

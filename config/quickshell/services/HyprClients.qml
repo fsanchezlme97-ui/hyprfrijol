@@ -18,14 +18,29 @@ Singleton {
     property var monitors: []
     property string activeAddress: ""
     property int refreshes: 0
+    property string lastRaw: ""
 
     readonly property var focusedMonitor: monitors.find(m => m.focused) ?? monitors[0] ?? null
     // Ventanas ordenadas por uso reciente (0 = la activa)
     readonly property var byRecent: clients.filter(c => c.workspace?.id > 0)
         .slice().sort((a, b) => a.focusHistoryID - b.focusHistoryID)
 
-    function refresh(): void { debounce.restart(); }
+    // Agrupa los eventos seguidos, pero sin aplazar sin fin: con restart() una ráfaga continua (una ventana que
+    // cambia de título sin parar) dejaba la lista sin actualizar mientras durase
+    function refresh(): void { if (!debounce.running) debounce.start(); }
     function refreshNow(): void { proc.running = false; proc.running = true; }
+    function setTitle(data: string): void {
+        const i = data.indexOf(",");
+        if (i < 0) return refresh();
+        const addr = norm(data.slice(0, i)), title = data.slice(i + 1);
+        const k = clients.findIndex(c => c.address === addr);
+        if (k < 0) return refresh();                       // aún no la conocemos: lista completa
+        if (clients[k].title === title) return;
+        const next = clients.slice();
+        next[k] = Object.assign({}, clients[k], { title: title });
+        clients = next;
+        refreshes++;
+    }
 
     function norm(a): string { a = String(a ?? ""); return a.startsWith("0x") ? a : "0x" + a; }
     function toplevelFor(address): var {
@@ -80,8 +95,11 @@ Singleton {
         target: Hyprland
         function onRawEvent(ev) {
             const n = ev.name;
+            // Título nuevo: llega en el propio evento («dirección,título»), no hace falta preguntar a hyprctl
+            if (n === "windowtitlev2") { root.setTitle(ev.data); return; }
+            if (n === "windowtitle") return;   // siempre llega junto con windowtitlev2
             if (["openwindow", "closewindow", "movewindow", "movewindowv2", "workspace", "workspacev2", "activewindow",
-                 "activewindowv2", "changefloatingmode", "windowtitle", "windowtitlev2", "focusedmon", "focusedmonv2",
+                 "activewindowv2", "changefloatingmode", "focusedmon", "focusedmonv2",
                  "monitoradded", "monitorremoved", "fullscreen", "createworkspace", "destroyworkspace", "pin",
                  "monitoraddedv2", "monitorremovedv2", "moveworkspace", "moveworkspacev2"].includes(n))
                 root.refresh();
@@ -90,14 +108,23 @@ Singleton {
 
     Process {
         id: proc
-        command: ["sh", "-c", "printf '{\"clients\":'; hyprctl clients -j; printf ',\"monitors\":'; hyprctl monitors -j; printf ',\"active\":'; hyprctl activewindow -j | grep -q address && hyprctl activewindow -j || printf '{}'; printf '}'"]
+        // Un solo hyprctl (antes sh + 5 hyprctl + grep en cada cambio). --batch -j separa las respuestas con
+        // líneas en blanco; dentro del JSON los saltos de línea van escapados, así que cortar ahí es seguro.
+        command: ["hyprctl", "-j", "--batch", "clients; monitors; activewindow"]
         stdout: StdioCollector {
             onStreamFinished: {
+                // Sin cambios (el sondeo de 600 ms de WinMode con ventanas flotantes): no se recalcula nada
+                if (text === root.lastRaw) return;
+                root.lastRaw = text;
                 try {
-                    const d = JSON.parse(text);
-                    root.clients = (d.clients ?? []).filter(c => c.mapped !== false && !c.hidden);
-                    root.monitors = d.monitors ?? [];
-                    root.activeAddress = d.active?.address ?? "";
+                    const parts = text.split(/\n\s*\n\s*\n/).map(t => t.trim()).filter(Boolean);
+                    const cl = JSON.parse(parts[0] ?? "[]"), mons = JSON.parse(parts[1] ?? "[]");
+                    let act = {};
+                    try { act = JSON.parse(parts[2] ?? "{}"); } catch (e) {}
+                    if (!Array.isArray(cl) || !Array.isArray(mons)) return;
+                    root.clients = cl.filter(c => c.mapped !== false && !c.hidden);
+                    root.monitors = mons;
+                    root.activeAddress = act?.address ?? "";
                     root.refreshes++;
                 } catch (e) {}
             }

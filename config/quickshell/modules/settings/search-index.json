@@ -247,7 +247,7 @@
   {"f": "Panel", "l": "Panel lateral", "t": "card"},
   {"f": "Panel", "l": "Ancho", "t": "row", "g": "Panel lateral"},
   {"f": "Panel", "l": "Lado", "t": "row", "g": "Panel lateral"},
-  {"f": "Panel", "l": "Fijar el panel", "t": "row", "s": "parte del mosaico: las ventanas se apartan y sigue abierto en todos los espacios (pantalla principal)", "g": "Panel lateral"},
+  {"f": "Panel", "l": "Fijar el panel", "t": "row", "s": "parte del mosaico: ocupa un tercio de la pantalla y las demás ventanas se reparten el resto; sigue abierto en todos los espacios (pantalla principal)", "g": "Panel lateral"},
   {"f": "Panel", "l": "Imagen en imagen (PiP)", "t": "card"},
   {"f": "Panel", "l": "Margen", "t": "row", "g": "Imagen en imagen (PiP)"},
   {"f": "Panel", "l": "Opacidad", "t": "row", "g": "Imagen en imagen (PiP)"},

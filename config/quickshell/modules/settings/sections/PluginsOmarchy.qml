@@ -258,6 +258,6 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Desde la terminal"
-        Mono { Layout.fillWidth: true; wrapMode: Text.WordWrap; text: "hf-plugin add <url|carpeta> · list · enable <id> · disable <id> · remove <id>\nhf-plugin summon <id> [payload]   (= omarchy-shell shell summon)\nqs -p " + Paths.root + "/config/quickshell ipc call shell open omarchy:<id>\nhf-plugin theme <colors.toml|carpeta|url> [--apply]" }
+        Mono { Layout.fillWidth: true; wrapMode: Text.WordWrap; text: "hf-plugin add <url|carpeta> · list · enable <id> · disable <id> · remove <id>\nhf-plugin summon <id> [payload]   (= omarchy-shell shell summon)\nqs -p " + Paths.root.replace(Paths.home, "~") + "/config/quickshell ipc call shell open omarchy:<id>\nhf-plugin theme <colors.toml|carpeta|url> [--apply]" }
     }
 }

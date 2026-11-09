@@ -40,6 +40,7 @@ Item {
         Loader { Layout.alignment: Qt.AlignHCenter; active: Settings.barHas("impresora"); visible: active && (item?.want ?? false); sourceComponent: PrinterChip { vertical: true } }
         Loader { Layout.alignment: Qt.AlignHCenter; visible: item?.want ?? false; sourceComponent: DevicesChip { vertical: true } }
         Loader { Layout.alignment: Qt.AlignHCenter; visible: item?.want ?? false; sourceComponent: DownloadsChip { vertical: true } }
+        Loader { Layout.alignment: Qt.AlignHCenter; visible: item?.want ?? false; sourceComponent: TestChip { vertical: true } }
         // Utilidades
         PomodoroChip { visible: Settings.barHas("pomodoro"); Layout.alignment: Qt.AlignHCenter; vertical: true }
         CaffeineChip { visible: Settings.barHas("cafeina"); Layout.alignment: Qt.AlignHCenter; vertical: true }

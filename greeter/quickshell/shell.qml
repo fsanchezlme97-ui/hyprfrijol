@@ -283,7 +283,15 @@ ShellRoot {
     }
 
     // ───────────── Recordar último usuario y sesión ─────────────
-    readonly property string memPath: (Quickshell.env("XDG_CACHE_HOME") || ((Quickshell.env("HOME") || "/tmp") + "/.cache")) + "/hf-greeter.json"
+    // El usuario «greeter» tiene HOME=/ (o «//»), donde no puede escribir: por eso no recordaba nada. Su carpeta
+    // propia la crean install.sh --greeter y hf-greeter-sync (/var/lib/hyprfrijol-greeter, del usuario greeter).
+    readonly property string memPath: {
+        const st = Quickshell.env("HF_GREETER_STATE");
+        if (st) return st + "/hf-greeter.json";
+        const home = (Quickshell.env("HOME") || "").replace(/\/+$/, "");
+        if (!home) return "/var/lib/hyprfrijol-greeter/hf-greeter.json";
+        return (Quickshell.env("XDG_CACHE_HOME") || (home + "/.cache")) + "/hf-greeter.json";
+    }
     property var mem: ({})
     FileView {
         id: memFile

@@ -9,9 +9,10 @@
 #                                  en el panel → panel; si no → navegador).
 #   hf-webapp start <clave> [panel|ventana]   arranca la ventana integrada si no está ya (panel: clase "hf-webapp.qml6",
 #                                  título "WhatsApp"… que el panel lateral acopla; ventana: ventana normal)
-#   hf-webapp cmd <clave> <orden> [arg]   toggle | pause | pipon | pipoff | back | reload | home | zoom <factor> (se guarda por web) |
+#   hf-webapp cmd <clave> <orden> [arg]   toggle | pause | pipon | pipoff | back | forward | reload | home | zoom <factor> (se guarda por web) |
 #                                  external (abre la página actual en el navegador) | url <dirección>
 #   hf-webapp stop [clave]         cierra una o todas
+#   hf-webapp idle-stop <clave>    la cierra por no usarla, salvo que esté sonando (lo pide el panel lateral)
 #   hf-webapp config <clave>       ajustes efectivos de la web app (JSON: los del usuario sobre los del catálogo)
 #   hf-webapp desktop              (re)escribe ~/.local/share/applications/hf-webapp-<clave>.desktop (Spotlight)
 #   hf-webapp browser              navegador predeterminado: "<tipo>\t<orden>\t<nombre>" (tipo chromium|firefox|otro)
@@ -25,6 +26,8 @@ ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
 HOST="$ROOT/config/quickshell/modules/sidepanel/webapp/host.qml"
 CATALOG="$ROOT/config/quickshell/services/webapps-catalog.json"
 RUN="${XDG_RUNTIME_DIR:-/tmp}/hf-webapp"
+# Sesión de prueba anidada: carpeta propia (si no, veía las web apps de la sesión real como abiertas y les mandaba órdenes)
+[ "${HF_NESTED:-}" = 1 ] && RUN="$RUN-${HYPRLAND_INSTANCE_SIGNATURE:-prueba}"
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/hyprfrijol"
 mkdir -p "$RUN"
 SETTINGS="$HOME/.config/hyprfrijol/settings.json"
@@ -197,7 +200,12 @@ case "${1:-}" in
     fi
     N=$(( $(cut -d' ' -f1 "$RUN/$K.cmd" 2>/dev/null || echo 0) + 1 ))
     printf '%s %s\n' "$N" "$*" > "$RUN/$K.cmd" ;;
+  idle-stop)
+    # Cierre por no usarla (Ajustes › Web apps › «Cerrar si no la usas»): nunca si está sonando
+    K="${2:?clave}"
+    [ "$(cat "$RUN/$K.audible" 2>/dev/null)" = 1 ] && exit 0
+    running "$K" && kill "$(cat "$RUN/$K.pid")"; rm -f "$RUN/$K.pid" "$RUN/$K.audible" "$RUN/$K.mode" ;;
   stop)
     for K in ${2:-$(ls "$RUN" 2>/dev/null | sed -n 's/\.pid$//p')}; do running "$K" && kill "$(cat "$RUN/$K.pid")"; rm -f "$RUN/$K.pid" "$RUN/$K.audible" "$RUN/$K.mode"; done ;;
-  *) sed -n '2,23p' "$0" ;;
+  *) sed -n '2,22p' "$0" ;;
 esac

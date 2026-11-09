@@ -37,7 +37,7 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 | Barra abajo / arriba / izquierda, fija o flotante | `quickshell/bar/` |
 | Spotlight (apps, archivos, calculadora, comandos, ventanas) | `modules/spotlight` |
 | Ajustes rápidos, notificaciones con respuesta, OSD | `modules/quicksettings`, `notifications`, `osd` |
-| Panel lateral con IA + WhatsApp / YouTube / Pinterest, PiP mínimo | `modules/sidepanel`, `pip` — ver `docs/IA.md` |
+| Panel lateral con IA + WhatsApp / YouTube / Pinterest (Atrás / Adelante, cierre opcional de las que no usas), PiP mínimo | `modules/sidepanel`, `pip` — ver `docs/IA.md` |
 | Vista general, Alt+Tab, Snap, dock y escritorio ordenado, widgets | `modules/overview`, `alttab`, `snap`, `desktop`, `widgets` |
 | Selector de fondos (por monitor, por hora, mono), captura sobre la pantalla congelada (lupa, ventanas, fijar, OCR con cajas, anotación, IA) / grabación, selector de color (HEX · RGB · HSL · OKLCH, historial) | `modules/wallpapers`, `capture`, `colorpicker` |
 | Portapapeles y emojis en Spotlight, agenda (con `.ics`), centro de actualizaciones con punto de restauración | `modules/spotlight`, `agenda`, `updates` |
@@ -52,20 +52,22 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 
 ## Capturas
 
-Capturas reales del shell a 1920×1080 con la configuración por defecto (paleta Oxocarbon, estilo Material) y el fondo «noche» de `assets/wallpapers/`.
+Capturas reales a 1920×1080 de una sesión de HyprFrijol 0.8.6 con la configuración por defecto (paleta Oxocarbon, estilo Material, barra arriba en archipiélago), ventanas de verdad abiertas y un fondo de [Wallhaven](https://wallhaven.cc/w/3q23od) (no incluido en el repo).
 
 | | |
 |---|---|
-| ![Escritorio con la barra y los widgets](docs/capturas/escritorio.webp) | ![Centro de control](docs/capturas/centro-de-control.webp) |
-| **Escritorio** · barra arriba en archipiélago y widgets de clima, sistema y notas | **Centro de control** · ajustes rápidos, notificaciones y agenda en un solo panel |
-| ![Spotlight con resultados](docs/capturas/spotlight.webp) | ![Ajustes › Apariencia](docs/capturas/ajustes-apariencia.webp) |
-| **Spotlight** · apps, acciones, archivos, calculadora, IA y web desde un buscador | **Ajustes › Apariencia** · estilos, 45 paletas (aquí Oxocarbon) y acento |
+| ![Escritorio con la barra en archipiélago](docs/capturas/escritorio.webp) | ![Terminal kitty con fastfetch y btop](docs/capturas/terminal.webp) |
+| **Escritorio** · barra arriba en islas: espacios, onda de audio, tiempo, recursos y reloj | **Terminal** · kitty, GTK, Qt/KDE y btop siguen la paleta activa |
+| ![Centro de control](docs/capturas/centro-de-control.webp) | ![Spotlight con resultados](docs/capturas/spotlight.webp) |
+| **Centro de control** · ajustes rápidos, avisos, agenda y relojes del mundo en un solo panel | **Spotlight** · apps, ajustes, acciones, archivos, calculadora, IA y web desde un buscador |
 | ![Asistente de IA en el panel lateral](docs/capturas/asistente-ia.webp) | ![Vista general de los espacios](docs/capturas/vista-general.webp) |
-| **Asistente de IA** · panel lateral que cambia el escritorio con tu aprobación | **Vista general** · espacios de trabajo con sus ventanas y buscador |
-| ![Selector de fondos](docs/capturas/selector-de-fondos.webp) | ![Terminal kitty con los colores del tema](docs/capturas/terminal.webp) |
-| **Selector de fondos** · vista previa al instante, por pantalla o según la hora | **Terminal** · kitty, Qt/KDE, GTK y btop siguen la paleta activa |
-| ![Ajustes › Aplicaciones](docs/capturas/ajustes-aplicaciones.webp) | ![Ajustes › Almacenamiento](docs/capturas/ajustes-almacenamiento.webp) |
-| **Ajustes › Aplicaciones** · centro de aplicaciones por categorías y origen | **Ajustes › Almacenamiento** · unidades extraíbles, discos y descargas |
+| **Asistente de IA** · panel lateral que cambia el escritorio con tu aprobación, junto a tus web apps | **Vista general** · espacios de trabajo con sus ventanas y buscador |
+| ![Selector de fondos](docs/capturas/selector-de-fondos.webp) | ![Pantalla de bloqueo](docs/capturas/bloqueo.webp) |
+| **Selector de fondos** · vista previa al instante (también vídeo), por pantalla o según la hora | **Bloqueo** · reloj, tu foto y tu fondo, con contraseña o huella |
+| ![Ajustes › Apariencia](docs/capturas/ajustes-apariencia.webp) | ![Ajustes › Web apps](docs/capturas/ajustes-webapps.webp) |
+| **Ajustes › Apariencia** · tres estilos, 45 paletas (aquí Oxocarbon) y acento | **Ajustes › Web apps** · WhatsApp, YouTube… en el panel, en ventana o en el navegador |
+| ![Ajustes › Aplicaciones](docs/capturas/ajustes-aplicaciones.webp) | ![Ajustes › Barra](docs/capturas/ajustes-barra.webp) |
+| **Ajustes › Aplicaciones** · centro de aplicaciones por categorías y origen | **Ajustes › Barra** · posición, forma, tamaño y módulos visibles |
 | ![Ajustes › Sistema y recuperación](docs/capturas/ajustes-sistema.webp) | ![Ajustes › Plugins de Omarchy](docs/capturas/ajustes-plugins-omarchy.webp) |
 | **Ajustes › Sistema** · puntos de restauración, diagnóstico, actualizaciones y modo seguro | **Ajustes › Plugins de Omarchy** · widgets, paneles y temas de Omarchy |
 

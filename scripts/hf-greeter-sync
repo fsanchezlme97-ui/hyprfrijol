@@ -198,6 +198,9 @@ chmod 644 "$STAGE"/*
 
 # Un solo paso con permisos: copia el greeter y crea live/ a tu nombre (el fondo viejo de la raíz se quita)
 U_NAME="$(id -un)"; U_GROUP="$(id -gn)"
+# Usuario con el que corre el login: greeter (Arch, openSUSE), _greetd (Debian/Ubuntu), greetd (Fedora), _greeter (Void)
+G_USER=""; for _u in greeter _greetd greetd _greeter; do getent passwd "$_u" >/dev/null 2>&1 && { G_USER="$_u"; break; }; done
+GSTATE="${HF_GREETER_STATE:-/var/lib/hyprfrijol-greeter}"
 {
   echo '#!/bin/sh'
   echo 'set -e'
@@ -205,6 +208,8 @@ U_NAME="$(id -un)"; U_GROUP="$(id -gn)"
   echo "for f in '$STAGE'/*; do [ -f \"\$f\" ] && install -m644 \"\$f\" '$DEST/'; done"
   echo "install -d -m755 -o '$U_NAME' -g '$U_GROUP' '$LIVE'"
   echo "rm -f '$DEST/wallpaper.jpg'"
+  # Memoria del login (último usuario y sesión): el usuario del greeter tiene HOME=/ y no puede escribir ahí
+  [ -z "$G_USER" ] || echo "install -d -m700 -o '$G_USER' -g '$(id -gn "$G_USER")' '$GSTATE'"
 } > "$STAGE/.install.sh"
 chmod 755 "$STAGE/.install.sh"
 

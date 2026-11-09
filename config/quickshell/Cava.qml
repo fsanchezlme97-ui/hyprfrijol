@@ -29,15 +29,28 @@ Singleton {
                     if (n > 0.015) any = true;
                 }
                 root.bars = out;
-                if (any) quiet.restart();
+                if (any) { quiet.restart(); root.probing = false; relisten.interval = 15000; }
                 root.silent = false;
             }
         }
-        onRunningChanged: if (!running) root.bars = Array(root.count).fill(0)
+        // Al arrancar también cuenta el silencio: si no suena nada, nunca llegaba un valor > 0 que pusiera en marcha
+        // `quiet` y cava seguía a 60 fps para siempre (≈5 % de CPU en reposo con el shell redibujando la onda)
+        onRunningChanged: if (running) quiet.restart(); else root.bars = Array(root.count).fill(0)
     }
-    // 6 s sin sonido y sin reproductor activo → pausa
-    Timer { id: quiet; interval: 6000; onTriggered: if (!Media.playing) root.silent = true }
-    // En pausa por silencio, se vuelve a escuchar de vez en cuando (sonido que no viene de un reproductor MPRIS)
-    Timer { running: root.silent && root.users > 0; interval: 15000; repeat: true; onTriggered: { root.silent = false; quiet.restart(); } }
-    Connections { target: Media; function onPlayingChanged() { if (Media.playing) root.silent = false; } }
+    // 6 s sin sonido y sin reproductor activo → pausa (2,5 s si solo era una escucha de comprobación)
+    property bool probing: false
+    Timer { id: quiet; interval: root.probing ? 2500 : 6000; onTriggered: if (!Media.playing) root.silent = true }
+    // En pausa por silencio, se vuelve a escuchar de vez en cuando (sonido que no viene de un reproductor MPRIS: juegos,
+    // llamadas…). Cada escucha sin sonido espacia la siguiente (15 → 30 → 60 s): cava pasa ~4 % del tiempo encendido
+    Timer {
+        id: relisten
+        running: root.silent && root.users > 0; interval: 15000; repeat: true
+        onTriggered: {
+            root.probing = true;
+            root.silent = false;
+            quiet.restart();
+            interval = Math.min(60000, interval * 2);
+        }
+    }
+    Connections { target: Media; function onPlayingChanged() { if (Media.playing) { root.silent = false; root.probing = false; relisten.interval = 15000; } } }
 }

@@ -220,7 +220,8 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: { parent.modelData.invoke(); Notifs.hidePopup(root.n); }
+                            // invoke() puede cerrar el aviso y destruir esta tarjeta: se guardan antes las referencias
+                            onClicked: { const n = root.n, act = parent.modelData; act.invoke(); Notifs.hidePopup(n); }
                         }
                     }
                 }

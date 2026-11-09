@@ -97,7 +97,7 @@ Scope {
     // Detección: pila PAM, nombre completo, huella, Bloq Mayús
     Process {
         running: true
-        command: ["sh", "-c", 'test -f /etc/pam.d/hyprlock && echo hyprlock || echo login; getent passwd "$USER" | cut -d: -f5 | cut -d, -f1; command -v fprintd-verify >/dev/null && fprintd-list "$USER" 2>/dev/null | grep -q "#" && echo fp || echo nofp; test -s "$HOME/.face" && echo face || echo noface']
+        command: ["sh", "-c", 'test -f /etc/pam.d/hyprlock && echo hyprlock || echo login; echo "$(getent passwd "$USER" | cut -d: -f5 | cut -d, -f1)"; command -v fprintd-verify >/dev/null && fprintd-list "$USER" 2>/dev/null | grep -q "#" && echo fp || echo nofp; test -s "$HOME/.face" && echo face || echo noface']
         stdout: StdioCollector {
             onStreamFinished: {
                 const l = text.split("\n");

@@ -84,7 +84,7 @@ Scope {
 
     Process {
         running: true
-        command: ["sh", "-c", 'getent passwd "$USER" | cut -d: -f5 | cut -d, -f1; id -nG | tr " " "\\n" | grep -qxE "wheel|sudo|admin" && echo admin || echo user; command -v fprintd-verify >/dev/null && fprintd-list "$USER" 2>/dev/null | grep -q "#" && echo fp || echo nofp']
+        command: ["sh", "-c", 'echo "$(getent passwd "$USER" | cut -d: -f5 | cut -d, -f1)"; id -nG | tr " " "\\n" | grep -qxE "wheel|sudo|admin" && echo admin || echo user; command -v fprintd-verify >/dev/null && fprintd-list "$USER" 2>/dev/null | grep -q "#" && echo fp || echo nofp']
         stdout: StdioCollector {
             onStreamFinished: {
                 const l = text.split("\n");

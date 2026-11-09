@@ -257,6 +257,9 @@ FPS="$(setting wallpaperFps 30)"; case "$FPS" in ''|*[!0-9]*) FPS=30 ;; esac
 # Sin hueco negro al cambiar: el reproductor anterior sigue hasta que el nuevo ya pinta, y mientras tanto el shell
 # enseña la imagen (o el primer fotograma) del nuevo. Con vídeo la capa del shell es transparente, así que cerrar
 # mpvpaper antes de tener el siguiente dejaba el escritorio en negro (y a veces el clic siguiente no lo arreglaba).
+# Un cambio de fondo cada vez: dos seguidos (doble clic, Aplicar + atajo…) se pisaban motion.pid y podían dejar un
+# reproductor huérfano o el escritorio en la imagen fija. Lo que se lanza en segundo plano cierra el fd 8 (8>&-).
+exec 8>"${XDG_RUNTIME_DIR:-/tmp}/hf-wallpaper-$(id -u).lock"; flock -w 12 8 || true
 OLD_WATCH="$(cat "$STATE/motion.watch" 2>/dev/null || true)"; OLD_PID="$(cat "$STATE/motion.pid" 2>/dev/null || true)"
 IMG="$FILE"; VIDEO=false; MOTION=""
 if is_scene "$FILE"; then
@@ -286,12 +289,12 @@ else
   if [ "$MOTION" = escena ]; then
     ARGS=(--silent --fps "$FPS")
     while read -r MON; do ARGS+=(--screen-root "$MON"); done < <(hyprctl monitors -j 2>/dev/null | jq -r '.[].name')
-    setsid linux-wallpaperengine "${ARGS[@]}" --bg "$FILE" >/dev/null 2>&1 &
+    setsid linux-wallpaperengine "${ARGS[@]}" --bg "$FILE" >/dev/null 2>&1 8>&- &
     NEW=$!; echo "$NEW" > "$STATE/motion.pid"; KEEP="$NEW"
   else
     # sin sonido, en bucle, recortado a la pantalla; hwdec si hay; el shell lo pausa (SIGSTOP) según wallpaperPauseOn.
     # Lo lanza el vigilante (_motion), que guarda el pid de mpvpaper en motion.pid y lo relanza si se cae.
-    setsid "$0" _motion "$FILE" "$FPS" >/dev/null 2>&1 &
+    setsid "$0" _motion "$FILE" "$FPS" >/dev/null 2>&1 8>&- &
     W=$!; echo "$W" > "$STATE/motion.watch"; KEEP="$W"
   fi
   # Esperar (hasta 8 s) a que el reproductor nuevo tenga su capa en pantalla y un momento para el primer cuadro
@@ -319,9 +322,9 @@ if command -v matugen >/dev/null; then
     echo "matugen falló, mira $STATE/matugen.log" >&2
   fi
 fi
-"$ROOT/scripts/hf-apply" || true   # tema → Quickshell, Hyprland, hyprlock, kitty, GTK
+"$ROOT/scripts/hf-apply" 8>&- || true   # tema → Quickshell, Hyprland, hyprlock, kitty, GTK
 
 # El login muestra el mismo fondo (y tu foto y tu tema): copia en segundo plano, sin pedir contraseña
-[ -x "$ROOT/scripts/hf-greeter-sync" ] && { setsid "$ROOT/scripts/hf-greeter-sync" --auto >/dev/null 2>&1 & } || true
+[ -x "$ROOT/scripts/hf-greeter-sync" ] && { setsid "$ROOT/scripts/hf-greeter-sync" --auto >/dev/null 2>&1 8>&- & } || true
 
 case "${1:-}" in restore|hora) ;; *) [ -n "${HF_QUIET:-}" ] || { command -v notify-send >/dev/null && notify-send -a "Fondos" -i "$IMG" "Fondo cambiado" "$(basename "$FILE")" || true; } ;; esac

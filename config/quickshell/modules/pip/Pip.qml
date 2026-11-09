@@ -36,7 +36,9 @@ Scope {
         return [w, Math.round(w * a)];
     }
     readonly property string corner: Settings.get("pipCorner", "sup-der")
+    // Sesión de prueba anidada (HF_NESTED): carpeta propia, para no ver ni tocar las web apps de la sesión real
     readonly property string runDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/hf-webapp"
+        + (Quickshell.env("HF_NESTED") === "1" ? "-" + (Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || "prueba") : "")
     readonly property string webPip: pipFile.text().trim()
     FileView { id: pipFile; path: root.runDir + "/pip"; watchChanges: true; printErrors: false; onFileChanged: reload() }
 

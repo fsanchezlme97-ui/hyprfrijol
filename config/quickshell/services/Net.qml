@@ -23,8 +23,20 @@ Singleton {
         later.restart();
     }
 
-    Timer { interval: 6000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.refresh() }
+    // Cambios de conexión al momento por `nmcli monitor` (sin sondear); la intensidad de la señal no avisa, así que
+    // se repasa cada 30 s. Antes eran tres nmcli cada 6 s.
+    Timer { interval: 30000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.refresh() }
     Timer { id: later; interval: 1500; onTriggered: root.refresh() }
+    Timer { id: soon; interval: 400; onTriggered: root.refresh() }
+    Process {
+        id: monitor
+        running: true
+        command: ["nmcli", "monitor"]
+        stdout: SplitParser { onRead: _ => soon.restart() }
+        // NetworkManager reiniciado o nmcli que falta: se reintenta, sin agobiar
+        onRunningChanged: if (!running) retry.start()
+    }
+    Timer { id: retry; interval: 20000; onTriggered: monitor.running = true }
 
     Process {
         id: status

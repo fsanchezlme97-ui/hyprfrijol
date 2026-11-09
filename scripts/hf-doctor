@@ -96,6 +96,9 @@ for c in /sys/class/drm/card[0-9]; do
     "") add warn "$(basename "$c")" "$name · sin driver del kernel" ;;
     nvidia)
       ms="$(cat /sys/module/nvidia_drm/parameters/modeset 2>/dev/null)"
+      # En muchas distros ese parámetro solo lo lee root: entonces lo delatan los conectores (cardN-HDMI-A-1…),
+      # que solo existen con modeset (sin esto salía un aviso falso)
+      [ -z "$ms" ] && compgen -G "$c-*" >/dev/null && ms=Y
       if [ "$ms" = Y ]; then add ok "$(basename "$c")" "$name · nvidia (modeset activado)"
       else nv_nomodeset="$(basename "$c")|$name"; fi ;;
     nouveau) add warn "$(basename "$c")" "$name · nouveau (funciona, pero lento; mejor el driver de NVIDIA)" ;;
@@ -204,6 +207,18 @@ pgrep -u "$uid" -x gnome-keyring-d >/dev/null 2>&1 || pgrep -u "$uid" -f gnome-k
   && add ok "Llavero" "gnome-keyring en marcha" || add info "Llavero" "gnome-keyring no está en marcha (las contraseñas de Chrome y la IA lo usan)"
 if in_session; then
   pgrep -u "$uid" -f "qs -p .*/config/quickshell" >/dev/null 2>&1 && add ok "Shell" "Quickshell en marcha" || add error "Shell" "Quickshell no está en marcha (hf-shell restart)"
+fi
+# Volcados de memoria (systemd-coredump): cuántos y de qué programas en la última semana. Cientos del mismo programa
+# delatan un fallo que se repite (p. ej. un portal que se cae al cerrar cada sesión de prueba) y llenan el disco.
+if have coredumpctl && [ -d /var/lib/systemd/coredump ]; then
+  cd_bytes="$(du -sb /var/lib/systemd/coredump 2>/dev/null | cut -f1)"; cd_bytes="${cd_bytes:-0}"
+  cd_top="$(coredumpctl list --json=short --since=-7d --no-pager 2>/dev/null | jq -r 'group_by(.exe) | map({n: length, e: (.[0].exe | split("/") | last)}) | sort_by(-.n) | .[:3] | map("\(.e) ×\(.n)") | join(", ")' 2>/dev/null)"
+  cd_n="$(coredumpctl list --json=short --since=-7d --no-pager 2>/dev/null | jq 'length' 2>/dev/null)"; cd_n="${cd_n:-0}"
+  cd_mb=$((cd_bytes / 1048576))
+  if [ "$cd_n" -ge 50 ] || [ "$cd_mb" -ge 1024 ]; then
+    add warn "Volcados" "$cd_n en 7 días, $cd_mb MB en disco${cd_top:+ · más: $cd_top} (verlos: coredumpctl list · liberar: sudo rm /var/lib/systemd/coredump/core.*)"
+  elif [ "$cd_n" -gt 0 ]; then add info "Volcados" "$cd_n en 7 días, $cd_mb MB${cd_top:+ · $cd_top}"
+  else add ok "Volcados" "ninguno en 7 días"; fi
 fi
 
 # ---------- Entorno ----------

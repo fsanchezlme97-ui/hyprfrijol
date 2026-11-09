@@ -25,7 +25,9 @@ ColumnLayout {
     readonly property var apps: WebApps.list
     property string expanded: ""             // clave de la fila abierta
     property var usedKeys: ({})              // "SUPER + W" → descripción (hyprctl binds)
+    // Sesión de prueba anidada (HF_NESTED): carpeta propia, para no ver ni tocar las web apps de la sesión real
     readonly property string runDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/hf-webapp"
+        + (Quickshell.env("HF_NESTED") === "1" ? "-" + (Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || "prueba") : "")
 
     // Guarda la lista; las de modo «panel» tienen pestaña en el panel lateral (sidePanelApps) y las demás no
     function save(list) {
@@ -296,6 +298,35 @@ ColumnLayout {
                                 onPicked: k => root.update(row.index, { tema: k })
                             }
                             Item { Layout.fillWidth: true }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+                            visible: row.mode === "panel"
+                            Txt { Layout.preferredWidth: 110; text: "Atrás / Adelante"; color: Theme.tv; size: 12 }
+                            Sw {
+                                checked: row.modelData.nav ?? (row.preset.cat !== "Mensajería")
+                                onToggled: v => root.update(row.index, { nav: v })
+                            }
+                            Txt { Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.Wrap; text: "Botones en la cabecera del panel (también Alt + ← / Alt + →)" }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+                            visible: row.mode === "panel"
+                            Txt { Layout.preferredWidth: 110; text: "Cerrar si no la usas"; color: Theme.tv; size: 12 }
+                            Seg {
+                                h: 28; textSize: 11.5
+                                model: [["0", "Nunca"], ["15", "15 min"], ["30", "30 min"], ["60", "1 h"]]
+                                current: String(row.modelData.unload ?? 0)
+                                onPicked: k => root.update(row.index, { unload: +k })
+                            }
+                            Txt {
+                                Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.Wrap
+                                text: (row.modelData.unload ?? 0) > 0
+                                      ? "Libera memoria. Mientras esté cerrada no llegan sus avisos; nunca se cierra si suena o está en PiP"
+                                      : "Siempre abierta en segundo plano (recomendado para WhatsApp y el correo)"
+                            }
                         }
                         RowLayout {
                             Layout.fillWidth: true

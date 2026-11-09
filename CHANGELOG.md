@@ -3,6 +3,38 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.6] — 2026-11-08
+
+- **El login recuerda tu usuario y tu sesión**: el usuario del greeter tiene la carpeta personal en `/` y no podía
+  guardar nada. Ahora usa `/var/lib/hyprfrijol-greeter` (la crea `hf-greeter-sync` o `install.sh --greeter`).
+- **Menos gasto en reposo**: la onda de audio de la barra ya no deja cava funcionando a 60 fps cuando no ha sonado
+  nada desde el arranque; Bloq Mayús se vigila sin lanzar procesos (antes ~13 por segundo); la red se entera de los
+  cambios por eventos (`nmcli monitor`) en vez de preguntar cada 6 s; el brillo no se sondea en equipos sin
+  retroiluminación; la lista de ventanas usa un solo `hyprctl` (antes 7 procesos), los títulos llegan del propio
+  evento y una ventana que cambia de título sin parar ya no deja la lista sin actualizar; las estadísticas de la
+  barra leen `/proc` y `/sys` sin `cat`/`grep` (la mitad de procesos cada 2 s).
+- **Cambiar de fondo dos veces seguidas** ya no deja reproductores de vídeo huérfanos: los cambios van uno detrás de
+  otro.
+- **Avisos**: los botones de acción ya no dejan el aviso a medio cerrar.
+- **hf-doctor**: sin el falso aviso de «nvidia sin modeset» cuando ese parámetro solo lo puede leer root.
+- **Web apps: Atrás / Adelante** en la cabecera del panel (y Alt + →), salvo en las de mensajería; se puede cambiar
+  en Ajustes › Web apps › Más opciones.
+- **Web apps: «Cerrar si no la usas»** (Nunca, 15 min, 30 min o 1 h; por defecto Nunca): libera memoria cerrando las
+  del panel que llevan ese tiempo sin abrirse. Nunca cierra la que está a la vista, en PiP o sonando.
+- **Bloqueo, ajustes rápidos y polkit**: si tu usuario no tiene nombre completo (o no está en `/etc/passwd`, p. ej.
+  LDAP), ya no aparece «nofp» en vez de tu nombre.
+- **Ajustes › Plugins de Omarchy** muestra la ruta con `~`.
+- **Capturas nuevas** en el README (0.8.6, 1920×1080, configuración por defecto).
+- **PiP de YouTube**: al salir, el vídeo recupera su tamaño (antes se quedaba a pantalla completa dentro de la web).
+- **Indicador de sesión de prueba** en la barra: solo aparece con una prueba de `dev/try.sh` en marcha; clic para
+  verla u ocultarla.
+- **La onda de audio** escucha menos en silencio: comprobaciones de 2,5 s cada vez más espaciadas (15 → 60 s).
+- **Estadísticas de la barra** con un solo proceso en marcha en vez de uno nuevo cada 2 s.
+- **hf-doctor** avisa de los volcados de memoria (cuántos, de qué programa y cuánto ocupan).
+- **Pruebas** (`dev/try.sh`): cierra los portales antes que el Hyprland anidado (dejaban cientos de volcados de
+  memoria), sin la ventana de novedades de Hyprland (también daba segfault) y con su propia carpeta de web apps (antes
+  veía las de la sesión real como abiertas y podía mandarles órdenes).
+
 ## [0.8.5] — 2026-11-08
 
 - **Imágenes del portapapeles de vuelta**: si habías copiado texto desde Chrome (que lo guarda en UTF-16), la lista

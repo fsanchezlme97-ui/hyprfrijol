@@ -79,6 +79,7 @@ Item {
         // Memorias USB montadas y descargas en curso: solo aparecen cuando hay algo (devicesBarIcon, downloadsBarIcon)
         Loader { visible: item?.want ?? false; sourceComponent: DevicesChip {} }
         Loader { visible: item?.want ?? false; sourceComponent: DownloadsChip {} }
+        Loader { visible: item?.want ?? false; sourceComponent: TestChip {} }   // solo con una prueba de dev/try.sh en marcha
         // Utilidades
         Divider { visible: root.hasInfo && root.hasUtil; Layout.leftMargin: 4; Layout.rightMargin: 4 }
         PomodoroChip { id: pomo; visible: Settings.barHas("pomodoro") }

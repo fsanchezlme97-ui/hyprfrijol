@@ -86,47 +86,81 @@ Singleton {
         }
     }
 
-    Timer { running: root.users > 0; repeat: true; interval: 2000; triggeredOnStart: true; onTriggered: proc.running = true }
+    // Al abrir o cerrar el monitor del sistema (detalle por proceso) se relanza con el otro modo
+    readonly property bool detailOn: detailUsers > 0
+    onDetailOnChanged: if (proc.running) { proc.running = false; proc.running = Qt.binding(() => root.users > 0); }
 
     Process {
         id: proc
-        command: ["sh", "-c", `
-            grep '^cpu' /proc/stat
-            grep -E '^(MemTotal|MemAvailable|SwapTotal|SwapFree):' /proc/meminfo
-            echo "load $(cut -d' ' -f1-3 /proc/loadavg)"
-            echo "uptime $(cut -d' ' -f1 /proc/uptime)"
-            awk 'NR>2 { sub(":", " "); if ($1 != "lo" && $1 !~ /^(docker|veth|br-|virbr|tun|wg)/) { rx += $2; tx += $10 } } END { print "net", rx, tx }' /proc/net/dev
-            for h in /sys/class/hwmon/hwmon*; do
-              n=$(cat "$h/name" 2>/dev/null)
-              case "$n" in
-                k10temp|coretemp|zenpower|cpu_thermal|acpitz) echo "cputemp $n $(cat "$h/temp1_input" 2>/dev/null)";;
-              esac
-            done
-            # una línea por gráfica: tarjeta, driver, ranura, % uso, temp, VRAM usada/total, frecuencia actual/máx (Intel)
+        running: root.users > 0
+        command: ["bash", "-c", `
+            # Un solo bash en marcha (antes un sh nuevo cada 2 s): escribe un bloque por vuelta terminado en «end» y espera con
+            # \`read -t\` (sin sleep). Casi todo con builtins; los drivers de cada gráfica se leen una vez; df cada 30 s.
+            detail=$1; exec 3<> <(:); i=0
+            cards=(); drvs=()
             for d in /sys/class/drm/card[0-9]*; do
               case "\${d##*/}" in *-*) continue;; esac
-              dev=$d/device; [ -e "$dev/driver" ] || continue
-              drv=$(readlink "$dev/driver"); drv=\${drv##*/}
-              busy=$(cat "$dev/gpu_busy_percent" 2>/dev/null || echo -)
-              t=-; for h in "$dev"/hwmon/hwmon*/temp1_input; do [ -r "$h" ] && { t=$(cat "$h"); break; }; done
-              mu=$(cat "$dev/mem_info_vram_used" 2>/dev/null || echo -); mt=$(cat "$dev/mem_info_vram_total" 2>/dev/null || echo -)
-              fa=-; fm=-
-              if [ -r "$d/gt_act_freq_mhz" ]; then fa=$(cat "$d/gt_act_freq_mhz"); fm=$(cat "$d/gt_max_freq_mhz" 2>/dev/null || echo -)
-              elif [ -r "$dev/tile0/gt0/freq0/act_freq" ]; then fa=$(cat "$dev/tile0/gt0/freq0/act_freq"); fm=$(cat "$dev/tile0/gt0/freq0/max_freq" 2>/dev/null || echo -); fi
-              slot=$(sed -n 's/^PCI_SLOT_NAME=//p' "$dev/uevent")
-              echo "gpu \${d##*/} $drv \${slot:--} $busy $t $mu $mt $fa $fm"
+              [ -e "$d/device/driver" ] || continue
+              drv=$(readlink "$d/device/driver"); cards+=("$d"); drvs+=("\${drv##*/}")
             done
-            command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=pci.bus_id,utilization.gpu,temperature.gpu,memory.used,memory.total,name --format=csv,noheader,nounits 2>/dev/null | sed 's/^/nvidia /'
-            awk '$3 ~ /^(nvme[0-9]+n[0-9]+|sd[a-z]+|vd[a-z]+|xvd[a-z]+|mmcblk[0-9]+)$/ { r += $6; w += $10 } END { printf "dio %.0f %.0f\\n", r * 512, w * 512 }' /proc/diskstats
-            df -B1 --output=used,size / | tail -n1 | sed 's/^/disk /'
-            if [ "$1" = 1 ]; then
-              # tiempo de CPU de cada proceso (el % se calcula entre dos medidas, como top)
-              awk 'match($0, /\\) [A-Za-z] /) { n = substr($0, index($0, "(") + 1, RSTART - index($0, "(") - 1); split(substr($0, RSTART + 2), a, " "); print "proc", FILENAME, a[12] + a[13], a[22], n }' /proc/[0-9]*/stat 2>/dev/null
-              df -B1 --output=source,target,used,size -x tmpfs -x devtmpfs -x efivarfs -x overlay -x squashfs 2>/dev/null | tail -n +2 | awk '$4 > 1e9 && !seen[$1]++' | sed 's/^/mnt /'
-            fi
-        `, "sh", root.detailUsers > 0 ? "1" : "0"]
-        stdout: StdioCollector {
-            onStreamFinished: {
+            nv=0; command -v nvidia-smi >/dev/null && nv=1
+            while :; do
+              while read -r l; do case "$l" in cpu*) echo "$l";; *) break;; esac; done < /proc/stat
+              while read -r k v _; do case "$k" in MemTotal:|MemAvailable:|SwapTotal:|SwapFree:) echo "$k $v kB";; esac; done < /proc/meminfo
+              read -r l1 l2 l3 _ < /proc/loadavg; echo "load $l1 $l2 $l3"
+              read -r up _ < /proc/uptime; echo "uptime $up"
+              rx=0; tx=0; n=0
+              while read -r l; do
+                n=$((n + 1)); [ "$n" -le 2 ] && continue
+                l=\${l/:/ }; read -r ifc a _ _ _ _ _ _ _ t _ <<< "$l"
+                case "$ifc" in lo|docker*|veth*|br-*|virbr*|tun*|wg*) continue;; esac
+                rx=$((rx + a)); tx=$((tx + t))
+              done < /proc/net/dev
+              echo "net $rx $tx"
+              for h in /sys/class/hwmon/hwmon*; do
+                n=; read -r n 2>/dev/null < "$h/name"
+                case "$n" in k10temp|coretemp|zenpower|cpu_thermal|acpitz) v=; read -r v 2>/dev/null < "$h/temp1_input"; echo "cputemp $n $v";; esac
+              done
+              for j in "\${!cards[@]}"; do
+                d=\${cards[$j]}; dev=$d/device
+                busy=-; read -r busy 2>/dev/null < "$dev/gpu_busy_percent"
+                t=-; for h in "$dev"/hwmon/hwmon*/temp1_input; do [ -r "$h" ] && { read -r t < "$h"; break; }; done
+                mu=-; mt=-; read -r mu 2>/dev/null < "$dev/mem_info_vram_used"; read -r mt 2>/dev/null < "$dev/mem_info_vram_total"
+                fa=-; fm=-
+                if [ -r "$d/gt_act_freq_mhz" ]; then read -r fa < "$d/gt_act_freq_mhz"; read -r fm 2>/dev/null < "$d/gt_max_freq_mhz"
+                elif [ -r "$dev/tile0/gt0/freq0/act_freq" ]; then read -r fa < "$dev/tile0/gt0/freq0/act_freq"; read -r fm 2>/dev/null < "$dev/tile0/gt0/freq0/max_freq"; fi
+                slot=; while IFS== read -r k v; do [ "$k" = PCI_SLOT_NAME ] && { slot=$v; break; }; done < "$dev/uevent"
+                echo "gpu \${d##*/} \${drvs[$j]} \${slot:--} $busy $t $mu $mt $fa $fm"
+              done
+              [ "$nv" = 1 ] && nvidia-smi --query-gpu=pci.bus_id,utilization.gpu,temperature.gpu,memory.used,memory.total,name --format=csv,noheader,nounits 2>/dev/null | while read -r l; do echo "nvidia $l"; done
+              r=0; w=0
+              while read -r _ _ dn _ _ a _ _ _ b _; do
+                [[ "$dn" =~ ^(nvme[0-9]+n[0-9]+|sd[a-z]+|vd[a-z]+|xvd[a-z]+|mmcblk[0-9]+)$ ]] && { r=$((r + a)); w=$((w + b)); }
+              done < /proc/diskstats
+              echo "dio $((r * 512)) $((w * 512))"
+              [ $((i % 15)) = 0 ] && df -B1 --output=used,size / | { read -r _; read -r u s; echo "disk $u $s"; }
+              if [ "$detail" = 1 ]; then
+                # tiempo de CPU de cada proceso (el % se calcula entre dos medidas, como top)
+                awk 'match($0, /\\) [A-Za-z] /) { n = substr($0, index($0, "(") + 1, RSTART - index($0, "(") - 1); split(substr($0, RSTART + 2), a, " "); print "proc", FILENAME, a[12] + a[13], a[22], n }' /proc/[0-9]*/stat 2>/dev/null
+                df -B1 --output=source,target,used,size -x tmpfs -x devtmpfs -x efivarfs -x overlay -x squashfs 2>/dev/null | tail -n +2 | awk '$4 > 1e9 && !seen[$1]++' | sed 's/^/mnt /'
+              fi
+              echo end
+              i=$((i + 1))
+              read -t 2 -u 3
+            done
+        `, "bash", root.detailOn ? "1" : "0"]
+        property string buf: ""
+        stdout: SplitParser {
+            onRead: line => {
+                if (line !== "end") { proc.buf += line + "\n"; return; }
+                const text = proc.buf;
+                proc.buf = "";
+                root.parse(text);
+            }
+        }
+    }
+    function parse(text: string): void {
+            {
                 let cpuT = -1, cpuPri = 9;
                 const gpus = [], nv = {};
                 const cores = [], prevCores = [], procs = [], disks = [];
@@ -229,6 +263,5 @@ Singleton {
                 root.txHist = root.push(root.txHist, root.netTx);
                 root.diskHist = root.push(root.diskHist, root.diskRead + root.diskWrite);
             }
-        }
     }
 }

@@ -1,5 +1,8 @@
 local cfg = HF.hypr
 local nested = (os.getenv("HF_NESTED") or os.getenv("HL_NESTED")) ~= nil   -- hf-session --nested: prueba dentro de otra sesión
+-- En pruebas, sin la ventana de novedades de Hyprland: el HOME falso nunca recuerda haberla visto, salía en cada
+-- prueba y hyprland-update-screen daba segfault al cerrarse
+if nested then hl.config({ ecosystem = { no_update_news = true, no_donation_nag = true } }) end
 
 hl.on("hyprland.start", function()
     hl.exec_cmd(HF.root .. "/scripts/hf-shell")                -- Quickshell (fondo, barra, avisos, polkit) + vigilante que lo reabre si se cae

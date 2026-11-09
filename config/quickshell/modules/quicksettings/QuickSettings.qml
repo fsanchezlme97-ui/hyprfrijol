@@ -58,7 +58,7 @@ Overlay {
     // ── Lectores ───────────────────────────────────────────────────
     Process {
         running: true
-        command: ["sh", "-c", 'getent passwd "$USER" | cut -d: -f5 | cut -d, -f1; echo "$USER"; command -v wayvnc >/dev/null && echo vnc; [ -s "$HOME/.face" ] && echo face; pgrep -x wayvnc >/dev/null && echo vncon; grep -qs "^enable_auth=true" "$HOME/.config/wayvnc/config" && echo vncauth; true']
+        command: ["sh", "-c", 'echo "$(getent passwd "$USER" | cut -d: -f5 | cut -d, -f1)"; echo "$USER"; command -v wayvnc >/dev/null && echo vnc; [ -s "$HOME/.face" ] && echo face; pgrep -x wayvnc >/dev/null && echo vncon; grep -qs "^enable_auth=true" "$HOME/.config/wayvnc/config" && echo vncauth; true']
         stdout: StdioCollector {
             onStreamFinished: {
                 const l = text.split("\n");

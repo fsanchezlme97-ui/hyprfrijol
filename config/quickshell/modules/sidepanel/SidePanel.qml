@@ -120,6 +120,7 @@ PanelWindow {
     onShownChanged: {
         Shell.sideShown = shown;
         if (shown) Qt.callLater(preload);
+        if (shown) touch(tab);
         if (shown && !web) chatHeld = true;
         if (!shown) autoPip(tab);
         dock.reconcile();
@@ -255,7 +256,9 @@ PanelWindow {
     }
 
     // ======================================================================= apps web
+    // Sesión de prueba anidada (HF_NESTED): carpeta propia, para no ver ni tocar las web apps de la sesión real
     readonly property string runDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/hf-webapp"
+        + (Quickshell.env("HF_NESTED") === "1" ? "-" + (Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || "prueba") : "")
     property var detached: ({})             // clave → true si el usuario la desacopló
     property bool focusWeb: false           // dar foco a la ventana web en el próximo acople
     property string webError: ""
@@ -361,6 +364,40 @@ PanelWindow {
         focusWeb = true;
         dock.reconcile();
     }
+    // Atrás / Adelante en la cabecera: por defecto en todas menos las de mensajería (WhatsApp, Telegram…)
+    function webConf(k) { return webapps.find(w => w?.key === k) ?? null; }
+    function navOn(k) {
+        const w = webConf(k);
+        if (!w) return false;
+        return w.nav ?? (WebApps.preset(w)?.cat !== "Mensajería");
+    }
+    function webCmd(k, c) { Quickshell.execDetached([Paths.script("hf-webapp"), "cmd", k, c]); }
+
+    // Cerrar las que no se usan (campo «unload» en minutos, 0 = nunca, por defecto nunca): libera memoria. Solo las del
+    // panel; nunca la que está a la vista, en PiP, desacoplada o sonando (eso lo mira hf-webapp idle-stop).
+    property var lastUsed: ({})
+    function touch(k) { if (k && k !== "ia") { const o = Object.assign({}, lastUsed); o[k] = Date.now(); lastUsed = o; } }
+    onTabChanged: if (shown) touch(tab)
+    readonly property bool anyUnload: webapps.some(w => (+w?.unload || 0) > 0)
+    Timer {
+        interval: 60000; repeat: true; running: win.anyUnload
+        onTriggered: {
+            const now = Date.now(), o = Object.assign({}, win.lastUsed);
+            if (win.shown && win.web) o[win.tab] = now;
+            for (const w of win.webapps) {
+                const k = w?.key, mins = +w?.unload || 0;
+                if (!k || mins <= 0 || WebApps.modeOf(k) !== "panel" || !win.webClient(k)) { if (k) delete o[k]; continue; }
+                if ((win.shown && win.tab === k) || win.webPip === k || win.detached[k]) { o[k] = now; continue; }
+                if (!o[k]) { o[k] = now; continue; }           // recién vista (precargada o abierta antes): empieza a contar
+                if (now - o[k] >= mins * 60000) {
+                    Quickshell.execDetached([Paths.script("hf-webapp"), "idle-stop", k]);
+                    delete o[k];
+                }
+            }
+            win.lastUsed = o;
+        }
+    }
+
     // PiP automático (pipAuto): al dejar YouTube con el vídeo sonando (cerrar el panel o cambiar de pestaña)
     readonly property bool pipOn: Settings.get("pip", true) !== false
     readonly property bool pipBtn: pipOn && Settings.get("pipButton", true) !== false
@@ -486,6 +523,18 @@ PanelWindow {
                         onClicked: chat.toggleHistory()
                     }
                     Item { Layout.fillWidth: true }
+                    IconBtn {
+                        visible: win.web && win.current !== null && win.navOn(win.tab)
+                        icon: "chevron_left"; iconSize: 14; implicitWidth: 26; implicitHeight: 26
+                        tooltip: "Atrás (Alt + ←)"
+                        onClicked: win.webCmd(win.tab, "back")
+                    }
+                    IconBtn {
+                        visible: win.web && win.current !== null && win.navOn(win.tab)
+                        icon: "chevron_right"; iconSize: 14; implicitWidth: 26; implicitHeight: 26
+                        tooltip: "Adelante (Alt + →)"
+                        onClicked: win.webCmd(win.tab, "forward")
+                    }
                     IconBtn {
                         visible: win.tab === "yt" && win.docked && win.pipBtn
                         icon: "pip"; iconSize: 14; implicitWidth: 26; implicitHeight: 26

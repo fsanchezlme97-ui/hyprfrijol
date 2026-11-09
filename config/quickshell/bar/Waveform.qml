@@ -28,6 +28,9 @@ Rectangle {
     readonly property bool live: Cava.active && (Media.playing || peak > 0.02)
     property real peak: 0
     property var disp: Array(n).fill(0)
+    property bool idlePainted: false
+    readonly property var paintKey: [Theme.p, Theme.ter, kind]
+    onPaintKeyChanged: { idlePainted = false; cv.requestPaint(); }
 
     Component.onCompleted: Cava.users++
     Component.onDestruction: Cava.users--
@@ -45,6 +48,10 @@ Rectangle {
                 if (d[i] > pk) pk = d[i];
             }
             root.peak = pk;
+            // En reposo los puntos no cambian: se pintan una vez y no en cada fotograma
+            const idle = !root.live && pk < 0.01;
+            if (idle && root.idlePainted) return;
+            root.idlePainted = idle;
             cv.requestPaint();
         }
     }
