@@ -1,7 +1,7 @@
 // Ajustes › Web apps — lista compartida con el panel lateral (Settings "webapps", services/WebApps.qml):
 //   [{ key, name, url, icon, mode, layout, zoom, panelWidth, tema, css, keybind, notify }]  · se abren con `hf-webapp open <clave>`.
 // Modo de cada una (mode):
-//   panel      pestaña del panel lateral (QtWebEngine acoplado; sesión propia, sigue avisando con el panel cerrado)
+//   (panel     antes: pestaña del panel lateral; desde 0.8.8 se abre en el navegador)
 //   ventana    ventana propia integrada (QtWebEngine, mismo perfil y ajustes)
 //   navegador  navegador predeterminado en modo app (Chrome/Chromium/Brave/Vivaldi/Edge, con tus sesiones);
 //              Firefox y derivados no tienen modo app → ventana normal
@@ -67,7 +67,7 @@ ColumnLayout {
     function addPreset(c) {
         if (added(c)) return;
         const a = { key: apps.some(x => x.key === c.key) || c.key === "ia" ? newKey(c.name) : c.key, name: c.name, url: c.url,
-                    icon: c.icon ?? "", mode: c.mode ?? "panel", keybind: "", notify: c.notify !== false };
+                    icon: c.icon ?? "", mode: c.mode === "ventana" ? "ventana" : "navegador", keybind: "", notify: c.notify !== false };
         save(apps.concat([a]));
         expanded = a.key;
     }
@@ -75,7 +75,7 @@ ColumnLayout {
         let u = url.trim(); if (!/^https?:\/\//.test(u)) u = "https://" + u;
         const n = name.trim() || WebApps.hostOf(u);
         const c = WebApps.catalog.find(x => WebApps.hostOf(x.url) === WebApps.hostOf(u));
-        const a = { key: newKey(n), name: n, url: u, icon: c?.icon ?? "", mode: "panel", keybind: "", notify: true };
+        const a = { key: newKey(n), name: n, url: u, icon: c?.icon ?? "", mode: "navegador", keybind: "", notify: true };
         save(apps.concat([a]));
         expanded = a.key;
     }
@@ -130,7 +130,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Tus web apps"
-        headerRight: Txt { muted: true; size: 11.5; text: root.apps.length + (root.apps.length === 1 ? " web app" : " web apps") + " · el orden es el de las pestañas del panel" }
+        headerRight: Txt { muted: true; size: 11.5; text: root.apps.length + (root.apps.length === 1 ? " web app" : " web apps") + " · se abren en el navegador o en su ventana" }
 
         Txt {
             visible: root.apps.length === 0
@@ -146,7 +146,7 @@ ColumnLayout {
             Txt { Layout.fillWidth: true; text: "App"; muted: true; size: 11.5 }
             Txt { Layout.preferredWidth: 170; text: "Se abre en"; muted: true; size: 11.5 }
             Txt { Layout.preferredWidth: 60; text: "Avisos"; muted: true; size: 11.5; horizontalAlignment: Text.AlignHCenter }
-            Txt { Layout.preferredWidth: 112; text: "Cerrar si no la usas"; muted: true; size: 11.5; elide: Text.ElideRight }
+            Txt { visible: false; Layout.preferredWidth: 112; text: "Cerrar si no la usas"; muted: true; size: 11.5; elide: Text.ElideRight }   // solo tenía sentido en el panel lateral
             Item { Layout.preferredWidth: 88 }
         }
 
@@ -210,6 +210,7 @@ ColumnLayout {
                     }
                     Item { Layout.preferredWidth: 60; implicitHeight: 26; Sw { anchors.centerIn: parent; checked: row.modelData.notify !== false; onToggled: v => root.update(row.index, { notify: v }) } }
                     Item {
+                        visible: false      // «Cerrar si no la usas»: solo para las del panel lateral, que ya no existe
                         Layout.preferredWidth: 112; implicitHeight: 30
                         Dropdown {
                             visible: row.canUnload

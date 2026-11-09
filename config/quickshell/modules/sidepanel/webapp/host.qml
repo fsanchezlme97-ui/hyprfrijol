@@ -266,13 +266,8 @@ Window {
         + "var st=document.createElement('style');st.id='hf-onecol';st.textContent="
         + "'html[data-hf-narrow] [data-hf-chain]{min-width:0!important}"
         + "html[data-hf-narrow] [data-hf-pane]{flex:1 1 auto!important;max-width:none!important;width:auto!important;min-width:0!important}"
-        // Sin chat abierto, solo la lista; con uno abierto, la lista arriba y el chat abajo, mitad y mitad (el chat se
-        // coloca encima de la mitad inferior: el contenedor común también lleva la barra de iconos de la izquierda)
+        + "html[data-hf-narrow][data-hf-chat] [data-hf-pane=side]{display:none!important}"
         + "html[data-hf-narrow]:not([data-hf-chat]) [data-hf-pane=main]{display:none!important}"
-        + "html[data-hf-narrow][data-hf-chat] [data-hf-split]{position:relative!important}"
-        + "html[data-hf-narrow][data-hf-chat] [data-hf-pane=side]{height:50%!important;max-height:50%!important;align-self:flex-start!important}"
-        + "html[data-hf-narrow][data-hf-chat] [data-hf-pane=main]{position:absolute!important;left:var(--hf-railw,0px)!important;right:0!important;"
-        + "bottom:0!important;top:auto!important;height:50%!important;max-height:50%!important;border-top:1px solid rgba(127,127,127,.28)!important;z-index:1}"
         // Los «cajones» (perfil, nuevo chat, info del contacto…) llevan un borde de 1 px que en una columna quedaba
         // en medio como una línea vertical. Solo se quita el borde: tocar su flex encogía el chat a la mitad.
         + "html[data-hf-narrow] [data-testid^=drawer-]{border-left:0!important;border-right:0!important}"
@@ -290,7 +285,7 @@ Window {
         + "P.side.parentElement.setAttribute('data-hf-split','')}}"
         + "if(P){var sp0=P.side.parentElement;sp0.style.setProperty('--hf-railw',Math.max(0,Math.round(P.side.getBoundingClientRect().left-sp0.getBoundingClientRect().left))+'px')}"
         + "var chat=!!document.getElementById('main')||!!window.__hfForceChat;h.toggleAttribute('data-hf-chat',chat);"
-        + "var hd=document.querySelector('#main header');if(hd&&!document.getElementById('hf-back')){var b=document.createElement('button');b.id='hf-back';b.title='Cerrar el chat';b.textContent='\\u2715';"
+        + "var hd=document.querySelector('#main header');if(hd&&!document.getElementById('hf-back')){var b=document.createElement('button');b.id='hf-back';b.title='Volver a los chats';b.textContent='\\u2190';"
         + "b.onclick=function(e){e.stopPropagation();var o={key:'Escape',code:'Escape',keyCode:27,which:27,bubbles:true};"
         + "(document.activeElement||document.body).dispatchEvent(new KeyboardEvent('keydown',o));document.body.dispatchEvent(new KeyboardEvent('keydown',o))};hd.insertBefore(b,hd.firstChild)}"
         + "var sp=P&&P.side.parentElement;window.__hfOneColState={found:!!P,narrow:narrow,chat:chat,width:window.innerWidth,"

@@ -3,12 +3,12 @@
 // act: lo ejecuta Spotlight.runAct(). top: aparece con la búsqueda vacía.
 
 var WEBAPPS = [
-    { key: "web:wa", cat: "Web apps", g: "W", name: "WhatsApp", sub: "en el panel lateral", kw: "mensajes chat whatsapp", hint: "", top: true, act: "side:wa",
-      det: [["Tipo", "Web app en el panel lateral"], ["Respuesta rápida", "Desde la notificación"]] },
+    { key: "web:wa", cat: "Web apps", g: "W", name: "WhatsApp", sub: "en el navegador", kw: "mensajes chat whatsapp", hint: "", top: true, act: "side:wa",
+      det: [["Tipo", "Web app (navegador)"], ["Respuesta rápida", "Desde la notificación"]] },
     { key: "web:gmail", cat: "Web apps", g: "G", name: "Gmail", sub: "correo en ventana propia", kw: "correo mail email gmail", hint: "", act: "app:https://mail.google.com",
       det: [["Tipo", "Web app en ventana propia"], ["Dirección", "mail.google.com"]] },
     { key: "web:yt", cat: "Web apps", g: "Y", name: "YouTube", sub: "modo cine y PiP", kw: "videos youtube musica", act: "side:yt",
-      det: [["Tipo", "Web app en el panel lateral"], ["Modo foco", "Bloqueada durante el foco"]] },
+      det: [["Tipo", "Web app (navegador)"], ["Modo foco", "Bloqueada durante el foco"]] },
     { key: "web:pin", cat: "Web apps", g: "P", name: "Pinterest", sub: "tableros como fondos", kw: "imagenes inspiracion fondo pinterest", act: "side:pin",
       det: [["Integración", "Tablero como fuente de fondos"]] }
 ];

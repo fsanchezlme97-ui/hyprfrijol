@@ -51,7 +51,9 @@ Singleton {
     readonly property bool barVertical: barPos === "izquierda" || barPos === "derecha"
     // Margen con el borde si flota: el mismo hueco que las ventanas (gapsOut), entre 2 y 4 px, igual en los 4 lados
     // (config/apply/52-pip.py lo calcula igual)
-    readonly property int barOffset: barFloating ? Math.max(2, Math.min(4, Math.round(Number(get("gapsOut", 4)) || 0))) : 0
+    // Margen de la barra flotante con el borde: el mismo hueco que las ventanas (gaps_out), así barra, ventanas y
+    // paneles quedan a la misma distancia del borde y entre sí (antes se forzaba a 2–4 px y no casaba)
+    readonly property int barOffset: barFloating ? Math.max(0, Math.min(24, Math.round(Number(get("gapsOut", 1)) || 0))) : 0
     readonly property int barThickness: barVertical ? barSize + 2 : barSize - 2 - (barFloating ? 2 : 0)
     readonly property real barScale: barThickness / (barVertical ? 36 : barFloating ? 30 : 32)
     // Comportamiento (Ajustes › Barra): "siempre" · "auto" (se esconde y vuelve con el cursor en el borde) ·
@@ -66,8 +68,11 @@ Singleton {
     // ¿La barra ocupa sitio ahora? (si no, los paneles llegan al borde)
     readonly property bool barReserves: !barAutoHide && !Shell.barHidden
     // Hueco de los paneles con el borde de la pantalla y con la barra: el mismo que el de las ventanas en mosaico
-    // (gapsOut = gaps_out de Hyprland), para que paneles y ventanas queden alineados
-    readonly property int winGap: Math.max(0, Math.min(24, Math.round(Number(get("gapsOut", 1)) || 0)))
+    // (gapsOut = gaps_out de Hyprland) más el filo de las ventanas (border_size: 1, 2 con alto contraste): las ventanas
+    // dejan ver gaps_out de fondo y luego su filo claro, así que el borde visible del panel cae donde empieza su contenido
+    readonly property int gapsOutPx: Math.max(0, Math.min(24, Math.round(Number(get("gapsOut", 1)) || 0)))
+    readonly property int winBorder: get("highContrast", false) ? 2 : 1
+    readonly property int winGap: gapsOutPx + winBorder
     // Distancia del borde de la pantalla a la que se abren los paneles en el lado de la barra (margen + barra + hueco)
     readonly property real barEdge: barReserves ? barOffset + barThickness + winGap : winGap
     // Módulos visibles de la barra (Ajustes › Barra › Módulos visibles). Es un conjunto: el orden lo fija la barra

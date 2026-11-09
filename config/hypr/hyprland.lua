@@ -47,6 +47,7 @@ require("frijol.input")
 require("frijol.look")
 require("frijol.rules")
 require("frijol.binds")
+require("frijol.floatsnap")    -- encajar ventanas flotantes al soltarlas en un borde (Snap.qml: snap drop)
 require("frijol.autostart")
 
 HF.load(HF.state .. "/settings.lua")  -- generado por hf-apply desde ~/.config/hyprfrijol/settings.json

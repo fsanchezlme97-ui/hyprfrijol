@@ -207,11 +207,9 @@ Overlay {
         return { key: "win:" + addrOf(t), cat: "Ventanas", kind: "window", win: t, g: (c || t.title || "?").charAt(0).toUpperCase(),
                  appIcon: c ? c.toLowerCase() : "", name: t.title || c, sub: c, hint: t.workspace ? "Espacio " + t.workspace.id : "" };
     }
-    // Las web apps «del panel lateral» solo salen si tienen pestaña en el panel (Ajustes › Panel lateral)
+    // Web apps: se abren con hf-webapp (en el navegador, o en su ventana propia si se eligió)
     function staticItems() {
-        const tabs = Settings.get("sidePanelApps", ["ia"]);
-        const web = Cat.WEBAPPS.filter(it => !String(it.act).startsWith("side:") || (Array.isArray(tabs) && tabs.includes(String(it.act).slice(5))));
-        return web.concat(Cat.ACTIONS).map(it => Object.assign({ kind: "static" }, it));
+        return Cat.WEBAPPS.concat(Cat.ACTIONS).map(it => Object.assign({ kind: "static" }, it));
     }
 
     function clipItem(r, cat) {
@@ -471,7 +469,7 @@ Overlay {
     }
     function runAct(act) {
         if (act.startsWith("view:")) { Shell.open(act.slice(5)); return; }
-        if (act.startsWith("side:")) { Shell.open("ia", act.slice(5)); return; }
+        if (act.startsWith("side:")) { WebApps.open(act.slice(5)); return; }
         if (act.startsWith("app:")) { openApp(act.slice(4)); Shell.close(); return; }
         if (act === "allapps") { setMode("apps"); return; }
         if (act.startsWith("prefix:")) { input.text = act.slice(7); input.forceActiveFocus(); return; }

@@ -64,10 +64,8 @@ in_panel() {   # ¿la clave tiene pestaña en el panel lateral?
 }
 mode_of() {   # mode_of <json>
   local m; m="$(field "$1" mode)"
-  case "$m" in panel|ventana|navegador) echo "$m"; return ;; esac
-  if [ "$(setting webappEngine integrado)" = navegador ]; then echo navegador
-  elif in_panel "$(field "$1" key)"; then echo panel
-  else echo navegador; fi
+  # El panel lateral ya no aloja web apps (0.8.8): solo «ventana» si se pidió; lo demás, al navegador
+  [ "$m" = ventana ] && echo ventana || echo navegador
 }
 # Navegador predeterminado (xdg-settings) → tipo, orden y nombre
 browser() {

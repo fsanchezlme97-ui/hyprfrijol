@@ -34,7 +34,7 @@ ColumnLayout {
             title: "Panel lateral"
             headerRight: Kbd { text: "Super + A" }
             Repeater {
-                model: root.catalog
+                model: root.catalog.slice(0, 1)     // solo el asistente: las web apps ya no van en el panel
                 Item {
                     id: row
                     required property var modelData
@@ -62,10 +62,9 @@ ColumnLayout {
                     }
                 }
             }
-            Button { kind: "link"; text: "+ Añadir una web app"; onClicked: settingsSection("webapps") }
             LabeledRow {
                 label: "Ancho"; labelWidth: 60
-                Seg { model: [["centro", "Como el centro"], [480, "480 px"], ["tercio", "Un tercio"]]; current: Settings.get("sideWidth", "centro"); onPicked: k => Settings.set("sideWidth", k) }
+                Seg { model: [["cuarto", "Un cuarto"], ["tercio", "Un tercio"], [400, "400 px"]]; current: Settings.get("sideWidth", "cuarto"); onPicked: k => Settings.set("sideWidth", k) }
             }
             LabeledRow {
                 label: "Lado"; labelWidth: 60

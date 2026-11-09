@@ -157,11 +157,7 @@ PanelWindow {
         const tones = ["pc", "ter", "sc"];
         const out = [];
         if (enabledApps.includes("ia")) out.push({ key: "ia", glyph: "", label: String(Settings.get("aiName", "") ?? "").trim() || "IA", tone: "p" });
-        webapps.forEach((w, i) => {
-            if (!w?.key || !enabledApps.includes(w.key)) return;
-            const n = String(w.name || w.key);
-            out.push({ key: w.key, glyph: n.charAt(0).toUpperCase(), label: n, tone: builtinTones[w.key] ?? tones[i % 3], icon: WebApps.iconOf(w) });
-        });
+        // Las web apps ya no tienen pestaña aquí (0.8.8): se abren en el navegador (Ajustes › Web apps)
         return out.length ? out : [{ key: "ia", glyph: "", label: String(Settings.get("aiName", "") ?? "").trim() || "IA", tone: "p" }];
     }
     readonly property var tabKeys: tabs.map(t => t.key)
@@ -180,16 +176,14 @@ PanelWindow {
     readonly property real mB: barPos === "abajo" ? barEdge : gap
     readonly property bool onLeft: Settings.get("sideSide", "derecha") === "izquierda"
     readonly property real mR: (onLeft ? barPos === "izquierda" : barPos === "derecha") ? barEdge : gap     // margen del lado del panel
-    // Ancho del asistente y de las web apps (sideWidth): "centro" (por defecto, el del centro de control: 404 px),
-    // "tercio" (un tercio de la pantalla) o px
-    readonly property var sideWidthPref: Settings.get("sideWidth", "centro")
+    // Ancho (sideWidth): "cuarto" (por defecto: una columna de un mosaico de 4), "tercio" o px
+    readonly property var sideWidthPref: Settings.get("sideWidth", "cuarto")
     readonly property real baseW: sideWidthPref === "tercio" ? WebApps.third(screen?.width ?? 1920)
-        : Number(sideWidthPref) > 0 ? Math.max(320, Math.min(720, Number(sideWidthPref))) : 404
+        : Number(sideWidthPref) > 0 ? Math.max(320, Math.min(720, Number(sideWidthPref))) : WebApps.quarter(screen?.width ?? 1920)
     // Cada web app tiene su ancho (WebApps.panelWidth: por defecto un tercio de la pantalla, una columna de un mosaico
     // de 3). Fijado, el panel mide siempre ese tercio en todas las pestañas: el reparto del mosaico no salta al cambiar
     // de pestaña y las demás ventanas se reparten los otros dos tercios.
-    readonly property real panelW: pinActive ? WebApps.third(screen?.width ?? 1920)
-        : web ? WebApps.panelWidth(tab, baseW, screen?.width ?? 1920) : baseW
+    readonly property real panelW: baseW
     onPanelWChanged: Shell.sideW = panelW
     Component.onCompleted: { Shell.sideW = panelW; Shell.sidePinned = pinActive; Shell.sideShown = shown; }
     // Franja reservada (fijado): lo que ocupa el panel desde el borde menos lo que ya reserva la barra en ese lado
@@ -206,7 +200,7 @@ PanelWindow {
         return Settings.barThickness + Settings.barOffset;
     }
     // + lo que falta para que entre el panel y la ventana vecina haya el mismo hueco que entre dos ventanas (2 × gaps_in)
-    readonly property real innerFix: Math.max(0, 2 * (Number(Settings.get("gapsIn", 1)) || 0) - gap)
+    readonly property real innerFix: Math.max(0, 2 * (Number(Settings.get("gapsIn", 1)) || 0) - Settings.gapsOutPx)
     readonly property int zoneW: Math.max(0, Math.round(mR + panelW + innerFix - barSideReserve))
     readonly property real headH: 40
 

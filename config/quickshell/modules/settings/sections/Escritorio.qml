@@ -306,7 +306,17 @@ ColumnLayout {
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }
         SwRow { label: "Enfocar al pasar el cursor"; sub: "input:follow_mouse = " + (Settings.get("focusOnHover", true) ? 1 : 0); mono: true; key: "focusOnHover"; def: true }
-        SwRow { label: "Acoplar al arrastrar a los bordes"; sub: "general:snap:enabled · ventanas flotantes"; mono: true; key: "snapEdges"; def: true }
+        SwRow { label: "Imán al arrastrar (bordes y otras ventanas)"; sub: "general:snap:enabled · ventanas flotantes"; mono: true; key: "snapEdges"; def: true }
+    }
+    // Modo flotante como un escritorio clásico: encajar al soltar (config/hypr/frijol/floatsnap.lua + Snap.qml),
+    // recordar posiciones (services/WinMode.qml) y barras de título (plugin Hyprbars, Ajustes › Plugins)
+    Section {
+        Layout.fillWidth: true
+        title: "Ventanas flotantes"
+        headerRight: Mono { text: root.winMode === "flotante" ? "modo flotante activo" : "también en espacios flotantes" }
+        SwRow { label: "Encajar al soltar en los bordes"; sub: "contra un lado: mitad · en una esquina: cuarto · arriba: toda el área · fuera: recupera su tamaño"; key: "dragSnap"; def: true }
+        SwRow { label: "Recordar dónde estaba cada app"; sub: "al volver a abrirla flotando, en el mismo sitio y con el mismo tamaño"; key: "floatRemember"; def: true }
+        LinkRow { label: "Barras de título con botones"; value: "minimizar · maximizar · cerrar (Hyprbars)"; section: "plugins"; sectionLabel: "Plugins"; target: "Hyprbars"; separator: false }
     }
     Section {
         Layout.fillWidth: true

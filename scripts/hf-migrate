@@ -28,6 +28,7 @@
 #      settings.json.antes-sin-perfiles) y el enlace ~/.local/bin/hf-profile. No toca el modo de energía.
 #      Dictado sin IA: quita dictationAI y cambia dictationWakeWord «Frijol» (la de antes) por «Distro»
 #      (copia en settings.json.antes-sin-ia-dictado).
+#      Web apps del panel lateral (0.8.8): mode «panel» → «navegador», sidePanelApps → ["ia"], cierra sus hosts.
 #      hf-apply lo lanza solo (--retired-only) si queda algo de esto.
 set -euo pipefail
 for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
@@ -120,6 +121,26 @@ with open(tmp, "w") as f:
     f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
 os.replace(tmp, p)
 PY
+  fi
+  # Web apps en el panel lateral (retiradas en 0.8.8): mode «panel» → «navegador» y sidePanelApps solo con «ia»
+  if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); w=d.get("webapps") or []; t=d.get("sidePanelApps"); sys.exit(0 if any(isinstance(a,dict) and a.get("mode")=="panel" for a in w) or (isinstance(t,list) and any(k!="ia" for k in t)) else 1)' "$cfg" 2>/dev/null; then
+    say "Web apps: el panel lateral ya no las aloja; las que estaban en él se abren en el navegador ($cfg)"
+    [ "$DRY" = 1 ] || python3 -I - "$cfg" <<'PY'
+import json, os, sys
+p = os.path.realpath(sys.argv[1])
+d = json.load(open(p))
+for a in d.get("webapps") or []:
+    if isinstance(a, dict) and a.get("mode") == "panel":
+        a["mode"] = "navegador"
+if isinstance(d.get("sidePanelApps"), list):
+    d["sidePanelApps"] = ["ia"]
+tmp = p + ".tmp"
+with open(tmp, "w") as f:
+    f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
+os.replace(tmp, p)
+PY
+    # Hosts de web apps que quedaran abiertos en el panel
+    [ "$DRY" = 1 ] || "$root/scripts/hf-webapp" stop >/dev/null 2>&1 || true
   fi
   # Enlace ~/.local/bin/hf-profile que ya no lleva a nada
   if [ -L "$BIN/hf-profile" ] && [ ! -e "$BIN/hf-profile" ]; then

@@ -12,7 +12,7 @@
   "activeBorder": "sutil",
   "barPos": "arriba",
   "barMode": "archipielago",
-  "barRoundExtra": 2,
+  "barRoundExtra": 4,
   "gapsIn": 1,
   "gapsOut": 1,
   "pipSize": "pequeno",
@@ -104,7 +104,7 @@
   "sidePanelApps": [
     "ia"
   ],
-  "sideWidth": "centro",
+  "sideWidth": "cuarto",
   "sideSide": "izquierda",
   "sidePanelPinned": false,
   "monoFondo": true,

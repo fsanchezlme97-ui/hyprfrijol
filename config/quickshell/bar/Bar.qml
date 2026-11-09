@@ -56,15 +56,16 @@ PanelWindow {
     readonly property bool textScaled: Math.abs(k - 1) > 0.01
     // Píldoras (isla / archipiélago): radio en px del contenido (que va escalado ×k) y destello de visualBell
     // Esquinas de las ventanas (Ajustes › Apariencia › Esquinas: decoration:rounding, px físicos) + 0/2/4 px
-    // (Ajustes › Barra › Esquinas: barRoundExtra, por defecto +2: un poco más suaves sin salirse del estilo)
+    // (Ajustes › Barra › Esquinas: barRoundExtra, por defecto +4: más suaves sin salirse del estilo)
     readonly property real pillRadius: Math.min((Settings.get("rounding", null) ?? Theme.winRadius)
-        + Math.max(0, Math.min(4, Number(Settings.get("barRoundExtra", 2)) || 0)), thickness / 2) / k
-    // Mismo filo que una ventana sin foco (hf-apply active_border → inactive_border)
+        + Math.max(0, Math.min(4, Number(Settings.get("barRoundExtra", 4)) || 0)), thickness / 2) / k
+    // Filo de las cápsulas: un recorte oscuro casi invisible (perfila la curva sobre fondos claros sin dibujar una
+    // línea). El borde gris de las ventanas sin foco, más claro que el relleno, se leía como un contorno basto.
+    // Sin borde de ventanas (Ajustes › Apariencia › Borde: ninguno), tampoco aquí.
     readonly property string borderMode: Settings.get("activeBorder", "sutil")
-    readonly property real pillBorderW: (borderMode === "ninguno" ? 0 : borderMode === "color" ? 2 : 1) / k
-    readonly property color pillBorder: borderMode === "color" ? Qt.alpha(Theme.ov, 0.7)
-        : Theme.glassy && Theme.blur ? Qt.alpha("#FFFFFF", Theme.light ? 0.28 : 0.05)
-        : Qt.alpha(Theme.ov, Theme.light ? 0.45 : 0.35)
+    // En vidrio (Aurora/SkySoul) sin filo: el borde lo da el propio cristal, suave; un trazo se veía marcado
+    readonly property real pillBorderW: (borderMode === "ninguno" || Theme.glassy ? 0 : 1) / k
+    readonly property color pillBorder: Theme.light ? Qt.rgba(0, 0, 0, 0.08) : Qt.rgba(0, 0, 0, 0.20)
     readonly property real bellLevel: bell.opacity
     // Rectángulo de la píldora i del archipiélago en px de la ventana (vacío si no toca)
     function pillRect(i: int): var {

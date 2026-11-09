@@ -35,7 +35,14 @@ def _profiles_left():
         return False
     if any(f'"{k}"' in t for k in ("profiles", "profileRules", "notifyFavorites", "dictationAI")):
         return True
-    return '"dictationWakeWord": "Frijol"' in t   # nombre de antes: pasa a «Distro» (hf-migrate, paso 6)
+    if '"dictationWakeWord": "Frijol"' in t:      # nombre de antes: pasa a «Distro» (hf-migrate, paso 6)
+        return True
+    try:                                            # web apps del panel lateral (retiradas en 0.8.8)
+        d = json.loads(t)
+        return any(isinstance(a, dict) and a.get("mode") == "panel" for a in d.get("webapps") or []) \
+            or (isinstance(d.get("sidePanelApps"), list) and any(k != "ia" for k in d["sidePanelApps"]))
+    except Exception:
+        return False
 if _profiles_left():
     subprocess.run([str(ROOT / "scripts/hf-migrate"), "--retired-only", "--quiet"], check=False)
 

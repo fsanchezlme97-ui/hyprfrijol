@@ -54,9 +54,11 @@ Overlay {
         if (z[1] + z[3] < 0.999) y1 -= gi;
         return { x: Math.round(x0 + b), y: Math.round(y0 + b), w: Math.round(x1 - x0 - 2 * b), h: Math.round(y1 - y0 - 2 * b) };
     }
-    function putWindow(address: string, z): void {
-        const c = HyprClients.client(address);
+    function putWindow(address: string, z): void { putWindowWith(HyprClients.client(address), z); }
+    // c: datos de la ventana (de la caché o recién leídos de hyprctl, como en snap drop)
+    function putWindowWith(c, z): void {
         if (!c) return;
+        const address = c.address;
         const r = zoneRect(HyprClients.monitorById(c.monitor) ?? HyprClients.focusedMonitor, z);
         const w = 'window = "address:' + address + '"';
         if (c.floating && !prevGeom[c.address]) { const g = Object.assign({}, prevGeom); g[c.address] = { at: c.at, size: c.size }; prevGeom = g; }
@@ -281,6 +283,64 @@ Overlay {
         }
         HyprClients.refresh();
     }
+    // Encajar al soltar (config/hypr/frijol/floatsnap.lua llama a «snap drop <ventana> <x> <y>» al soltar una
+    // ventana flotante arrastrada): borde izquierdo/derecho → mitad · esquina → cuarto · arriba (o sobre la barra)
+    // → toda el área. Soltada lejos de los bordes, una ventana que estaba encajada recupera su tamaño anterior.
+    // Ajustes › Escritorio › «Encajar al soltar en los bordes» (dragSnap, por defecto sí).
+    // Lee el estado actual de la ventana (la caché de HyprClients puede ir por detrás tras un arrastre) y decide
+    function dropAt(address: string, x: real, y: real): void {
+        if (Settings.get("dragSnap", true) !== true) { HyprClients.refresh(); return; }   // (refresca: WinMode recuerda la posición)
+        dropProc.address = address; dropProc.px = x; dropProc.py = y;
+        dropProc.running = false; dropProc.running = true;
+    }
+    Process {
+        id: dropProc
+        property string address: ""
+        property real px: 0
+        property real py: 0
+        command: ["hyprctl", "clients", "-j"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let list = [];
+                try { list = JSON.parse(text); } catch (e) { return; }
+                const c = list.find(o => o.address === HyprClients.norm(dropProc.address));
+                if (c) win.dropWith(c, dropProc.px, dropProc.py);
+            }
+        }
+    }
+    function dropWith(c, x: real, y: real): void {
+        const address = c.address;
+        if (!c.floating) return;
+        const m = HyprClients.monitors.find(mm => { const L = HyprClients.logical(mm); return x >= L.x && x < L.x + L.w && y >= L.y && y < L.y + L.h; })
+                  ?? HyprClients.monitorById(c.monitor);
+        if (!m) return;
+        const L = HyprClients.logical(m), U = HyprClients.usableRect(m), T = 6, C = Math.max(60, Math.round(L.h * 0.12));
+        const left = x <= L.x + T, right = x >= L.x + L.w - 1 - T, top = y <= U.y + T, bottom = y >= L.y + L.h - 1 - T;
+        let z = null;
+        if (left || right) {
+            const tq = y <= U.y + C, bq = y >= U.y + U.h - C;
+            z = tq ? [left ? 0 : .5, 0, .5, .5] : bq ? [left ? 0 : .5, .5, .5, .5] : [left ? 0 : .5, 0, .5, 1];
+        } else if (top) z = [0, 0, 1, 1];
+        if (z) { putWindowWith(c, z); return; }
+        // Fuera de los bordes: si venía encajada, vuelve a su tamaño (se queda donde la soltaste)
+        const p = prevGeom[HyprClients.norm(address)];
+        if (p) {
+            const g = Object.assign({}, prevGeom); delete g[HyprClients.norm(address)]; prevGeom = g;
+            // Con su tamaño de antes, centrada bajo el cursor (como al «desencajar» en otros escritorios) y dentro del área
+            const nw = Math.min(p.size[0], U.w), nh = Math.min(p.size[1], U.h);
+            const nx = Math.round(Math.max(U.x, Math.min(x - nw / 2, U.x + U.w - nw)));
+            const ny = Math.round(Math.max(U.y, Math.min(c.at[1], U.y + U.h - nh)));
+            const t = 'window = "address:' + address + '"';
+            Shell.dispatch('hl.dsp.window.resize({ x = ' + nw + ', y = ' + nh + ', exact = true, ' + t + ' })');
+            Shell.dispatch('hl.dsp.window.move({ x = ' + nx + ', y = ' + ny + ', exact = true, ' + t + ' })');
+            HyprClients.refresh();
+        }
+    }
+    IpcHandler {
+        target: "snap"
+        function drop(address: string, x: int, y: int): void { win.dropAt(address, x, y); }
+    }
+
     GlobalShortcut { appid: "hf"; name: "snapleft"; description: "HyprFrijol: a la izquierda (mosaico) / acoplar a la izquierda"; onPressed: win.arrow("l", [0, 0, .5, 1]) }
     GlobalShortcut { appid: "hf"; name: "snapright"; description: "HyprFrijol: a la derecha (mosaico) / acoplar a la derecha"; onPressed: win.arrow("r", [.5, 0, .5, 1]) }
     GlobalShortcut { appid: "hf"; name: "snapup"; description: "HyprFrijol: arriba (mosaico) / ocupar toda el área"; onPressed: win.arrow("u", [0, 0, 1, 1]) }

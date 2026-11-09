@@ -50,9 +50,8 @@ Singleton {
     function modeOf(a): string {
         a = find(a);
         if (!a) return "navegador";
-        if (a.mode === "panel" || a.mode === "ventana" || a.mode === "navegador") return a.mode;
-        if (Settings.get("webappEngine", "integrado") === "navegador") return "navegador";
-        return panelApps.includes(a.key) ? "panel" : "navegador";
+        // El panel lateral ya no aloja web apps (0.8.8): las que estaban en él se abren en el navegador
+        return a.mode === "ventana" ? "ventana" : "navegador";
     }
     function iconName(a): string {
         a = find(a);
@@ -68,17 +67,19 @@ Singleton {
         return s ? (list.find(a => String(a.name).toLowerCase() === s) ?? null) : null;
     }
     readonly property real panelZoom: 0.9
+    // Una columna de un mosaico de 4 (ancho por defecto del panel lateral)
+    function quarter(monW): real { return Math.round(Math.max(320, ((Number(monW) || 1920) - 16) / 4)); }
     function third(monW): real { return Math.round(Math.max(320, ((Number(monW) || 1920) - 16) / 3)); }
     function panelWidth(a, base, monW): real {
         a = find(a);
         if (!a) return base;
         const v = a.panelWidth ?? "auto";
-        // "auto"/"panel": el ancho del panel (Ajustes › Panel lateral › Ancho); "tercio": un tercio de la pantalla
-        const w = v === "tercio" ? third(monW) : Number(v) > 0 ? Number(v) : base;
+        // "auto"/"tercio": un tercio de la pantalla; "panel": el ancho del asistente (Ajustes › Panel lateral › Ancho)
+        const w = v === "panel" ? base : Number(v) > 0 ? Number(v) : third(monW);
         const max = Math.max(base, Math.floor((Number(monW) || 1920) * 0.5));
         return Math.round(Math.max(320, Math.min(w, max)));
     }
-    readonly property var widths: [["auto", "Como el panel"], ["tercio", "Un tercio"], [600, "600 px"], [800, "800 px"]]
+    readonly property var widths: [["auto", "Un tercio"], ["panel", "Como el panel"], [600, "600 px"], [800, "800 px"]]
     // Pestaña del panel lateral activada/desactivada (Ajustes › Panel lateral): «panel» al activarla; al quitarla, el
     // modo de antes (sin «mode» → navegador, como siempre)
     function setPanelMode(k, on): void {
@@ -92,5 +93,5 @@ Singleton {
     }
     // Lanzar con el modo elegido (hf-webapp open decide: panel lateral, ventana propia o navegador)
     function open(k): void { Quickshell.execDetached([Paths.script("hf-webapp"), "open", k]); }
-    readonly property var modes: [["panel", "Panel lateral"], ["ventana", "Ventana propia"], ["navegador", "Navegador"]]
+    readonly property var modes: [["navegador", "Navegador"], ["ventana", "Ventana propia"]]
 }

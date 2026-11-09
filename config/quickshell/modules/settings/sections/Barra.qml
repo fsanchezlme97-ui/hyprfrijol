@@ -97,7 +97,7 @@ ColumnLayout {
             Seg {
                 readonly property int win: Settings.get("rounding", null) ?? Theme.winRadius
                 model: [[0, "Como las ventanas (" + win + " px)"], [2, (win + 2) + " px"], [4, (win + 4) + " px"]]
-                current: Settings.get("barRoundExtra", 2)
+                current: Settings.get("barRoundExtra", 4)
                 onPicked: k => Settings.set("barRoundExtra", k)
             }
         }

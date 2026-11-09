@@ -265,6 +265,55 @@ Singleton {
     onReadyChanged: { HyprClients.refreshNow(); Qt.callLater(sync); }
     Component.onCompleted: Qt.callLater(sync)
 
+    // ---------- recordar posiciones (Ajustes › Escritorio › «Recordar dónde estaba cada app», floatRemember) ----------
+    // Por clase de app, la última geometría que tuvo flotando (sin contar diálogos pequeños ni maximizadas); al abrirla
+    // de nuevo en un espacio flotante vuelve ahí (dentro del área útil; en cascada si ya hay otra igual en ese sitio).
+    // Se guarda en ~/.local/state/hyprfrijol/float-geometry.json.
+    readonly property bool remember: Settings.get("floatRemember", true) === true
+    property var geom: ({})
+    FileView {
+        id: geomFile
+        path: Paths.state + "/float-geometry.json"
+        printErrors: false
+        atomicWrites: true
+        onLoaded: { try { root.geom = JSON.parse(text()) ?? {}; } catch (e) { root.geom = {}; } }
+    }
+    Timer { id: geomSave; interval: 2000; onTriggered: geomFile.setText(JSON.stringify(root.geom)) }
+    Connections {
+        target: HyprClients
+        enabled: root.remember
+        function onRefreshesChanged() {
+            let changed = false;
+            const g = Object.assign({}, root.geom);
+            for (const c of HyprClients.clients) {
+                if (!c.floating || root.keep(c) || root.small(c) || !c.class || !c.mapped) continue;
+                if (root.pending.some(p => p.a === c.address)) continue;      // aún colocándose
+                const o = g[c.class], n = { x: c.at[0], y: c.at[1], w: c.size[0], h: c.size[1], mon: c.monitor };
+                if (!o || o.x !== n.x || o.y !== n.y || o.w !== n.w || o.h !== n.h) { g[c.class] = n; changed = true; }
+            }
+            if (changed) { root.geom = g; geomSave.restart(); }
+        }
+    }
+    // Coloca la ventana donde estaba su app la última vez; false si no hay nada guardado
+    function restoreGeom(c): bool {
+        const r = remember ? geom[c.class] : null;
+        if (!r) return false;
+        const mon = HyprClients.monitorById(r.mon) ?? HyprClients.monitorById(c.monitor) ?? HyprClients.focusedMonitor;
+        if (!mon) return false;
+        const U = HyprClients.usableRect(mon);
+        const w = Math.min(r.w, U.w), h = Math.min(r.h, U.h);
+        let x = Math.max(U.x, Math.min(r.x, U.x + U.w - w)), y = Math.max(U.y, Math.min(r.y, U.y + U.h - h));
+        // Otra ventana de la misma app ya en ese sitio: un paso en diagonal
+        for (let i = 0; i < 8 && HyprClients.clients.some(o => o.address !== c.address && o.class === c.class && o.floating
+                && Math.abs(o.at[0] - x) < 24 && Math.abs(o.at[1] - y) < 24); i++) {
+            x = Math.min(x + 32, U.x + U.w - w); y = Math.min(y + 32, U.y + U.h - h);
+        }
+        const t = 'window = "address:' + c.address + '"';
+        Shell.dispatch('hl.dsp.window.resize({ x = ' + w + ', y = ' + h + ', exact = true, ' + t + ' })');
+        Shell.dispatch('hl.dsp.window.move({ x = ' + x + ', y = ' + y + ', exact = true, ' + t + ' })');
+        return true;
+    }
+
     // ---------- ventanas nuevas ----------
     property var pending: []        // [{ a: dirección, t: ms }] recién abiertas que flotan por el modo
     Connections {
@@ -295,7 +344,7 @@ Singleton {
             const now = Date.now(), left = [];
             for (const p of root.pending) {
                 const c = HyprClients.client(p.a);
-                if (c) { if (c.floating && !root.keep(c)) root.place(c, false, []); }
+                if (c) { if (c.floating && !root.keep(c) && (root.small(c) || !root.restoreGeom(c))) root.place(c, false, []); }
                 else if (now - p.t < 3000) left.push(p);   // aún no sale en hyprctl: se reintenta
             }
             root.pending = left;

@@ -3,6 +3,35 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.8] — 2026-11-09
+
+- **Esquinas de la barra más suaves**: un anillo tenue de 1 px por fuera del contorno ensancha el suavizado (como
+  el de las esquinas de Hyprland); a 1x ya no se ven escalones ni un tramo recto a 45°.
+- **Paneles a la misma distancia que las ventanas**: el centro de control, las notificaciones, el panel lateral y
+  los demás paneles suman al hueco (`gaps_out`) el filo de las ventanas (`border_size`), así su borde visible cae
+  donde empieza el contenido de las ventanas, junto a la barra y al borde de la pantalla.
+- **Panel lateral solo para el asistente**: las web apps salen del panel (se veían mal y gastaban recursos que el
+  navegador ya pone): las que estaban en él se abren en el navegador (en Spotlight y Ajustes › Web apps sigue la
+  opción «Ventana propia»). El panel mide **un cuarto de la pantalla** (una columna de un mosaico de 4; también
+  «Un tercio» o 400 px en Ajustes › Panel lateral). `hf-migrate` pasa las web apps de modo «panel» a «navegador»
+  y cierra sus procesos.
+- **Barra: esquinas redondas y suaves**: el contorno de las cápsulas se dibuja con curvas Bézier y suavizado (antes
+  tramos rectos que se veían octogonales), +4 px sobre las esquinas de las ventanas por defecto (Ajustes › Barra ›
+  Esquinas: +0 / +2 / +4). Sin el contorno gris; en vidrio (Aurora) sin filo, el borde lo da el cristal.
+- **Misma distancia que las ventanas**: la barra flotante queda del borde de la pantalla al mismo hueco que las
+  ventanas (gaps_out; antes se forzaba a 2–4 px), y con ella el centro de control y los paneles.
+- **Ventanas flotantes como en un escritorio clásico** (Ajustes › Escritorio › Ventanas flotantes):
+  - **Encajar al soltar**: arrastra una ventana flotante contra un lado y ocupa esa mitad; contra una esquina, ese
+    cuarto; arriba (o sobre la barra), toda el área. Soltada lejos de los bordes, una ventana encajada recupera su
+    tamaño, centrada bajo el cursor (`config/hypr/frijol/floatsnap.lua` + `snap drop`).
+  - **Recordar dónde estaba cada app**: al volver a abrirla flotando, en el mismo sitio y con el mismo tamaño
+    (`~/.local/state/hyprfrijol/float-geometry.json`).
+  - **Barras de título con botones**: acceso directo a Hyprbars (Ajustes › Plugins), que pone minimizar ·
+    maximizar · cerrar en las ventanas flotantes.
+  - El antiguo «Acoplar al arrastrar a los bordes» (imán de Hyprland) se llama ahora «Imán al arrastrar».
+- **WhatsApp como en la 0.8.6** (si se abre en ventana propia): una columna, la lista o el chat, con «←»; sin la
+  línea vertical en medio.
+
 ## [0.8.7] — 2026-11-09
 
 - **Personalidad del asistente** (Ajustes › IA › Personalidad): ponle **nombre** (sale en la pestaña del panel y
