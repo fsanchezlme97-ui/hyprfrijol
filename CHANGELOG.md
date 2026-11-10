@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.16] — 2026-11-09
+
+- **La voz de Samantha suena limpia**: ya no lee en voz alta «dilo con voz cálida…» antes de cada respuesta, y al
+  final ya no suena un ruido como de televisor apagándose (Gemini manda ahora un WAV entero y se envolvía en otro,
+  así que sus bloques finales se oían como estática).
+
 ## [0.8.15] — 2026-11-09
 
 - **Hablar con Samantha por voz: Super + Alt + H** (mantener: hablar · soltar: se lo pregunta; un toque corto deja el

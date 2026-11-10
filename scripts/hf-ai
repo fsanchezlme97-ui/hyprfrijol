@@ -1773,8 +1773,8 @@ def speak(text, s=None):
     if not key:
         return {"ok": False, "error": "Falta la clave de Gemini (Ajustes › Asistente de IA)"}
     voice = str(s.get("aiVoiceName") or "Aoede")
-    body = {"contents": [{"parts": [{"text": "Dilo con voz cálida, suave y cercana, con curiosidad y alegría, como en "
-                                             "una conversación íntima: " + t}]}],
+    # Solo el texto: los modelos TTS nuevos leían en voz alta cualquier instrucción de estilo puesta delante
+    body = {"contents": [{"parts": [{"text": t}]}],
             "generationConfig": {"responseModalities": ["AUDIO"],
                                  "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}}}}
     r, err = None, ""
@@ -1785,14 +1785,18 @@ def speak(text, s=None):
         except AIError as e:
             err = str(e)
     try:
-        pcm = base64.b64decode(r["candidates"][0]["content"]["parts"][0]["inlineData"]["data"])
+        audio = base64.b64decode(r["candidates"][0]["content"]["parts"][0]["inlineData"]["data"])
     except Exception:
         return {"ok": False, "error": err or "Gemini no devolvió audio"}
     TTS_DIR.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix="hf-ai-voice-", suffix=".wav", dir=TTS_DIR)
     f = pathlib.Path(name)
-    with os.fdopen(fd, "wb") as fo, wave.open(fo, "wb") as w:             # PCM 16 bits, 24 kHz, mono
-        w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
+    with os.fdopen(fd, "wb") as fo:
+        if audio[:4] == b"RIFF":               # los modelos nuevos ya mandan un WAV entero (con bloques tras el audio)
+            fo.write(audio)
+        else:                                  # los de antes: PCM 16 bits, 24 kHz, mono, sin cabecera
+            with wave.open(fo, "wb") as w:
+                w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(audio)
     player = shutil.which("pw-play") or shutil.which("paplay")
     if not player:
         f.unlink(missing_ok=True)
