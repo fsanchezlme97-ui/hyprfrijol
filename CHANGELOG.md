@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.12] — 2026-11-09
+
+- **Las opciones de los iconos de la bandeja que abren una terminal ya funcionan** (p. ej. «Ejecutar Cachy-Update»):
+  GLib no reconocía kitty y no abría nada. Nuevo `scripts/xdg-terminal-exec`, que abre la terminal elegida en
+  Ajustes › Predeterminadas. Arregla también cualquier app con `Terminal=true` lanzada desde otra app.
+
 ## [0.8.11] — 2026-11-09
 
 - **Dictado en tiempo real**: con Super + Alt + D las palabras se van escribiendo en la ventana con foco mientras

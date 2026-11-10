@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# xdg-terminal-exec — GLib (gio, gtk-launch, apps de la bandeja como Cachy-Update…) abre con esto los .desktop con
+# Terminal=true. Sin él no reconoce kitty («Imposible encontrar el terminal requerido») y el clic no hace nada.
+# Abre la terminal de Ajustes › Predeterminadas (clave «terminal»). scripts/ va delante en el PATH de la sesión
+# (config/hypr/frijol/env.lua): manda sobre un xdg-terminal-exec del sistema, a propósito.
+#   xdg-terminal-exec [-e] <orden> [args…]
+[ "${1:-}" = -e ] && shift
+t=$(jq -r '.terminal // empty' "$HOME/.config/hyprfrijol/settings.json" 2>/dev/null)
+exec "${t:-kitty}" -e "$@"
