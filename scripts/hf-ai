@@ -1733,7 +1733,8 @@ def key_status(provider):
 
 # ---------------------------------------------------------------- voz (Gemini TTS, misma clave gratuita)
 TTS_MODELS = ["gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts", "gemini-2.5-flash-preview-tts"]   # si uno falla (cuota…), el siguiente
-TTS_PID = pathlib.Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp") / "hf-ai-voice.pid"
+TTS_DIR = pathlib.Path(os.environ.get("XDG_RUNTIME_DIR") or HOME / ".cache/hyprfrijol")   # privado: nunca /tmp
+TTS_PID = TTS_DIR / "hf-ai-voice.pid"
 TTS_MAX = 900                                                            # caracteres: cuida la cuota gratuita
 
 def speakable(text):
@@ -1750,7 +1751,9 @@ def speakable(text):
 
 def speak_stop():
     try:
-        os.kill(int(TTS_PID.read_text()), 15)
+        pid = int(TTS_PID.read_text())
+        if b"hf-ai-voice-" in pathlib.Path(f"/proc/{pid}/cmdline").read_bytes():   # solo nuestro reproductor
+            os.kill(pid, 15)
     except (OSError, ValueError):
         pass
     TTS_PID.unlink(missing_ok=True)
@@ -1782,8 +1785,10 @@ def speak(text, s=None):
         pcm = base64.b64decode(r["candidates"][0]["content"]["parts"][0]["inlineData"]["data"])
     except Exception:
         return {"ok": False, "error": err or "Gemini no devolvió audio"}
-    f = pathlib.Path(tempfile.gettempdir()) / f"hf-ai-voice-{os.getpid()}.wav"
-    with wave.open(str(f), "wb") as w:             # PCM 16 bits, 24 kHz, mono
+    TTS_DIR.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(prefix="hf-ai-voice-", suffix=".wav", dir=TTS_DIR)
+    f = pathlib.Path(name)
+    with os.fdopen(fd, "wb") as fo, wave.open(fo, "wb") as w:             # PCM 16 bits, 24 kHz, mono
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
     player = shutil.which("pw-play") or shutil.which("paplay")
     if not player:

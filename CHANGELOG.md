@@ -3,6 +3,11 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.14] — 2026-11-09
+
+- Voz del asistente más segura: el audio temporal y el registro del reproductor van a una carpeta privada (nunca a
+  /tmp), y «parar la voz» solo detiene el reproductor de hf-ai.
+
 ## [0.8.13] — 2026-11-09
 
 - **El asistente se llama Samantha** y tiene personalidad propia (cálida, curiosa, cercana). Se cambia en Ajustes ›
