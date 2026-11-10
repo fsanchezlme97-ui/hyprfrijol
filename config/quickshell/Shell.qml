@@ -34,6 +34,7 @@ Singleton {
     property string dictPhase: "idle"
     property bool aiSpeaking: false        // hf-ai speak mientras suena la voz del asistente (onda rellena en la barra)
     signal dictToggle()
+    signal aiAskHidden(string text)        // pregunta al asistente sin abrir el panel (hablar por voz: Super + Alt + H)
     // Pantalla donde se abren los paneles: la del monitor con foco
     readonly property var screen: {
         const name = Hyprland.focusedMonitor?.name;

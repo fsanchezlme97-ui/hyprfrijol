@@ -226,15 +226,20 @@ Item {
                 root.busy = false;
                 let r = null;
                 try { r = JSON.parse(text); } catch (e) { r = { error: "Respuesta no válida de hf-ai" }; }
-                if (r.error) root.push({ role: "ai", text: r.error, error: true });
-                else {
+                if (r.error) {
+                    root.push({ role: "ai", text: r.error, error: true });
+                    if (!root.active) Quickshell.execDetached(["notify-send", "-a", Settings.get("aiName", "") || "Asistente", "-i", "dialog-error", r.error]);
+                } else {
                     root.push({ role: "ai", text: r.text || (r.actions?.length ? "Puedo hacerlo. Estos son los pasos:" : "…"),
                                 actions: r.actions ?? [], labels: r.labels ?? [], plan: r.plan ?? [], steps: r.steps ?? [],
                                 code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto });
                     if (Settings.get("aiVoice", false)) Quickshell.execDetached([Paths.script("hf-ai"), "speak", r.text || ""]);
                     // Sin confirmación (Ajustes › IA) o todo «aprobado siempre» (aiAlwaysApprove): se aplica ya y queda
                     // el botón Deshacer (salvo pasos sin vuelta atrás, que siempre preguntan)
-                    if (((!root.confirmChanges && !r.confirm) || r.auto) && (r.actions?.length ?? 0) > 0) root.apply(root.messages.length - 1);
+                    const auto = ((!root.confirmChanges && !r.confirm) || r.auto) && (r.actions?.length ?? 0) > 0;
+                    if (auto) root.apply(root.messages.length - 1);
+                    // con el panel cerrado (conversación por voz) hay que verlo para aprobar los cambios
+                    else if ((r.actions?.length ?? 0) > 0 && !root.active) Shell.open("ia");
                 }
             }
         }

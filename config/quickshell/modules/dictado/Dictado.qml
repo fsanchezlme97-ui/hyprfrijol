@@ -91,7 +91,8 @@ Scope {
         case "done":
             if (kind === "ia") {                // hablar con el asistente: la pregunta va al panel lateral
                 phase = "done"; msg = committed.trim() ? "Se lo dije a " + (Settings.get("aiName", "") || "el asistente") : "No te oí";
-                if (committed.trim()) Shell.open("ia", { ask: committed.trim() });
+                // Con voz, la conversación sigue con el panel cerrado (se oye la respuesta); sin voz, hay que verla
+                if (committed.trim()) Settings.get("aiVoice", false) ? Shell.aiAskHidden(committed.trim()) : Shell.open("ia", { ask: committed.trim() });
                 hider.interval = 1800; hider.restart();
                 break;
             }

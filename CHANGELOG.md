@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.17] — 2026-11-09
+
+- **Hablar con Samantha ya no abre el panel lateral**: con «Hablar con voz» activo, Super + Alt + H (o `hf-ai talk`)
+  hace la conversación con el panel cerrado y se oye la respuesta. Queda guardada en el historial de chats como
+  siempre. El panel solo se abre si la respuesta propone cambios que hay que aprobar; si algo falla, llega un aviso.
+  Sin voz, se sigue abriendo el panel para poder leer la respuesta.
+
 ## [0.8.16] — 2026-11-09
 
 - **La voz de Samantha suena limpia**: ya no lee en voz alta «dilo con voz cálida…» antes de cada respuesta, y al

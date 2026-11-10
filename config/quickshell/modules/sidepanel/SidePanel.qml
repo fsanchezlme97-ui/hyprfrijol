@@ -243,6 +243,13 @@ PanelWindow {
     Connections {
         target: Shell
         function onOpened(v) { if (v === "ia") win.handleArg(Shell.arg); }
+        function onAiAskHidden(t) { win.askHidden(t); }
+    }
+    // Conversación por voz: el chat trabaja con el panel cerrado (y queda en el historial como siempre)
+    function askHidden(text) {
+        chatHeld = true;
+        if (!chatLoader.item) { pendingArg = { ask: text, hidden: true }; return; }
+        chat.ask(String(text));
     }
     function select(k) {
         if (inBrowser(k)) { openInBrowser(k); Shell.close(); return; }
@@ -631,7 +638,7 @@ PanelWindow {
                 source: Qt.resolvedUrl("AiChat.qml")
                 onLoaded: {
                     item.active = Qt.binding(() => win.shown && !win.web);
-                    if (win.pendingArg !== null) { const a = win.pendingArg; win.pendingArg = null; win.handleArg(a); }
+                    if (win.pendingArg !== null) { const a = win.pendingArg; win.pendingArg = null; a.hidden ? item.ask(String(a.ask)) : win.handleArg(a); }
                 }
             }
             // Mientras la app web arranca (o si falla / está desacoplada)
