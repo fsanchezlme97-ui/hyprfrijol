@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.10] — 2026-11-09
+
+- **Cambiar entre fondos en movimiento ya no dispara la CPU**: la copia a la medida de la pantalla y la del login se
+  convierten con 2 hilos y la menor prioridad (antes usaban todos los núcleos a la vez). Al cambiar varias veces
+  seguidas se corta la conversión del vídeo que ya no está, y las del login en cola ya no convierten cada una su
+  fondo viejo.
+- **Código con colores en el asistente**: los bloques de código de las respuestas se ven resaltados por lenguaje
+  (SQL, terminal bash/zsh/fish, JSON, Python, diff, yaml/toml/ini, HTML/XML, Lua y estilo C: JS/TS/QML/C/Go/Rust…),
+  con paleta clara u oscura según el tema. Sin dependencias nuevas (`modules/sidepanel/highlight.js`).
+- **Iconos Catppuccin** (catppuccin/vscode-icons, MIT) para todo lo de archivos y código: lenguaje en la cabecera de los
+  bloques de código del asistente, documentos adjuntos, resultados de archivos de Spotlight y archivos y carpetas del
+  escritorio (con carpetas especiales: src, .config, Descargas, Documentos…). Mocha con tema oscuro, Latte con tema claro.
+  Solo se incluyen los 180 iconos usados (`components/CatIcon.qml`; se regeneran con `dev/gen-catppuccin.py`).
+
 ## [0.8.9] — 2026-11-09
 
 - **Arranque más ligero**: Quickshell arranca sin páginas enormes transparentes (THP «always» en CachyOS y otras):

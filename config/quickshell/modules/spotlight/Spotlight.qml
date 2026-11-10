@@ -23,6 +23,7 @@ import "../../components"
 import "../../services"
 import Quickshell.Widgets
 import "catalog.js" as Cat
+import "../../components/catppuccin.js" as Ctp
 
 Overlay {
     id: spot
@@ -298,7 +299,7 @@ Overlay {
             const fl = fileList.map(p => {
                 const name = p.replace(/\/$/, "").split("/").pop();
                 const dir = p.endsWith("/");
-                return { key: "file:" + p, cat: "Archivos", kind: "file", path: p.replace(/\/$/, ""), icon: dir ? "folder" : "file", g: "/",
+                return { key: "file:" + p, cat: "Archivos", kind: "file", path: p.replace(/\/$/, ""), icon: dir ? "folder" : "file", g: "/", catIcon: Qt.resolvedUrl("../../assets/catppuccin/" + Ctp.rel(Ctp.forPath(p, dir), Theme.light)),
                          name: name, sub: p.replace(Paths.home, "~").replace(/\/[^\/]*\/?$/, ""), isDir: dir };
             });
             if (fl.length) return fl;
@@ -1213,7 +1214,7 @@ Overlay {
         property bool selected: false
         readonly property string tone: Cat.CAT_TILE[item.cat] ?? "s4"
         readonly property string iconSrc: item.appIcon ? Quickshell.iconPath(item.appIcon, true) : ""
-        readonly property bool hasImage: (iconSrc !== "" && img.status !== Image.Error) || thumb.status === Image.Ready
+        readonly property bool hasImage: (iconSrc !== "" && img.status !== Image.Error) || thumb.status === Image.Ready || catImg.status === Image.Ready
         readonly property bool isColor: item.kind === "clip" && item.clip?.kind === "color"
         implicitWidth: size
         implicitHeight: size
@@ -1232,6 +1233,16 @@ Overlay {
             sourceSize: Qt.size(root.size * 2, root.size * 2)
             asynchronous: true
             cache: false
+        }
+        // Icono Catppuccin de un archivo o carpeta
+        Image {
+            id: catImg
+            anchors.centerIn: parent
+            visible: status === Image.Ready && !thumb.visible
+            width: root.size >= 40 ? 34 : 18; height: width
+            source: root.item.catIcon ?? ""
+            sourceSize: Qt.size(width * 2, height * 2)
+            smooth: true; mipmap: true
         }
         IconImage {
             id: img

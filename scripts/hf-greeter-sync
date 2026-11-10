@@ -138,8 +138,8 @@ make_live() {
         [ "$have" = "$out" ] || cp -f "$have/wallpaper.mp4" "$out/"
       else
         say "Preparando el vídeo para el login (unos segundos)…"
-        nice -n 10 ffmpeg -loglevel error -y -i "$WALL" -an -t 120 -vf "scale='min(1920,iw)':-2,fps=30" \
-          -c:v libx264 -preset veryfast -crf 26 -pix_fmt yuv420p -movflags +faststart "$out/wallpaper.tmp.mp4" </dev/null 2>/dev/null \
+        nice -n 19 ionice -c 3 ffmpeg -loglevel error -y -threads 2 -i "$WALL" -an -t 120 -vf "scale='min(1920,iw)':-2,fps=30" \
+          -c:v libx264 -threads 2 -preset veryfast -crf 26 -pix_fmt yuv420p -movflags +faststart "$out/wallpaper.tmp.mp4" </dev/null 2>/dev/null \
           && mv -f "$out/wallpaper.tmp.mp4" "$out/wallpaper.mp4"
         rm -f "$out/wallpaper.tmp.mp4"
       fi
@@ -176,6 +176,7 @@ if [ "$MODE" = auto ]; then
   # Nunca desde una sesión de prueba (anidada o con un HOME falso): pisaría tu login con el fondo de la prueba
   [ -z "${HF_NESTED:-}" ] && [ "$HOME" = "$(getent passwd "$(id -un)" | cut -d: -f6)" ] || exit 0
   exec 9>"${XDG_RUNTIME_DIR:-/tmp}/hf-greeter-sync.lock"; flock 9   # dos cambios seguidos: uno detrás del otro
+  WALL="$(wall_src)"   # el fondo de AHORA: los que esperaban en cola ya no convierten cada uno su vídeo viejo
   make_live "$LIVE" "$LIVE"
   exit 0
 fi

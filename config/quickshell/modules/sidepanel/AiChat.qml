@@ -534,7 +534,7 @@ print(json.dumps(out[:300]))
             id: dcRow
             anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
             spacing: 5
-            Icon { anchors.verticalCenter: parent.verticalCenter; name: "file"; size: 12; color: dc.fg }
+            CatIcon { anchors.verticalCenter: parent.verticalCenter; path: dc.path; size: 13 }
             Txt {
                 anchors.verticalCenter: parent.verticalCenter
                 width: Math.min(implicitWidth, 220 - 16 - 17 - (dc.removable ? 20 : 0))

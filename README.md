@@ -269,3 +269,5 @@ qs -p ~/src/hyprfrijol/config/quickshell ipc call shell toggle spotlight
 [MIT](LICENSE) © 2026 hyprfrijol contributors.
 
 Los paquetes que instala el instalador (Hyprland, Quickshell, tipografías, iconos…) tienen sus propias licencias.
+Los iconos de archivos, carpetas y lenguajes son de [Catppuccin Icons](https://github.com/catppuccin/vscode-icons)
+(MIT, `config/quickshell/assets/catppuccin/LICENSE`).

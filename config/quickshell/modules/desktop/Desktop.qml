@@ -18,6 +18,7 @@ import Quickshell.Hyprland
 import "../.."
 import "../../components"
 import "../../services"
+import "../../components/catppuccin.js" as Ctp
 
 Scope {
     id: root
@@ -96,12 +97,15 @@ Scope {
         kra: ["application-x-krita", "image-x-generic"], xcf: ["image-x-xcf", "image-x-generic"], psd: ["image-vnd.adobe.photoshop", "image-x-generic"]
     })
     function iconFor(f): string {
-        if (f.dir) return Quickshell.iconPath("folder", true) || Quickshell.iconPath("inode-directory", true);
+        // archivos y carpetas: Catppuccin Icons (Mocha/Latte según el tema); los lanzadores .desktop, su icono de app
+        const cat = n => String(Qt.resolvedUrl("../../assets/catppuccin/" + Ctp.rel(n, Theme.light)));
+        if (f.dir) return cat(Ctp.forPath(f.n, true));
         if (f.entryIcon) {
             if (f.entryIcon.startsWith("/")) return fileUrl(f.entryIcon);
             const p = Quickshell.iconPath(f.entryIcon, true);
             if (p) return p;
         }
+        if (!/\.desktop$/i.test(f.n)) return cat(Ctp.forPath(f.n, false));
         const e = (/\.([^.]+)$/.exec(f.n)?.[1] ?? "").toLowerCase();
         const k = kind(f);
         const names = (extIcons[e] ?? []).concat(e === "desktop" ? ["application-x-desktop", "application-x-executable"]

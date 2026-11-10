@@ -1,6 +1,7 @@
 // Respuesta del asistente con formato: trocea el Markdown del modelo y dibuja cada parte con su pieza.
 //   texto           Markdown (títulos, listas, negritas, tablas, enlaces)
-//   ```bash … ```   bloque de código o de comandos: fondo propio, letra monoespaciada, lenguaje y botón «Copiar»
+//   ```bash … ```   bloque de código o de comandos: fondo propio, letra monoespaciada, colores por lenguaje
+//                   (highlight.js: SQL, terminal, JSON, Python, diff, yaml/toml, HTML, Lua y estilo C), botón «Copiar»
 //   ```hf-chart {…}```  gráfico: {"type":"bar"|"line"|"pie", "title", "labels":[…], "series":[{"name","values":[…]}],
 //                   "unit"} (hf-ai explica el formato al modelo; si el JSON no vale, se ve como código)
 //   ![alt](url)     imagen (http(s) o ruta local) en una línea propia; clic → se abre fuera
@@ -10,6 +11,7 @@ import QtQuick.Layouts
 import Quickshell
 import "../.."
 import "../../components"
+import "highlight.js" as Hl
 
 ColumnLayout {
     id: root
@@ -112,7 +114,8 @@ ColumnLayout {
                 spacing: 4
                 RowLayout {
                     width: parent.width
-                    Icon { name: box.shell ? "terminal" : "code"; size: 11; color: Theme.tv }
+                    CatIcon { id: langIcon; visible: valid; lang: box.d.lang || (box.shell ? "bash" : ""); size: 13 }
+                    Icon { visible: !langIcon.valid; name: box.shell ? "terminal" : "code"; size: 11; color: Theme.tv }
                     Txt { text: box.shell ? "Terminal" : (box.d.lang || "Código"); size: 10.5; muted: true; weight: Font.DemiBold }
                     Item { Layout.fillWidth: true }
                     Rectangle {
@@ -135,9 +138,10 @@ ColumnLayout {
                 }
                 TextEdit {
                     width: parent.width
-                    text: box.d.text ?? ""
                     readOnly: true; selectByMouse: true
                     wrapMode: TextEdit.WrapAnywhere
+                    textFormat: TextEdit.RichText
+                    text: Hl.html(box.d.text ?? "", box.d.lang ?? "", Theme.light)
                     color: Theme.t
                     selectionColor: Qt.alpha(Theme.p, 0.4)
                     font.family: Theme.mono
