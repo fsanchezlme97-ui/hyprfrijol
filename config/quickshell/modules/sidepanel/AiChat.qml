@@ -14,7 +14,7 @@
 // aiAlwaysApprove (Ajustes › IA lo revoca) y los planes con todo aprobado siempre se aplican solos (hf-ai: auto),
 // nunca los pasos sin vuelta atrás. La primera vez sale una tarjeta con lo que puede hacer y ejemplos (aiOnboarded).
 // setWindow({address, class, title}): abierto con Super+Ctrl+A (hf-ai summon) → la conversación va sobre esa ventana.
-// Micrófono: si existe scripts/hf-dictate, dicta la pregunta (hf-dictate record; el texto acaba en la entrada).
+// Dictado: no tiene micrófono propio; el dictado global (Super + Alt + D o el botón de la barra) escribe en la entrada.
 // Imágenes (si aiContextCapture): arrastrar archivos / imágenes de la web, Ctrl+V con una imagen en el portapapeles o el
 // clip (selector de archivos). Salen en miniatura sobre la entrada (× para quitarlas) y en la burbuja del mensaje;
 // van en messages[i].images y hf-ai las manda al modelo (o su OCR si no ve imágenes). `hf-ai attach` consigue las que
@@ -301,45 +301,6 @@ Item {
         const term = Settings.get("terminal", "kitty");
         Quickshell.execDetached([term, "-e", "sh", "-c", code + '; echo; printf "Pulsa Intro para cerrar…"; read _']);
     }
-
-    // ---- dictado (opcional: solo si existe scripts/hf-dictate). Con HF_DICTATE_OUTPUT=ninguna no teclea nada:
-    // el texto llega por el evento "text" y se pone en la entrada del chat.
-    property bool dictAvailable: false
-    property bool dictating: false
-    property string dictPrefix: ""
-    property string dictStage: ""          // rec | transcribing | cleaning
-    property real dictLevel: 0
-    Process {
-        running: true
-        command: ["test", "-x", Paths.script("hf-dictate")]
-        onExited: code => root.dictAvailable = code === 0
-    }
-    function toggleDictation() {
-        if (dictating) { Quickshell.execDetached([Paths.script("hf-dictate"), "stop"]); return; }
-        dictPrefix = input.text.trim() === "" ? "" : input.text.trim() + " ";
-        dictating = true; dictStage = "rec"; dictLevel = 0;
-        focusInput();
-        dictProc.running = true;
-    }
-    Process {
-        id: dictProc
-        command: [Paths.script("hf-dictate"), "record"]
-        environment: ({ HF_DICTATE_OUTPUT: "ninguna" })   // el texto llega por el evento "text", no tecleado
-        stdout: SplitParser {
-            onRead: line => {
-                let j = null;
-                try { j = JSON.parse(line); } catch (e) { return; }
-                if (j.ev === "level") root.dictLevel = j.v;
-                else if (j.ev === "transcribing" || j.ev === "cleaning") root.dictStage = j.ev;
-                else if (j.ev === "text") input.text = root.dictPrefix + j.text;
-                else if (j.ev === "done") Qt.callLater(() => { input.text = root.dictPrefix + (dictLast.text || input.text.slice(root.dictPrefix.length)); });
-                else if (j.ev === "error") root.push({ role: "ai", text: "Dictado: " + (j.msg ?? "error"), error: true, local: true });
-                if (j.ev === "text") dictLast.text = j.text;
-            }
-        }
-        onExited: { root.dictating = false; root.dictStage = ""; root.focusInput(); }
-    }
-    QtObject { id: dictLast; property string text: "" }
 
     // ---- handoff «Continuar en Claude ↗»
     function handoff() {
@@ -1240,7 +1201,7 @@ print(json.dumps(out[:300]))
             }
             TextInput {
                 id: input
-                anchors { left: clipBtn.visible ? clipBtn.right : parent.left; right: micBtn.visible ? micBtn.left : sendBtn.left; verticalCenter: parent.verticalCenter; leftMargin: clipBtn.visible ? 4 : 14; rightMargin: 8 }
+                anchors { left: clipBtn.visible ? clipBtn.right : parent.left; right: sendBtn.left; verticalCenter: parent.verticalCenter; leftMargin: clipBtn.visible ? 4 : 14; rightMargin: 8 }
                 color: Theme.t
                 selectionColor: Theme.pc
                 selectedTextColor: Theme.pcText
@@ -1253,25 +1214,9 @@ print(json.dumps(out[:300]))
                 Txt {
                     anchors.fill: parent
                     visible: input.text === "" && !input.preeditText
-                    text: root.dictating ? (root.dictStage === "rec" ? "Escuchando… (pulsa el micrófono para terminar)" : "Transcribiendo…")
-                        : root.busy ? "Pensando…" : root.pending.length ? "Pregunta sobre la imagen…" : root.pendingDocs.length ? "Pregunta sobre el documento…" : root.winInfo ? "Pregunta sobre esta ventana o pide algo…" : "Pregunta o pide algo al escritorio…"
+                    text: root.busy ? "Pensando…" : root.pending.length ? "Pregunta sobre la imagen…" : root.pendingDocs.length ? "Pregunta sobre el documento…" : root.winInfo ? "Pregunta sobre esta ventana o pide algo…" : "Pregunta o pide algo al escritorio…"
                     muted: true
                 }
-            }
-            Rectangle {
-                id: micBtn
-                visible: root.dictAvailable
-                anchors { right: sendBtn.left; rightMargin: 4; verticalCenter: parent.verticalCenter }
-                width: visible ? 30 : 0; height: 30; radius: Theme.r(7)
-                color: root.dictating ? Theme.danger : micMa.containsMouse ? Qt.alpha(Theme.t, 0.08) : "transparent"
-                Rectangle {   // nivel del micrófono
-                    anchors.centerIn: parent
-                    visible: root.dictating && root.dictStage === "rec"
-                    width: 30 + root.dictLevel * 10; height: width; radius: width / 2
-                    color: "transparent"; border.width: 2; border.color: Qt.alpha(Theme.danger, 0.5)
-                }
-                Icon { anchors.centerIn: parent; name: "mic"; size: 14; color: root.dictating ? Theme.bg : Theme.tv }
-                MouseArea { id: micMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.toggleDictation() }
             }
             Rectangle {
                 id: sendBtn

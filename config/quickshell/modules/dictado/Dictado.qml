@@ -1,13 +1,14 @@
 // Dictado y comandos de voz (local, como SuperWhisper): atajos globales hf:dictado (Super + Alt + D) y hf:comando
 // (Super + Alt + V). Modo «ptt»: hablar mientras se mantiene (un toque corto deja el micrófono abierto hasta volver a
 // pulsar); «toggle»: cada pulsación empieza/termina; «continuo»: empieza al pulsar y para solo tras unos segundos
-// callado. Mientras hablas se ve el texto provisional y cada frase se escribe al terminarla (scripts/hf-dictate:
-// VAD + whisper-server residente). Al dictar, «Distro, …» al principio de una frase es una orden (dictationWake);
+// callado. Mientras hablas el texto se va escribiendo en la ventana y lo provisional se corrige al terminar cada frase
+// (scripts/hf-dictate: VAD + whisper-server residente). Al dictar, «Distro, …» al principio de una frase es una orden (dictationWake);
 // las órdenes las entiende scripts/hf-voice (sin IA) y lo demás va al asistente.
 // La píldora va donde el OSD y con su estilo (services/OsdStack.qml): pegada al borde y el OSD se aparta.
 // IPC:  qs -p <repo>/config/quickshell ipc call dictado toggle|start|stop|cancel|state|command
 //       … dictado file <clip.wav> [dictado|comando]  (pruebas: el audio sale del archivo, a tiempo real)
 // Ajustes › Dictado (sections/Dictado.qml).
+// Botón de la barra: módulo «dictado» de barModules (Shell.dictToggle / Shell.dictPhase).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -50,7 +51,7 @@ Scope {
         hider.stop(); cmdHider.stop();
         const a = [Paths.script("hf-dictate"), "record", "--mode", fromKey || mode !== "ptt" ? mode : "toggle"];
         if (kind === "comando") a.push("--command");
-        if (mode === "ptt" && fromKey) a.push("--hold");     // no escribir con las teclas del atajo aún pulsadas
+        if (fromKey) a.push("--hold");     // no escribir con las teclas del atajo aún pulsadas (released() lo suelta)
         args = a.concat(extra ?? []);
         proc.running = true;
     }
@@ -112,20 +113,25 @@ Scope {
         stdout: SplitParser { onRead: l => { try { root.onEvent(JSON.parse(l)); } catch (e) {} } }
         onExited: if (["rec", "trans", "cmd"].includes(root.phase)) { root.phase = "idle"; }
     }
+    Binding { target: Shell; property: "dictPhase"; value: root.phase }
+    Connections { target: Shell; function onDictToggle() { root.toggle("dictado"); } }   // botón de la barra
     Timer { id: hider; interval: 1600; onTriggered: root.phase = "idle" }
     Timer { id: cmdHider; interval: 3000; onTriggered: { root.cmdText = ""; root.cmdMsg = ""; } }
 
     function pressed(k): void {
         if (proc.running) {
-            if (root.mode !== "ptt" || root.latched || root.phase === "rec") root.stop();
+            // Con Super + Alt pulsados, lo que se teclease serían atajos de Hyprland (Super + Alt + S manda la ventana al
+            // espacio oculto…): hf-dictate no escribe hasta que released() mande «release»
+            root.send("hold");
+            if (root.phase === "rec") root.send("stop");
             return;
         }
         root.pressedAt = Date.now();
         root.start(k, null, true);
     }
     function released(): void {
+        root.send("release");                                          // ya se puede escribir (en todos los modos)
         if (root.mode !== "ptt" || root.phase !== "rec" || root.latched) return;
-        root.send("release");                                          // ya se puede escribir
         if (Date.now() - root.pressedAt < 350) root.latched = true;    // toque corto: manos libres
         else root.stop();
     }

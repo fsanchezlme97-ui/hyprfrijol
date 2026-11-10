@@ -79,7 +79,7 @@ Singleton {
     // (BarH/BarV: espacios y título · onda · información · utilidades · bandeja · estado y hora)
     readonly property var barModuleList: {
         const v = get("barModules", null);
-        return Array.isArray(v) ? v : ["espacios", "titulo", "musica", "clima", "recursos", "pomodoro", "cafeina", "ia", "red", "bateria", "notificaciones", "reloj"];
+        return Array.isArray(v) ? v : ["espacios", "titulo", "musica", "clima", "recursos", "pomodoro", "cafeina", "dictado", "ia", "red", "bateria", "notificaciones", "reloj"];
     }
     function barHas(m: string): bool { return barModuleList.includes(m); }
 

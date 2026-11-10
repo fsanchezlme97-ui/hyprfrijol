@@ -30,6 +30,9 @@ Singleton {
     property bool sideHidden: false
     // Barra escondida a mano en esta sesión (Super + J → hf:barra; IPC shell toggleBar): vuelve al llevar el cursor al borde
     property bool barHidden: false
+    // Dictado (modules/dictado): fase que pinta el botón de la barra (idle | rec | trans…) y la orden de empezar/terminar
+    property string dictPhase: "idle"
+    signal dictToggle()
     // Pantalla donde se abren los paneles: la del monitor con foco
     readonly property var screen: {
         const name = Hyprland.focusedMonitor?.name;

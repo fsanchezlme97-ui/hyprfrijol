@@ -66,7 +66,7 @@ Item {
     }
 
     readonly property bool hasInfo: Settings.barHas("clima") || Settings.barHas("recursos") || Settings.barHas("impresora")
-    readonly property bool hasUtil: pomo.visible || cafe.visible || bongo.visible || clipBtn.visible || aiBtn.visible || gearBtn.visible || tray.visible
+    readonly property bool hasUtil: pomo.visible || cafe.visible || bongo.visible || dictBtn.visible || clipBtn.visible || aiBtn.visible || gearBtn.visible || tray.visible
     RowLayout {
         id: right
         x: root.compact ? (wave.active ? wave.x + wave.width + root.gapC : left.x + left.implicitWidth + root.gapC) : parent.width - implicitWidth - 3
@@ -85,6 +85,7 @@ Item {
         PomodoroChip { id: pomo; visible: Settings.barHas("pomodoro") }
         BongoChip { id: bongo; visible: Settings.barHas("bongo") }   // gato bongo: golpea al escribir (junto al pomodoro)
         CaffeineChip { id: cafe; visible: Settings.barHas("cafeina") }
+        IconBtn { id: dictBtn; visible: Settings.barHas("dictado"); icon: "mic"; active: Shell.dictPhase === "rec"; tooltip: Shell.dictPhase === "rec" ? "Dictando · clic para terminar" : "Dictado · Super + Alt + D"; onClicked: Shell.dictToggle() }
         IconBtn { id: clipBtn; visible: Settings.barHas("portapapeles"); icon: "clipboard"; tooltip: "Portapapeles"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // abre Spotlight en modo portapapeles
         IconBtn { id: aiBtn; visible: Settings.barHas("ia"); icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") }
         IconBtn { id: gearBtn; visible: Settings.barHas("ajustes"); icon: "gear"; onClicked: Shell.open("ajustesapp") }   // Ajustes (tuerca; opcional, ya está en el panel)

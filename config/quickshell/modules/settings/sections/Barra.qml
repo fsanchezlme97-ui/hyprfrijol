@@ -169,7 +169,7 @@ ColumnLayout {
             spacing: 8
             Repeater {
                 model: [["espacios", "Espacios"], ["titulo", "Título de ventana"], ["reloj", "Reloj"], ["pomodoro", "Pomodoro"], ["musica", "Música"], ["ia", "Asistente IA"],
-                        ["ajustes", "Ajustes (tuerca)"], ["red", "Red"], ["bateria", "Batería"], ["portapapeles", "Portapapeles"], ["notificaciones", "Notificaciones"], ["cafeina", "Cafeína"], ["bongo", "Gato bongo"]]
+                        ["ajustes", "Ajustes (tuerca)"], ["red", "Red"], ["bateria", "Batería"], ["portapapeles", "Portapapeles"], ["notificaciones", "Notificaciones"], ["cafeina", "Cafeína"], ["dictado", "Dictado"], ["bongo", "Gato bongo"]]
                 Chip {
                     required property var modelData
                     readonly property var list: Settings.barModuleList

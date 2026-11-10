@@ -3,6 +3,22 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.11] — 2026-11-09
+
+- **Dictado en tiempo real**: con Super + Alt + D las palabras se van escribiendo en la ventana con foco mientras
+  hablas, y lo provisional se corrige solo (con retrocesos) al terminar cada frase. Hace falta `wtype`; con ydotool o
+  «Pegar»/«Portapapeles» sigue yendo frase a frase.
+  Mientras hablas solo se añaden las palabras en que coinciden dos provisionales seguidos (en dictados largos ya no se
+  borra ni se reescribe lo dicho); si una palabra ya escrita cambia, se corrige una vez al cerrar la frase.
+- **Super + Alt + D ya no mueve ventanas ni cambia de espacio**: mientras las teclas del atajo están pulsadas no se
+  escribe nada (antes las letras se convertían en atajos de Hyprland, como Super + Alt + S).
+- **El dictado ya no agranda la pantalla**: nunca escribe con Ctrl, Mayús, Alt o Super pulsados en el teclado (con
+  cualquier atajo, no solo el del dictado; lo mira en el teclado físico y escribe a trozos). Antes, pulsar un atajo
+  mientras escribía convertía las letras en atajos y el zoom subía hasta 3× (se quita con Super + -).
+- **Botón de dictado en la barra** (módulo «Dictado» en Ajustes › Barra; activo por defecto): clic para empezar o
+  terminar, resaltado mientras graba.
+- El panel del asistente ya no tiene micrófono propio: el dictado es global y escribe también en su caja de texto.
+
 ## [0.8.10] — 2026-11-09
 
 - **Cambiar entre fondos en movimiento ya no dispara la CPU**: la copia a la medida de la pantalla y la del login se
