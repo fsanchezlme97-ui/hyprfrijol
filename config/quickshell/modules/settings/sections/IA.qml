@@ -19,6 +19,7 @@ ColumnLayout {
     property string geminiModelsErr: ""
     property string status: ""
     property var key: ({ stored: false, where: "", hint: "" })
+    readonly property bool needKey: prov === "gemini" || Settings.get("aiVoice", false)   // la voz usa Gemini TTS
     property string keyMsg: ""
     property bool keyErr: false
     property string testMsg: ""
@@ -45,7 +46,7 @@ ColumnLayout {
     }
     Process {
         id: keyStat
-        running: root.prov === "gemini"
+        running: root.needKey
         command: [Paths.script("hf-ai"), "key", "status", "gemini"]
         stdout: StdioCollector { onStreamFinished: { try { root.key = JSON.parse(text); } catch (e) {} } }
     }
@@ -128,7 +129,7 @@ ColumnLayout {
 
             // ---- clave de Gemini ----
             LabeledRow {
-                visible: root.prov === "gemini"
+                visible: root.needKey
                 label: "Clave de la API"; labelWidth: 120
                 hint: root.key.stored ? root.key.hint : ""
                 RowLayout {
@@ -138,7 +139,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         icon: ""
                         input.echoMode: TextInput.Password
-                        placeholder: root.key.stored ? (root.key.where.startsWith("env:") ? "Se usa $" + root.key.where.slice(4) : "Guardada · pega otra") : "Pega aquí tu clave (AIza…)"
+                        placeholder: root.key.stored ? (root.key.where.startsWith("env:") ? "Se usa $" + root.key.where.slice(4) : "Guardada · pega otra") : "Pega aquí tu clave (AIza… o AQ.…)"
                         onAccepted: root.saveKey()
                     }
                     Button { kind: "primary"; text: "Guardar"; enabled: keyField.text.trim() !== "" && !keySet.running; onClicked: root.saveKey() }
@@ -146,7 +147,7 @@ ColumnLayout {
                 }
             }
             RowLayout {
-                visible: root.prov === "gemini"
+                visible: root.needKey
                 Layout.fillWidth: true
                 Layout.leftMargin: 130
                 spacing: 14
@@ -290,6 +291,8 @@ ColumnLayout {
             }
             Timer { id: personaSave; interval: 800; onTriggered: persona.save() }
         }
+        // Voz (aiVoice, aiVoiceName): hf-ai speak lee cada respuesta con Gemini TTS, con la clave de Gemini de arriba
+        SwRow { label: "Hablar con voz"; sub: "lee las respuestas en voz alta con Gemini (clave gratuita de Google; Google recibe el texto)"; key: "aiVoice"; def: false }
         Txt {
             Layout.alignment: Qt.AlignRight
             visible: persona.text.length > 1500

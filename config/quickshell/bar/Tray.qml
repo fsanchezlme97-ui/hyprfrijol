@@ -67,6 +67,7 @@ Item {
     }
 
     TrayMenu { id: menu }
+    function openMenu(it): void { over.shown = false; menu.open(it, more); }
 
     // Desplegable con los iconos que no caben o están ocultos
     PopupWindow {
@@ -106,7 +107,8 @@ Item {
                         item: modelData
                         size: 18
                         // el menú se ancla al «›» (este desplegable se cierra para que no se pisen)
-                        onMenuRequested: { over.shown = false; menu.open(modelData, more); }
+                        // por root: dentro del PopupWindow el id «menu» no se ve (ReferenceError y el clic derecho no hacía nada)
+                        onMenuRequested: root.openMenu(modelData)
                     }
                 }
             }

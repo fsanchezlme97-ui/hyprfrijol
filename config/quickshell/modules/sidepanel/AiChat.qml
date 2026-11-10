@@ -231,6 +231,7 @@ Item {
                     root.push({ role: "ai", text: r.text || (r.actions?.length ? "Puedo hacerlo. Estos son los pasos:" : "…"),
                                 actions: r.actions ?? [], labels: r.labels ?? [], plan: r.plan ?? [], steps: r.steps ?? [],
                                 code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto });
+                    if (Settings.get("aiVoice", false)) Quickshell.execDetached([Paths.script("hf-ai"), "speak", r.text || ""]);
                     // Sin confirmación (Ajustes › IA) o todo «aprobado siempre» (aiAlwaysApprove): se aplica ya y queda
                     // el botón Deshacer (salvo pasos sin vuelta atrás, que siempre preguntan)
                     if (((!root.confirmChanges && !r.confirm) || r.auto) && (r.actions?.length ?? 0) > 0) root.apply(root.messages.length - 1);

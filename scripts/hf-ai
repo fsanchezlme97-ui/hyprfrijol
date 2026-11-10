@@ -23,6 +23,7 @@
   hf-ai models [gemini]      modelos disponibles del proveedor → {"models": [[id, nombre]…], "error": …}
   hf-ai test                 prueba la conexión con el proveedor → {"ok": bool, "text": "…"}
   hf-ai transform "instrucción" < texto   aplica la instrucción al texto y lo imprime en plano (hf-dictate)
+  hf-ai speak "texto" | - | --stop   lo lee en voz alta con Gemini TTS (aiVoice, voz aiVoiceName; corta lo anterior)
   hf-ai key status|set|clear gemini   clave de Gemini: set la lee de stdin (o de HF_AI_KEY_IN), nunca de argv
 
 Proveedor (Ajustes › IA, settings.json):
@@ -1699,8 +1700,8 @@ def key_set(provider, key):
     key = (key or "").strip()
     if not key:
         return {"ok": False, "error": "La clave está vacía"}
-    if not re.fullmatch(r"[A-Za-z0-9_\-]{20,200}", key):
-        return {"ok": False, "error": "Eso no parece una clave de Gemini (suelen empezar por «AIza…»)"}
+    if not re.fullmatch(r"[A-Za-z0-9_.\-]{20,200}", key):
+        return {"ok": False, "error": "Eso no parece una clave de Gemini (suelen empezar por «AIza…» o «AQ.…»)"}
     key_clear(provider)
     if _keyring_ok():
         try:
@@ -1730,6 +1731,73 @@ def key_status(provider):
     k, where = gemini_key()
     return {"stored": bool(k), "where": where, "hint": (k[:4] + "…" + k[-4:]) if len(k) > 12 else ""}
 
+# ---------------------------------------------------------------- voz (Gemini TTS, misma clave gratuita)
+TTS_MODELS = ["gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts", "gemini-2.5-flash-preview-tts"]   # si uno falla (cuota…), el siguiente
+TTS_PID = pathlib.Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp") / "hf-ai-voice.pid"
+TTS_MAX = 900                                                            # caracteres: cuida la cuota gratuita
+
+def speakable(text):
+    """Lo que se lee de una respuesta: sin bloques de código, enlaces ni marcas de Markdown."""
+    t = re.sub(r"```.*?(```|$)", " ", str(text or ""), flags=re.S)
+    t = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", t)
+    t = re.sub(r"https?://\S+", "", t)
+    t = re.sub(r"[`*_#>|~]+", "", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    if len(t) > TTS_MAX:
+        cut = t[:TTS_MAX]
+        t = cut[:max(cut.rfind(". "), cut.rfind("? "), cut.rfind("! ")) + 1] or cut
+    return t
+
+def speak_stop():
+    try:
+        os.kill(int(TTS_PID.read_text()), 15)
+    except (OSError, ValueError):
+        pass
+    TTS_PID.unlink(missing_ok=True)
+
+def speak(text, s=None):
+    """Lee «text» en voz alta (aiVoice; voz aiVoiceName). Corta lo que estuviera diciendo. → {"ok", "error"}"""
+    import base64, tempfile, wave
+    s = s or settings()
+    t = speakable(text)
+    speak_stop()
+    if not t:
+        return {"ok": False, "error": "Nada que leer"}
+    key, _ = gemini_key()
+    if not key:
+        return {"ok": False, "error": "Falta la clave de Gemini (Ajustes › Asistente de IA)"}
+    voice = str(s.get("aiVoiceName") or "Aoede")
+    body = {"contents": [{"parts": [{"text": "Dilo con voz cálida, suave y cercana, con curiosidad y alegría, como en "
+                                             "una conversación íntima: " + t}]}],
+            "generationConfig": {"responseModalities": ["AUDIO"],
+                                 "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}}}}
+    r, err = None, ""
+    for m in TTS_MODELS:
+        try:
+            r = gemini_http("POST", f"/models/{m}:generateContent", key, body, timeout=60)
+            break
+        except AIError as e:
+            err = str(e)
+    try:
+        pcm = base64.b64decode(r["candidates"][0]["content"]["parts"][0]["inlineData"]["data"])
+    except Exception:
+        return {"ok": False, "error": err or "Gemini no devolvió audio"}
+    f = pathlib.Path(tempfile.gettempdir()) / f"hf-ai-voice-{os.getpid()}.wav"
+    with wave.open(str(f), "wb") as w:             # PCM 16 bits, 24 kHz, mono
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
+    player = shutil.which("pw-play") or shutil.which("paplay")
+    if not player:
+        f.unlink(missing_ok=True)
+        return {"ok": False, "error": "Falta pw-play o paplay"}
+    speak_stop()                                    # otra respuesta pudo empezar mientras se generaba esta
+    p = subprocess.Popen([player, str(f)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    TTS_PID.write_text(str(p.pid))
+    p.wait()
+    f.unlink(missing_ok=True)
+    if TTS_PID.exists() and TTS_PID.read_text() == str(p.pid):
+        TTS_PID.unlink(missing_ok=True)
+    return {"ok": True, "error": ""}
+
 def gemini_model(s):
     m = str(s.get("aiModel") or "").strip().removeprefix("models/")
     return m if re.match(r"(gemini|gemma|learnlm)", m) else GEMINI_DEFAULT
@@ -1749,6 +1817,9 @@ def gemini_http(method, path, key, body=None, timeout=120):
         msg, status = err.get("message", ""), err.get("status", "")
         if e.code == 400 and ("API key" in msg or "API_KEY" in json.dumps(err)):
             raise AIError("La clave de Gemini no es válida. Cópiala de nuevo desde aistudio.google.com/apikey.")
+        if e.code == 402:
+            raise AIError("Tu proyecto de Google AI Studio tiene la facturación prepago sin saldo. Recárgalo o crea la "
+                          "clave en un proyecto sin facturación (plan gratuito): aistudio.google.com/apikey")
         if e.code == 403:
             raise AIError("Google rechazó la clave (sin permiso para la API de Gemini). " + msg[:160])
         if e.code == 404:
@@ -2241,6 +2312,11 @@ def main(argv):
         except AIError as e:
             print(text.strip()); print(str(e), file=sys.stderr); sys.exit(1)
         return
+    elif cmd == "speak":
+        if arg == "--stop":
+            speak_stop(); out = {"ok": True, "error": ""}
+        else:
+            out = speak(arg)
     elif cmd == "key":
         sub, prov = (rest + ["", ""])[:2]
         prov = prov or "gemini"

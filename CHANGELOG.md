@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.13] — 2026-11-09
+
+- **El asistente se llama Samantha** y tiene personalidad propia (cálida, curiosa, cercana). Se cambia en Ajustes ›
+  Asistente de IA › Personalidad.
+- **Samantha puede hablar**: «Hablar con voz» (Ajustes › Asistente de IA › Personalidad) lee cada respuesta en voz
+  alta con Gemini TTS y la clave gratuita de Google AI Studio, aunque el asistente use Claude. No lee el código y
+  corta la respuesta anterior si llega otra. A mano: `hf-ai speak "texto"` / `hf-ai speak --stop`.
+- Se aceptan las claves nuevas de Google AI Studio (las que empiezan por `AQ.`), y si el proyecto de Google tiene la
+  facturación sin saldo se dice claramente (antes parecía el límite del plan gratuito).
+- **Clic derecho en un icono del desplegable «›» de la bandeja**: vuelve a abrir su menú (antes se cerraba el
+  desplegable y no pasaba nada).
+
 ## [0.8.12] — 2026-11-09
 
 - **Las opciones de los iconos de la bandeja que abren una terminal ya funcionan** (p. ej. «Ejecutar Cachy-Update»):
