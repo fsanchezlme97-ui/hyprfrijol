@@ -23,12 +23,13 @@
   hf-ai models [gemini]      modelos disponibles del proveedor → {"models": [[id, nombre]…], "error": …}
   hf-ai test                 prueba la conexión con el proveedor → {"ok": bool, "text": "…"}
   hf-ai transform "instrucción" < texto   aplica la instrucción al texto y lo imprime en plano (hf-dictate)
+  hf-ai talk                 hablar con el asistente por voz (como Super + Alt + H): empieza o termina de escuchar
   hf-ai speak "texto" | - | --stop   lo lee en voz alta con Gemini TTS (aiVoice, voz aiVoiceName; corta lo anterior)
   hf-ai key status|set|clear gemini   clave de Gemini: set la lee de stdin (o de HF_AI_KEY_IN), nunca de argv
 
 Proveedor (Ajustes › IA, settings.json):
   aiProvider  "claude-code" (CLI `claude -p`, por defecto) | "ollama" | "openai-compatible" | "gemini" | "off"
-  aiModel     p. ej. "haiku" / "sonnet" (claude-code), "llama3.2" (ollama), "gpt-4o-mini", "gemini-2.5-flash"…
+  aiModel     p. ej. "haiku" / "sonnet" (claude-code), "llama3.2" (ollama), "gpt-4o-mini", "gemini-flash-latest"…
   aiEndpoint  http://localhost:11434 (ollama) · https://api…/v1 (openai-compatible)
   aiKeyEnv    variable de entorno con la clave (openai-compatible), por defecto HF_AI_KEY
   Gemini      clave de https://aistudio.google.com/apikey: $GEMINI_API_KEY / $GOOGLE_API_KEY, o guardada con
@@ -1666,9 +1667,11 @@ def provider_vision(prov, s):
 
 # ---------------------------------------------------------------- Gemini (Google AI Studio, plan gratuito)
 GEMINI_API = os.environ.get("HF_GEMINI_API") or "https://generativelanguage.googleapis.com/v1beta"   # HF_GEMINI_API: solo para pruebas
-GEMINI_DEFAULT = "gemini-2.5-flash"
-GEMINI_FALLBACK = [["gemini-2.5-flash", "Gemini 2.5 Flash (recomendado)"], ["gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite (más rápido)"],
-                   ["gemini-2.5-pro", "Gemini 2.5 Pro (el más capaz, menos cuota)"]]
+# Los alias «latest» siguen al modelo más nuevo (gemini-2.5-flash ya no se da a cuentas nuevas)
+GEMINI_DEFAULT = "gemini-flash-latest"
+GEMINI_LITE = "gemini-flash-lite-latest"
+GEMINI_FALLBACK = [["gemini-flash-latest", "Gemini Flash (recomendado)"], ["gemini-flash-lite-latest", "Gemini Flash-Lite (más rápido)"],
+                   ["gemini-pro-latest", "Gemini Pro (el más capaz, menos cuota)"]]
 SECRETS = HOME / ".config/hyprfrijol/secrets"
 SECRET_ATTRS = ["service", "hyprfrijol", "provider", "gemini"]
 OLD_SECRET_ATTRS = ["service", "hypr-liquid", "provider", "gemini"]   # nombre anterior: se sigue leyendo
@@ -1797,7 +1800,9 @@ def speak(text, s=None):
     speak_stop()                                    # otra respuesta pudo empezar mientras se generaba esta
     p = subprocess.Popen([player, str(f)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     TTS_PID.write_text(str(p.pid))
+    run(QS + ["ipc", "call", "shell", "setAiSpeaking", "true"])     # la barra pinta la onda rellena
     p.wait()
+    run(QS + ["ipc", "call", "shell", "setAiSpeaking", "false"])
     f.unlink(missing_ok=True)
     if TTS_PID.exists() and TTS_PID.read_text() == str(p.pid):
         TTS_PID.unlink(missing_ok=True)
@@ -1871,7 +1876,13 @@ def call_gemini(system, messages, ctx_text, s):
     if not key:
         raise AIError("Falta la clave de Gemini. Consíguela gratis en aistudio.google.com/apikey y pégala en Ajustes › Asistente de IA.")
     path, body = gemini_request(system, messages, ctx_text, s)
-    data = gemini_http("POST", path, key, body, timeout=120)
+    try:
+        data = gemini_http("POST", path, key, body, timeout=120)
+    except AIError as e:
+        if "no responden" not in str(e) or GEMINI_LITE in path:
+            raise
+        # modelo saturado (503, pasa a menudo con el gratuito): una vez con el ligero
+        data = gemini_http("POST", f"/models/{GEMINI_LITE}:generateContent", key, body, timeout=120)
     fb = data.get("promptFeedback") or {}
     if fb.get("blockReason"):
         raise AIError("Gemini no ha respondido a esto (bloqueado por sus filtros de seguridad).")
@@ -2317,6 +2328,8 @@ def main(argv):
         except AIError as e:
             print(text.strip()); print(str(e), file=sys.stderr); sys.exit(1)
         return
+    elif cmd == "talk":                     # Super + Alt + H: hablar con el asistente (empieza / termina)
+        run(QS + ["ipc", "call", "dictado", "talk"]); return
     elif cmd == "speak":
         if arg == "--stop":
             speak_stop(); out = {"ok": True, "error": ""}

@@ -216,9 +216,14 @@ PanelWindow {
     mask: Region { item: panel }
 
     // ======================================================================= apertura
+    property var pendingArg: null
     function handleArg(a) {
         if (typeof a === "string" && a.trim().startsWith("{")) { try { a = JSON.parse(a); } catch (e) {} }
-        if ((a && typeof a === "object") || (typeof a === "string" && a.startsWith("ask:"))) chatHeld = true;   // crea el chat ya
+        if ((a && typeof a === "object") || (typeof a === "string" && a.startsWith("ask:"))) {
+            chatHeld = true;                                                       // crea el chat ya
+            // Se carga en segundo plano: hasta que exista, chat es un sustituto que no hace nada y la pregunta se perdía
+            if (!chatLoader.item) { pendingArg = a; return; }
+        }
         if (a && typeof a === "object" && a.window) { tab = "ia"; chat.setWindow(a.window); }   // hf-ai summon (Super+Ctrl+A)
         if (a && typeof a === "object" && a.image) { tab = "ia"; chat.attach(String(a.image)); }
         if (a && typeof a === "object" && Array.isArray(a.images)) { tab = "ia"; a.images.forEach(p => chat.attach(String(p))); }
@@ -624,7 +629,10 @@ PanelWindow {
                 active: win.chatHeld || !Shell.lazyModules
                 asynchronous: !win.shown         // precargado (cursor encima): sin bloquear; al abrir, al momento
                 source: Qt.resolvedUrl("AiChat.qml")
-                onLoaded: item.active = Qt.binding(() => win.shown && !win.web)
+                onLoaded: {
+                    item.active = Qt.binding(() => win.shown && !win.web);
+                    if (win.pendingArg !== null) { const a = win.pendingArg; win.pendingArg = null; win.handleArg(a); }
+                }
             }
             // Mientras la app web arranca (o si falla / está desacoplada)
             Item {

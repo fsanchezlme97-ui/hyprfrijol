@@ -1,5 +1,5 @@
-// Dictado y comandos de voz (local, como SuperWhisper): atajos globales hf:dictado (Super + Alt + D) y hf:comando
-// (Super + Alt + V). Modo «ptt»: hablar mientras se mantiene (un toque corto deja el micrófono abierto hasta volver a
+// Dictado y comandos de voz (local, como SuperWhisper): atajos globales hf:dictado (Super + Alt + D), hf:comando
+// (Super + Alt + V) y hf:hablar (Super + Alt + H: lo dicho va al asistente, que contesta con voz si aiVoice). Modo «ptt»: hablar mientras se mantiene (un toque corto deja el micrófono abierto hasta volver a
 // pulsar); «toggle»: cada pulsación empieza/termina; «continuo»: empieza al pulsar y para solo tras unos segundos
 // callado. Mientras hablas el texto se va escribiendo en la ventana y lo provisional se corrige al terminar cada frase
 // (scripts/hf-dictate: VAD + whisper-server residente). Al dictar, «Distro, …» al principio de una frase es una orden (dictationWake);
@@ -23,7 +23,7 @@ Scope {
     id: root
     // idle | rec | trans | cmd | done | error  (el dictado no usa IA: sin fase de «mejorar»)
     property string phase: "idle"
-    property string kind: "dictado"         // dictado | comando
+    property string kind: "dictado"         // dictado | comando | ia (lo dicho va al asistente, no se escribe)
     property string msg: ""
     property string code: ""
     property string partial: ""             // lo provisional de la frase en curso
@@ -89,6 +89,12 @@ Scope {
         case "transcribing": phase = "trans"; break;
         case "text": committed = j.text; break;
         case "done":
+            if (kind === "ia") {                // hablar con el asistente: la pregunta va al panel lateral
+                phase = "done"; msg = committed.trim() ? "Se lo dije a " + (Settings.get("aiName", "") || "el asistente") : "No te oí";
+                if (committed.trim()) Shell.open("ia", { ask: committed.trim() });
+                hider.interval = 1800; hider.restart();
+                break;
+            }
             if (j.how === "comando") {          // solo hubo órdenes: se queda el resultado un momento
                 if (kind !== "comando") { phase = "done"; msg = cmdMsg; hider.interval = 2400; hider.restart(); }
                 break;
@@ -109,6 +115,7 @@ Scope {
     Process {
         id: proc
         command: root.args
+        environment: root.kind === "ia" ? { HF_DICTATE_OUTPUT: "ninguna" } : ({})   // «ia»: no escribir en la ventana
         stdinEnabled: true
         stdout: SplitParser { onRead: l => { try { root.onEvent(JSON.parse(l)); } catch (e) {} } }
         onExited: if (["rec", "trans", "cmd"].includes(root.phase)) { root.phase = "idle"; }
@@ -145,9 +152,15 @@ Scope {
         onPressed: root.pressed("comando")
         onReleased: root.released()
     }
+    GlobalShortcut {
+        appid: "hf"; name: "hablar"; description: "HyprFrijol: hablar con el asistente"
+        onPressed: root.pressed("ia")
+        onReleased: root.released()
+    }
     IpcHandler {
         target: "dictado"
         function toggle(): void { root.toggle("dictado"); }
+        function talk(): void { root.toggle("ia"); }          // hablar con el asistente (hf-ai talk)
         function command(): void { root.toggle("comando"); }
         function start(): void { root.start("dictado", null); }
         function stop(): void { root.stop(); }

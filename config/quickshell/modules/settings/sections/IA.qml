@@ -94,11 +94,11 @@ ColumnLayout {
 
     readonly property var models: prov === "claude-code" ? [["", "Predeterminado de Claude Code"], ["haiku", "Haiku (rápido)"], ["sonnet", "Sonnet (equilibrado)"], ["opus", "Opus (el más capaz)"]]
         : prov === "ollama" ? (ollamaModels.length ? ollamaModels.map(m => [m, m]) : [["llama3.2", "llama3.2"]])
-        : prov === "gemini" ? (geminiModels.length ? geminiModels : [["gemini-2.5-flash", "Gemini 2.5 Flash (recomendado)"]])
+        : prov === "gemini" ? (geminiModels.length ? geminiModels : [["gemini-flash-latest", "Gemini Flash (recomendado)"]])
         : [["gpt-4o-mini", "gpt-4o-mini"], ["claude-sonnet-5-5", "claude-sonnet-5-5"]]
     readonly property string curModel: {
         const m = Settings.get("aiModel", "");
-        return prov === "gemini" && !/^(gemini|gemma|learnlm)/.test(m) ? "gemini-2.5-flash" : m;
+        return prov === "gemini" && !/^(gemini|gemma|learnlm)/.test(m) ? "gemini-flash-latest" : m;
     }
 
     RowLayout {

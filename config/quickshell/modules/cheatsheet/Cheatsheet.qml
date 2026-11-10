@@ -51,6 +51,7 @@ Overlay {
 
     // ── Categorías (por el texto de la descripción) ───────────────────────
     readonly property var categories: [
+        ["voz", "Voz y asistente", /dictado|voz|hablar con|asistente/i],
         ["apps", "Aplicaciones", /terminal|archivos|navegador|editor|ofim|mezclador|administrador de tareas|hypr ajustes/i],
         ["captura", "Captura y pantalla", /captura|recortar|zona|ocr|traducir|color|grabar|lupa|zoom/i],
         ["multimedia", "Multimedia", /silenciar|pista|reproducir|volumen|brillo|micr/i],

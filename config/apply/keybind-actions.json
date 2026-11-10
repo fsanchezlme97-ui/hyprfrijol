@@ -24,6 +24,7 @@
   "Herramientas": "hl.dsp.global(\"hf:herramientas\")",
   "Dictado": "hl.dsp.global(\"hf:dictado\")",
   "Comando de voz": "hl.dsp.global(\"hf:comando\")",
+  "Hablar con el asistente": "hl.dsp.global(\"hf:hablar\")",
   "Portapapeles": "hl.dsp.global(\"hf:portapapeles\")",
   "Historial del portapapeles": "hl.dsp.global(\"hf:portapapeles\")",
   "Emojis": "hl.dsp.global(\"hf:emojis\")",

@@ -6,6 +6,8 @@
 //   onda    curva suave rellena, simétrica
 //   linea   una sola línea fina que oscila
 // Cada fotograma se acerca al valor de cava con ataque rápido y caída suave, así se mueve fluido y sin retraso.
+// Mientras habla el asistente (Shell.aiSpeaking) es siempre «onda» rellena en color terciario: así se distingue su voz
+// del resto del audio del equipo.
 // En silencio queda una línea de puntos tenue. Clic: controles de música. Clic central: reproducir/pausar.
 // Rueda: volumen.
 import QtQuick
@@ -16,7 +18,7 @@ import "../services"
 Rectangle {
     id: root
     property real barHeight: 32
-    readonly property string kind: Settings.get("waveStyle", "barras")
+    readonly property string kind: Shell.aiSpeaking ? "onda" : Settings.get("waveStyle", "barras")
     readonly property int n: Cava.count
     readonly property real gap: kind === "barras" ? 1.6 : 0
     readonly property real bw: kind === "barras" ? 2.6 : 0
@@ -31,7 +33,7 @@ Rectangle {
     property real peak: 0
     property var disp: Array(n).fill(0)
     property bool idlePainted: false
-    readonly property var paintKey: [Theme.p, Theme.ter, kind]
+    readonly property var paintKey: [Theme.p, Theme.ter, kind, Shell.aiSpeaking]
     onPaintKeyChanged: { idlePainted = false; cv.requestPaint(); }
 
     Component.onCompleted: Cava.users++
@@ -118,8 +120,9 @@ Rectangle {
             ctx.reset();
             const w = width, h = height, mid = h / 2, d = root.disp, n = root.n;
             const g = ctx.createLinearGradient(0, 0, w, 0);
-            g.addColorStop(0, Qt.alpha(Theme.p, 0.75));
-            g.addColorStop(0.5, Theme.p);
+            const ai = Shell.aiSpeaking;
+            g.addColorStop(0, Qt.alpha(ai ? Theme.ter : Theme.p, 0.75));
+            g.addColorStop(0.5, ai ? Theme.ter : Theme.p);
             g.addColorStop(1, Qt.alpha(Theme.ter, 0.85));
             ctx.fillStyle = g;
             ctx.strokeStyle = g;

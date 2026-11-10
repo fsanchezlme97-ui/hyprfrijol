@@ -12,7 +12,7 @@ Singleton {
     property var bars: Array(count).fill(0)
     property bool paused: false
     property int users: 0                         // barras que muestran la onda (si 0, no hace falta cava)
-    readonly property bool active: !paused && users > 0 && (Media.playing || !silent)
+    readonly property bool active: !paused && users > 0 && (Media.playing || Shell.aiSpeaking || !silent)
     property bool silent: false
 
     Process {
@@ -39,7 +39,7 @@ Singleton {
     }
     // 6 s sin sonido y sin reproductor activo → pausa (2,5 s si solo era una escucha de comprobación)
     property bool probing: false
-    Timer { id: quiet; interval: root.probing ? 2500 : 6000; onTriggered: if (!Media.playing) root.silent = true }
+    Timer { id: quiet; interval: root.probing ? 2500 : 6000; onTriggered: if (!Media.playing && !Shell.aiSpeaking) root.silent = true }
     // En pausa por silencio, se vuelve a escuchar de vez en cuando (sonido que no viene de un reproductor MPRIS: juegos,
     // llamadas…). Cada escucha sin sonido espacia la siguiente (15 → 30 → 60 s): cava pasa ~4 % del tiempo encendido
     Timer {
@@ -52,5 +52,7 @@ Singleton {
             interval = Math.min(60000, interval * 2);
         }
     }
+    // La voz del asistente (hf-ai speak) no es un reproductor MPRIS: se escucha mientras suena
+    Connections { target: Shell; function onAiSpeakingChanged() { if (Shell.aiSpeaking) { root.silent = false; root.probing = false; } } }
     Connections { target: Media; function onPlayingChanged() { if (Media.playing) { root.silent = false; root.probing = false; relisten.interval = 15000; } } }
 }

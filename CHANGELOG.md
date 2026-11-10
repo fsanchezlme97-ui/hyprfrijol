@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.15] — 2026-11-09
+
+- **Hablar con Samantha por voz: Super + Alt + H** (mantener: hablar · soltar: se lo pregunta; un toque corto deja el
+  micrófono abierto hasta volver a pulsar). Lo dicho no se escribe en la ventana: va al asistente, que contesta con
+  voz si «Hablar con voz» está activo. Desde la terminal: `hf-ai talk`. El dictado sigue en Super + Alt + D
+  (`hf-dictate toggle` desde la terminal) y todos los atajos se ven con Super + / (nuevo grupo «Voz y asistente»).
+- **La voz de Samantha se distingue en la barra**: mientras habla, la onda de audio es siempre una onda rellena en el
+  color terciario (con música u otros sonidos sigue el estilo de siempre).
+- Las preguntas al asistente desde la voz o desde otras apps (`sidepanel ask`) ya no se pierden cuando el chat aún no
+  estaba cargado.
+- Gemini: el modelo por defecto pasa a «Gemini Flash» (alias que sigue al más nuevo; gemini-2.5-flash ya no se da a
+  cuentas nuevas) y, si está saturado, se reintenta una vez con Flash-Lite.
+
 ## [0.8.14] — 2026-11-09
 
 - Voz del asistente más segura: el audio temporal y el registro del reproductor van a una carpeta privada (nunca a

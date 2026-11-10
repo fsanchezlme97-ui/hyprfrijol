@@ -32,6 +32,7 @@ Singleton {
     property bool barHidden: false
     // Dictado (modules/dictado): fase que pinta el botón de la barra (idle | rec | trans…) y la orden de empezar/terminar
     property string dictPhase: "idle"
+    property bool aiSpeaking: false        // hf-ai speak mientras suena la voz del asistente (onda rellena en la barra)
     signal dictToggle()
     // Pantalla donde se abren los paneles: la del monitor con foco
     readonly property var screen: {
@@ -122,6 +123,7 @@ Singleton {
         function current(): string { return root.view; }
         function focus(): void { root.setFocusMode(!root.focusMode); }
         function toggleBar(): void { root.barHidden = !root.barHidden; }
+        function setAiSpeaking(on: bool): void { root.aiSpeaking = on; }
     }
 
     // Un atajo global por vista:  hl.dsp.global("hf:<vista>")
