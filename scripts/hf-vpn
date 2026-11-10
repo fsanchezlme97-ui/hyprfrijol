@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2178,SC2128,SC2179  # «a» es un array local en unas funciones y una cadena local en otras: no se mezclan
 # hf-vpn — VPN de NetworkManager (cualquier plugin), VPN de empresa (FortiGate y GlobalProtect, con SSO/SAML),
 # WireGuard y VPN en malla (Tailscale, ZeroTier). Lo usan Ajustes › Red, la IA y la terminal.
 # Salida en líneas JSON (una por elemento).

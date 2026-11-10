@@ -3,6 +3,29 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.9] — 2026-11-09
+
+- **Arranque más ligero**: Quickshell arranca sin páginas enormes transparentes (THP «always» en CachyOS y otras):
+  ~165 MB menos de RAM (de ~470 a ~305 MB). `hf-wallpaper restore` ya no vuelve a sacar el fotograma del vídeo ni a
+  calcular la paleta si el fondo no cambió (~1 s de CPU y un PNG 4K menos en cada inicio de sesión).
+- **Vigilante del shell sin procesos en reposo**: antes lanzaba `sleep`, `flock`, `timeout` y `hyprctl` cada 3 s
+  (~115 000 procesos al día); ahora espera con builtins y solo pregunta a Hyprland si el shell no está.
+- La búsqueda de actualizaciones en segundo plano corre con la menor prioridad (`nice 19`).
+- Ajustes › Notificaciones: las capturas temporales (`/run/user/…`) ya no se guardan como icono de la app (salía un
+  icono roto tras reiniciar).
+- **Fondo en vídeo, «Tapado por ventanas»** (Ajustes › Fondos › Pausar): ahora mide cuánto tapan de verdad las
+  ventanas (≥ 85 % de cada pantalla), también las flotantes. Antes bastaba una ventana en mosaico y, con el escritorio
+  flotante, nunca se pausaba.
+- **mpvpaper colgado al cerrar sesión**: si la sesión se cerraba con el vídeo pausado, el reproductor (detenido con
+  SIGSTOP) no se enteraba y se quedaba para siempre. Ahora se reanuda para que termine solo, y cada cierre del
+  reproductor va seguido de SIGCONT. El vigilante del vídeo ya no lo relanza cuando la sesión se ha ido.
+- `hf-doctor`: avisa por los volcados de memoria de este arranque; los de días atrás solo se mencionan.
+- Para desarrollar: `dev/lint.sh` (revisión estática) y `dev/check.sh` (abre todas las vistas en una sesión anidada y
+  falla si hay errores de QML). Ver `dev/DESARROLLO.md`.
+- Botones e interruptores de Ajustes usan el `enabled` de Qt en vez de redeclararlo; paletas internas y el arrastre de
+  la captura con nombres que no tapan propiedades de Qt.
+- Documentación al día con la 0.8.8 (el panel lateral es solo del asistente; las web apps van en ventana o navegador).
+
 ## [0.8.8] — 2026-11-09
 
 - **Esquinas de la barra más suaves**: un anillo tenue de 1 px por fuera del contorno ensancha el suavizado (como

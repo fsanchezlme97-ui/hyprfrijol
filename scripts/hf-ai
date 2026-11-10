@@ -819,7 +819,7 @@ def exec_action(a):
             hypr(f"hl.dsp.focus({{ {sel} }})")
             hypr("hl.dsp.window.pin()")
             return {"kind": "pin", "addr": w["address"]}
-        dest = f'"special:minimized"' if op == "minimize" else str(int(a["workspace"])) if op == "move" \
+        dest = '"special:minimized"' if op == "minimize" else str(int(a["workspace"])) if op == "move" \
             else str(jrun(["hyprctl", "activeworkspace", "-j"]).get("id") or 1)
         hypr(f"hl.dsp.window.move({{ workspace = {dest}, follow = false, {sel} }})")
         back = ws.get("id")
@@ -1943,7 +1943,7 @@ def do_chat(req, print_request=False):
             m["_imgs"] = []
         return base_ctx + ("\n\n" + extra if extra else "")
     if nimg and vision and attach_vision(msgs0):
-        ctx_text = base_ctx + f"\n\nEl usuario adjunta imágenes (las ves en la conversación; «[Adjunta …]» marca en qué mensaje)."
+        ctx_text = base_ctx + "\n\nEl usuario adjunta imágenes (las ves en la conversación; «[Adjunta …]» marca en qué mensaje)."
     else:
         ctx_text = without_vision("este modelo no ve imágenes" if not vision else "no se pudieron preparar las imágenes") if nimg else base_ctx
     if print_request:

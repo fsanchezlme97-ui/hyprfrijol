@@ -20,7 +20,15 @@ running() { ! flock -n "$LOCK" true 2>/dev/null; }
 # El socket queda como archivo tras cerrar una sesión anidada: hay que preguntar a Hyprland
 alive_session() { [ -S "${XDG_RUNTIME_DIR:-/tmp}/hypr/$SIG/.socket.sock" ] && HYPRLAND_INSTANCE_SIGNATURE=$SIG timeout 3 hyprctl version >/dev/null 2>&1; }
 # -o: los hijos de qs (web apps…) no heredan el candado; si no, lo retienen tras cerrarse la barra
-start() { running || setsid -f flock -n -o "$LOCK" $CMD >/dev/null 2>&1; }
+# Sin páginas enormes transparentes (THP) para el shell: con THP «always» (CachyOS y otras) el montón de Qt/QML se
+# infla en bloques de 2 MB (~170 MB de RSS de más). prctl(PR_SET_THP_DISABLE) se hereda y sobrevive a exec, así que
+# vale para qs y sus hijos; la línea de órdenes sigue siendo la de qs (mine() la busca). Sin python3, tal cual.
+NOTHP=()
+command -v python3 >/dev/null && NOTHP=(python3 -Ic 'import ctypes,os,sys
+try: ctypes.CDLL(None).prctl(41, 1, 0, 0, 0)
+except Exception: pass
+os.execvp(sys.argv[1], sys.argv[1:])')
+start() { running || setsid -f flock -n -o "$LOCK" "${NOTHP[@]}" $CMD >/dev/null 2>&1; }
 
 # Solo los Quickshell de ESTA sesión (no los de una sesión de prueba anidada con el mismo repo)
 mine() {
@@ -42,9 +50,30 @@ case "${1:-}" in
     LIMIT="$(jq -r '.safeModeCrashLimit // empty' "$HOME/.config/hyprfrijol/settings.json" 2>/dev/null)"
     case "$LIMIT" in ''|*[!0-9]*) LIMIT=3 ;; esac
     T0=$SECONDS CRASHES=0 OFFERED=0 GOOD=0 UP_SINCE=$SECONDS
-    while sleep 3; do
-      alive_session || { sleep 3; alive_session; } || exit 0   # Hyprland ya no está: fin
-      if running || [ -n "$(mine)" ]; then
+    # Sin procesos mientras el shell va bien (antes sleep + flock + timeout + hyprctl cada 3 s, ~115 000 al día):
+    # espera con read -t (builtin) y mira el pid de qs con kill -0 y /proc. Solo si qs no está se pregunta a
+    # Hyprland (cuando Hyprland se cierra, qs se cierra con él, así que el vigilante también termina).
+    # Al cerrarse la sesión con el fondo en vídeo pausado (SIGSTOP, wallpaperPauseOn), mpvpaper no se entera de que
+    # Wayland se ha ido y se queda parado para siempre: se reanuda para que termine solo. Solo el de esta sesión.
+    wake_player() {
+      local p
+      for p in $(cat "$HOME/.local/state/hyprfrijol/motion.pid" 2>/dev/null); do
+        tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null | grep -qx "HYPRLAND_INSTANCE_SIGNATURE=$SIG" && kill -CONT "$p" 2>/dev/null
+      done
+    }
+    exec 7<> <(:)
+    QP=""
+    qs_alive() { local c; [ -n "$QP" ] && kill -0 "$QP" 2>/dev/null && read -r c < "/proc/$QP/comm" 2>/dev/null && [ "$c" = qs ]; }
+    while read -rt 3 -u 7 _ || true; do
+      if qs_alive; then
+        if [ "$GOOD" = 0 ] && [ -z "${HF_TRY:-}" ] && [ $((SECONDS - UP_SINCE)) -ge 90 ]; then   # (no en dev/try.sh: sus ajustes son temporales)
+          GOOD=1; "$ROOT/scripts/hf-safe" mark-good >/dev/null 2>&1 &
+        fi
+        continue
+      fi
+      QP="$(mine | head -n1)"
+      alive_session || { sleep 3; alive_session; } || { wake_player; exit 0; }   # Hyprland ya no está: fin
+      if [ -n "$QP" ] || running; then
         if [ "$GOOD" = 0 ] && [ -z "${HF_TRY:-}" ] && [ $((SECONDS - UP_SINCE)) -ge 90 ]; then   # (no en dev/try.sh: sus ajustes son temporales)
           GOOD=1; "$ROOT/scripts/hf-safe" mark-good >/dev/null 2>&1 &
         fi

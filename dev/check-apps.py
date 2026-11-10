@@ -9,7 +9,7 @@ Fuentes: archlinux.org (repos oficiales) y AUR RPC · mdapi de Fedora 44 · madi
 Launchpad (Ubuntu 26.04, amd64) · listado de download.opensuse.org (Tumbleweed) · Flathub API · índice OCI del remoto ArtCraft ·
 releases de GitHub (AppImage / .flatpak) · repositorios del fabricante (Google, Microsoft).
 """
-import datetime, json, pathlib, re, sys, time, urllib.parse, urllib.request
+import datetime, json, pathlib, re, sys, urllib.parse, urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CAT = ROOT / "install/apps.json"

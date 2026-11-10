@@ -13,7 +13,7 @@ ca.andyholmes.Valent; org.freedesktop.DBus.ObjectManager en /ca/andyholmes/Valen
 en org.gtk.Actions: battery.state, share.uris, findmyphone.ring; la acción de la app «window» abre una página).
 Si no está Valent pero sí kdeconnect-cli (alternativa), se usa ese.
 """
-import json, os, pathlib, shutil, subprocess, sys, urllib.parse
+import json, os, pathlib, shutil, subprocess, sys
 for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
     if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 

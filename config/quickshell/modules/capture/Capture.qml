@@ -486,9 +486,9 @@ Scope {
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             property point p0
             property rect r0
-            property string drag: ""      // nuevo | mover | t b l r tl tr bl br
+            property string dragKind: ""      // nuevo | mover | t b l r tl tr bl br
             property bool moved: false
-            readonly property string handle: root.stage === "listo" && root.mode === "region" && !pressed ? handleAt(mouseX, mouseY) : drag
+            readonly property string handle: root.stage === "listo" && root.mode === "region" && !pressed ? handleAt(mouseX, mouseY) : dragKind
             cursorShape: root.mode === "ventana" ? Qt.PointingHandCursor
                        : root.mode === "pantalla" ? Qt.ArrowCursor
                        : ({ tl: Qt.SizeFDiagCursor, br: Qt.SizeFDiagCursor, tr: Qt.SizeBDiagCursor, bl: Qt.SizeBDiagCursor,
@@ -511,12 +511,12 @@ Scope {
                     return;
                 }
                 p0 = Qt.point(m.x, m.y); r0 = root.sel; moved = false;
-                if (root.mode !== "region") drag = "";
-                else if (root.stage === "listo") drag = handleAt(m.x, m.y) || "nuevo";
-                else drag = "nuevo";
+                if (root.mode !== "region") dragKind = "";
+                else if (root.stage === "listo") dragKind = handleAt(m.x, m.y) || "nuevo";
+                else dragKind = "nuevo";
             }
             onPositionChanged: m => {
-                if (!pressed || !drag) return;
+                if (!pressed || !dragKind) return;
                 const dx = m.x - p0.x, dy = m.y - p0.y, r = r0, W = width, H = height;
                 if (!moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
                 moved = true;
@@ -525,20 +525,20 @@ Scope {
                     const bx = Math.min(W, Math.max(x1, x2)), by = Math.min(H, Math.max(y1, y2));
                     return Qt.rect(ax, ay, bx - ax, by - ay);
                 };
-                if (drag === "nuevo") { root.stage = "elegir"; root.sel = box(p0.x, p0.y, m.x, m.y); }
-                else if (drag === "mover") root.sel = Qt.rect(Math.max(0, Math.min(W - r.width, r.x + dx)), Math.max(0, Math.min(H - r.height, r.y + dy)), r.width, r.height);
+                if (dragKind === "nuevo") { root.stage = "elegir"; root.sel = box(p0.x, p0.y, m.x, m.y); }
+                else if (dragKind === "mover") root.sel = Qt.rect(Math.max(0, Math.min(W - r.width, r.x + dx)), Math.max(0, Math.min(H - r.height, r.y + dy)), r.width, r.height);
                 else {
                     let x1 = r.x, y1 = r.y, x2 = r.x + r.width, y2 = r.y + r.height;
-                    if (drag.includes("t")) y1 += dy;
-                    if (drag.includes("b")) y2 += dy;
-                    if (drag.includes("l")) x1 += dx;
-                    if (drag.includes("r")) x2 += dx;
+                    if (dragKind.includes("t")) y1 += dy;
+                    if (dragKind.includes("b")) y2 += dy;
+                    if (dragKind.includes("l")) x1 += dx;
+                    if (dragKind.includes("r")) x2 += dx;
                     root.sel = box(x1, y1, x2, y2);
                 }
             }
             onReleased: m => {
                 if (m.button !== Qt.LeftButton) return;
-                const d = drag; drag = "";
+                const d = dragKind; dragKind = "";
                 if (moved) {
                     moved = false;
                     if (root.hasSel()) root.stage = "listo";
@@ -646,7 +646,7 @@ Scope {
                 color: Qt.rgba(0, 0, 0, 0.7)
                 Txt {
                     id: coordTxt; anchors.centerIn: parent; size: 11; color: "white"; tabular: true
-                    text: picker.moved && picker.drag === "nuevo"
+                    text: picker.moved && picker.dragKind === "nuevo"
                           ? Math.round(root.sel.width * root.dpr) + " × " + Math.round(root.sel.height * root.dpr)
                           : Math.round(picker.mouseX * root.dpr) + ", " + Math.round(picker.mouseY * root.dpr)
                 }

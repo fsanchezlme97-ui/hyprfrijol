@@ -19,7 +19,7 @@ con clave), wallhavenSorting ("toplist" | "random" | "date_added"…), wallhaven
 Clave: $WALLHAVEN_API_KEY → llavero (secret-tool service=hyprfrijol provider=wallhaven) → ~/.config/hyprfrijol/secrets/
 wallhaven.key (600). Nunca va en settings.json ni en la línea de órdenes. Caché: ~/.cache/hyprfrijol/wallhaven.
 """
-import json, os, re, shutil, subprocess, sys, time, pathlib, random, urllib.request, urllib.parse, urllib.error
+import json, os, re, shutil, subprocess, sys, pathlib, random, urllib.request, urllib.parse, urllib.error
 for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
     if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 

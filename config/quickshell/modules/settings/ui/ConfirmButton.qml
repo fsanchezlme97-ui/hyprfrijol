@@ -9,7 +9,7 @@ Rectangle {
     id: root
     property string text: ""
     property string confirmText: "¿Seguro? Sí"
-    property bool enabled: true
+    // enabled: el de Item (antes se redeclaraba y tapaba al de Qt; mismo valor por defecto)
     property real h: 30
     property bool armed: false
     signal confirmed()

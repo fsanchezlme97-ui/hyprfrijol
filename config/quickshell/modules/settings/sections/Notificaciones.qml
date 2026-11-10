@@ -51,7 +51,7 @@ RowLayout {
     }
     function iconFor(a): string {
         const e = a.entry ? DesktopEntries.heuristicLookup(a.entry) : DesktopEntries.heuristicLookup(a.name || a.key);
-        const n = e?.icon || a.icon || "";
+        const n = e?.icon || (/^(file:\/\/)?\/(run|tmp)\//.test(a.icon || "") ? "" : a.icon) || "";   // temporales: ver NotifRules.tempPath
         if (!n) return "";
         if (n.startsWith("/") || n.startsWith("file:") || n.startsWith("image:")) return n.startsWith("/") ? "file://" + n : n;
         return Quickshell.iconPath(n, true) || "";

@@ -19,7 +19,7 @@ devicesNotify (aviso con «Abrir» y «Expulsar»).
 Pruebas: HF_DEVICES_LSBLK=<json de lsblk -J> sustituye a lsblk (watch vigila el archivo) y HF_DEVICES_DRYRUN=1
 imprime las órdenes de udisksctl en lugar de ejecutarlas.
 """
-import json, os, re, shutil, subprocess, sys, threading, time, pathlib, select
+import json, os, re, shutil, subprocess, sys, threading, time, pathlib
 for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
     if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 

@@ -12,7 +12,7 @@ Rectangle {
     property string hint: ""
     property string kind: "tonal"
     property bool active: false
-    property bool enabled: true
+    // enabled: el de Item (antes se redeclaraba y tapaba al de Qt; mismo valor por defecto)
     property real h: 30
     property real padX: 12
     property real textSize: 12.5

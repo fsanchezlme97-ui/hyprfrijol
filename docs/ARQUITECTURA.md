@@ -29,7 +29,7 @@ Todo vive en `config/quickshell/`. Cada vista del diseño es un módulo en `modu
 | Spotlight | `spotlight` | `modules/spotlight` | `DesktopEntries`, `fd`, `qalc` |
 | Ajustes rápidos | `ajustes` | `modules/quicksettings` | nmcli, `Bluetooth`, `UPower`, `PowerProfiles`, hyprsunset |
 | Notificaciones y OSD | `notificaciones` | `Notifs.qml`, `modules/notifications`, `modules/osd` | `NotificationServer`, `Pipewire` |
-| Panel lateral (IA, WhatsApp, YouTube, Pinterest) y PiP | `ia` | `modules/sidepanel`, `modules/pip` | `hf-ai` (Claude Code / Ollama / API), `hf-webapp` (QtWebEngine), `hf-mcp` |
+| Panel lateral (asistente de IA), web apps y PiP | `ia` | `modules/sidepanel`, `modules/pip` | `hf-ai` (Claude Code / Ollama / API), `hf-webapp` (QtWebEngine), `hf-mcp` |
 | Vista general, Alt+Tab, Snap | `vista`, `alttab`, `snap` | `modules/overview`, `alttab`, `snap` | `ScreencopyView`, `services/HyprClients.qml` |
 | Dock (modo flotante: minimizar, maximizar, ocultación inteligente) y escritorio ordenado | — | `modules/desktop` | `FolderListModel` |
 | Widgets | `widgets` | `modules/widgets` | Open-Meteo, Moonraker/OctoPrint, `/proc` |

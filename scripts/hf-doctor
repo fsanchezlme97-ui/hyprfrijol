@@ -210,14 +210,22 @@ if in_session; then
 fi
 # Volcados de memoria (systemd-coredump): cuántos y de qué programas en la última semana. Cientos del mismo programa
 # delatan un fallo que se repite (p. ej. un portal que se cae al cerrar cada sesión de prueba) y llenan el disco.
+# Se avisa por los de ESTE arranque (los de días atrás, ya arreglados, solo se mencionan): antes una ráfaga vieja de
+# pruebas dejaba el aviso puesto una semana entera.
 if have coredumpctl && [ -d /var/lib/systemd/coredump ]; then
-  cd_bytes="$(du -sb /var/lib/systemd/coredump 2>/dev/null | cut -f1)"; cd_bytes="${cd_bytes:-0}"
-  cd_top="$(coredumpctl list --json=short --since=-7d --no-pager 2>/dev/null | jq -r 'group_by(.exe) | map({n: length, e: (.[0].exe | split("/") | last)}) | sort_by(-.n) | .[:3] | map("\(.e) ×\(.n)") | join(", ")' 2>/dev/null)"
-  cd_n="$(coredumpctl list --json=short --since=-7d --no-pager 2>/dev/null | jq 'length' 2>/dev/null)"; cd_n="${cd_n:-0}"
-  cd_mb=$((cd_bytes / 1048576))
-  if [ "$cd_n" -ge 50 ] || [ "$cd_mb" -ge 1024 ]; then
-    add warn "Volcados" "$cd_n en 7 días, $cd_mb MB en disco${cd_top:+ · más: $cd_top} (verlos: coredumpctl list · liberar: sudo rm /var/lib/systemd/coredump/core.*)"
-  elif [ "$cd_n" -gt 0 ]; then add info "Volcados" "$cd_n en 7 días, $cd_mb MB${cd_top:+ · $cd_top}"
+  cd_bytes="$(du -sb /var/lib/systemd/coredump 2>/dev/null | cut -f1)"; cd_bytes="${cd_bytes:-0}"; cd_mb=$((cd_bytes / 1048576))
+  cd_top() { jq -r 'group_by(.exe) | map({n: length, e: (.[0].exe | split("/") | last)}) | sort_by(-.n) | .[:3] | map("\(.e) ×\(.n)") | join(", ")' 2>/dev/null; }
+  cd_week="$(coredumpctl list --json=short --since=-7d --no-pager 2>/dev/null)"; [ -n "$cd_week" ] || cd_week='[]'
+  cd_boot="$(coredumpctl list --json=short --since="$(uptime -s 2>/dev/null || echo today)" --no-pager 2>/dev/null)"; [ -n "$cd_boot" ] || cd_boot='[]'
+  cd_n="$(jq length <<<"$cd_week" 2>/dev/null)"; cd_n="${cd_n:-0}"
+  cd_b="$(jq length <<<"$cd_boot" 2>/dev/null)"; cd_b="${cd_b:-0}"
+  cd_free="liberar: sudo rm /var/lib/systemd/coredump/core.*"
+  if [ "$cd_b" -ge 10 ]; then
+    add warn "Volcados" "$cd_b desde que encendiste · $(cd_top <<<"$cd_boot") (verlos: coredumpctl list)"
+  elif [ "$cd_mb" -ge 1024 ]; then
+    add warn "Volcados" "$cd_mb MB en disco ($cd_free)"
+  elif [ "$cd_n" -gt 0 ]; then
+    add info "Volcados" "$cd_b desde que encendiste, $cd_n en 7 días ($(cd_top <<<"$cd_week")), $cd_mb MB · $cd_free"
   else add ok "Volcados" "ninguno en 7 días"; fi
 fi
 

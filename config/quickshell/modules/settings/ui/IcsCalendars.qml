@@ -13,7 +13,7 @@ Section {
     id: root
     title: "Calendarios (.ics)"
     // Colores: tokens del tema y algunos tonos fijos (como los de Google Calendar)
-    readonly property var palette: ["p", "ter", "tv", "danger", "#4F8EF7", "#3FB27F", "#F2A33A", "#B07CE8"]
+    readonly property var swatches: ["p", "ter", "tv", "danger", "#4F8EF7", "#3FB27F", "#F2A33A", "#B07CE8"]
     readonly property var cals: Events.calendars
     property string newColor: ""
     function save(list) { Settings.set("calendarIcs", list.map(c => ({ url: c.url, name: c.name, color: c.color }))); }
@@ -22,7 +22,7 @@ Section {
     function add() {
         const u = urlField.text.trim();
         if (!u || cals.some(c => c.url === u)) return;
-        save(cals.concat([{ url: u, name: nameField.text.trim() || Events.calName(u), color: newColor || palette[cals.length % palette.length] }]));
+        save(cals.concat([{ url: u, name: nameField.text.trim() || Events.calName(u), color: newColor || swatches[cals.length % swatches.length] }]));
         urlField.text = ""; nameField.text = ""; newColor = "";
     }
     readonly property bool validUrl: /^(https?|webcal):\/\/\S+$/i.test(urlField.text.trim()) || /^(~|\/|file:\/\/)\S/.test(urlField.text.trim())
@@ -94,7 +94,7 @@ Section {
             ColorSwatches {
                 visible: cal.picking
                 Layout.leftMargin: 28
-                colors: root.palette
+                colors: root.swatches
                 current: cal.modelData.color
                 onPicked: c => { root.patch(cal.index, { color: c }); cal.picking = false; }
             }
@@ -117,8 +117,8 @@ Section {
         spacing: 8
         Field { id: nameField; Layout.fillWidth: true; icon: "edit"; placeholder: "Nombre (opcional)"; onAccepted: if (root.validUrl) root.add() }
         ColorSwatches {
-            colors: root.palette
-            current: root.newColor || root.palette[root.cals.length % root.palette.length]
+            colors: root.swatches
+            current: root.newColor || root.swatches[root.cals.length % root.swatches.length]
             onPicked: c => root.newColor = c
         }
         Button { kind: "primary"; text: "Añadir"; enabled: root.validUrl; onClicked: root.add() }

@@ -7,7 +7,7 @@ Rectangle {
     id: root
     property string text: ""
     property string kind: "outline"
-    property bool enabled: true
+    // enabled: el de Item (antes se redeclaraba y tapaba al de Qt; mismo valor por defecto)
     property real h: 30
     signal clicked()
     implicitHeight: h

@@ -5,7 +5,7 @@ import "../../.."
 Rectangle {
     id: root
     property bool checked: false
-    property bool enabled: true
+    // enabled: el de Item (antes se redeclaraba y tapaba al de Qt; mismo valor por defecto)
     signal toggled(bool value)
     implicitWidth: 44
     implicitHeight: 26

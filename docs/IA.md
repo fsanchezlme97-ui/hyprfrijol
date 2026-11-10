@@ -1,7 +1,7 @@
 # IA en hyprfrijol
 
-El asistente vive en el **panel lateral** (`SUPER + A`, vista `ia`), pestaña **IA**. Junto a ella están
-WhatsApp, YouTube y Pinterest como apps web. Todo lo que la IA hace en el escritorio pasa por un
+El asistente vive en el **panel lateral** (`SUPER + A`, vista `ia`), solo con el asistente (desde la 0.8.8 las apps web
+ya no van en el panel: se abren en su ventana o en el navegador, ver «Apps web» abajo). Todo lo que la IA hace en el escritorio pasa por un
 esquema fijo de acciones que **tú apruebas** antes de aplicarlas, y que se pueden deshacer.
 
 **Fijar** (chincheta de la cabecera · Ajustes › Panel lateral y PiP › «Fijar el panel», `sidePanelPinned`): el panel
@@ -153,22 +153,22 @@ el asistente no puede crearse órdenes que ejecuten comandos.
 
 El panel muestra el aviso «Abierta en Claude Desktop / Se envió la conversación y el contexto que elegiste».
 
-## Apps web (WhatsApp, YouTube, Pinterest)
+## Apps web (WhatsApp, YouTube, Pinterest…)
 
-QtWebEngine no puede cargarse dentro de Quickshell (0.3.x), así que cada app es una ventana `qml6`
-(clase `hf-webapp.qml6`, título `WhatsApp`/`YouTube`/`Pinterest`, con `(n)` si hay sin leer) que el panel
-acopla debajo de sus pestañas: flotante, fijada, 400 px. Al cerrar el panel se guardan en el espacio
-especial `hfweb` y siguen vivas (las notificaciones web llegan como avisos del sistema).
+Desde la 0.8.8 el panel lateral es solo del asistente. Cada app web se abre según su **modo** (Ajustes › Web apps):
+`ventana` (ventana propia integrada, `hf-webapp`, QtWebEngine: QtWebEngine no puede cargarse dentro de Quickshell 0.3.x,
+así que es una ventana `qml6` aparte, clase `hf-webwin-<clave>.qml6`) o `navegador` (navegador predeterminado en modo
+app, el predeterminado). El modo antiguo `panel` se lee como `navegador` (hf-migrate, paso 6, lo reescribe).
 
-- Sesiones guardadas en `~/.local/share/hyprfrijol/webapps/<wa|yt|pin>` (la primera vez hay que iniciar sesión).
-- **Desacoplar** (icono ↗ de la cabecera) la deja como ventana normal; vuelve con «Acoplar al panel».
-- **PiP** (YouTube): deja solo el vídeo en una ventana pequeña en la esquina de `pipCorner`, con cerrar,
-  pausa y «Volver al panel». `hf-webapp cmd yt toggle|pause|back|reload|home|zoom <f>|external|url <dirección>` la controla.
+- Sesiones guardadas en `~/.local/share/hyprfrijol/webapps/<clave>` (la primera vez hay que iniciar sesión).
+- Las notificaciones web llegan como avisos del sistema; «Cerrar si no la usas» (`unload`) la descarga tras un rato.
+- **PiP** (YouTube): deja solo el vídeo en una ventana pequeña en la esquina de `pipCorner`, con cerrar y pausa.
+  `hf-webapp cmd yt toggle|pause|back|reload|home|zoom <f>|external|url <dirección>` la controla.
 - `hf-webapp stop` las cierra todas.
 
 ### Ajustes por web app (Ajustes › Web apps)
 
-- **Modo**: `panel` (pestaña del panel lateral) · `ventana` (ventana propia integrada, clase `hf-webwin-<clave>.qml6`) ·
+- **Modo**: `ventana` (ventana propia integrada, clase `hf-webwin-<clave>.qml6`) ·
   `navegador` (navegador predeterminado en modo app). Catálogo de populares con iconos Papirus en
   `config/quickshell/services/webapps-catalog.json` (lo leen `services/WebApps.qml` y `hf-webapp`).
 - **Se adapta al ancho**: `layout: "movil"` pide la web de móvil (agente de usuario de Android y `mobileHost`, p. ej.

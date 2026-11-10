@@ -7,7 +7,7 @@
 // Si el fondo es un vídeo que reproduce mpvpaper, esta capa se oculta.
 // Ajustes › Fondos: wallpaperTransition ("fundido" | "ninguna"), wallpaperNoFullscreen (la rotación espera a que no
 // haya nada en pantalla completa), wallpaperPauseOn (pausa el fondo en movimiento: fullscreen | bateria | maximizada |
-// cubierto (alguna ventana en mosaico: casi no se ve) | juego | foco). wallpaperMotion / wallpaperMotionKind / wallpaperFps los aplica hf-wallpaper.
+// cubierto (las ventanas tapan ≥ 85 % de cada pantalla, en mosaico o flotantes) | juego | foco). wallpaperMotion / wallpaperMotionKind / wallpaperFps los aplica hf-wallpaper.
 import QtQuick
 import QtQuick.Effects
 import Quickshell
@@ -117,8 +117,27 @@ PanelWindow {
     readonly property var shownClients: HyprClients.clients.filter(c => visibleWs.includes(c.workspace?.id))
     readonly property bool anyFullscreen: shownClients.some(c => ((c.fullscreen ?? 0) & 2) !== 0)
     readonly property bool anyMaximized: shownClients.some(c => ((c.fullscreen ?? 0) & 1) !== 0)
-    // Cubierto: alguna ventana en mosaico en un espacio visible (el mosaico llena la pantalla; solo asoman los huecos)
-    readonly property bool anyTiled: shownClients.some(c => !c.floating && !c.hidden)
+    // Cubierto: en TODAS las pantallas (mpvpaper es uno para todas) las ventanas del espacio visible tapan al menos el
+    // 85 % de la zona útil, sean en mosaico o flotantes (el escritorio flotante también cuenta). Se mide con una rejilla
+    // de 16×10 puntos: barato y no cuenta dos veces lo que se solapa. Antes bastaba una ventana en mosaico, y en el
+    // modo flotante nunca se pausaba.
+    readonly property bool covered: {
+        const mons = HyprClients.monitors;
+        if (!mons.length) return false;
+        return mons.every(m => {
+            const r = HyprClients.usableRect(m), ws = m.activeWorkspace?.id;
+            const cs = HyprClients.clients.filter(c => c.workspace?.id === ws || (c.pinned && c.monitor === m.id));
+            if (!cs.length || !(r.w > 0 && r.h > 0)) return false;
+            if (cs.some(c => (c.fullscreen ?? 0) !== 0)) return true;
+            const N = 16, M = 10;
+            let hit = 0;
+            for (let i = 0; i < N; i++) for (let j = 0; j < M; j++) {
+                const x = r.x + (i + 0.5) * r.w / N, y = r.y + (j + 0.5) * r.h / M;
+                if (cs.some(c => x >= c.at[0] && x < c.at[0] + c.size[0] && y >= c.at[1] && y < c.at[1] + c.size[1])) hit++;
+            }
+            return hit >= N * M * 0.85;
+        });
+    }
 
     // ── Pausar el fondo en movimiento (solo la primera pantalla; mpvpaper es uno para todas) ──
     readonly property var pauseOn: {
@@ -130,7 +149,7 @@ PanelWindow {
     readonly property bool paused: wp.video && (
         (pauseOn.includes("fullscreen") && anyFullscreen) ||
         (pauseOn.includes("maximizada") && anyMaximized) ||
-        (pauseOn.includes("cubierto") && anyTiled) ||
+        (pauseOn.includes("cubierto") && covered) ||
         (pauseOn.includes("bateria") && Battery.onBattery) ||
         (pauseOn.includes("juego") && anyGame) ||
         (pauseOn.includes("foco") && Shell.focusMode))

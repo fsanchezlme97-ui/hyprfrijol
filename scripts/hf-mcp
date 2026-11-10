@@ -149,7 +149,7 @@ def annotations(name):
 
 
 def handle(msg):
-    mid, method, params = msg.get("id"), msg.get("method"), msg.get("params") or {}
+    method, params = msg.get("method"), msg.get("params") or {}
     if method == "initialize":
         return {"protocolVersion": params.get("protocolVersion") or PROTOCOL,
                 "capabilities": {"tools": {"listChanged": False}},

@@ -59,7 +59,7 @@ cleanup() {
     [ -n "${SIG:-}" ] && rm -rf "${XDG_RUNTIME_DIR:-/tmp}/hf-webapp-$SIG"   # web apps de la prueba (hf-webapp con HF_NESTED)
     if [ -n "$bus" ]; then
       for q in $(pgrep -u "$(id -u)"); do
-        on_bus "$q" && kill "$q" 2>/dev/null
+        on_bus "$q" && { kill "$q"; kill -CONT "$q"; } 2>/dev/null   # CONT: un mpvpaper pausado (SIGSTOP) no atiende TERM
       done
     fi
   fi

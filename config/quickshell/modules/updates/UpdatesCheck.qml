@@ -19,7 +19,8 @@ Scope {
     }
     Process {
         id: bgCheck
-        command: [Paths.script("hf-updates"), "check"]
+        // En segundo plano y con la menor prioridad: checkupdates, paru -Qua, flatpak y fwupd a la vez se notaban
+        command: ["nice", "-n", "19", Paths.script("hf-updates"), "check"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let r = {};

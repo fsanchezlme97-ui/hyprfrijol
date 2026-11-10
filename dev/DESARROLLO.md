@@ -38,6 +38,14 @@ dev/try.sh -s 'estilo=flat colorMode=elegir palette=claro' spotlight   # ajustes
 ```
 Imprime avisos/errores de Quickshell: deben salir vacíos. Compara la captura con `design/capturas/`.
 
+## Antes de publicar
+```bash
+dev/lint.sh     # segundos: bash -n, python, luac, JSON, shellcheck y pyflakes (si están; la cabecera dice cómo)
+dev/check.sh    # ~2 min: sesión anidada con HOME falso, abre las 18 vistas y todas las secciones de Ajustes y
+                # falla si Quickshell avisa de algún error nuevo (dice en qué vista salió). -v: todos los avisos
+```
+Los dos salen con 1 si algo falla.
+
 ## Módulos
 Un módulo = carpeta `config/quickshell/modules/<nombre>/` con su `.qml` principal (normalmente un `Overlay`
 con `view: "<vista>"`) y sus piezas. Se registra en `modules/Modules.qml`.

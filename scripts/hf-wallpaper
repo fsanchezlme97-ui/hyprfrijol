@@ -89,6 +89,8 @@ first_frame() {   # first_frame <vídeo> <salida> [alto]
   ffmpeg -y -loglevel error -i "$1" -frames:v 1 ${3:+-vf "scale=-2:$3"} "$2" 2>/dev/null && return 0
   command -v magick >/dev/null && magick "$1[0]" ${3:+-thumbnail "x$3"} "$2" 2>/dev/null
 }
+# El shell pausa el reproductor con SIGSTOP (wallpaperPauseOn): un proceso detenido no atiende SIGTERM hasta que se
+# reanuda, así que cada kill va seguido de SIGCONT (si no, quedaba un mpvpaper parado para siempre).
 # Para el reproductor del fondo animado de ESTA sesión (no los de otras sesiones gráficas ni de otros usuarios)
 stop_motion() {   # stop_motion [pid que se conserva …]  (el reproductor nuevo, al cambiar de vídeo a vídeo)
   local p w keep=" $* "
@@ -103,7 +105,7 @@ stop_motion() {   # stop_motion [pid que se conserva …]  (el reproductor nuevo
     [[ "$keep" == *" $p "* ]] || { ours "$p" 'hf-wallpaper _motion' && kill "$p" 2>/dev/null || true; }
   done
   for p in ${OLD_PID-$(cat "$STATE/motion.pid" 2>/dev/null)}; do
-    [[ "$keep" == *" $p "* ]] || { ours "$p" '^(mpvpaper|linux-wallpaperengine)|/(mpvpaper|linux-wallpaperengine) ' && kill "$p" 2>/dev/null || true; }
+    [[ "$keep" == *" $p "* ]] || { ours "$p" '^(mpvpaper|linux-wallpaperengine)|/(mpvpaper|linux-wallpaperengine) ' && { kill "$p"; kill -CONT "$p"; } 2>/dev/null || true; }
   done
   [ -n "${keep// /}" ] || rm -f "$STATE/motion.watch" "$STATE/motion.pid"
   # Los lanzados por versiones anteriores (sin pid guardado): solo los de nuestra pantalla Wayland
@@ -111,7 +113,7 @@ stop_motion() {   # stop_motion [pid que se conserva …]  (el reproductor nuevo
     # Misma instancia de Hyprland (la firma es única; WAYLAND_DISPLAY se repite en sesiones anidadas/de prueba)
     w="$(tr '\0' '\n' 2>/dev/null < "/proc/$p/environ" | sed -n 's/^HYPRLAND_INSTANCE_SIGNATURE=//p')"
     [[ "$keep" == *" $p "* ]] && continue
-    [ -n "$w" ] && [ "$w" = "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && kill "$p" 2>/dev/null || true
+    [ -n "$w" ] && [ "$w" = "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && { kill "$p"; kill -CONT "$p"; } 2>/dev/null || true
   done
 }
 # Los tuyos; si no hay ninguno, los de hyprfrijol. "list all" = los dos.
@@ -169,7 +171,7 @@ thumb_of() {   # ruta de la miniatura (se genera si falta o está desactualizada
   if ! thumb_fresh "$f" "$t"; then
     if is_motion "$f"; then first_frame "$f" "$t" 480 || true
     # jpeg:size: libjpeg decodifica ya reducido (un 4K a la mitad), mucho más rápido que leerlo entero
-    else magick -define jpeg:size=1708x960 "$f[0]" -auto-orient -thumbnail 'x480^' -quality 85 "$t" 2>/dev/null || true; fi
+    else magick -define jpeg:size=1708x960 "${f}[0]" -auto-orient -thumbnail 'x480^' -quality 85 "$t" 2>/dev/null || true; fi
   fi
   printf '%s' "$t"
 }
@@ -181,7 +183,7 @@ info_of() {   # info_of <fondo> <miniatura>
     [ -s "$t" ] || return 0
     if is_motion "$f"; then
       res="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$f" 2>/dev/null | head -n1)"
-    else res="$(magick identify -ping -format '%wx%h' "$f[0]" 2>/dev/null)"; fi
+    else res="$(magick identify -ping -format '%wx%h' "${f}[0]" 2>/dev/null)"; fi
     cols="$(magick "$t" -scale '64x36!' -colors 6 -depth 8 -format '%c' histogram:info:- 2>/dev/null \
             | sort -rn | grep -o '#[0-9A-Fa-f]\{6\}' | head -n4 | tr '\n' ' ')"
     printf '%s %s\n' "${res:-?}" "$cols" > "$i.tmp" && mv "$i.tmp" "$i"
@@ -243,6 +245,9 @@ case "${1:-next}" in
              [ "$first" = 1 ] || sleep 2
              first=0
              [ "$(current)" = "$F" ] || exit 0                     # ya hay otro fondo
+             # La sesión se cerró (mpvpaper se va con ella): nada que relanzar, y sin esto a los 5 intentos marcaba el
+             # fondo como «sin vídeo»
+             timeout 3 hyprctl version >/dev/null 2>&1 || exit 0
              setsid mpvpaper -o "no-audio loop panscan=1.0 hwdec=auto-safe vf=fps=$FPS${SOCK:+ input-ipc-server=$SOCK}" '*' "$PLAY" >/dev/null 2>&1 &
              MP=$!; echo "$MP" > "$STATE/motion.pid"; started=$SECONDS
              wait "$MP" 2>/dev/null || true
@@ -301,11 +306,15 @@ IMG="$FILE"; VIDEO=false; MOTION=""
 if is_scene "$FILE"; then
   IMG="$(scene_preview "$FILE")"
   [ -n "$IMG" ] || { echo "La escena $FILE no tiene imagen de vista previa" >&2; exit 1; }
-  case "${IMG,,}" in *.gif|*.mp4|*.webm) ffmpeg -y -loglevel error -i "$IMG" -frames:v 1 "$STATE/video-frame.png" && IMG="$STATE/video-frame.png" ;; esac
+  case "${IMG,,}" in *.gif|*.mp4|*.webm) rm -f "$STATE/video-frame.src"; ffmpeg -y -loglevel error -i "$IMG" -frames:v 1 "$STATE/video-frame.png" && IMG="$STATE/video-frame.png" ;; esac
   [ "$NO_MOTION" = 0 ] && [ "$(setting wallpaperMotionKind video)" = escena ] && command -v linux-wallpaperengine >/dev/null && MOTION=escena
 elif is_motion "$FILE"; then
   IMG="$STATE/video-frame.png"
-  first_frame "$FILE" "$IMG"
+  # Mismo vídeo que la última vez (al iniciar sesión, casi siempre): el fotograma ya está. Sacarlo de un 4K cuesta
+  # ~1 s de CPU y escribe un PNG de varios MB en cada arranque.
+  FSTAMP="$(stat -Lc '%n %s %Y' -- "$FILE" 2>/dev/null)"
+  if [ -s "$IMG" ] && [ -n "$FSTAMP" ] && [ "$(cat "$STATE/video-frame.src" 2>/dev/null)" = "$FSTAMP" ]; then :
+  else first_frame "$FILE" "$IMG" && printf '%s' "$FSTAMP" > "$STATE/video-frame.src"; fi
   if [ "$NO_MOTION" = 0 ] && command -v mpvpaper >/dev/null; then MOTION=video
   elif [ "$NO_MOTION" = 0 ]; then
     echo "Para que se mueva instala mpvpaper (Ajustes › Fondos de pantalla); de momento queda quieto." >&2
@@ -375,8 +384,11 @@ fi
 # Colores
 if command -v matugen >/dev/null; then
   sed -e "s#@ROOT@#$ROOT#g" -e "s#@STATE@#$STATE#g" "$ROOT/config/matugen/config.toml" > "$STATE/matugen.toml"
-  if matugen image "$IMG" -c "$STATE/matugen.toml" -m dark -t "${HF_SCHEME:-scheme-tonal-spot}" --source-color-index 0 >"$STATE/matugen.log" 2>&1; then
-    :
+  # Misma imagen, esquema y plantilla que la última vez (restore al iniciar sesión): la paleta ya está hecha
+  MSTAMP="$(stat -Lc '%n %s %Y' -- "$IMG" "$ROOT/config/matugen/config.toml" "$ROOT/config/matugen/templates/colors.json" 2>/dev/null | tr '\n' ' ')${HF_SCHEME:-scheme-tonal-spot}"
+  if [ -s "$STATE/colors.json" ] && [ "$(cat "$STATE/matugen.src" 2>/dev/null)" = "$MSTAMP" ]; then :
+  elif matugen image "$IMG" -c "$STATE/matugen.toml" -m dark -t "${HF_SCHEME:-scheme-tonal-spot}" --source-color-index 0 >"$STATE/matugen.log" 2>&1; then
+    printf '%s' "$MSTAMP" > "$STATE/matugen.src"
   else
     echo "matugen falló, mira $STATE/matugen.log" >&2
   fi

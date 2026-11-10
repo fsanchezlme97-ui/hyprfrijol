@@ -14,7 +14,7 @@ Item {
     property string key: ""
     property bool def: false
     property bool checked: key !== "" ? !!Settings.get(key, def) : false
-    property bool enabled: true
+    // enabled: el de Item (antes se redeclaraba y tapaba al de Qt; mismo valor por defecto)
     property bool separator: true
     property alias trailing: extra.data
     signal toggled(bool value)

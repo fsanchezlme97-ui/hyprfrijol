@@ -12,6 +12,9 @@ import "../.."
 Scope {
     id: root
     property var seen: ({})       // clave → { name, entry, icon, last, count }
+    // Iconos que son archivos temporales (p. ej. «notify-send -i captura.png» de las capturas, en /run/user/…): no
+    // sirven como icono de la app y desaparecen al reiniciar (el aviso «Could not load icon» en Ajustes › Notificaciones)
+    function tempPath(p): bool { return /^(file:\/\/)?\/(run|tmp)\//.test(String(p ?? "")); }
     readonly property var rules: Settings.get("notifyApps", ({}))
 
     function keyOf(n): string { return String(n.appName || n.desktopEntry || "").trim().toLowerCase(); }
@@ -25,7 +28,7 @@ Scope {
         if (k) {
             const s = Object.assign({}, seen);
             const prev = s[k] ?? { count: 0 };
-            s[k] = { name: n.appName || n.desktopEntry, entry: n.desktopEntry || prev.entry || "", icon: n.appIcon || (String(n.image || "").startsWith("image://icon/") ? String(n.image) : "") || prev.icon || "",
+            s[k] = { name: n.appName || n.desktopEntry, entry: n.desktopEntry || prev.entry || "", icon: (root.tempPath(n.appIcon) ? "" : n.appIcon) || (String(n.image || "").startsWith("image://icon/") ? String(n.image) : "") || (root.tempPath(prev.icon) ? "" : prev.icon) || "",
                      last: Date.now(), count: (prev.count || 0) + 1 };
             seen = s;
             saveT.restart();

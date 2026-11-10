@@ -37,7 +37,7 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 | Barra abajo / arriba / izquierda, fija o flotante | `quickshell/bar/` |
 | Spotlight (apps, archivos, calculadora, comandos, ventanas) | `modules/spotlight` |
 | Ajustes rápidos, notificaciones con respuesta, OSD | `modules/quicksettings`, `notifications`, `osd` |
-| Panel lateral con IA + WhatsApp / YouTube / Pinterest (Atrás / Adelante, cierre opcional de las que no usas), PiP mínimo | `modules/sidepanel`, `pip` — ver `docs/IA.md` |
+| Panel lateral con el asistente de IA (¼ de pantalla); web apps (WhatsApp, YouTube…) en ventana propia o en el navegador, PiP mínimo | `modules/sidepanel`, `pip` — ver `docs/IA.md` |
 | Vista general, Alt+Tab, Snap, dock y escritorio ordenado, widgets | `modules/overview`, `alttab`, `snap`, `desktop`, `widgets` |
 | Selector de fondos (por monitor, por hora, mono), captura sobre la pantalla congelada (lupa, ventanas, fijar, OCR con cajas, anotación, IA) / grabación, selector de color (HEX · RGB · HSL · OKLCH, historial) | `modules/wallpapers`, `capture`, `colorpicker` |
 | Portapapeles y emojis en Spotlight, agenda (con `.ics`), centro de actualizaciones con punto de restauración | `modules/spotlight`, `agenda`, `updates` |
@@ -61,7 +61,7 @@ Capturas reales a 1920×1080 de una sesión de HyprFrijol 0.8.6 con la configura
 | ![Centro de control](docs/capturas/centro-de-control.webp) | ![Spotlight con resultados](docs/capturas/spotlight.webp) |
 | **Centro de control** · ajustes rápidos, avisos, agenda y relojes del mundo en un solo panel | **Spotlight** · apps, ajustes, acciones, archivos, calculadora, IA y web desde un buscador |
 | ![Asistente de IA en el panel lateral](docs/capturas/asistente-ia.webp) | ![Vista general de los espacios](docs/capturas/vista-general.webp) |
-| **Asistente de IA** · panel lateral que cambia el escritorio con tu aprobación, junto a tus web apps | **Vista general** · espacios de trabajo con sus ventanas y buscador |
+| **Asistente de IA** · panel lateral que cambia el escritorio con tu aprobación | **Vista general** · espacios de trabajo con sus ventanas y buscador |
 | ![Selector de fondos](docs/capturas/selector-de-fondos.webp) | ![Pantalla de bloqueo](docs/capturas/bloqueo.webp) |
 | **Selector de fondos** · vista previa al instante (también vídeo), por pantalla o según la hora | **Bloqueo** · reloj, tu foto y tu fondo, con contraseña o huella |
 | ![Ajustes › Apariencia](docs/capturas/ajustes-apariencia.webp) | ![Ajustes › Web apps](docs/capturas/ajustes-webapps.webp) |
@@ -207,7 +207,7 @@ Son los mismos que en illogical-impulse (misma tecla, misma función), más los 
 |---|---|
 | Super (pulsar y soltar) · Super + Espacio | Spotlight |
 | Super + Tab | Vista general |
-| Super + A (o B / O) | Panel lateral: IA, WhatsApp, YouTube, Pinterest |
+| Super + A (o B / O) | Panel lateral del asistente de IA |
 | Super + N | Ajustes rápidos (con notificaciones) |
 | Ctrl + Super + N · Super + Alt + N | Centro de notificaciones · no molestar |
 | Super + V · Super + . | Spotlight en modo portapapeles · emojis |

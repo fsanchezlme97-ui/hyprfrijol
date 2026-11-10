@@ -113,7 +113,7 @@ RowLayout {
         property string label: ""
         property string sub: ""
         property string button: "Borrar"
-        property bool enabled: true
+        // enabled: el de Item (antes se redeclaraba y tapaba al de Qt; mismo valor por defecto)
         signal go()
         Layout.fillWidth: true
         Layout.topMargin: 2

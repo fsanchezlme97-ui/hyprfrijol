@@ -59,7 +59,7 @@ ColumnLayout {
     // con código, gráficos o imágenes la burbuja usa todo el ancho
     readonly property bool wide: parts.some(p => p.kind !== "md")
     // colores de las series: el acento del tema (si tiene color) y una paleta de tonos bien distintos entre sí
-    readonly property var palette: {
+    readonly property var seriesColors: {
         const base = Theme.light ? ["#3b6fd8", "#d9485f", "#2f9e6e", "#c98a1b", "#8a5cd1", "#1f9bb5"]
                                  : ["#7aa2f7", "#f7768e", "#9ece6a", "#e0af68", "#bb9af7", "#7dcfff"];
         return Theme.p.hslSaturation > 0.3 ? [Theme.p].concat(base.slice(0, 5)) : base;
@@ -224,7 +224,7 @@ ColumnLayout {
                     onPaint: {
                         const g = getContext("2d");
                         g.reset();
-                        const W = width, H = height, S = cb.series, L = cb.labels, pal = root.palette;
+                        const W = width, H = height, S = cb.series, L = cb.labels, pal = root.seriesColors;
                         g.font = Theme.px(10) + "px '" + Theme.font + "'";
                         g.textBaseline = "middle";
                         if (cb.type === "pie") {
@@ -310,7 +310,7 @@ ColumnLayout {
                             required property var modelData
                             required property int index
                             spacing: 5
-                            Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 9; height: 9; radius: 2; color: root.palette[index % root.palette.length] }
+                            Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 9; height: 9; radius: 2; color: root.seriesColors[index % root.seriesColors.length] }
                             Txt { text: modelData.name; size: 10.5; muted: true }
                         }
                     }
