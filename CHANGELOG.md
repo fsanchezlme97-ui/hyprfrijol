@@ -3,6 +3,11 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.50] — 2026-11-11
+
+### Arreglado
+- Con una gráfica NVIDIA con `nouveau` (aquí la GT 710), el vídeo de fondo de la pantalla de bloqueo, del selector de fondos y del login tiraba Quickshell (SIGBUS): VA-API decodificaba en la primera gráfica, la de nouveau, que no tiene firmware de vídeo. Al caerse con la pantalla bloqueada, Hyprland mostraba su pantalla de «Oops» del bloqueo caído. Ahora, si `nouveau` está cargado, Qt decodifica el vídeo por CPU (`QT_FFMPEG_DECODING_HW_DEVICE_TYPES=none`, en `env.lua` y en `greeter/hyprland-greeter.lua`).
+
 ## [0.8.49] — 2026-11-11
 
 ### Cambiado

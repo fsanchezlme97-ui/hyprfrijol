@@ -24,6 +24,11 @@ elseif qtTheme("KDEPlasmaPlatformTheme6.so") then
     hl.env("QT_QPA_PLATFORMTHEME", "kde")
     hl.env("XDG_MENU_PREFIX", "plasma-")
 end
+-- Vídeo de Qt (fondo del bloqueo y del selector) sin decodificar por hardware si hay una gráfica con nouveau: VA-API
+-- abre la primera (renderD128, aquí la GT 710), sin firmware de vídeo, y Quickshell muere con SIGBUS (y con él el
+-- bloqueo: Hyprland enseña su pantalla de «Oops» por el bloqueo caído).
+-- shortcut: apaga el hardware aunque nouveau no sea la primera gráfica; afinar si el vídeo por CPU pesa.
+if exists("/sys/module/nouveau/initstate") then hl.env("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "none") end
 -- Cursor: Bibata si está instalado
 for _, dir in ipairs({ "/usr/share/icons/Bibata-Modern-Classic", (os.getenv("HOME") or "") .. "/.local/share/icons/Bibata-Modern-Classic" }) do
     if exists(dir .. "/index.theme") then hl.env("XCURSOR_THEME", "Bibata-Modern-Classic"); HF.cursor = "Bibata-Modern-Classic"; break end

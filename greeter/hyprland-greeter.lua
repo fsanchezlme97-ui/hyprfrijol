@@ -10,6 +10,9 @@ hl.config({
     animations = { enabled = true },
     cursor = { inactive_timeout = 5 },
 })
+-- Vídeo de fondo sin decodificar por hardware si hay nouveau (ver config/hypr/frijol/env.lua: Quickshell muere con SIGBUS)
+local nv = io.open("/sys/module/nouveau/initstate", "r")
+if nv then nv:close(); hl.env("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "none") end
 hl.on("hyprland.start", function()
     -- Al iniciar la sesión elegida, Quickshell termina y cerramos este Hyprland
     hl.exec_cmd("qs -p /etc/greetd/quickshell; hyprctl dispatch 'hl.dsp.exit()'")
