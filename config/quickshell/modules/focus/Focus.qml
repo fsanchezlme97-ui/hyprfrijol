@@ -33,20 +33,15 @@ Scope {
     readonly property bool blocking: Pomodoro.running && Pomodoro.mode === "foco"
     readonly property var blockList: { const v = Settings.get("focusBlock", []); return Array.isArray(v) ? v : []; }
     readonly property var blockRules: ({
-        youtube:   { web: /^youtube/i },
-        pinterest: { web: /^pinterest/i },
-        whatsapp:  { web: /^whatsapp/i, cls: /^(whatsapp.*|whatsdesk|zapzap|com\.rtosta\.zapzap)$/i },
+        whatsapp:  { cls: /^(whatsapp.*|whatsdesk|zapzap|com\.rtosta\.zapzap)$/i },
         juegos:    { cls: /^(steam_app_\d+|gamescope)$/i },
         redes:     { cls: /(tiktok|instagram|facebook|twitter|reddit|mastodon|tuba|tokodon|bluesky)/i },
         correo:    { cls: /^(thunderbird|org\.mozilla\.thunderbird|betterbird|evolution|org\.gnome\.evolution|geary|org\.gnome\.geary)$/i }
     })
     function blockedBy(c): string {
-        const web = c.class === "hf-webapp.qml6";
         for (const k of root.blockList) {
             const r = root.blockRules[k];
-            if (!r) continue;
-            if (web && r.web && r.web.test(c.title ?? "")) return k;
-            if (!web && r.cls && r.cls.test(c.class ?? "")) return k;
+            if (r?.cls && r.cls.test(c.class ?? "")) return k;
         }
         return "";
     }

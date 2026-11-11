@@ -27,14 +27,6 @@ def hypr_lua(s, c):
         if o.get("from"):
             out.append(f"hl.unbind({_q(o['from'])})")
         out.append(f"hl.bind({_q(o['to'])}, {lua}, {{ description = {_q(desc)} }})")
-    # web apps con atajo: hf-webapp open elige el motor (panel lateral o navegador predeterminado, webappEngine)
-    for a in s.get("webapps") or []:
-        kb = (a.get("keybind") or "").strip()
-        if not kb or not a.get("key"):
-            continue
-        cmd = f"{_here().parent.parent}/scripts/hf-webapp open {a['key']}"
-        out.append(f"hl.unbind({_q(kb)})")
-        out.append(f"hl.bind({_q(kb)}, hl.dsp.exec_cmd({_q(cmd)}), {{ description = {_q(a.get('name', 'Web app'))} }})")
     # sobreamplificar (Ajustes › Sonido): la tecla de volumen sube hasta el 150 %
     if s.get("overAmplify"):
         out.append('hl.unbind("XF86AudioRaiseVolume")')

@@ -71,7 +71,7 @@ ColumnLayout {
             seen[k] = true; out.push({ cls: cls, name: name || cls, e: e, open: open });
         };
         for (const c of HyprClients.clients) {
-            if ((c.workspace?.id ?? 0) <= 0 || /^(org\.quickshell|hf-webapp\.qml6)$/.test(c.class ?? "")) continue;
+            if ((c.workspace?.id ?? 0) <= 0 || /^org\.quickshell$/.test(c.class ?? "")) continue;
             const e = HyprClients.entryFor(c.class);
             push(c.class, e?.name ?? HyprClients.appName(c.class), e, true);
         }

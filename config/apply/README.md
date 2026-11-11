@@ -18,7 +18,7 @@ Una extensión rota solo deja un comentario `-- x.py: error …`, no rompe el re
 | `40-monitors.py` | monitors {salida: {mode, position, scale, vrr, hdr, mirror, disabled}}, uiScale |
 | `50-rules.py` | ventanas de Ajustes/Herramientas, gameNoFx |
 | `52-pip.py` | regla de ventana del PiP: esquina (pipCorner/pipFree) y margen (pipMargin) apartados de la barra (sustituye a HF.rules.pip) |
-| `60-binds.py` | keybinds (reasignaciones, ver keybind-actions.json), atajos de webapps (hf-webapp open), overAmplify, lupa (magnifier) |
+| `60-binds.py` | keybinds (reasignaciones, ver keybind-actions.json), overAmplify, lupa (magnifier) |
 | `15-apps.py` | fileManager (si está instalado), terminal |
 | `17-theme-apps.py` | themeApps + themeKitty/themeQt/themeBtop → include de kitty, paleta e iconos de qt6ct (apps Qt; kdeglobals solo si está el tema de Plasma), tema de btop; themeIcons/iconFolders → tema de usuario Papirus-Liquid-* con las carpetas del color del acento (sin root). Recarga en vivo solo con el HOME real |
 | `16-gtk.py` | themeApps (+ themeGtk) → colores de libadwaita (gtk-adw.css) y gsettings color-scheme / accent-color / gtk-theme |

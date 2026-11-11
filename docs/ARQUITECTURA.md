@@ -29,7 +29,7 @@ Todo vive en `config/quickshell/`. Cada vista del diseño es un módulo en `modu
 | Spotlight | `spotlight` | `modules/spotlight` | `DesktopEntries`, `fd`, `qalc` |
 | Ajustes rápidos | `ajustes` | `modules/quicksettings` | nmcli, `Bluetooth`, `UPower`, `PowerProfiles`, hyprsunset |
 | Notificaciones y OSD | `notificaciones` | `Notifs.qml`, `modules/notifications`, `modules/osd` | `NotificationServer`, `Pipewire` |
-| Panel lateral (asistente de IA), web apps y PiP | `ia` | `modules/sidepanel`, `modules/pip` | `hf-ai` (Claude Code / Ollama / API), `hf-webapp` (QtWebEngine), `hf-mcp` |
+| Panel lateral (asistente de IA) y PiP | `ia` | `modules/sidepanel`, `modules/pip` | `hf-ai` (Claude Code / Ollama / API), `hf-mcp` |
 | Vista general, Alt+Tab, Snap | `vista`, `alttab`, `snap` | `modules/overview`, `alttab`, `snap` | `ScreencopyView`, `services/HyprClients.qml` |
 | Dock (modo flotante: minimizar, maximizar, ocultación inteligente) y escritorio ordenado | — | `modules/desktop` | `FolderListModel` |
 | Widgets | `widgets` | `modules/widgets` | Open-Meteo, Moonraker/OctoPrint, `/proc` |
@@ -85,7 +85,7 @@ Desde la terminal (`qs -p <repo>/config/quickshell ipc call <objetivo> <función
 
 - **Hyprland cambió a Lua en 0.57.** `hyprland.conf` ya no se lee. Valida siempre con `Hyprland --verify-config --config config/hypr/hyprland.lua` (detecta claves y campos desconocidos).
 - **QML:** las propiedades no pueden empezar por `on` + mayúscula ni por mayúscula; `data` no vale como id, `escape` no vale como señal y `show` no vale como función de IPC.
-- **QtWebEngine dentro de Quickshell 0.3.2 se cierra solo.** Por eso las web apps son ventanas `qml6` aparte que el panel acopla (`hf-webapp`).
+- **QtWebEngine dentro de Quickshell 0.3.2 se cierra solo.** No se puede incrustar una web dentro del shell.
 
 - **Quickshell cambia rápido.** Fija una versión en el README y prueba cada actualización.
 - **Rendimiento del vidrio:** el blur de muchas capas pesa en gráficas integradas. Hace falta el interruptor «Reducir transparencia», y «Quitar efectos en juegos» (`gameNoFx`) ya lo apaga en pantalla completa.

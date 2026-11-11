@@ -71,10 +71,6 @@ Singleton {
     function appOf(p): var {
         if (!p) return { name: "", icon: "" };
         const ident = String(p.identity ?? "");
-        // Web apps integradas (scripts/hf-webapp): el reproductor lleva el nombre de la web app
-        const web = /chromium\.instance/i.test(p.dbusName ?? "") ? WebApps.byName(ident) : null;
-        if (web) return { name: web.name, icon: WebApps.iconOf(web), web: true };
-        if (/^qml runtime$/i.test(ident)) return { name: "Web app", icon: Quickshell.iconPath("web-browser", true), web: true };
         const e = entryOf(p);
         const raw = String(p.dbusName ?? "").replace("org.mpris.MediaPlayer2.", "").replace(/\.instance[_\d]+$/, "");
         const name = e?.name || ident || raw.charAt(0).toUpperCase() + raw.slice(1);

@@ -56,7 +56,6 @@ cleanup() {
     fi
     [ -n "${SIG:-}" ] && HYPRLAND_INSTANCE_SIGNATURE=$SIG hyprctl dispatch 'hl.dsp.exit()' >/dev/null 2>&1
     sleep 1; kill "$PID" 2>/dev/null; sleep 0.5; kill -9 "$PID" 2>/dev/null
-    [ -n "${SIG:-}" ] && rm -rf "${XDG_RUNTIME_DIR:-/tmp}/hf-webapp-$SIG"   # web apps de la prueba (hf-webapp con HF_NESTED)
     if [ -n "$bus" ]; then
       for q in $(pgrep -u "$(id -u)"); do
         on_bus "$q" && { kill "$q"; kill -CONT "$q"; } 2>/dev/null   # CONT: un mpvpaper pausado (SIGSTOP) no atiende TERM

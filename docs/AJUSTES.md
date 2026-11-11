@@ -2,7 +2,7 @@
 
 ## Ajustes (`modules/settings/`)
 Ventana flotante «Ajustes» (1280×800) con 17 secciones: Apariencia, Fondos, Barra, Escritorio y gestos,
-Enfoque y pomodoro, Asistente de IA, Panel lateral y PiP, Plugins, Web apps, Pantallas, Teclado y atajos,
+Enfoque y pomodoro, Asistente de IA, Panel lateral y PiP, Plugins, Pantallas, Teclado y atajos,
 Red, Sonido, Energía, Sistema y recuperación, Accesibilidad y Acerca del sistema.
 
 - Abrir: vista `ajustesapp` (`hl.dsp.global("hf:ajustesapp")`, `Shell.open("ajustesapp", "<sección>")`) o
@@ -59,7 +59,7 @@ Red, Sonido, Energía, Sistema y recuperación, Accesibilidad y Acerca del siste
 | 35-windows.py | `windowMode` (regla `hf-float-all` del modo flotante; `no-maximize`: las ventanas en mosaico no se maximizan por su cuenta, las flotantes sí), `floatApps` + `floatAppsSize` (reglas `hf-float-apps` / `hf-float-apps-compact`) |
 | 40-monitors.py | `monitors` {salida: {mode, position, scale, vrr, disabled, mirror}} |
 | 50-rules.py | ventanas Ajustes/Herramientas flotantes; sin efectos a pantalla completa (`gameNoFx`) |
-| 60-binds.py | `keybinds` {descripción: {from, to}} (acciones en `keybind-actions.json`), atajos de `webapps`, `overAmplify`, lupa (`magnifier`: sustituye la lupa básica de binds.lua) |
+| 60-binds.py | `keybinds` {descripción: {from, to}} (acciones en `keybind-actions.json`), `overAmplify`, lupa (`magnifier`: sustituye la lupa básica de binds.lua) |
 | 15-apps.py | `fileManager` (solo si está instalado; si no, env.lua usa el primero instalado: Nautilus, Dolphin…), `terminal` |
 | 16-gtk.py | con `themeApps`: `gtk-adw.css` (colores de libadwaita: barra lateral, popovers, diálogos) importado en gtk-4.0/gtk.css y `gsettings` `color-scheme` (prefer-dark/default), `accent-color` (el de GNOME 47+ más cercano al color principal) y `gtk-theme` adw-gtk3[-dark] |
 | 70-plugins.py | `plugins` {id: {on, …opciones}} → `hl.config({ plugin = { … } })`, atajo/gesto de HyprExpo y Hyprspace; solo para los activados y dentro de una guarda (`hl.get_loaded_plugins()`) |
@@ -148,7 +148,7 @@ portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si o
 - Al cambiar de modo, las ventanas abiertas de los espacios afectados pasan a flotar o al mosaico al momento
   (las que hiciste flotar a mano en un espacio que no cambia se quedan como están).
 - Ventanas nuevas que flotan por el modo: centradas, en cascada (32 px) y, si la app pide poco, al 62 % × 70 %
-  del área útil; diálogos pequeños (< 560×420) y PiP / web apps / ventanas del shell se dejan como vienen.
+  del área útil; diálogos pequeños (< 560×420) y PiP / ventanas del shell se dejan como vienen.
 - Atajo `Super + Mayús + Espacio` (`hf:modoventanas`, «Cambiar modo de ventanas»): mosaico → desplazamiento →
   flotante, con los tres modos en el OSD. IPC: `qs ipc call winmode cycle | set <modo> | setWs <espacio> <modo> | get <espacio>`.
 - Ajustes rápidos › Ventanas: clic = siguiente modo; el desplegable elige el modo de todos los espacios y el de

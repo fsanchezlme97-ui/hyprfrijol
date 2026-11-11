@@ -23,6 +23,7 @@ PopupWindow {
     readonly property bool isHidden: !!item && hidden.includes(item.id)
 
     function open(it, fromItem): void {
+        if (shown && item === it) { close(); return; }      // otro clic en el mismo icono: se cierra
         if (shown) { shown = false; Qt.callLater(() => open(it, fromItem)); return; }
         item = it; from = fromItem; stack = []; shown = true;
     }
@@ -48,7 +49,12 @@ PopupWindow {
     QsMenuOpener { id: o2; menu: menu.stack.length > 1 ? menu.stack[1] : null }
     QsMenuOpener { id: o3; menu: menu.stack.length > 2 ? menu.stack[2] : null }
     readonly property var opener: [o0, o1, o2, o3][Math.min(3, stack.length)]
-    HyprlandFocusGrab { active: menu.visible; windows: [menu]; onCleared: menu.close() }
+    // La captura se activa un instante después de que el menú se muestre: activada en el mismo momento, la ventana
+    // aún no existía para Hyprland y la captura no hacía nada (el menú no se cerraba al hacer clic fuera)
+    property bool grabbing: false
+    onVisibleChanged: { grabbing = false; if (visible) grabLater.restart(); }
+    Timer { id: grabLater; interval: 60; onTriggered: menu.grabbing = menu.visible }
+    HyprlandFocusGrab { active: menu.grabbing; windows: [menu]; onCleared: menu.close() }
 
     Rectangle {
         id: body

@@ -28,7 +28,8 @@
 #      settings.json.antes-sin-perfiles) y el enlace ~/.local/bin/hf-profile. No toca el modo de energía.
 #      Dictado sin IA: quita dictationAI y cambia dictationWakeWord «Frijol» (la de antes) por «Distro»
 #      (copia en settings.json.antes-sin-ia-dictado).
-#      Web apps del panel lateral (0.8.8): mode «panel» → «navegador», sidePanelApps → ["ia"], cierra sus hosts.
+#      Web apps (0.8.28): borra sus lanzadores, el enlace hf-webapp y sus claves de settings.json (copia en
+#      settings.json.antes-sin-webapps); sus sesiones guardadas se quedan.
 #      Asistente «Samantha» → «Helpert» (0.8.20), y su personalidad si era la de fábrica (copia en
 #      settings.json.antes-de-helpert).
 #      hf-apply lo lanza solo (--retired-only) si queda algo de esto.
@@ -143,16 +144,29 @@ with open(tmp, "w") as f:
 os.replace(tmp, p)
 PY
   fi
-  # Web apps en el panel lateral (retiradas en 0.8.8): mode «panel» → «navegador» y sidePanelApps solo con «ia»
-  if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); w=d.get("webapps") or []; t=d.get("sidePanelApps"); sys.exit(0 if any(isinstance(a,dict) and a.get("mode")=="panel" for a in w) or (isinstance(t,list) and any(k!="ia" for k in t)) else 1)' "$cfg" 2>/dev/null; then
-    say "Web apps: el panel lateral ya no las aloja; las que estaban en él se abren en el navegador ($cfg)"
+  # Web apps (retiradas en 0.8.28): cierra las que sigan abiertas, borra sus lanzadores y el enlace de hf-webapp y
+  # quita sus claves de settings.json (copia en settings.json.antes-sin-webapps). Sus sesiones guardadas
+  # (~/.local/share/hyprfrijol/webapps) no se tocan: se pueden borrar a mano.
+  local apps="$HOME/.local/share/applications" auto="$HOME/.config/autostart" f
+  for f in "$apps"/hf-webapp-*.desktop "$auto"/hf-webapp-*.desktop; do
+    [ -e "$f" ] || continue
+    say "Web apps retiradas: borro el lanzador $f"
+    run rm -f "$f"
+  done
+  if [ -L "$BIN/hf-webapp" ] && [ ! -e "$BIN/hf-webapp" ]; then
+    say "Web apps retiradas: borro el enlace roto $BIN/hf-webapp"
+    run rm -f "$BIN/hf-webapp"
+  fi
+  [ "$DRY" = 1 ] || pkill -f 'modules/sidepanel/webapp/host.qml' 2>/dev/null || true
+  if [ -f "$cfg" ] && grep -qE '"(webapps|webappEngine|webappPreload)"' "$cfg"; then
+    say "Web apps retiradas: quito webapps, webappEngine y webappPreload de $cfg"
+    run cp -n "$cfg" "$cfg.antes-sin-webapps"
     [ "$DRY" = 1 ] || python3 -I - "$cfg" <<'PY'
 import json, os, sys
 p = os.path.realpath(sys.argv[1])
 d = json.load(open(p))
-for a in d.get("webapps") or []:
-    if isinstance(a, dict) and a.get("mode") == "panel":
-        a["mode"] = "navegador"
+for k in ("webapps", "webappEngine", "webappPreload"):
+    d.pop(k, None)
 if isinstance(d.get("sidePanelApps"), list):
     d["sidePanelApps"] = ["ia"]
 tmp = p + ".tmp"
@@ -160,8 +174,6 @@ with open(tmp, "w") as f:
     f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
 os.replace(tmp, p)
 PY
-    # Hosts de web apps que quedaran abiertos en el panel
-    [ "$DRY" = 1 ] || "$root/scripts/hf-webapp" stop >/dev/null 2>&1 || true
   fi
   # Enlace ~/.local/bin/hf-profile que ya no lleva a nada
   if [ -L "$BIN/hf-profile" ] && [ ! -e "$BIN/hf-profile" ]; then

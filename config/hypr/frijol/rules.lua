@@ -30,14 +30,3 @@ hl.window_rule({
     no_blur   = true,
 })
 
--- Web apps del panel lateral (WhatsApp, YouTube, Pinterest): ventanas qml6 que el panel acopla
--- Nacen escondidas en el espacio especial «hfweb» (sin destello en pantalla): el panel trae la de la pestaña activa,
--- así se pueden precargar las demás en segundo plano
-hl.window_rule({
-    name  = "hf-webapps",
-    match = { class = "^hf-webapp\\.qml6$" },
-    workspace = "special:hfweb silent",
-    float = true,
-    border_size = 0,
-    no_anim = true,
-})

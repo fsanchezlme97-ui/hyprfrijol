@@ -39,12 +39,9 @@ def _profiles_left():
         return True
     if '"aiName": "Samantha"' in t:               # asistente de antes: pasa a «Helpert» (hf-migrate, paso 6)
         return True
-    try:                                            # web apps del panel lateral (retiradas en 0.8.8)
-        d = json.loads(t)
-        return any(isinstance(a, dict) and a.get("mode") == "panel" for a in d.get("webapps") or []) \
-            or (isinstance(d.get("sidePanelApps"), list) and any(k != "ia" for k in d["sidePanelApps"]))
-    except Exception:
-        return False
+    if any(f'"{k}"' in t for k in ("webapps", "webappEngine", "webappPreload")):   # web apps (retiradas en 0.8.28)
+        return True
+    return any((HOME / ".local/share/applications").glob("hf-webapp-*.desktop"))
 if _profiles_left():
     subprocess.run([str(ROOT / "scripts/hf-migrate"), "--retired-only", "--quiet"], check=False)
 

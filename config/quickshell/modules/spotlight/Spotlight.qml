@@ -208,9 +208,8 @@ Overlay {
         return { key: "win:" + addrOf(t), cat: "Ventanas", kind: "window", win: t, g: (c || t.title || "?").charAt(0).toUpperCase(),
                  appIcon: c ? c.toLowerCase() : "", name: t.title || c, sub: c, hint: t.workspace ? "Espacio " + t.workspace.id : "" };
     }
-    // Web apps: se abren con hf-webapp (en el navegador, o en su ventana propia si se eligió)
     function staticItems() {
-        return Cat.WEBAPPS.concat(Cat.ACTIONS).map(it => Object.assign({ kind: "static" }, it));
+        return Cat.ACTIONS.map(it => Object.assign({ kind: "static" }, it));
     }
 
     function clipItem(r, cat) {
@@ -470,7 +469,6 @@ Overlay {
     }
     function runAct(act) {
         if (act.startsWith("view:")) { Shell.open(act.slice(5)); return; }
-        if (act.startsWith("side:")) { WebApps.open(act.slice(5)); return; }
         if (act.startsWith("app:")) { openApp(act.slice(4)); Shell.close(); return; }
         if (act === "allapps") { setMode("apps"); return; }
         if (act.startsWith("prefix:")) { input.text = act.slice(7); input.forceActiveFocus(); return; }

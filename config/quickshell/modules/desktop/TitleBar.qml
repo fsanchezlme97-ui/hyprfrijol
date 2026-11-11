@@ -24,7 +24,7 @@ PanelWindow {
 
     readonly property bool enabledHere: { WinMode.mode; WinMode.overrides; return Settings.get("titleBars", true) !== false && WinMode.isFloat(wsId); }
     readonly property var ownFrame: (Settings.get("barsOwnFrame", []) ?? []).map(c => String(c).toLowerCase())
-        .concat(["org.quickshell", "hf-webapp.qml6"])
+        .concat(["org.quickshell"])
 
     // La ventana a la que pertenecen los botones: la activa, si flota en esta pantalla y no trae barra propia
     readonly property var target: {

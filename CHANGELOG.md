@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.28] — 2026-11-10
+
+- **El menú de los iconos de la bandeja se cierra** al hacer clic fuera o al volver a pulsar el icono. Antes se
+  quedaba abierto y no había forma de quitarlo. Lo mismo con el desplegable de iconos ocultos.
+- **Se retiran las web apps**: la sección de Ajustes, el panel lateral web, sus entradas en Spotlight, el PiP de
+  YouTube, sus atajos y `hf-webapp`. El panel lateral queda solo para el asistente de IA. Al actualizar se borran sus
+  lanzadores, el enlace `~/.local/bin/hf-webapp` y sus claves de `settings.json` (copia en
+  `settings.json.antes-sin-webapps`). Las sesiones guardadas en `~/.local/share/hyprfrijol/webapps` no se tocan: se
+  pueden borrar a mano.
+
 ## [0.8.27] — 2026-11-10
 
 - **Botones de ventana dentro de la ventana**: la barra de título del shell pasa a ser una pastilla pequeña arriba a

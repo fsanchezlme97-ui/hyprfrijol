@@ -37,7 +37,7 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 | Barra abajo / arriba / izquierda, fija o flotante | `quickshell/bar/` |
 | Spotlight (apps, archivos, calculadora, comandos, ventanas) | `modules/spotlight` |
 | Ajustes rápidos, notificaciones con respuesta, OSD | `modules/quicksettings`, `notifications`, `osd` |
-| Panel lateral con el asistente de IA (¼ de pantalla); web apps (WhatsApp, YouTube…) en ventana propia o en el navegador, PiP mínimo | `modules/sidepanel`, `pip` — ver `docs/IA.md` |
+| Panel lateral con el asistente de IA (¼ de pantalla), PiP mínimo | `modules/sidepanel`, `pip` — ver `docs/IA.md` |
 | Vista general, Alt+Tab, Snap, dock y escritorio ordenado, widgets | `modules/overview`, `alttab`, `snap`, `desktop`, `widgets` |
 | Selector de fondos (por monitor, por hora, mono), captura sobre la pantalla congelada (lupa, ventanas, fijar, OCR con cajas, anotación, IA) / grabación, selector de color (HEX · RGB · HSL · OKLCH, historial) | `modules/wallpapers`, `capture`, `colorpicker` |
 | Portapapeles y emojis en Spotlight, agenda (con `.ics`), centro de actualizaciones con punto de restauración | `modules/spotlight`, `agenda`, `updates` |
@@ -64,12 +64,12 @@ Capturas reales a 1920×1080 de una sesión de HyprFrijol 0.8.6 con la configura
 | **Asistente de IA** · panel lateral que cambia el escritorio con tu aprobación | **Vista general** · espacios de trabajo con sus ventanas y buscador |
 | ![Selector de fondos](docs/capturas/selector-de-fondos.webp) | ![Pantalla de bloqueo](docs/capturas/bloqueo.webp) |
 | **Selector de fondos** · vista previa al instante (también vídeo), por pantalla o según la hora | **Bloqueo** · reloj, tu foto y tu fondo, con contraseña o huella |
-| ![Ajustes › Apariencia](docs/capturas/ajustes-apariencia.webp) | ![Ajustes › Web apps](docs/capturas/ajustes-webapps.webp) |
-| **Ajustes › Apariencia** · tres estilos, 45 paletas (aquí Oxocarbon) y acento | **Ajustes › Web apps** · WhatsApp, YouTube… en el panel, en ventana o en el navegador |
-| ![Ajustes › Aplicaciones](docs/capturas/ajustes-aplicaciones.webp) | ![Ajustes › Barra](docs/capturas/ajustes-barra.webp) |
-| **Ajustes › Aplicaciones** · centro de aplicaciones por categorías y origen | **Ajustes › Barra** · posición, forma, tamaño y módulos visibles |
-| ![Ajustes › Sistema y recuperación](docs/capturas/ajustes-sistema.webp) | ![Ajustes › Plugins de Omarchy](docs/capturas/ajustes-plugins-omarchy.webp) |
-| **Ajustes › Sistema** · puntos de restauración, diagnóstico, actualizaciones y modo seguro | **Ajustes › Plugins de Omarchy** · widgets, paneles y temas de Omarchy |
+| ![Ajustes › Apariencia](docs/capturas/ajustes-apariencia.webp) | ![Ajustes › Aplicaciones](docs/capturas/ajustes-aplicaciones.webp) |
+| **Ajustes › Apariencia** · tres estilos, 45 paletas (aquí Oxocarbon) y acento | **Ajustes › Aplicaciones** · centro de aplicaciones por categorías y origen |
+| ![Ajustes › Barra](docs/capturas/ajustes-barra.webp) | ![Ajustes › Sistema y recuperación](docs/capturas/ajustes-sistema.webp) |
+| **Ajustes › Barra** · posición, forma, tamaño y módulos visibles | **Ajustes › Sistema** · puntos de restauración, diagnóstico, actualizaciones y modo seguro |
+| ![Ajustes › Plugins de Omarchy](docs/capturas/ajustes-plugins-omarchy.webp) | |
+| **Ajustes › Plugins de Omarchy** · widgets, paneles y temas de Omarchy | |
 
 ## Instalación
 
@@ -190,7 +190,7 @@ config/
   cava/            onda de audio de la barra
   defaults/        ajustes, colores y plantilla de local.lua por defecto
 install/           packages.tsv (dependencias por distro) y bootstrap.sh (instalación en una línea)
-scripts/           hf-session, hf-apply, hf-wallpaper, hf-lock, hf-capture, hf-updates, hf-ai, hf-mcp, hf-webapp,
+scripts/           hf-session, hf-apply, hf-wallpaper, hf-lock, hf-capture, hf-updates, hf-ai, hf-mcp,
                    hf-devices, hf-download, hf-wallhaven
 assets/wallpapers/ fondos incluidos
 greeter/           login con greetd

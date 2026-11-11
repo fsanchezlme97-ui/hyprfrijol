@@ -396,10 +396,7 @@
   {"f": "Virtualizacion", "l": "Visor remoto", "t": "row", "s": "virt-viewer · la pantalla de cada máquina", "g": "Otras apps"},
   {"f": "Virtualizacion", "l": "Contenedores", "t": "card"},
   {"f": "Virtualizacion", "l": "Podman + Distrobox", "t": "row", "g": "Contenedores"},
-  {"f": "Virtualizacion", "l": "BoxBuddy", "t": "row", "s": "Gestiona Distrobox con interfaz", "g": "Contenedores"},
-  {"f": "WebApps", "l": "Tus web apps", "t": "card"},
-  {"f": "WebApps", "l": "Añadir web app", "t": "card"},
-  {"f": "WebApps", "l": "Otra web", "t": "head", "g": "Añadir web app"}
+  {"f": "Virtualizacion", "l": "BoxBuddy", "t": "row", "s": "Gestiona Distrobox con interfaz", "g": "Contenedores"}
 ],
 "keys": {
   "Accesibilidad": ["bigCursor", "colorFilter", "fontScale", "highContrast", "magnifier", "monoAudio", "osk", "reduceMotion", "reduceTransparency", "screenReader", "visualBell"],
@@ -425,6 +422,5 @@
   "Remoto": ["remoteClient", "remoteHosts", "vncListen", "vncOutput"],
   "Sistema": ["updatesFirmware", "updatesFlatpak", "updatesMode", "updatesSnapshot"],
   "Sonido": ["audioAutoSwitch", "noiseSuppression", "overAmplify", "systemSounds"],
-  "Teclado": ["capsEscape", "clipboardAutoPaste", "clipboardClearOnLogin", "kbLayouts", "kbRepeatDelay", "kbRepeatRate", "kbSwitch", "keybinds", "numlock", "spotlightClipRecent"],
-  "WebApps": ["sidePanelApps", "webapps"]
+  "Teclado": ["capsEscape", "clipboardAutoPaste", "clipboardClearOnLogin", "kbLayouts", "kbRepeatDelay", "kbRepeatRate", "kbSwitch", "keybinds", "numlock", "spotlightClipRecent"]
 }}

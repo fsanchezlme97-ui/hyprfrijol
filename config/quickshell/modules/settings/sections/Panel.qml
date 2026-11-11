@@ -13,12 +13,8 @@ ColumnLayout {
     id: root
     spacing: 12
     readonly property var apps: Settings.get("sidePanelApps", ["ia"])
-    readonly property var catalog: [["ia", "", "Asistente de IA", "hf-ai", ""]].concat(WebApps.list.map(w => [w.key, String(w.name)[0], w.name, w.url, WebApps.iconOf(w)]))
-    // Activar una pestaña pone la web app en modo «panel» (Ajustes › Web apps); quitarla devuelve el modo anterior
-    function toggleTab(k, v) {
-        Settings.set("sidePanelApps", v ? apps.concat([k]) : apps.filter(x => x !== k));
-        if (k !== "ia") WebApps.setPanelMode(k, v);
-    }
+    readonly property var catalog: [["ia", "", "Asistente de IA", "hf-ai", ""]]
+    function toggleTab(k, v) { Settings.set("sidePanelApps", v ? apps.concat([k]) : apps.filter(x => x !== k)); }
     readonly property string corner: Settings.get("pipCorner", "sup-der")
     readonly property var sizes: ({ minimo: [192, 108], pequeno: [256, 144], mediano: [320, 180], grande: [400, 225] })
     readonly property var size: sizes[Settings.get("pipSize", "minimo")] ?? sizes.minimo
@@ -34,7 +30,7 @@ ColumnLayout {
             title: "Panel lateral"
             headerRight: Kbd { text: "Super + A" }
             Repeater {
-                model: root.catalog.slice(0, 1)     // solo el asistente: las web apps ya no van en el panel
+                model: root.catalog
                 Item {
                     id: row
                     required property var modelData

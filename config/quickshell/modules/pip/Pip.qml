@@ -36,19 +36,8 @@ Scope {
         return [w, Math.round(w * a)];
     }
     readonly property string corner: Settings.get("pipCorner", "sup-der")
-    // Sesión de prueba anidada (HF_NESTED): carpeta propia, para no ver ni tocar las web apps de la sesión real
-    readonly property string runDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/hf-webapp"
-        + (Quickshell.env("HF_NESTED") === "1" ? "-" + (Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || "prueba") : "")
-    readonly property string webPip: pipFile.text().trim()
-    FileView { id: pipFile; path: root.runDir + "/pip"; watchChanges: true; printErrors: false; onFileChanged: reload() }
 
     readonly property var titleRe: /^([Pp]icture[-\s]?[Ii]n[-\s]?[Pp]icture|[Pp]antalla[-\s]?en[-\s]?[Pp]antalla|[Ii]mage[mn]?[-\s]?(en|em|dentro de)[-\s]?[Ii]mage[mn]?)/
-    readonly property var webNames: {
-        const o = { wa: "WhatsApp", yt: "YouTube", pin: "Pinterest" };
-        for (const w of (Settings.get("webapps", []) ?? [])) if (w?.key) o[w.key] = String(w.name || w.key);
-        return o;
-    }
-    function isWeb(c) { return root.webPip !== "" && c.class === "hf-webapp.qml6" && String(c.title).startsWith(webNames[root.webPip] ?? "-"); }
 
     // ---- Document PiP y miniventanas (pip-apps.json)
     readonly property bool calls: Settings.get("pipCalls", true) !== false
@@ -98,7 +87,7 @@ Scope {
         let changed = false;
         for (const c of list) {
             if (known[c.address]) { k[c.address] = known[c.address]; continue; }
-            if (titleRe.test(String(c.title)) || isWeb(c)) continue;
+            if (titleRe.test(String(c.title))) continue;
             const r = classify(c, list);
             if (r) {
                 r.aspect = c.size?.[0] > 0 ? c.size[1] / c.size[0] : 0.75;
@@ -112,7 +101,7 @@ Scope {
     readonly property var win: {
         if (!enabled) return null;
         const list = HyprClients.clients;
-        return list.find(c => titleRe.test(String(c.title)) || isWeb(c))
+        return list.find(c => titleRe.test(String(c.title)))
             ?? list.find(c => known[c.address] && allowed(known[c.address].kind)) ?? null;
     }
     readonly property var info: win ? (known[win.address] ?? { kind: "video" }) : null
@@ -288,12 +277,7 @@ Scope {
     function close() {
         const c = win;
         if (!c) return;
-        if (isWeb(c)) {           // el YouTube del panel no se cierra: se pausa y vuelve a guardarse
-            Quickshell.execDetached(["sh", "-c", '"$0" cmd "$1" pause; sleep 0.5; "$0" cmd "$1" pipoff', Paths.script("hf-webapp"), root.webPip]);
-            Shell.dispatch('hl.dsp.window.pin({ action = "disable", ' + sel(c) + ' })');
-            Shell.dispatch('hl.dsp.window.move({ workspace = "special:hfweb", follow = false, ' + sel(c) + ' })');
-            setWebPip("");
-        } else Shell.dispatch('hl.dsp.window.close({ ' + sel(c) + ' })');
+        Shell.dispatch('hl.dsp.window.close({ ' + sel(c) + ' })');
     }
     // Reproductor de la miniventana de música: el que suena con el título de la ventana, si no el activo
     readonly property var player: {
@@ -303,8 +287,7 @@ Scope {
     }
     readonly property bool playing: kind === "music" ? (player?.isPlaying ?? false) : Media.playing
     function toggle() {
-        if (win && isWeb(win)) Quickshell.execDetached([Paths.script("hf-webapp"), "cmd", root.webPip, "toggle"]);
-        else if (kind === "music") { if (player?.canTogglePlaying) player.togglePlaying(); }
+        if (kind === "music") { if (player?.canTogglePlaying) player.togglePlaying(); }
         else Media.toggle();
     }
     function next() { if (player?.canGoNext) player.next(); }
@@ -321,7 +304,6 @@ Scope {
     function back() {
         const c = win;
         if (!c) return;
-        if (isWeb(c)) { Shell.open("ia", root.webPip); return; }      // el panel la saca del PiP (pipoff) y la acopla
         if (kind === "video") { Shell.dispatch('hl.dsp.window.close({ ' + sel(c) + ' })'); return; }   // el navegador devuelve el vídeo a su pestaña
         // Llamada o página: se cierra el PiP (la llamada sigue en su pestaña) y se enfoca esa ventana.
         // Reproductor: se va a la app y la miniventana se queda.
@@ -342,7 +324,6 @@ Scope {
         function toggle(): void { root.toggle(); }
         function next(): void { root.next(); }
     }
-    function setWebPip(k) { Quickshell.execDetached(["sh", "-c", 'mkdir -p "$1" && printf "%s" "$2" > "$1/pip"', "sh", root.runDir, k]); }
 
     // Progreso (MPRIS no avisa de la posición: se consulta cada segundo)
     property real progress: 0
@@ -439,7 +420,7 @@ Scope {
         }
         // Progreso, en el borde inferior del vídeo
         Rectangle {
-            visible: root.progress > 0 && root.kind === "video" && !root.isWeb(root.win)
+            visible: root.progress > 0 && root.kind === "video"
             x: (root.ctlLeft ? root.gutter : 0) + 4
             anchors { bottom: parent.bottom; bottomMargin: 3 }
             width: ((root.target?.aw ?? root.size[0]) - 8) * root.progress

@@ -85,7 +85,11 @@ Item {
         color: "transparent"
         implicitWidth: box.width
         implicitHeight: box.height
-        HyprlandFocusGrab { active: over.visible; windows: [over]; onCleared: over.shown = false }
+        // la captura, un instante después de mostrarse (ver TrayMenu.qml: activada a la vez, no cerraba al clic fuera)
+        property bool grabbing: false
+        onVisibleChanged: { grabbing = false; if (visible) overGrab.restart(); }
+        Timer { id: overGrab; interval: 60; onTriggered: over.grabbing = over.visible }
+        HyprlandFocusGrab { active: over.grabbing; windows: [over]; onCleared: over.shown = false }
         Rectangle {
             id: box
             width: Math.max(120, og.implicitWidth + 16)

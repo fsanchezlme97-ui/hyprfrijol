@@ -23,57 +23,6 @@
   "fontScale": 1.0,
   "appFontPx": 12,
   "termFontPx": 13,
-  "webappEngine": "integrado",
-  "webapps": [
-    {
-      "key": "wa",
-      "name": "WhatsApp",
-      "url": "https://web.whatsapp.com",
-      "keybind": "",
-      "notify": true,
-      "bar": true
-    },
-    {
-      "key": "yt",
-      "name": "YouTube",
-      "url": "https://www.youtube.com",
-      "keybind": "",
-      "notify": false,
-      "bar": false
-    },
-    {
-      "key": "pin",
-      "name": "Pinterest",
-      "url": "https://www.pinterest.com",
-      "keybind": "",
-      "notify": false,
-      "bar": false
-    },
-    {
-      "key": "gmail",
-      "name": "Gmail",
-      "url": "https://mail.google.com",
-      "keybind": "",
-      "notify": true,
-      "bar": true
-    },
-    {
-      "key": "calendario",
-      "name": "Calendario",
-      "url": "https://calendar.google.com",
-      "keybind": "",
-      "notify": true,
-      "bar": false
-    },
-    {
-      "key": "notion",
-      "name": "Notion",
-      "url": "https://www.notion.so",
-      "keybind": "",
-      "notify": false,
-      "bar": false
-    }
-  ],
   "aiProvider": "claude-code",
   "aiModel": "",
   "aiEndpoint": "",

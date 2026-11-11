@@ -84,7 +84,6 @@ def hypr_lua(s, c):
 
     # Teclas que el usuario ya reasignó en Ajustes › Teclado: no se pisan
     taken = {_norm_key(o.get("to")) for o in (s.get("keybinds") or {}).values() if isinstance(o, dict) and o.get("to")}
-    taken |= {_norm_key(a.get("keybind")) for a in (s.get("webapps") or []) if isinstance(a, dict) and a.get("keybind")}
     used_keys = set()
 
     out = [

@@ -20,7 +20,6 @@ la chincheta o el ajuste. El estado se guarda en settings.json: tras reiniciar e
 |---|---|
 | `config/quickshell/modules/sidepanel/SidePanel.qml` | Panel de 400 px a la derecha: pestañas, apps web acopladas, PiP de YouTube |
 | `config/quickshell/modules/sidepanel/AiChat.qml` | Conversación, contexto, tarjetas Aplicar / Descartar / Deshacer, «Continuar en Claude ↗» |
-| `config/quickshell/modules/sidepanel/webapp/host.qml` + `scripts/hf-webapp` | Apps web en QtWebEngine (proceso `qml6` aparte) |
 | `config/quickshell/modules/pip/Pip.qml` | Coloca y controla las ventanas de imagen en imagen |
 | `scripts/hf-ai` | Habla con el modelo, valida acciones, las aplica y las deshace |
 | `scripts/hf-mcp` | Servidor MCP: la misma API del shell para Claude Code u otros clientes |
@@ -152,34 +151,6 @@ el asistente no puede crearse órdenes que ejecuten comandos.
 3. si no hay ninguno, solo la copia.
 
 El panel muestra el aviso «Abierta en Claude Desktop / Se envió la conversación y el contexto que elegiste».
-
-## Apps web (WhatsApp, YouTube, Pinterest…)
-
-Desde la 0.8.8 el panel lateral es solo del asistente. Cada app web se abre según su **modo** (Ajustes › Web apps):
-`ventana` (ventana propia integrada, `hf-webapp`, QtWebEngine: QtWebEngine no puede cargarse dentro de Quickshell 0.3.x,
-así que es una ventana `qml6` aparte, clase `hf-webwin-<clave>.qml6`) o `navegador` (navegador predeterminado en modo
-app, el predeterminado). El modo antiguo `panel` se lee como `navegador` (hf-migrate, paso 6, lo reescribe).
-
-- Sesiones guardadas en `~/.local/share/hyprfrijol/webapps/<clave>` (la primera vez hay que iniciar sesión).
-- Las notificaciones web llegan como avisos del sistema; «Cerrar si no la usas» (`unload`) la descarga tras un rato.
-- **PiP** (YouTube): deja solo el vídeo en una ventana pequeña en la esquina de `pipCorner`, con cerrar y pausa.
-  `hf-webapp cmd yt toggle|pause|back|reload|home|zoom <f>|external|url <dirección>` la controla.
-- `hf-webapp stop` las cierra todas.
-
-### Ajustes por web app (Ajustes › Web apps)
-
-- **Modo**: `ventana` (ventana propia integrada, clase `hf-webwin-<clave>.qml6`) ·
-  `navegador` (navegador predeterminado en modo app). Catálogo de populares con iconos Papirus en
-  `config/quickshell/services/webapps-catalog.json` (lo leen `services/WebApps.qml` y `hf-webapp`).
-- **Se adapta al ancho**: `layout: "movil"` pide la web de móvil (agente de usuario de Android y `mobileHost`, p. ej.
-  m.youtube.com) cuando es estrecha; `minWidth` reduce el zoom para que quepa la de escritorio (WhatsApp, 600 px).
-  `zoom` del usuario (y Ctrl + / Ctrl − / Ctrl 0 en la ventana).
-- **Tema**: `tema` = `sistema` (prefers-color-scheme según el tema claro/oscuro del escritorio) | `oscuro` | `claro` | `web`;
-  fondo con el color del tema, barras de desplazamiento finas con los colores del tema y `css` propio (en vivo).
-- **Enlaces** de otros dominios → navegador predeterminado; ventanas de inicio de sesión (Google, Apple, Microsoft…)
-  en una ventanita propia. Descargas → carpeta de descargas. Avisos (`notify`) → notify-send con el icono de la app.
-- El reproductor MPRIS de cada web app se llama como ella (la música lo muestra con su nombre e icono).
-- `hf-webapp config <clave>` imprime los ajustes efectivos; `hf-webapp desktop` regenera los `.desktop`.
 
 ## PiP de los navegadores
 
