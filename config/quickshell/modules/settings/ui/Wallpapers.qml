@@ -1,5 +1,6 @@
 // Fondos disponibles (hf-wallpaper list) y el actual (~/.local/state/hyprfrijol/wallpaper-path).
-//   Wallpapers { id: wp }  wp.files · wp.images · wp.animated · wp.current · wp.set(file) · wp.refresh()
+//   Wallpapers { id: wp }  wp.files · wp.images · wp.animated · wp.current · wp.set(file[, pantalla]) · wp.refresh()
+//   wp.own(pantalla): su fondo propio (imagen o vídeo; "" si usa el general) · wp.reset(pantalla): quitárselo
 //   wp.deps { mpvpaper, ffmpeg, ffmpegthumbnailer, "linux-wallpaperengine" } (instalado o no) · wp.tick (miniaturas de
 //   vídeo listas → Thumb { tick: wp.tick }) · wp.addAnimated() (elige un vídeo/GIF, lo copia y lo pone) · wp.error
 import QtQuick
@@ -20,7 +21,20 @@ Item {
     readonly property bool adding: picker.running
     function name(f: string): string { return String(f).split("/").pop().replace(/\.[^.]+$/, ""); }
     function isVideo(f: string): bool { return /\.(mp4|webm|mkv|mov|gif)$/i.test(f); }
-    function set(f: string): void { current = f; Quickshell.execDetached([Paths.script("hf-wallpaper"), f]); }
+    function set(f: string, mon: string): void {
+        if (mon) { Quickshell.execDetached([Paths.script("hf-wallpaper"), "-o", mon, f]); return; }
+        current = f; Quickshell.execDetached([Paths.script("hf-wallpaper"), f]);
+    }
+    function reset(mon: string): void { Quickshell.execDetached([Paths.script("hf-wallpaper"), "-o", mon, "reset"]); }
+    // Fondo propio de una pantalla (wallpaper.json: el vídeo en motions; la imagen en monitors)
+    function own(mon: string): string { return (wj.motions ?? {})[mon] ?? (wj.monitors ?? {})[mon] ?? ""; }
+    FileView {
+        path: Paths.state + "/wallpaper.json"
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        JsonAdapter { id: wj; property var monitors: ({}); property var motions: ({}) }
+    }
     function refresh(): void { lister.running = false; lister.running = true; depsProc.running = true; }
     function addAnimated(): void { error = ""; picker.running = true; }
     Process {

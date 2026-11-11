@@ -16,6 +16,9 @@ ColumnLayout {
     readonly property int rot: Settings.get("wallpaperRotateMin", 0)
     readonly property bool auto: rot > 0 || Settings.get("wallpaperOnStart", false)
     property string filter: "todos"        // todos | imagenes | animados
+    // Con varias pantallas: a cuál va el fondo ("" = todas; si no, solo esa, también en movimiento: hf-wallpaper -o)
+    property string monitor: ""
+    readonly property string ownHere: monitor ? wp.own(monitor) : ""
     readonly property var shown: filter === "animados" ? wp.animated : filter === "imagenes" ? wp.images : wp.files
     readonly property bool hasPlayer: !!wp.deps["mpvpaper"]
     function installPlayer(): void {
@@ -34,6 +37,24 @@ ColumnLayout {
             Layout.alignment: Qt.AlignTop
             title: "Colección"
             headerRight: Txt { muted: true; size: 11.5; text: wp.files.length + " fondos · " + wp.videos + " animados" }
+            LabeledRow {
+                visible: Quickshell.screens.length > 1
+                label: "Pantalla"
+                labelWidth: 70
+                Seg {
+                    h: 28
+                    model: [["", "Todas"]].concat(Quickshell.screens.map(s => [s.name, s.name + (s === Shell.primaryScreen ? " (principal)" : "")]))
+                    current: root.monitor
+                    onPicked: k => root.monitor = k
+                }
+            }
+            Txt {
+                visible: root.monitor !== ""
+                Layout.fillWidth: true
+                muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                text: (root.ownHere ? "Con fondo propio: " + wp.name(root.ownHere) + "." : "Usa el fondo general.")
+                      + " Lo que elijas abajo va solo a " + root.monitor + " (los vídeos se mueven) y no cambia los colores."
+            }
             Seg {
                 Layout.fillWidth: true
                 h: 28
@@ -55,8 +76,8 @@ ColumnLayout {
                         file: modelData
                         tick: wp.tick
                         label: wp.name(modelData)
-                        selected: wp.current === modelData
-                        onClicked: wp.set(modelData)
+                        selected: root.monitor ? root.ownHere === modelData : wp.current === modelData
+                        onClicked: wp.set(modelData, root.monitor)
                     }
                 }
             }
@@ -73,7 +94,8 @@ ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 8
                 Button { text: "Abrir carpeta"; onClicked: Quickshell.execDetached(["sh", "-c", "d=\"$(xdg-user-dir PICTURES)\"; [ -d \"$d/Fondos\" ] && xdg-open \"$d/Fondos\" || { mkdir -p \"$d/Wallpapers\"; xdg-open \"$d/Wallpapers\"; }"]) }
-                Button { text: "Al azar"; onClicked: Quickshell.execDetached([Paths.script("hf-wallpaper"), "random"]) }
+                Button { text: "Al azar"; onClicked: Quickshell.execDetached([Paths.script("hf-wallpaper")].concat(root.monitor ? ["-o", root.monitor] : []).concat(["random"])) }
+                Button { visible: root.ownHere !== ""; text: "Usar el general en " + root.monitor; onClicked: wp.reset(root.monitor) }
                 Button { text: wp.adding ? "Eligiendo…" : "Añadir fondo animado…"; enabled: !wp.adding; onClicked: wp.addAnimated() }
                 IconBtn { icon: "refresh"; implicitWidth: 30; implicitHeight: 30; onClicked: wp.refresh() }
                 Button { text: "Selector de fondos"; kind: "primary"; onClicked: Shell.open("fondos") }

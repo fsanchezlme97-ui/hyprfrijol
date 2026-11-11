@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.39] — 2026-11-11
+
+- Ajustes › Fondos de pantalla: con varias pantallas, «Pantalla: Todas · HDMI-A-2 (principal) · VGA-1». Con una
+  elegida, el fondo (también en movimiento) y «Al azar» van solo a ella, se marca el suyo y «Usar el general» se lo
+  quita. Antes solo se podía desde el selector de fondos.
+
 ## [0.8.38] — 2026-11-11
 
 - Animaciones más fluidas:
