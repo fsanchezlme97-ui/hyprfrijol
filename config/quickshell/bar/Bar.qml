@@ -129,6 +129,13 @@ PanelWindow {
             onHoveredChanged: if (!hovered && bar.edgeMode) hideDelay.restart()
         }
         Timer { id: hideDelay; interval: 600 }
+        // Dónde se pulsa (capa transparente por encima de todo; el PointHandler es pasivo y el clic sigue a su botón):
+        // el panel que se abra nace de ese punto (Shell.from, components/Overlay)
+        Item {
+            anchors.fill: parent
+            z: 1000
+            PointHandler { acceptedButtons: Qt.LeftButton | Qt.RightButton; onActiveChanged: if (active) Shell.from(bar, point.position) }
+        }
 
         Item {
             id: body

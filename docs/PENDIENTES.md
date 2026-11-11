@@ -16,7 +16,9 @@ illogical-impulse (end-4) y Omarchy 4.5 (noviembre de 2026). Al terminar algo, s
       Noctalia; quitar sondeos (p. ej. la pastilla de ventana pregunta a Hyprland cada 100 ms) y reaccionar a
       eventos. Hecho (v0.8.48): `dev/perf.sh` y reposo de 4,7 % a ~1 % de un núcleo. Falta: los 450 MB de RSS y
       la comparación con los otros shells.
-- [ ] **Pulido de animaciones**: paneles que salen de la barra y se transforman entre sí (como Caelestia).
+- [ ] **Pulido de animaciones**: paneles que salen de la barra y se transforman entre sí (como Caelestia). Hecho
+      (v0.8.49): los paneles abiertos con el ratón desde la barra nacen del punto pulsado. Falta: que un panel se
+      transforme en otro al saltar de uno a otro, y probar la apertura desde la barra en uso real.
 - [ ] **Plugins propios**: formato, permisos y un registro con versiones fijadas (como DMS); hoy solo los de Omarchy.
 - [ ] **Más compositores** (niri, Sway): evaluar qué partes dependen de Hyprland. Grande; después de lo demás.
 - [ ] Detalles de otros shells: desbloqueo facial (Howdy), letras de canciones, perfiles de energía según

@@ -1,7 +1,8 @@
 // Base de todos los paneles/emergentes del shell (Spotlight, ajustes rápidos, portapapeles, agenda…).
 // - Se muestra cuando Shell.view === view, en la pantalla con foco.
 // - Esc o clic fuera → cierra (Shell.close()).  Toma el teclado mientras está abierto.
-// - Animación de entrada "softUp" del diseño (.38s, cubic-bezier(.2,.8,.2,1)).
+// - Animación de entrada "softUp" del diseño (.38s, cubic-bezier(.2,.8,.2,1)); abierto con el ratón desde la barra,
+//   nace del punto pulsado (Shell.from).
 // - place: "center" | "screen" (centrado en la pantalla entera, sea cual sea la barra; `lift` lo sube y
 //   `centerHeight` fija la altura con la que se centra, para que no salte al cambiar de tamaño) | "top" | "top-right" | "bottom-right" | "bottom-left" | "right" | "left" | "bottom" | "fill"
 //   Respeta la barra (abajo/arriba/izquierda) con los mismos márgenes que el diseño.
@@ -101,23 +102,50 @@ PanelWindow {
         readonly property real dx: win.at === "right" || win.at === "top-right" || win.at === "bottom-right" ? 18
                                  : win.at === "left" || win.at === "top-left" || win.at === "bottom-left" ? -18 : 0
         readonly property real dy: dx !== 0 ? 0 : win.at === "top" || win.at === "top-bar" || win.at === "center" || win.at === "screen" ? -10 : 14
+        // Abierto desde la barra con el ratón (Shell.from justo antes de abrir, en esta pantalla): nace del punto
+        // pulsado, más pequeño y sin deslizarse; se cierra hacia el mismo punto. Con el teclado, desde su borde.
+        property bool fromPress: false
+        property point org: Qt.point(0, 0)
+        readonly property point edgeOrg: Qt.point(
+            win.at === "bottom-right" || win.at === "top-right" || win.at === "right" ? width
+                : win.at === "bottom-left" || win.at === "top-left" || win.at === "left" ? 0 : width / 2,
+            win.at === "bottom-right" || win.at === "bottom-left" || win.at === "bottom" ? height
+                : win.at === "top-right" || win.at === "top-left" || win.at === "top-bar" ? 0 : height / 2)
         opacity: win.shown ? 1 : 0
-        scale: win.shown ? 1 : (win.place === "fill" ? 0.985 : 0.94)
-        transformOrigin: win.at === "bottom-right" ? Item.BottomRight : win.at === "top-right" ? Item.TopRight
-                       : win.at === "bottom-left" ? Item.BottomLeft : win.at === "top-left" ? Item.TopLeft
-                       : win.at === "bottom" ? Item.Bottom : win.at === "top-bar" ? Item.Top : win.at === "right" ? Item.Right
-                       : win.at === "left" ? Item.Left : Item.Center
-        transform: Translate {
-            x: win.shown ? 0 : panel.dx
-            y: win.shown ? 0 : panel.dy
-            Behavior on x { NumberAnimation { duration: win.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.easeIn : Theme.easeOut } }
-            Behavior on y { NumberAnimation { duration: win.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.easeIn : Theme.easeOut } }
+        // Escala y desplazamiento: se fija el punto de partida y luego se anima (go()), así la apertura sabe ya de
+        // dónde sale; con bindings, el valor de partida sería el del cierre anterior
+        property real sc: place === "fill" ? 0.985 : 0.94
+        readonly property string place: win.place
+        property real tx: dx
+        property real ty: dy
+        property bool anim: true
+        function go(open: bool): void {
+            if (open) {
+                fromPress = !Theme.still && Shell.originScreen === win.screen && Math.abs(Shell.openedAt - Shell.originAt) < 500;
+                if (fromPress) org = Qt.point(Shell.origin.x - x, Shell.origin.y - y);
+                anim = false;
+                sc = fromPress ? 0.82 : place === "fill" ? 0.985 : 0.94; tx = fromPress ? 0 : dx; ty = fromPress ? 0 : dy;
+                anim = true;
+                sc = 1; tx = 0; ty = 0;
+            } else {
+                sc = fromPress ? 0.82 : place === "fill" ? 0.985 : 0.94; tx = fromPress ? 0 : dx; ty = fromPress ? 0 : dy;
+            }
         }
-        Behavior on scale { NumberAnimation { duration: win.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.easeIn : Theme.easeOut } }
+        transform: [
+            Scale {
+                origin.x: panel.fromPress ? panel.org.x : panel.edgeOrg.x
+                origin.y: panel.fromPress ? panel.org.y : panel.edgeOrg.y
+                xScale: panel.sc; yScale: panel.sc
+            },
+            Translate { x: panel.tx; y: panel.ty }
+        ]
+        Behavior on sc { enabled: panel.anim; NumberAnimation { duration: win.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.easeIn : Theme.easeOut } }
+        Behavior on tx { enabled: panel.anim; NumberAnimation { duration: win.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.easeIn : Theme.easeOut } }
+        Behavior on ty { enabled: panel.anim; NumberAnimation { duration: win.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.easeIn : Theme.easeOut } }
         Behavior on opacity { NumberAnimation { id: fade; duration: win.shown ? Theme.durIn * 0.6 : Theme.durOut; easing.type: Easing.OutCubic } }
 
         Keys.onEscapePressed: { win.escapePressed(); Shell.close(); }
     }
-    onShownChanged: if (shown) panel.forceActiveFocus()
+    onShownChanged: { panel.go(shown); if (shown) panel.forceActiveFocus(); }
     OpenProbe { name: win.view; shown: win.shown }
 }

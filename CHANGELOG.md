@@ -3,6 +3,11 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.49] — 2026-11-11
+
+### Cambiado
+- Los paneles que abres con el ratón desde la barra (centro de control, tiempo, red, Spotlight…) nacen del punto que pulsaste y vuelven a él al cerrarse, en vez de aparecer en su sitio. Con el teclado siguen saliendo de su borde; con «Reducir movimiento», sin animación. Va en la base de todos los paneles (`components/Overlay.qml`), así que vale para todos.
+
 ## [0.8.48] — 2026-11-11
 
 ### Rendimiento

@@ -72,6 +72,19 @@ Singleton {
     property real openedAt: 0
     function stamp(): void { openedAt = Date.now(); }
 
+    // Origen de la última pulsación en la barra (en coordenadas de su pantalla): el panel que abra nace de ese punto
+    // (components/Overlay). Lo pone bar/Bar.qml al pulsar; solo cuenta si la apertura llega justo después.
+    property point origin: Qt.point(0, 0)
+    property var originScreen: null
+    property real originAt: 0
+    function from(w, pos): void {
+        const s = w?.screen; if (!s) return;
+        const a = w.anchors, m = w.margins;
+        const wx = a.left ? m.left : a.right ? s.width - m.right - w.width : (s.width - w.width) / 2;
+        const wy = a.top ? m.top : a.bottom ? s.height - m.bottom - w.height : (s.height - w.height) / 2;
+        origin = Qt.point(wx + pos.x, wy + pos.y); originScreen = s; originAt = Date.now();
+    }
+
     function open(v: string, a): void {
         const rd = redirects[v];
         if (rd) { v = rd[0]; a = rd[1]; }
