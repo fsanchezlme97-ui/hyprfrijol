@@ -19,5 +19,7 @@ Singleton {
         const m = /^(\d{1,2}):(\d{2})/.exec(s ?? ""); if (!m || h24) return s ?? "";
         const h = Number(m[1]); return (h % 12 || 12) + ":" + m[2] + (h < 12 ? " a. m." : " p. m.");
     }
-    SystemClock { id: clock; precision: SystemClock.Seconds; onDateChanged: if (date) root.now = date }
+    // Minutos: nada muestra segundos, y con Seconds todo lo que depende de «now» (el «hace X min» de cada aviso…)
+    // se recalculaba cada segundo con el shell en reposo. Salta justo al cambiar de minuto.
+    SystemClock { id: clock; precision: SystemClock.Minutes; onDateChanged: if (date) root.now = date }
 }

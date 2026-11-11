@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.48] — 2026-11-11
+
+### Rendimiento
+- El shell en reposo gasta ~1 % de un núcleo en lugar de ~4,7 % (medido en una sesión real con dos pantallas). Las dos causas, encontradas con `qmlprofiler`:
+  - El monitor del sistema (`SysStats`) llamaba a JS una vez por línea: ~380 líneas cada 2 s con el consumo por programa. Ahora es una llamada por bloque.
+  - El reloj compartido (`Time.now`) cambiaba cada segundo, y con él se rehacía cada segundo la lista del centro de notificaciones, aunque estuviera cerrado (el «hace X min» de cada aviso). Ahora cambia al cambiar de minuto; nada muestra segundos.
+- Nuevo `dev/perf.sh`: mide la CPU y la memoria del shell en reposo en una sesión anidada (ver `dev/DESARROLLO.md`, que explica también cómo perfilar la sesión real).
+
 ## [0.8.47] — 2026-11-11
 
 ### Arreglado

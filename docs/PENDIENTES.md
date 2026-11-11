@@ -14,7 +14,8 @@ illogical-impulse (end-4) y Omarchy 4.5 (noviembre de 2026). Al terminar algo, s
 - [ ] **Idiomas**: textos de la interfaz traducibles; inglés primero (Omarchy tiene 50 y los cambia en vivo).
 - [ ] **Rendimiento medido**: memoria y CPU del shell en reposo y con paneles abiertos, comparado con Caelestia y
       Noctalia; quitar sondeos (p. ej. la pastilla de ventana pregunta a Hyprland cada 100 ms) y reaccionar a
-      eventos.
+      eventos. Hecho (v0.8.48): `dev/perf.sh` y reposo de 4,7 % a ~1 % de un núcleo. Falta: los 450 MB de RSS y
+      la comparación con los otros shells.
 - [ ] **Pulido de animaciones**: paneles que salen de la barra y se transforman entre sí (como Caelestia).
 - [ ] **Plugins propios**: formato, permisos y un registro con versiones fijadas (como DMS); hoy solo los de Omarchy.
 - [ ] **Más compositores** (niri, Sway): evaluar qué partes dependen de Hyprland. Grande; después de lo demás.

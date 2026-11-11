@@ -46,6 +46,17 @@ dev/check.sh    # ~2 min: sesión anidada con HOME falso, abre las 18 vistas y t
 ```
 Los dos salen con 1 si algo falla.
 
+## Rendimiento
+```bash
+dev/perf.sh            # CPU (hilo principal, render, procesos lanzados) y memoria del shell en reposo, sesión anidada
+dev/perf.sh -v ajustes # además con esa vista abierta
+```
+La sesión anidada no tiene tus ventanas ni tus pantallas: para ver qué gasta en la sesión real, perfílala con
+`qmlprofiler` (arrancar `qs -p config/quickshell --debug 3768` bajo el cerrojo de `hf-shell`, luego
+`/usr/lib/qt6/bin/qmlprofiler --interactive -a localhost -p 3768`: `r` para parar, `o archivo.qtd` para guardar).
+Con el shell en reposo no debería haber nada que se repita cada segundo: un `onRead` por línea de un proceso que
+escribe mucho o un enlace a `Time.now` en una vista cerrada pero cargada son los culpables típicos.
+
 ## Módulos
 Un módulo = carpeta `config/quickshell/modules/<nombre>/` con su `.qml` principal (normalmente un `Overlay`
 con `view: "<vista>"`) y sus piezas. Se registra en `modules/Modules.qml`.

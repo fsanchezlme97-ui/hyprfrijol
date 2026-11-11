@@ -173,15 +173,8 @@ Singleton {
               read -t 2 -u 3
             done
         `, "bash", String(root.procMode)])
-        property string buf: ""
-        stdout: SplitParser {
-            onRead: line => {
-                if (line !== "end") { proc.buf += line + "\n"; return; }
-                const text = proc.buf;
-                proc.buf = "";
-                root.parse(text);
-            }
-        }
+        // Un bloque por vuelta (cientos de líneas con «proc»): una sola llamada a JS por bloque, no una por línea
+        stdout: SplitParser { splitMarker: "\nend\n"; onRead: block => root.parse(block) }   // la línea «end» entera: un proceso «…backend» no corta
     }
     function parse(text: string): void {
             {
