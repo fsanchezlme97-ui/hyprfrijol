@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.12] — 2026-11-11
+
+### Corregido
+- La apertura de los paneles (centro de control, Spotlight, agenda, ventanas de los widgets de la barra…) es **una sola animación**: el fundido, la escala y el deslizamiento van a la vez, sin rebote. Antes el panel se quedaba un instante quieto como un bloque gris desenfocado y luego entraba, y el fundido acababa antes que el movimiento.
+- Se abren siempre igual, con el ratón o con el teclado (antes, con el ratón nacían del punto pulsado y con el teclado desde su borde).
+
 ## [0.9.11] — 2026-11-11
 
 ### Corregido

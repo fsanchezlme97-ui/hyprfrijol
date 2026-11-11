@@ -1,8 +1,7 @@
 // Base de todos los paneles/emergentes del shell (Spotlight, ajustes rápidos, portapapeles, agenda…).
 // - Se muestra cuando Shell.view === view, en la pantalla con foco.
 // - Esc o clic fuera → cierra (Shell.close()).  Toma el teclado mientras está abierto.
-// - Animación de entrada "softUp" del diseño (.38s, cubic-bezier(.2,.8,.2,1)); abierto con el ratón desde la barra,
-//   nace del punto pulsado (Shell.from).
+// - Una sola animación de entrada (fundido, escala y deslizamiento desde su borde a la vez, Theme.durIn y Theme.ease).
 // - place: "center" | "screen" (centrado en la pantalla entera, sea cual sea la barra; `lift` lo sube y
 //   `centerHeight` fija la altura con la que se centra, para que no salte al cambiar de tamaño) | "top" | "top-right" | "bottom-right" | "bottom-left" | "right" | "left" | "bottom" | "fill"
 //   Respeta la barra (abajo/arriba/izquierda) con los mismos márgenes que el diseño.
@@ -12,6 +11,7 @@
 //       Glass { anchors.fill: parent; kind: "popup"  … contenido … }
 //   }
 import QtQuick
+import QtQuick.Window
 import Quickshell
 import Quickshell.Wayland
 import ".."
@@ -97,52 +97,52 @@ PanelWindow {
         // Clics dentro del panel no cierran
         MouseArea { anchors.fill: parent; z: -1; acceptedButtons: Qt.AllButtons; onClicked: {} }
 
-        // Entrada: aparece, crece desde el 94 % y se desliza desde su borde (barra o lateral) con un leve rebote;
-        // salida: más corta y sin rebote
+        // Una sola animación: «p» va de 0 a 1 y de ella salen a la vez la opacidad, la escala (desde el 94 %) y el
+        // deslizamiento desde su borde (barra o lateral). Antes cada una llevaba su duración y su curva (el fundido
+        // acababa enseguida, el movimiento seguía y la escala rebotaba) y además, con el ratón, nacía del punto
+        // pulsado y con el teclado del borde: se veían dos animaciones distintas. Entrada desacelerando, sin rebote;
+        // salida más corta.
         readonly property real dx: win.at === "right" || win.at === "top-right" || win.at === "bottom-right" ? 18
                                  : win.at === "left" || win.at === "top-left" || win.at === "bottom-left" ? -18 : 0
         readonly property real dy: dx !== 0 ? 0 : win.at === "top" || win.at === "top-bar" || win.at === "center" || win.at === "screen" ? -10 : 14
-        // Abierto desde la barra con el ratón (Shell.from justo antes de abrir, en esta pantalla): nace del punto
-        // pulsado, más pequeño y sin deslizarse; se cierra hacia el mismo punto. Con el teclado, desde su borde.
-        property bool fromPress: false
-        property point org: Qt.point(0, 0)
         readonly property point edgeOrg: Qt.point(
             win.at === "bottom-right" || win.at === "top-right" || win.at === "right" ? width
                 : win.at === "bottom-left" || win.at === "top-left" || win.at === "left" ? 0 : width / 2,
             win.at === "bottom-right" || win.at === "bottom-left" || win.at === "bottom" ? height
                 : win.at === "top-right" || win.at === "top-left" || win.at === "top-bar" ? 0 : height / 2)
-        opacity: win.shown ? 1 : 0
-        // Escala y desplazamiento: se fija el punto de partida y luego se anima (go()), así la apertura sabe ya de
-        // dónde sale; con bindings, el valor de partida sería el del cierre anterior
-        property real sc: place === "fill" ? 0.985 : 0.94
-        readonly property string place: win.place
-        property real tx: dx
-        property real ty: dy
-        property bool anim: true
+        readonly property real sc0: win.place === "fill" ? 0.985 : 0.94
+        property real p: 0
+        // Antes de animar se dibuja una vez casi transparente (con opacidad 0 Qt no dibuja nada): el primer dibujo
+        // del contenido es el lento (texto, iconos, efectos) y, si cae dentro de la entrada, el panel se quedaba
+        // quieto unos fotogramas como un bloque gris desenfocado y luego arrancaba: parecían dos animaciones.
+        // Con 0,004 no se ve ni lleva desenfoque (ignore_alpha de la capa en look.lua).
+        opacity: waitFrame.running ? 0.004 : Math.min(1, p * 1.5)
+        property int swaps: 0
         function go(open: bool): void {
-            if (open) {
-                fromPress = !Theme.still && Shell.originScreen === win.screen && Math.abs(Shell.openedAt - Shell.originAt) < 500;
-                if (fromPress) org = Qt.point(Shell.origin.x - x, Shell.origin.y - y);
-                anim = false;
-                sc = fromPress ? 0.82 : place === "fill" ? 0.985 : 0.94; tx = fromPress ? 0 : dx; ty = fromPress ? 0 : dy;
-                anim = true;
-                sc = 1; tx = 0; ty = 0;
-            } else {
-                sc = fromPress ? 0.82 : place === "fill" ? 0.985 : 0.94; tx = fromPress ? 0 : dx; ty = fromPress ? 0 : dy;
-            }
+            if (!open) { waitFrame.stop(); p = 0; }
+            else if (p > 0) p = 1;                      // reabierto mientras se cerraba: ya está pintado
+            else { swaps = 0; waitFrame.restart(); }
+        }
+        function start(): void { waitFrame.stop(); if (win.shown) p = 1; }
+        Timer { id: waitFrame; interval: 160; onTriggered: panel.start() }   // por si no llega el aviso del fotograma
+        Connections {
+            target: waitFrame.running ? panel.Window.window : null
+            function onFrameSwapped() { if (++panel.swaps >= 2) panel.start(); }
         }
         transform: [
             Scale {
-                origin.x: panel.fromPress ? panel.org.x : panel.edgeOrg.x
-                origin.y: panel.fromPress ? panel.org.y : panel.edgeOrg.y
-                xScale: panel.sc; yScale: panel.sc
+                origin.x: panel.edgeOrg.x; origin.y: panel.edgeOrg.y
+                xScale: panel.sc0 + (1 - panel.sc0) * panel.p; yScale: xScale
             },
-            Translate { x: panel.tx; y: panel.ty }
+            Translate { x: panel.dx * (1 - panel.p); y: panel.dy * (1 - panel.p) }
         ]
-        Behavior on sc { enabled: panel.anim; NumberAnimation { duration: win.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.easeIn : Theme.easeOut } }
-        Behavior on tx { enabled: panel.anim; NumberAnimation { duration: win.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.easeIn : Theme.easeOut } }
-        Behavior on ty { enabled: panel.anim; NumberAnimation { duration: win.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.easeIn : Theme.easeOut } }
-        Behavior on opacity { NumberAnimation { id: fade; duration: win.shown ? Theme.durIn * 0.6 : Theme.durOut; easing.type: Easing.OutCubic } }
+        Behavior on p {
+            NumberAnimation {
+                id: fade
+                duration: win.shown ? Theme.durIn : Theme.durOut
+                easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.ease : Theme.easeOut
+            }
+        }
 
         Keys.onEscapePressed: { win.escapePressed(); Shell.close(); }
     }

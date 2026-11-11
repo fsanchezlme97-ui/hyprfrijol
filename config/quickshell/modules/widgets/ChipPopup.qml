@@ -4,6 +4,7 @@
 // El chip la abre con BarAnchor.open(chip, "w-clima"): Shell.arg = { chip: true, c, screen } con c = centro
 // del chip a lo largo de la barra (px lógicos de la pantalla). Sin arg (atajo, IPC) se centra en la barra.
 import QtQuick
+import QtQuick.Window
 import Quickshell
 import Quickshell.Wayland
 import "../.."
@@ -31,6 +32,7 @@ PanelWindow {
     property var lastArg: null
     onShownChanged: {
         if (shown) { lastArg = chipArg(Shell.arg); panel.forceActiveFocus(); }
+        panel.go(shown);
     }
 
     screen: Quickshell.screens.find(s => s.name === a?.screen) ?? Shell.screen
@@ -68,21 +70,36 @@ PanelWindow {
         readonly property real oy: win.vertical ? Math.max(0, Math.min(height, win.c - y)) : (win.pos === "arriba" ? 0 : height)
         readonly property real dx: win.pos === "izquierda" ? -12 : win.pos === "derecha" ? 12 : 0
         readonly property real dy: win.pos === "arriba" ? -12 : win.pos === "abajo" ? 12 : 0
-        opacity: win.shown ? 1 : 0
+        // Una sola animación como components/Overlay: «p» (0 → 1) mueve a la vez opacidad, escala y desplazamiento,
+        // y antes se dibuja una vez casi transparente para que el primer dibujo (el lento) no caiga en la entrada
+        property real p: 0
+        property int swaps: 0
+        opacity: waitFrame.running ? 0.004 : Math.min(1, p * 1.5)
+        function go(open: bool): void {
+            if (!open) { waitFrame.stop(); p = 0; }
+            else if (p > 0) p = 1;
+            else { swaps = 0; waitFrame.restart(); }
+        }
+        function start(): void { waitFrame.stop(); if (win.shown) p = 1; }
+        Timer { id: waitFrame; interval: 160; onTriggered: panel.start() }
+        Connections {
+            target: waitFrame.running ? panel.Window.window : null
+            function onFrameSwapped() { if (++panel.swaps >= 2) panel.start(); }
+        }
         transform: [
             Scale {
                 origin.x: panel.ox; origin.y: panel.oy
-                xScale: win.shown ? 1 : 0.92; yScale: win.shown ? 1 : 0.86
-                Behavior on xScale { NumberAnimation { duration: win.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.easeIn : Theme.easeOut } }
-                Behavior on yScale { NumberAnimation { duration: win.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.easeIn : Theme.easeOut } }
+                xScale: 0.92 + 0.08 * panel.p; yScale: 0.86 + 0.14 * panel.p
             },
-            Translate {
-                x: win.shown ? 0 : panel.dx; y: win.shown ? 0 : panel.dy
-                Behavior on x { NumberAnimation { duration: win.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.easeIn : Theme.easeOut } }
-                Behavior on y { NumberAnimation { duration: win.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.easeIn : Theme.easeOut } }
-            }
+            Translate { x: panel.dx * (1 - panel.p); y: panel.dy * (1 - panel.p) }
         ]
-        Behavior on opacity { NumberAnimation { id: fade; duration: win.shown ? Theme.durIn * 0.6 : Theme.durOut; easing.type: Easing.OutCubic } }
+        Behavior on p {
+            NumberAnimation {
+                id: fade
+                duration: win.shown ? Theme.durIn : Theme.durOut
+                easing.type: Easing.BezierSpline; easing.bezierCurve: win.shown ? Theme.ease : Theme.easeOut
+            }
+        }
     }
     OpenProbe { name: win.view; shown: win.shown }
 }
