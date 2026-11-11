@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.24] — 2026-11-10
+
+- Los botones de las barras de título usan iconos de Nerd Font (cerrar, maximizar, minimizar, chincheta y menú)
+  en vez de símbolos de texto. Sin una Nerd Font instalada siguen los símbolos de texto. El instalador añade
+  JetBrains Mono Nerd Font en Arch.
+
 ## [0.8.23] — 2026-11-10
 
 - Sin emojis en Ajustes ni en la barra de título: el botón de mostrar en todos los espacios es ahora ⊙.

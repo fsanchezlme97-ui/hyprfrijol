@@ -354,7 +354,7 @@ ColumnLayout {
                 Txt { text: root.winMode === "flotante" ? "Añade barras de título a las ventanas" : "Barras de título con botones"; weight: Font.DemiBold }
                 Txt {
                     Layout.fillWidth: true
-                    text: "Menú ⋮, mostrar en todos los espacios ⊙, minimizar, maximizar y cerrar, solo en las ventanas que no traen la suya. "
+                    text: "Botones de menú, mostrar en todos los espacios, minimizar, maximizar y cerrar, solo en las ventanas que no traen la suya. "
                         + "Se compila una vez (unos minutos) y se recompila tras actualizar Hyprland."
                     muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
                 }

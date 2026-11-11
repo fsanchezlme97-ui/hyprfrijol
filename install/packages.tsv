@@ -91,6 +91,7 @@ util-linux	recommended	util-linux	util-linux	util-linux	util-linux,rfkill	util-l
 fonts-noto	recommended	noto-fonts	google-noto-sans-fonts	google-noto-sans-fonts	fonts-noto-core	noto-fonts-ttf	tipografía de respaldo	apariencia	
 fonts-emoji	recommended	noto-fonts-emoji	google-noto-color-emoji-fonts	google-noto-coloremoji-fonts	fonts-noto-color-emoji	noto-fonts-emoji	emojis (Spotlight «;»)	apariencia	
 fonts-mono	recommended	ttf-jetbrains-mono	jetbrains-mono-fonts	jetbrains-mono-fonts	fonts-jetbrains-mono	-	monoespaciada (Ajustes, terminal)	apariencia	
+fonts-nerd	recommended	ttf-jetbrains-mono-nerd	-	-	-	-	iconos de los botones de las barras de título (Hyprbars)	apariencia	
 icons	recommended	papirus-icon-theme	papirus-icon-theme	papirus-icon-theme	papirus-icon-theme	papirus-icon-theme	iconos de apps (con carpetas del acento)	apariencia	
 gtk-settings	recommended	gsettings-desktop-schemas,adw-gtk-theme	gsettings-desktop-schemas,adw-gtk3-theme	gsettings-desktop-schemas	gsettings-desktop-schemas	gsettings-desktop-schemas	tema claro/oscuro de las apps GTK	apariencia	
 qt6ct	recommended	qt6ct	qt6ct	qt6ct	qt6ct	qt6ct	tema y colores de las apps Qt	apariencia	qt6ct

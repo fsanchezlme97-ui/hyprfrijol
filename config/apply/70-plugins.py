@@ -152,12 +152,21 @@ def hypr_lua(s, c):
                 qs = f"qs -p {shlex.quote(str(root / 'config/quickshell'))} ipc call shell open ventana" if root else ""
                 # de derecha a izquierda: cerrar, maximizar, minimizar (al espacio especial del shell), fijar en todos
                 # los espacios y el menú de ventana (WinMenu.qml; pulsar la barra ya enfocó esta ventana)
+                # Glifos de Nerd Font (Material Design: cerrar, maximizar, minimizar, chincheta, menú) si hay alguna
+                # instalada; si no, símbolos de texto que tiene cualquier fuente (no salen cuadros vacíos)
+                ico = ["✕", "□", "–", "⊙", "⋮"]
+                try:
+                    import subprocess
+                    if subprocess.run(["fc-list", ":charset=f0403", "family"], capture_output=True, text=True, timeout=5).stdout.strip():
+                        ico = ["\U000F05AD", "\U000F05AF", "\U000F05B0", "\U000F0403", "\U000F01D9"]
+                except (OSError, subprocess.SubprocessError):
+                    pass
                 btns = [
-                    (danger, "✕", "hyprctl dispatch 'hl.dsp.window.close()'"),
-                    (c.get("t"), "□", "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\", action = \"toggle\" })'"),
-                    (c.get("t"), "–", "hyprctl dispatch 'hl.dsp.window.move({ workspace = \"special:minimized\", follow = false })'"),
-                    (c.get("t"), "⊙", "hyprctl dispatch 'hl.dsp.window.pin()'"),
-                ] + ([(c.get("t"), "⋮", qs)] if qs else [])
+                    (danger, ico[0], "hyprctl dispatch 'hl.dsp.window.close()'"),
+                    (c.get("t"), ico[1], "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\", action = \"toggle\" })'"),
+                    (c.get("t"), ico[2], "hyprctl dispatch 'hl.dsp.window.move({ workspace = \"special:minimized\", follow = false })'"),
+                    (c.get("t"), ico[3], "hyprctl dispatch 'hl.dsp.window.pin()'"),
+                ] + ([(c.get("t"), ico[4], qs)] if qs else [])
                 for fg, icon, act in btns:
                     body.append(f"hl.plugin.hyprbars.add_button({{ bg_color = {_q(clear)}, fg_color = {_q(_rgba(fg))}, size = {size}, icon = {_q(icon)}, action = {_q(act)} }})")
             if vals.get("floatingOnly"):
