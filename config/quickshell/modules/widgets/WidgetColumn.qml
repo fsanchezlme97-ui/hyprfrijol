@@ -259,7 +259,7 @@ ColumnLayout {
                 Layout.preferredHeight: 6
                 radius: Theme.r(3)
                 color: Theme.fill2
-                Rectangle { width: parent.width * Printer.progress; height: parent.height; radius: Theme.r(3); color: Theme.p; Behavior on width { NumberAnimation { duration: 500 } } }
+                Rectangle { width: parent.width * Printer.progress; height: parent.height; radius: Theme.r(3); color: Theme.p; Behavior on width { NumberAnimation { duration: Theme.ms(500); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } } }
             }
             RowLayout {
                 visible: Printer.online

@@ -61,7 +61,7 @@ PanelWindow {
         anchors.fill: parent
         color: "#000000"
         opacity: win.dim && win.shown ? 0.28 : 0
-        Behavior on opacity { NumberAnimation { duration: Theme.dur } }
+        Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
     MouseArea {
         anchors.fill: parent

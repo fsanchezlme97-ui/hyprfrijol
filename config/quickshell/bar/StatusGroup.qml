@@ -25,7 +25,7 @@ Rectangle {
     implicitWidth: vertical ? 26 : hrow.implicitWidth + 16
     radius: Theme.r(7)
     color: on || hovered ? Theme.fill2 : "transparent"
-    Behavior on color { ColorAnimation { duration: Theme.dur } }
+    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
     function open(section: string, arg): void {
         if (Shell.view === "ajustes" && (arg === undefined || arg === null)) Shell.close();

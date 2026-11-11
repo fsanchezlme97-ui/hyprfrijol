@@ -229,7 +229,7 @@ Scope {
             scale: win.shown ? 1 : 0.94
             Behavior on opacity { NumberAnimation { id: fade; duration: win.shown ? Theme.durIn : 220; easing.type: Easing.OutCubic } }
             Behavior on scale { NumberAnimation { duration: Theme.durIn; easing.type: Easing.OutCubic } }
-            Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+            Behavior on width { NumberAnimation { duration: Theme.ms(180); easing.type: Easing.OutCubic } }
 
             RowLayout {
                 id: row
@@ -246,7 +246,7 @@ Scope {
                         width: 24; height: 24; radius: 12
                         color: Qt.alpha(win.accent, 0.18)
                         scale: root.phase === "rec" ? 1 + Math.min(0.35, (root.levels[root.levels.length - 1] ?? 0) * 0.45) : 1
-                        Behavior on scale { NumberAnimation { duration: 90 } }
+                        Behavior on scale { NumberAnimation { duration: Theme.ms(90); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                     }
                     Icon { anchors.centerIn: parent; size: 14; name: win.iconName; color: win.accent }
                 }
@@ -265,7 +265,7 @@ Scope {
                             anchors.verticalCenter: parent.verticalCenter
                             color: Theme.t
                             opacity: 0.35 + v * 0.65
-                            Behavior on height { NumberAnimation { duration: 70 } }
+                            Behavior on height { NumberAnimation { duration: Theme.ms(70); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                         }
                     }
                 }

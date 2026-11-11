@@ -419,7 +419,7 @@ Overlay {
                         Layout.preferredHeight: 52
                         radius: Theme.r(8)
                         color: hovered ? Qt.alpha(Theme.t, 0.14) : Theme.fill2
-                        Behavior on color { ColorAnimation { duration: 120 } }
+                        Behavior on color { ColorAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                         Item {
                             anchors.fill: parent
                             anchors.margins: 4
@@ -435,7 +435,7 @@ Overlay {
                                     height: modelData[3] * parent.height - (modelData[1] > 0 ? 1.5 : 0) - (modelData[1] + modelData[3] < 0.999 ? 1.5 : 0)
                                     radius: Theme.r(4)
                                     color: on ? Theme.p : Theme.s4
-                                    Behavior on color { ColorAnimation { duration: 100 } }
+                                    Behavior on color { ColorAnimation { duration: Theme.ms(100); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                                     MouseArea {
                                         anchors.fill: parent
                                         hoverEnabled: true

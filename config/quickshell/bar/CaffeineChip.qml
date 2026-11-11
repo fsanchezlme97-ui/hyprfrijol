@@ -12,7 +12,7 @@ Rectangle {
     implicitHeight: vertical ? 26 : 22
     radius: Theme.r(7)
     color: Caffeine.on ? Theme.p : ma.containsMouse ? Theme.fill2 : "transparent"
-    Behavior on color { ColorAnimation { duration: Theme.dur } }
+    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     Icon { anchors.centerIn: parent; name: "coffee"; size: 15; color: Caffeine.on ? Theme.pText : Theme.t; opacity: Caffeine.on ? 1 : 0.75 }
     MouseArea {
         id: ma

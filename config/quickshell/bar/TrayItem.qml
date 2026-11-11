@@ -51,7 +51,7 @@ Item {
         radius: Theme.r(6)
         color: Theme.fill2
         opacity: ma.containsMouse ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 120 } }
+        Behavior on opacity { NumberAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
     IconImage {
         id: img

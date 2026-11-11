@@ -132,6 +132,9 @@ Singleton {
     readonly property int dur: still ? 0 : (motion.dur ?? 260)            // transiciones de estado
     readonly property int durIn: still ? 0 : (motion.durIn ?? 420)        // aparición de paneles
     readonly property int durOut: still ? 0 : (motion.durOut ?? 180)      // cierre de paneles
+    // Duración fija de un detalle (hover, pulsación, cambio de color) que sigue la velocidad elegida y se anula con
+    // «Reducir movimiento»: Theme.ms(140)
+    function ms(n: real): int { return still ? 0 : Math.round(n / (motion.speed || 1)); }
     // Curvas: «ease» desacelera al entrar; «easeIn» es la de aparición (con un leve rebote en Fluido, y en
     // SkySoul con Equilibrado); «easeOut» acelera al salir
     readonly property var easeSpring: [0.34, 1.36, 0.64, 1, 1, 1]

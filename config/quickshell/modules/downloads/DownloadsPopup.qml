@@ -174,7 +174,7 @@ ChipPopup {
                                         width: unknown ? parent.width * 0.3 : parent.width * Math.max(0, Math.min(1, row.it.progress))
                                         height: parent.height; radius: 2
                                         color: row.it.status === "paused" ? Theme.ter : Theme.p
-                                        Behavior on width { enabled: !bar.unknown; NumberAnimation { duration: 400 } }
+                                        Behavior on width { enabled: !bar.unknown; NumberAnimation { duration: Theme.ms(400); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                                         SequentialAnimation on x {
                                             running: bar.unknown && !Theme.reduceMotion
                                             loops: Animation.Infinite

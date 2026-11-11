@@ -442,7 +442,7 @@ Overlay {
                                 required property int index
                                 width: pager.page === index ? 16 : 6; height: 6; radius: 3
                                 color: pager.page === index ? Theme.t : Qt.alpha(Theme.t, 0.3)
-                                Behavior on width { NumberAnimation { duration: Theme.dur } }
+                                Behavior on width { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                                 MouseArea { anchors.fill: parent; anchors.margins: -5; cursorShape: Qt.PointingHandCursor; onClicked: pager.go(parent.index) }
                             }
                         }
@@ -575,8 +575,8 @@ Overlay {
         radius: width / 2
         color: Theme.t
         opacity: barMa.containsMouse || barMa.pressed || flick.moving ? 0.45 : 0.22
-        Behavior on opacity { NumberAnimation { duration: 140 } }
-        Behavior on width { NumberAnimation { duration: 120 } }
+        Behavior on opacity { NumberAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+        Behavior on width { NumberAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
         MouseArea {
             id: barMa
             anchors.fill: parent
@@ -739,8 +739,8 @@ Overlay {
             height: parent.height
             radius: parent.radius
             color: root.muted ? Theme.o : Theme.fillOn
-            Behavior on width { enabled: !drag.pressed; NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-            Behavior on color { ColorAnimation { duration: Theme.dur } }
+            Behavior on width { enabled: !drag.pressed; NumberAnimation { duration: Theme.ms(120); easing.type: Easing.OutCubic } }
+            Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
         }
         MouseArea {
             id: drag
@@ -765,7 +765,7 @@ Overlay {
             tabular: true
             color: root.frac > 0.86 ? Theme.fillOnText : Theme.tv
             opacity: drag.containsMouse || drag.pressed ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 140 } }
+            Behavior on opacity { NumberAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
         }
     }
 
@@ -784,16 +784,16 @@ Overlay {
         implicitHeight: Math.max(46, tcol.implicitHeight + 10)
         radius: Theme.pill ? Math.min(height / 2, Theme.r(11)) : Theme.r(6)
         scale: Theme.estilo !== "flat" && main.pressed ? 0.97 : 1
-        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutBack; easing.overshoot: 2 } }
+        Behavior on scale { NumberAnimation { duration: Theme.ms(180); easing.type: Easing.OutBack; easing.overshoot: 2 } }
         opacity: available ? 1 : 0.55
         color: active ? Theme.fillOn : Theme.fill2
-        Behavior on color { ColorAnimation { duration: Theme.dur } }
+        Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
         readonly property color fg: active ? Theme.fillOnText : Theme.t
         Rectangle {
             anchors.fill: parent; radius: parent.radius
             color: Theme.light ? "#000000" : "#FFFFFF"
             opacity: main.containsMouse ? 0.06 : 0
-            Behavior on opacity { NumberAnimation { duration: 140 } }
+            Behavior on opacity { NumberAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
         }
         Ripple { id: rip; anchors.fill: parent; radius: root.radius; color: root.fg }
         MouseArea {
@@ -857,7 +857,7 @@ Overlay {
                     Layout.preferredWidth: 10
                     radius: root.itemRadius
                     color: sel ? Theme.segThumb : hov.hovered ? Qt.alpha(Theme.s1, 0.35) : "transparent"
-                    Behavior on color { ColorAnimation { duration: Theme.dur } }
+                    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                     HoverHandler { id: hov }
                     Txt {
                         anchors.centerIn: parent

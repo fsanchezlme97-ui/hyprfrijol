@@ -24,7 +24,7 @@ RowLayout {
             implicitHeight: root.h
             radius: Theme.ctl(root.h)
             color: on ? Theme.p : Theme.s4
-            Behavior on color { ColorAnimation { duration: Theme.dur } }
+            Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
             Rectangle { anchors.fill: parent; radius: parent.radius; color: Theme.t; opacity: ma.containsMouse && !pill.on ? 0.06 : 0 }
             Txt { id: t; anchors.centerIn: parent; text: pill.modelData.label; tabular: true; size: 12; weight: Font.DemiBold; color: pill.on ? Theme.pText : Theme.t }
             MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.picked(pill.modelData.key) }

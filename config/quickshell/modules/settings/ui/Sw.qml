@@ -14,7 +14,7 @@ Rectangle {
     color: checked ? Theme.p : Theme.s4
     border.width: checked ? 0 : 2
     border.color: Theme.o
-    Behavior on color { ColorAnimation { duration: Theme.dur } }
+    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     Rectangle {
         readonly property real d: root.checked ? 20 : 12
         width: d; height: d; radius: d / 2
@@ -22,8 +22,8 @@ Rectangle {
         x: root.checked ? root.width - d - 3 : 7
         color: root.checked ? Theme.pText : Theme.o
         Behavior on x { NumberAnimation { duration: Theme.dur + 60; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
-        Behavior on width { NumberAnimation { duration: Theme.dur } }
-        Behavior on height { NumberAnimation { duration: Theme.dur } }
+        Behavior on width { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+        Behavior on height { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
     MouseArea {
         anchors.fill: parent

@@ -321,7 +321,7 @@ Scope {
                                     implicitHeight: 32
                                     radius: Theme.r(5)
                                     color: it.on ? Theme.selBg : ma.containsMouse ? Qt.alpha(Theme.t, 0.05) : "transparent"
-                                    Behavior on color { ColorAnimation { duration: 160 } }
+                                    Behavior on color { ColorAnimation { duration: Theme.ms(160); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                                     // Chroma: marca roja a la izquierda de la sección elegida (Nothing)
                                     Rectangle {
                                         visible: Theme.selPill && it.on

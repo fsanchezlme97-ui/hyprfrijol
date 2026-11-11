@@ -18,7 +18,7 @@ Rectangle {
     radius: Theme.ctl(28)
     color: primary ? Theme.p : danger && ma.containsMouse ? Qt.alpha(Theme.danger, 0.22) : ma.containsMouse ? Qt.alpha(Theme.t, 0.14) : Theme.fill2
     opacity: enabled ? 1 : 0.5
-    Behavior on color { ColorAnimation { duration: 120 } }
+    Behavior on color { ColorAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     Row {
         id: row
         anchors.centerIn: parent

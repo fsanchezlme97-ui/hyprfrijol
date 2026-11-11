@@ -23,19 +23,19 @@ Rectangle {
     implicitWidth: row.implicitWidth + padX * 2
     radius: Theme.ctl(h)
     scale: Theme.estilo !== "flat" && mouse.pressed && root.enabled ? 0.96 : 1
-    Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
+    Behavior on scale { NumberAnimation { duration: Theme.ms(160); easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
     opacity: enabled ? 1 : 0.45
     color: kind === "primary" || active ? Theme.p : kind === "tonal" ? Theme.fill2 : "transparent"
     border.width: kind === "outline" ? 1 : 0
     border.color: Theme.ov
-    Behavior on color { ColorAnimation { duration: Theme.dur } }
+    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
     Rectangle {   // hover: brillo(1.06) del diseño
         anchors.fill: parent
         radius: parent.radius
         color: Theme.light ? "#000000" : "#FFFFFF"
         opacity: mouse.containsMouse && root.enabled ? (mouse.pressed ? 0.10 : 0.06) : 0
-        Behavior on opacity { NumberAnimation { duration: 140 } }
+        Behavior on opacity { NumberAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
     Ripple { id: rip; anchors.fill: parent; radius: root.radius; color: root.fg }
     RowLayout {

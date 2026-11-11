@@ -25,7 +25,7 @@ Item {
         color: card.on ? Qt.alpha(Theme.p, 0.10) : cardMa.containsMouse ? Qt.tint(Theme.s3, Qt.alpha(Theme.t, 0.04)) : Theme.s3
         border.width: 1
         border.color: card.on ? Theme.p : cardMa.containsMouse ? Theme.o : Theme.ov
-        Behavior on color { ColorAnimation { duration: 120 } }
+        Behavior on color { ColorAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
         MouseArea { id: cardMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: card.store.openDetail(card.tool) }
         RowLayout {
             anchors.fill: parent; anchors.margins: 12

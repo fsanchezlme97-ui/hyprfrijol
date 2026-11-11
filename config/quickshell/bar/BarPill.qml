@@ -20,7 +20,7 @@ Glass {
     effects: true
     color: "transparent"                 // el relleno lo pinta la forma de abajo
     opacity: bar.emptyWs ? 0 : 1
-    Behavior on opacity { NumberAnimation { duration: Theme.dur } }
+    Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
     readonly property real bw: bar.pillBorderW
     readonly property real feather: 1 / bar.k

@@ -86,7 +86,7 @@ PanelWindow {
                     border.width: cell.sel ? 1 : 0
                     border.color: Qt.alpha(Theme.p, 0.85)
                     opacity: cell.sel || cell.hot ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 110 } }
+                    Behavior on opacity { NumberAnimation { duration: Theme.ms(110); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                 }
 
                 Item {
@@ -95,7 +95,7 @@ PanelWindow {
                     y: 8
                     width: win.iconSize; height: win.iconSize
                     scale: ma.pressed ? 0.94 : 1
-                    Behavior on scale { NumberAnimation { duration: 90 } }
+                    Behavior on scale { NumberAnimation { duration: Theme.ms(90); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                     layer.enabled: true
                     layer.effect: MultiEffect {
                         shadowEnabled: true

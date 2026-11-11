@@ -39,7 +39,7 @@ Rectangle {
                 implicitWidth: lbl.implicitWidth + 24
                 radius: root.pill || Theme.pill ? height / 2 : Theme.r(5)
                 color: on ? Theme.segThumb : ma.containsMouse ? Qt.alpha(Theme.t, 0.05) : "transparent"
-                Behavior on color { ColorAnimation { duration: Theme.dur } }
+                Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                 Rectangle {   // separador entre segmentos
                     visible: seg.index > 0 && !seg.on && root.current !== root.items[seg.index - 1]?.key && !root.pill && !Theme.pill
                     width: 1; height: parent.height; color: Theme.ov

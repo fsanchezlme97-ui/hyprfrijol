@@ -192,7 +192,7 @@ Scope {
             anchors.fill: parent
             color: "black"
             opacity: root.stage === "tarjeta" ? (root.frozen ? 0.45 : 0.3) : 0
-            Behavior on opacity { NumberAnimation { duration: Theme.dur } }
+            Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
         }
 
         MouseArea {
@@ -352,7 +352,7 @@ Scope {
                                 border.width: Qt.colorEqual(root.picked, modelData) ? 2 : 1
                                 border.color: Qt.colorEqual(root.picked, modelData) ? Theme.p : Theme.ov
                                 scale: swMa.containsMouse ? 1.1 : 1
-                                Behavior on scale { NumberAnimation { duration: 120 } }
+                                Behavior on scale { NumberAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                                 MouseArea {
                                     id: swMa
                                     anchors.fill: parent

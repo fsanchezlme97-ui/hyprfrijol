@@ -13,7 +13,7 @@ Rectangle {
     color: checked ? Theme.p : Theme.fill2
     border.width: checked ? 0 : (Theme.estilo === "flat" ? 2 : 1)
     border.color: Theme.estilo === "flat" ? Theme.o : Theme.ov
-    Behavior on color { ColorAnimation { duration: Theme.dur } }
+    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     Rectangle {
         id: thumb
         readonly property real d: Theme.estilo === "flat" ? (root.checked ? 14 : 10) + (ma.pressed ? 2 : 0) : 14
@@ -22,8 +22,8 @@ Rectangle {
         x: root.checked ? parent.width - width - 3 : (Theme.estilo === "flat" ? 5 : 3)
         color: root.checked ? Theme.pText : (Theme.estilo === "flat" ? Theme.o : Theme.tv)
         Behavior on x { NumberAnimation { duration: Theme.dur + 60; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
-        Behavior on width { NumberAnimation { duration: 160 } }
-        Behavior on color { ColorAnimation { duration: Theme.dur } }
+        Behavior on width { NumberAnimation { duration: Theme.ms(160); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+        Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
     MouseArea {
         id: ma

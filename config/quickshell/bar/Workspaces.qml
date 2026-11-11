@@ -61,7 +61,7 @@ Grid {
             height: root.vertical ? (dot ? 14 : 22) : 20
             radius: Theme.r(6)
             color: active && !dot ? Theme.p : "transparent"
-            Behavior on color { ColorAnimation { duration: Theme.dur } }
+            Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
             Behavior on width { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
             Txt {
                 id: lbl

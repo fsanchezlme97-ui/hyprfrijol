@@ -20,7 +20,7 @@ Rectangle {
     color: armed ? Theme.danger : "transparent"
     border.width: armed ? 0 : 1
     border.color: Qt.alpha(Theme.danger, 0.6)
-    Behavior on color { ColorAnimation { duration: Theme.dur } }
+    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     Rectangle { anchors.fill: parent; radius: parent.radius; color: Theme.danger; opacity: ma.containsMouse && root.enabled && !root.armed ? 0.1 : 0 }
     Txt {
         id: t

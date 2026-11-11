@@ -101,7 +101,7 @@ PanelWindow {
         radius: Theme.r(14)
         kind: "panel"
         opacity: dockWin.shown ? 1 : 0
-        Behavior on opacity { NumberAnimation { id: fade; duration: Theme.dur } }
+        Behavior on opacity { NumberAnimation { id: fade; duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
         transform: Translate {
             x: dockWin.revealed || dockWin.bottom ? 0 : -(6 + dock.width + 32)   // también la sombra
             y: dockWin.revealed || !dockWin.bottom ? 0 : 6 + dock.height + 32
@@ -141,8 +141,8 @@ PanelWindow {
                                                 : (di.index % 3 === 0 ? Theme.pc : di.index % 3 === 1 ? Theme.s4 : Theme.sc)
                         scale: dma.pressed ? 0.92 : 1
                         opacity: di.allMin ? 0.45 : 1
-                        Behavior on scale { NumberAnimation { duration: 90 } }
-                        Behavior on opacity { NumberAnimation { duration: Theme.dur } }
+                        Behavior on scale { NumberAnimation { duration: Theme.ms(90); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                        Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                         Image {
                             id: dockIcon
                             anchors.centerIn: parent
@@ -174,8 +174,8 @@ PanelWindow {
                                 readonly property bool act: modelData.address === HyprClients.activeAddress && !WinMode.isMin(modelData)
                                 width: dockWin.bottom ? (act ? 12 : 4) : 3; height: dockWin.bottom ? 3 : (act ? 12 : 4); radius: 1.5
                                 color: WinMode.isMin(modelData) ? Theme.o : Theme.p
-                                Behavior on width { NumberAnimation { duration: 140 } }
-                                Behavior on height { NumberAnimation { duration: 140 } }
+                                Behavior on width { NumberAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                                Behavior on height { NumberAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                             }
                         }
                     }

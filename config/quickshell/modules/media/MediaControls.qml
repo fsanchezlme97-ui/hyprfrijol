@@ -224,7 +224,7 @@ Overlay {
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width; height: seekMa.containsMouse || seek.dragging ? 6 : 4; radius: height / 2
                         color: Theme.fill2
-                        Behavior on height { NumberAnimation { duration: 120 } }
+                        Behavior on height { NumberAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                         Rectangle { width: Math.max(parent.height, parent.width * seek.frac); height: parent.height; radius: height / 2; color: Theme.p }
                     }
                     Rectangle {
@@ -282,7 +282,7 @@ Overlay {
                         width: 48; height: 48; radius: 24
                         color: playMa.containsMouse ? Qt.lighter(Theme.p, 1.08) : Theme.p
                         scale: playMa.pressed ? 0.94 : 1
-                        Behavior on scale { NumberAnimation { duration: 120 } }
+                        Behavior on scale { NumberAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                         Icon { anchors.centerIn: parent; name: (win.player?.isPlaying ?? false) ? "pause" : "play"; size: 19; color: Theme.pText; stroke: 2.4 }
                         MouseArea { id: playMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (win.player?.canTogglePlaying) win.player.togglePlaying() }
                     }
@@ -376,7 +376,7 @@ Overlay {
                         implicitHeight: 36
                         radius: Theme.r(8)
                         color: on ? Theme.selBg : prowMa.containsMouse ? Theme.fill2 : "transparent"
-                        Behavior on color { ColorAnimation { duration: Theme.dur } }
+                        Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                         RowLayout {
                             anchors { fill: parent; leftMargin: 8; rightMargin: 6 }
                             spacing: 9

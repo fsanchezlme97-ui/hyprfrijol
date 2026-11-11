@@ -15,7 +15,7 @@ Rectangle {
     implicitHeight: vertical ? 26 : 22
     radius: Theme.r(7)
     color: showing ? Theme.p : ma.containsMouse ? Theme.fill2 : "transparent"
-    Behavior on color { ColorAnimation { duration: Theme.dur } }
+    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     Icon { anchors.centerIn: parent; name: "code"; size: 15; color: chip.showing ? Theme.pText : Theme.t; opacity: chip.showing ? 1 : 0.8 }
     MouseArea {
         id: ma

@@ -10,7 +10,7 @@ Rectangle {
     id: root
     visible: opacity > 0
     opacity: Confirm.active ? 1 : 0
-    Behavior on opacity { NumberAnimation { duration: Theme.dur } }
+    Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     implicitWidth: Math.min(620, row.implicitWidth + 32)
     implicitHeight: 52
     radius: Theme.r(10)
@@ -40,6 +40,6 @@ Rectangle {
         height: 2
         color: Theme.p
         width: parent.width * (Confirm.total > 0 ? Confirm.left / Confirm.total : 0)
-        Behavior on width { NumberAnimation { duration: 1000 } }
+        Behavior on width { NumberAnimation { duration: Theme.ms(1000); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
 }

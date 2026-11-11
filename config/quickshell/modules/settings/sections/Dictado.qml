@@ -275,7 +275,7 @@ ColumnLayout {
                                 Layout.fillWidth: true
                                 implicitHeight: 4; radius: 2; color: Theme.fill2
                                 Rectangle { width: parent.width * (mrow.prog?.pct ?? 0) / 100; height: 4; radius: 2; color: Theme.p
-                                    Behavior on width { NumberAnimation { duration: 200 } } }
+                                    Behavior on width { NumberAnimation { duration: Theme.ms(200); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } } }
                             }
                             Txt { visible: !!mrow.prog; text: "Descargando… " + (mrow.prog?.pct ?? 0) + " % · " + (mrow.prog?.mb ?? 0) + " de " + (mrow.prog?.total || mrow.modelData.mb) + " MB"; muted: true; size: 11; tabular: true }
                         }

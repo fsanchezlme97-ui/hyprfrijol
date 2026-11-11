@@ -27,7 +27,7 @@ Rectangle {
     implicitHeight: Math.max(20, barHeight - 8)
     radius: Theme.ctl(height)
     color: hover.hovered ? Theme.fill2 : "transparent"
-    Behavior on color { ColorAnimation { duration: Theme.dur } }
+    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
     readonly property bool live: Cava.active && (Media.playing || peak > 0.02)
     property real peak: 0

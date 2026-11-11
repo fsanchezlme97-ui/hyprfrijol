@@ -99,7 +99,7 @@ ColumnLayout {
                             radius: Theme.r(3)
                             x: modelData.endsWith("izq") ? 6 : modelData.endsWith("centro") ? (scr.width - width) / 2 : scr.width - width - 6
                             y: modelData.startsWith("sup") ? 6 : scr.height - height - 6
-                            Behavior on color { ColorAnimation { duration: Theme.dur } }
+                            Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                             color: on ? Theme.p : "transparent"
                             border.width: on ? 0 : 1; border.color: Theme.o
                             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Settings.set("pipCorner", parent.modelData) }

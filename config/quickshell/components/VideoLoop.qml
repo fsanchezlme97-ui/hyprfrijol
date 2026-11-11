@@ -4,13 +4,14 @@
 // y, si no está, no se carga y queda la imagen fija.
 import QtQuick
 import QtMultimedia
+import ".."
 
 Item {
     id: vp
     property string source: ""
     readonly property bool ready: player.playing && player.position > 0
     opacity: ready ? 1 : 0
-    Behavior on opacity { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+    Behavior on opacity { NumberAnimation { duration: Theme.ms(260); easing.type: Easing.OutCubic } }
     MediaPlayer {
         id: player
         source: vp.source ? "file://" + vp.source : ""

@@ -79,7 +79,7 @@ ChipPopup {
                     height: Math.max(3, (parent.height - 60) * Printer.progress)
                     radius: 2
                     color: Theme.p; opacity: 0.85
-                    Behavior on height { NumberAnimation { duration: 500 } }
+                    Behavior on height { NumberAnimation { duration: Theme.ms(500); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                 }
                 Image {
                     id: cam
@@ -112,7 +112,7 @@ ChipPopup {
                     Layout.preferredHeight: 6
                     radius: Theme.r(3)
                     color: Theme.fill2
-                    Rectangle { width: parent.width * Printer.progress; height: parent.height; radius: Theme.r(3); color: Printer.state === "paused" ? Theme.ter : Theme.p; Behavior on width { NumberAnimation { duration: 500 } } }
+                    Rectangle { width: parent.width * Printer.progress; height: parent.height; radius: Theme.r(3); color: Printer.state === "paused" ? Theme.ter : Theme.p; Behavior on width { NumberAnimation { duration: Theme.ms(500); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } } }
                 }
                 Txt {
                     Layout.fillWidth: true

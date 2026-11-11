@@ -105,7 +105,7 @@ PanelWindow {
         color: Qt.alpha(Theme.s1, hover.hovered || drag.active ? 0.96 : 0.78)
         border.width: 1
         border.color: Qt.alpha(Theme.ov, 0.6)
-        Behavior on color { ColorAnimation { duration: 120 } }
+        Behavior on color { ColorAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
         HoverHandler { id: hover }
         // clic derecho en cualquier parte de la pastilla: menú de ventana

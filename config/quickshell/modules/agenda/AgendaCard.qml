@@ -145,7 +145,7 @@ Glass {
                         readonly property bool isSel: win.sameDay(modelData, win.day)
                         readonly property bool busy: { Events.all; return Events.hasDay(modelData); }
                         opacity: !live ? 0 : out ? 0.55 : 1
-                        Behavior on opacity { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.dur } }
+                        Behavior on opacity { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                         Rectangle {
                             anchors.centerIn: parent
                             width: 27; height: 27; radius: 13.5

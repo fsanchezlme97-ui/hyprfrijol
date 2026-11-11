@@ -730,7 +730,7 @@ print(json.dumps(out[:300]))
                             anchors { left: parent.left; top: bubble.bottom; topMargin: 3; leftMargin: 2 }
                             spacing: 2
                             opacity: msgHover.hovered || msg.isLast ? 1 : 0
-                            Behavior on opacity { NumberAnimation { duration: 140 } }
+                            Behavior on opacity { NumberAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                             IconBtn {
                                 icon: "copy"; iconSize: 12; fg: Theme.tv; implicitWidth: 24; implicitHeight: 22
                                 tooltip: "Copiar la respuesta"

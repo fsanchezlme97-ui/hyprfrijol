@@ -88,7 +88,7 @@ Scope {
             width: implicitWidth
             opacity: Shell.focusMode ? 1 : 0
             transform: Translate { y: Shell.focusMode ? 0 : 10; Behavior on y { NumberAnimation { duration: Theme.durIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } } }
-            Behavior on opacity { NumberAnimation { duration: Theme.dur } }
+            Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
             Glass { anchors.fill: parent; kind: "panel"; radius: Theme.ctl(height) }
 

@@ -52,7 +52,7 @@ Rectangle {
                     text: parent.modelData.label
                     color: parent.on ? Theme.segText : Theme.tv
                     weight: parent.on ? Font.DemiBold : Font.Medium
-                    Behavior on color { ColorAnimation { duration: Theme.dur } }
+                    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                 }
                 MouseArea {
                     anchors.fill: parent

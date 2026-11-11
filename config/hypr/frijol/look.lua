@@ -58,6 +58,9 @@ hl.curve("suave",   { type = "bezier", points = { {0.2, 0.8}, {0.2, 1} } })
 hl.curve("entrada", { type = "bezier", points = { {0.05, 0.7}, {0.1, 1} } })
 hl.curve("salida",  { type = "bezier", points = { {0.3, 0}, {0.8, 0.15} } })
 hl.curve("rebote",  { type = "bezier", points = { {0.34, 1.3}, {0.64, 1} } })
+-- global primero: lo que no se nombra hereda su curva (sin él, 0,8 s con la genérica de Hyprland). hf-apply pone
+-- encima el preajuste de Ajustes › Apariencia › Movimiento.
+hl.animation({ leaf = "global",      enabled = true, speed = 4.5, bezier = "entrada" })
 hl.animation({ leaf = "windowsIn",   enabled = true, speed = 4.2, bezier = "rebote",  style = "popin 90%" })
 hl.animation({ leaf = "windowsOut",  enabled = true, speed = 2.6, bezier = "salida",  style = "popin 92%" })
 hl.animation({ leaf = "windowsMove", enabled = true, speed = 4.5, bezier = "rebote" })
@@ -69,6 +72,11 @@ hl.animation({ leaf = "workspaces",  enabled = true, speed = 4.8, bezier = "entr
 hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 4.2, bezier = "entrada", style = "slidefadevert 18%" })
 hl.animation({ leaf = "layersIn",    enabled = true, speed = 3.2, bezier = "entrada", style = "fade" })
 hl.animation({ leaf = "layersOut",   enabled = true, speed = 2.2, bezier = "salida",  style = "fade" })
+hl.animation({ leaf = "fadeLayersIn",  enabled = true, speed = 2.0, bezier = "entrada" })
+hl.animation({ leaf = "fadeLayersOut", enabled = true, speed = 1.6, bezier = "salida" })
+hl.animation({ leaf = "fadePopupsIn",  enabled = true, speed = 1.6, bezier = "entrada" })
+hl.animation({ leaf = "fadePopupsOut", enabled = true, speed = 1.2, bezier = "salida" })
+hl.animation({ leaf = "zoomFactor",    enabled = true, speed = 2.6, bezier = "entrada" })
 
 -- Vidrio para las capas del shell (barra, paneles, Spotlight) que dibuja Quickshell.
 -- Todas usan el espacio de nombres "hf-…"; el fondo de pantalla no lleva blur.

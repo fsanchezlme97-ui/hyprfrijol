@@ -162,7 +162,7 @@ PanelWindow {
                 // Archipiélago: el fondo lo ponen las píldoras de cada grupo (BarPill)
                 visible: !bar.archi
                 opacity: bar.emptyWs ? 0 : 1
-                Behavior on opacity { NumberAnimation { duration: Theme.dur } }
+                Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                 // Fija: solo la línea del lado de las ventanas
                 Rectangle {
                     visible: !bar.floating && (Theme.borderWidth > 0 || Theme.glassy)

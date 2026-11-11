@@ -104,7 +104,7 @@ Section {
         Rectangle {
             Layout.fillWidth: true; implicitHeight: 4; radius: Theme.r(2); color: Theme.s4
             Rectangle { width: parent.width * root.progress; height: parent.height; radius: parent.radius; color: Theme.p
-                        Behavior on width { NumberAnimation { duration: Theme.dur } } }
+                        Behavior on width { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } } }
         }
     }
 

@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.38] — 2026-11-11
+
+- Animaciones más fluidas:
+  - Hyprland: el fundido de las capas del shell (paneles, avisos, menús), el de los menús emergentes de las apps,
+    el zoom del cursor, la llegada de una pantalla y el encendido de pantalla heredaban el valor por defecto de
+    Hyprland (0,8 s con la curva genérica). Ahora siguen el preajuste de movimiento (p. ej. 0,24 s en Fluido) con
+    su curva. «global» se fija en los cuatro preajustes para que nada vuelva a quedarse lento.
+  - Shell: unas 100 transiciones (hover, pulsación, cambios de color y de tamaño) iban en línea recta; ahora usan
+    la curva del preajuste. Las de duración fija siguen la velocidad elegida y se anulan con «Reducir movimiento»
+    (`Theme.ms()`).
+- Barra secundaria: el consumo se agrupa por programa, no por proceso (dos kitty abiertos por separado salen como
+  uno, «×2», sumando los dos). Con varias ventanas, el clic va de una en una.
+
 ## [0.8.37] — 2026-11-11
 
 - El consumo de la barra secundaria ya no es por espacio: muestra todos los programas abiertos, en cualquier espacio

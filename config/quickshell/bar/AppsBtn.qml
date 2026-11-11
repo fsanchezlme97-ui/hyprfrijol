@@ -11,7 +11,7 @@ Rectangle {
     readonly property bool logo: OsLogo.available
     implicitWidth: side; implicitHeight: side; radius: Theme.r(7)
     color: logo ? (ma.containsMouse || Shell.view === "spotlight" ? Theme.fill2 : "transparent") : Theme.p
-    Behavior on color { ColorAnimation { duration: Theme.dur } }
+    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
     Image {
         anchors.centerIn: parent

@@ -39,7 +39,7 @@ Rectangle {
         height: parent.height
         radius: parent.radius
         color: Theme.fillOn
-        Behavior on width { enabled: !drag.pressed; NumberAnimation { duration: 120 } }
+        Behavior on width { enabled: !drag.pressed; NumberAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
     Icon { x: 10; anchors.verticalCenter: parent.verticalCenter; name: root.icon; color: Theme.fillOnText }
     MouseArea {

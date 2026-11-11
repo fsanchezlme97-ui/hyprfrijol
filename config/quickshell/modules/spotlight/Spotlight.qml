@@ -979,7 +979,7 @@ Overlay {
                                 anchors.fill: parent; anchors.margins: 3
                                 radius: Theme.r(10)
                                 color: cell.on ? Theme.selBg : cellMa.containsMouse ? Theme.fill2 : "transparent"
-                                Behavior on color { ColorAnimation { duration: 110 } }
+                                Behavior on color { ColorAnimation { duration: Theme.ms(110); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                                 SpotTile {
                                     id: cellTile
                                     anchors.horizontalCenter: parent.horizontalCenter
@@ -1159,7 +1159,7 @@ Overlay {
             anchors.fill: parent
             radius: Theme.r(8)
             color: root.selected ? Theme.pc : mouse.containsMouse ? Theme.fill2 : "transparent"
-            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on color { ColorAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
             readonly property color fg: root.selected ? Theme.pcText : Theme.t
             readonly property color subFg: root.selected ? Theme.pcText : Theme.tv
 

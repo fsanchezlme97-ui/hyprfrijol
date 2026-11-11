@@ -33,7 +33,7 @@ BarChip {
             muted: true
             Layout.preferredWidth: chip.showText && full !== "" ? implicitWidth : 0
             opacity: chip.showText ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: Theme.dur } }
+            Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
         }
     }
     ColumnLayout {

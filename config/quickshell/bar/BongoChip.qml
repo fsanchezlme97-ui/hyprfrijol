@@ -15,7 +15,7 @@ Rectangle {
     implicitHeight: vertical ? 24 : 22
     radius: Theme.r(7)
     color: ma.containsMouse ? Theme.fill2 : "transparent"
-    Behavior on color { ColorAnimation { duration: Theme.dur } }
+    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     // el lector del teclado solo corre mientras el gato se ve
     property bool counted: false
     function count(on: bool): void { if (on !== counted) { counted = on; Bongo.users += on ? 1 : -1; } }

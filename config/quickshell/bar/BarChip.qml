@@ -15,7 +15,7 @@ Rectangle {
     signal rightClicked()
     radius: Theme.r(7)
     color: open ? Theme.fill2 : ma.containsMouse ? Theme.fill2 : "transparent"
-    Behavior on color { ColorAnimation { duration: Theme.dur } }
+    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
     // Centro del chip a lo largo de la barra, en px de la pantalla (la ventana de la barra empieza a barOffset del borde)
     function anchorArg(): var {

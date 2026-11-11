@@ -39,7 +39,7 @@ ColumnLayout {
             implicitHeight: baseH + (portSet ? (root.compact ? 30 : 36) : 0)
             radius: root.compact ? Theme.r(5) : Theme.r(6)
             color: on && !root.compact ? Theme.selBg : ma.containsMouse ? (root.compact ? Theme.s1 : Qt.alpha(Theme.t, 0.05)) : "transparent"
-            Behavior on color { ColorAnimation { duration: Theme.dur } }
+            Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
             RowLayout {
                 anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: root.compact ? 8 : 10; rightMargin: root.compact ? 8 : 10 }
                 height: row.baseH

@@ -279,7 +279,7 @@ Scope {
                     id: deskCol
                     anchors { fill: parent; margins: 6 }
                     opacity: perScreen.deskOn ? 1 : 0
-                    Behavior on opacity { NumberAnimation { id: deskFade; duration: Theme.dur } }
+                    Behavior on opacity { NumberAnimation { id: deskFade; duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
                     ColumnLayout {
                         anchors.fill: parent

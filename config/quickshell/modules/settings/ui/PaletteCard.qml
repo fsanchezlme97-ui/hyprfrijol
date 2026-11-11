@@ -26,7 +26,7 @@ Rectangle {
     border.width: on ? 2 : 1
     border.color: on ? Theme.p : ma.containsMouse ? Qt.alpha(Theme.t, 0.35) : Qt.alpha(Theme.t, 0.12)
     clip: true
-    Behavior on border.color { ColorAnimation { duration: Theme.dur } }
+    Behavior on border.color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
     // Barra lateral de la «ventana» con el fondo más oscuro (o claro)
     Rectangle {

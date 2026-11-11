@@ -104,7 +104,7 @@ Rectangle {
                 required property int index
                 width: index === lv.currentIndex ? 16 : 6; height: 6; radius: 3
                 color: index === lv.currentIndex ? Theme.p : Theme.o
-                Behavior on width { NumberAnimation { duration: Theme.dur } }
+                Behavior on width { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                 MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: lv.currentIndex = parent.index }
             }
         }

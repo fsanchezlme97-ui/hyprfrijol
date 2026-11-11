@@ -16,7 +16,7 @@ Rectangle {
     color: on ? Theme.selBg : ma.containsMouse ? Qt.alpha(Theme.t, 0.05) : "transparent"
     border.width: on ? 0 : 1
     border.color: Theme.o
-    Behavior on color { ColorAnimation { duration: Theme.dur } }
+    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     Txt {
         id: t
         anchors.centerIn: parent

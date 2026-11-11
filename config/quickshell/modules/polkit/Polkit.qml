@@ -115,7 +115,7 @@ Scope {
             anchors.fill: parent
             color: "#000000"
             opacity: root.shown ? 0.42 : 0
-            Behavior on opacity { NumberAnimation { duration: Theme.dur } }
+            Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
         }
         MouseArea { anchors.fill: parent; onClicked: field.forceActiveFocus() }
 
@@ -206,7 +206,7 @@ Scope {
                     color: Theme.fill2
                     border.width: 1
                     border.color: root.error ? Qt.alpha(Theme.ter, 0.8) : field.activeFocus ? Qt.alpha(Theme.p, 0.6) : Theme.ov
-                    Behavior on border.color { ColorAnimation { duration: 140 } }
+                    Behavior on border.color { ColorAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                     Txt {
                         anchors.left: parent.left; anchors.leftMargin: 14
                         anchors.verticalCenter: parent.verticalCenter

@@ -18,7 +18,7 @@ Rectangle {
     color: selected ? Theme.selBg : ma.containsMouse ? Qt.alpha(Theme.t, 0.04) : "transparent"
     border.width: selected ? 2 : 1
     border.color: selected ? Theme.p : Theme.ov
-    Behavior on color { ColorAnimation { duration: Theme.dur } }
+    Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 12

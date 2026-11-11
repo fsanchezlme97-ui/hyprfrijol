@@ -25,7 +25,7 @@ RowLayout {
             height: parent.height
             radius: Theme.r(3)
             color: m.value > 0.92 ? Theme.danger : m.barColor
-            Behavior on width { enabled: !Theme.reduceMotion; NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+            Behavior on width { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.ms(400); easing.type: Easing.OutCubic } }
         }
     }
     Txt { text: m.text; size: 12; tabular: true; horizontalAlignment: Text.AlignRight; Layout.preferredWidth: m.textWidth; visible: m.textWidth > 0 }

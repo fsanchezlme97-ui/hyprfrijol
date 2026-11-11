@@ -46,7 +46,7 @@ Item {
         // SkySoul: el borde lo dibujan los dos trazos de abajo
         border.width: root.showBorder && !root.glass ? Theme.borderWidth : 0
         border.color: Theme.border
-        Behavior on color { ColorAnimation { duration: Theme.dur } }
+        Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
 
     // Resplandor del acento que se desliza despacio por los paneles abiertos (el cristal se siente vivo).

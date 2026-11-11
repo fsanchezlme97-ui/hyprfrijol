@@ -113,7 +113,7 @@ PanelWindow {
             contrast: -stack.sat * 0.05
         }
         property real sat: win.mono ? -1 : 0
-        Behavior on sat { NumberAnimation { id: satAnim; duration: 600 } }
+        Behavior on sat { NumberAnimation { id: satAnim; duration: Theme.ms(600); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
 
     // ── Estado de las ventanas (pantalla completa / maximizada en algún espacio visible) ──
