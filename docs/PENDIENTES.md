@@ -14,7 +14,8 @@ Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar 
 4. [x] [Asistente de IA](planes/asistente-ia.md), fases 1–2: una entrada con pestañas, filtro de secretos, apps privadas,
        registro de acciones e historial (0.9.3). Falta de esas fases: la página de Inicio (el estado y «Probar
        conexión» siguen arriba de la pestaña Asistente).
-5. [ ] [Productividad](planes/productividad.md), fases 1–3: categoría, portapapeles y tareas.
+5. [x] [Productividad](planes/productividad.md), fases 1–3: una entrada con pestañas, portapapeles (tamaño, caducidad,
+       apps privadas), alarmas en Ajustes y tareas (0.9.4). Los relojes del mundo siguen en Fecha.
 6. [ ] Lo que queda de los cuatro planes (creador de temas, recetas, vista previa, Spotlight…).
 
 ## Baratos de añadir (primero)

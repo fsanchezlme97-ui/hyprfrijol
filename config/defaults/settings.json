@@ -67,6 +67,8 @@
   "monoFondo": true,
   "wallpaperHora": false,
   "clipboardAutoPaste": true,
+  "clipMaxItems": 750,
+  "clipExpireDays": 0,
   "calendarIcs": [],
   "calendarCollapsed": false,
   "updatesSnapshot": true,

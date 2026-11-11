@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+"""hf-clip — guarda lo copiado en el historial (cliphist) con los ajustes de Productividad › Portapapeles.
+
+  hf-clip store     lo llama `wl-paste --watch` (config/hypr/frijol/autostart.lua) con lo copiado por stdin
+
+· clipMaxItems (750): tamaño del historial (cliphist -max-items; lo fijado vive aparte y no cuenta).
+· clipExpireDays (0 = nunca): borra lo que lleva más de esos días; la hora de cada entrada se apunta en
+  ~/.cache/hyprfrijol/clip-times.json (cliphist no la guarda). Las de antes de activarlo cuentan desde ese momento.
+· privateApps (la lista de Ajustes › Asistente de IA › Privacidad): si la ventana activa es una de ellas, no se
+  guarda y se deja la marca ~/.cache/hyprfrijol/clip-private, que el asistente respeta (hf-ai clipboard_private)
+  hasta que se copie otra cosa.
+Lo que el gestor de contraseñas marca como sensible (CLIPBOARD_STATE=sensitive) ya lo descarta cliphist.
+"""
+import json, pathlib, subprocess, sys, time
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+HOME = pathlib.Path.home()
+CACHE = HOME / ".cache/hyprfrijol"
+TIMES = CACHE / "clip-times.json"
+PRIVATE = CACHE / "clip-private"
+PRIVATE_APPS = ["keepassxc", "bitwarden", "1password", "seahorse", "kwalletmanager", "enpass", "proton pass"]
+
+
+def load(p, d):
+    try:
+        return json.loads(p.read_text())
+    except Exception:
+        return d
+
+
+def settings():
+    s = dict(load(ROOT / "config/defaults/settings.json", {}) or {})
+    s.update(load(HOME / ".config/hyprfrijol/settings.json", {}) or {})
+    return s
+
+
+def active_class():
+    try:
+        out = subprocess.run(["hyprctl", "activewindow", "-j"], capture_output=True, text=True, timeout=2).stdout
+        return str((json.loads(out or "{}") or {}).get("class") or "").lower()
+    except Exception:
+        return ""
+
+
+def num(v, d):
+    try:
+        return max(0, int(v))
+    except (TypeError, ValueError):
+        return d
+
+
+def store():
+    data = sys.stdin.buffer.read()
+    s = settings()
+    apps = s.get("privateApps")
+    apps = [str(x).strip().lower() for x in (apps if isinstance(apps, list) else PRIVATE_APPS) if str(x).strip()]
+    cls = active_class()
+    CACHE.mkdir(parents=True, exist_ok=True)
+    if cls and any(a in cls for a in apps):
+        PRIVATE.touch()
+        return
+    PRIVATE.unlink(missing_ok=True)
+    subprocess.run(["cliphist", "-max-items", str(num(s.get("clipMaxItems"), 750) or 750), "store"], input=data)
+    days = num(s.get("clipExpireDays"), 0)
+    if not days:
+        TIMES.unlink(missing_ok=True)
+        return
+    lines = subprocess.run(["cliphist", "list"], capture_output=True).stdout.split(b"\n")
+    ids = {ln.split(b"\t", 1)[0].decode(): ln for ln in lines if b"\t" in ln}
+    now, cut = time.time(), time.time() - days * 86400
+    times = {i: t for i, t in (load(TIMES, {}) or {}).items() if i in ids}
+    for i in ids:
+        times.setdefault(i, now)
+    old = [i for i, t in times.items() if t < cut]
+    if old:
+        subprocess.run(["cliphist", "delete"], input=b"\n".join(ids[i] for i in old) + b"\n")
+        for i in old:
+            times.pop(i, None)
+    TIMES.write_text(json.dumps(times))
+
+
+if __name__ == "__main__":
+    if sys.argv[1:2] == ["store"]:
+        store()
+    else:
+        print(__doc__.strip())
+        sys.exit(0 if sys.argv[1:2] in (["-h"], ["--help"]) else 2)

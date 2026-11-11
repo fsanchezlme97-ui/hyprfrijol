@@ -149,9 +149,7 @@ RowLayout {
             }
             SwRow { label: "Bloq Num al iniciar"; sub: "input:numlock_by_default"; mono: true; key: "numlock"; def: true }
             SwRow { label: "Bloq Mayús como Escape"; sub: "input:kb_options = caps:escape"; mono: true; key: "capsEscape"; def: false }
-            SwRow { label: "Pegar al elegir del portapapeles"; sub: "SUPER + V · escribe el elemento en la ventana activa"; key: "clipboardAutoPaste"; def: true }
-            SwRow { label: "Vaciar el portapapeles al iniciar sesión"; sub: "los elementos fijados se conservan"; key: "clipboardClearOnLogin"; def: false }
-            SwRow { label: "Lo último copiado en Spotlight"; sub: "3 elementos al abrirlo vacío · escribe : para todo el historial"; key: "spotlightClipRecent"; def: true }
+            LinkRow { label: "Portapapeles"; value: "pegar al elegir, tamaño y caducidad"; section: "portapapeles"; sectionLabel: "Productividad"; target: "Guardar hasta" }
         }
     }
 

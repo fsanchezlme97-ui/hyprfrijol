@@ -1,6 +1,8 @@
 // Agenda del centro de control (QuickSettings.qml; reloj de la barra = Shell.open("agenda") / Super + C):
 // calendario del mes (es_ES, lunes primero) · eventos del día elegido con «Unirse» · relojes del mundo (WorldClock).
-// Eventos: services/Events.qml (locales + .ics del ajuste calendarIcs). «+» añade un evento local.
+// Eventos: services/Events.qml (locales + .ics del ajuste calendarIcs). «+» añade un evento local o una tarea.
+// Tareas: services/Tasks.qml, bajo los eventos (hoy: las vencidas arriba, en rojo, y las sin fecha; otro día: las
+// que vencen ese día). Una tarea creada hoy queda sin fecha; en otro día, vence ese día.
 // Teclas (cuando tiene el foco): ← → ↑ ↓ días · RePág/AvPág mes · Inicio = hoy · N nuevo evento · Esc cerrar.
 // Contraído (botón ⌃ de la cabecera, ajuste calendarCollapsed): solo la semana del día elegido (con los días de los meses
 // vecinos), para que eventos y relojes quepan sin desplazar; ‹ › pasan de semana. La rejilla se pliega deslizándose
@@ -20,6 +22,7 @@ Glass {
     property date month: new Date()      // día 1 del mes visible
     property date day: new Date()        // día elegido
     property bool adding: false
+    property string addKind: "evento"    // el «+»: evento o tarea
     readonly property var es: Qt.locale("es_ES")
     readonly property date today: Time.now
     readonly property bool collapsed: Settings.get("calendarCollapsed", false) === true
@@ -69,6 +72,7 @@ Glass {
         return cap(es.toString(day, "dddd d 'de' MMMM"));
     }
     readonly property var dayEvents: { Events.all; return Events.forDay(day); }
+    readonly property var dayTasks: { Tasks.list; return Tasks.forDay(day); }
 
     ColumnLayout {
         id: body
@@ -182,11 +186,17 @@ Glass {
             Layout.fillWidth: true
             Layout.leftMargin: 3
             spacing: 4
-            Txt { Layout.fillWidth: true; text: win.dayTitle + (win.dayEvents.length ? " · " + win.dayEvents.length + (win.dayEvents.length === 1 ? " evento" : " eventos") : ""); weight: Font.DemiBold }
+            Txt {
+                Layout.fillWidth: true
+                readonly property int nt: win.dayTasks.filter(x => !x.done).length
+                text: win.dayTitle + (win.dayEvents.length ? " · " + win.dayEvents.length + (win.dayEvents.length === 1 ? " evento" : " eventos") : "")
+                      + (nt ? " · " + nt + (nt === 1 ? " tarea" : " tareas") : "")
+                weight: Font.DemiBold
+            }
             IconBtn {
                 implicitWidth: 26; implicitHeight: 26; radius: Theme.r(6)
                 icon: win.adding ? "x" : "plus"; iconSize: 13
-                tooltip: win.adding ? "Cancelar" : "Nuevo evento (N)"
+                tooltip: win.adding ? "Cancelar" : "Nuevo evento o tarea (N)"
                 onClicked: { win.adding = !win.adding; if (win.adding) Qt.callLater(() => fTitle.focusInput()); else keys.forceActiveFocus(); }
             }
         }
@@ -196,9 +206,17 @@ Glass {
             visible: win.adding
             Layout.fillWidth: true
             spacing: 6
-            Field { id: fTitle; Layout.fillWidth: true; h: 30; icon: "calendar"; placeholder: "Título del evento"; onAccepted: addBtn.clicked()
+            Segmented {
+                h: 28
+                model: [{ key: "evento", label: "Evento" }, { key: "tarea", label: "Tarea" }]
+                current: win.addKind
+                onPicked: k => { win.addKind = k; fTitle.focusInput(); }
+            }
+            Field { id: fTitle; Layout.fillWidth: true; h: 30; icon: win.addKind === "tarea" ? "check" : "calendar"
+                    placeholder: win.addKind === "tarea" ? "Qué hay que hacer" : "Título del evento"; onAccepted: addBtn.clicked()
                     onKeyPressed: e => { if (e.key === Qt.Key_Escape) { win.adding = false; keys.forceActiveFocus(); e.accepted = true; } } }
             RowLayout {
+                visible: win.addKind === "evento"
                 Layout.fillWidth: true
                 spacing: 6
                 Field { id: fFrom; Layout.preferredWidth: 78; h: 30; icon: "clock"; placeholder: "10:00"; onAccepted: addBtn.clicked() }
@@ -208,13 +226,20 @@ Glass {
             }
             RowLayout {
                 Layout.fillWidth: true
-                Txt { Layout.fillWidth: true; text: "Sin hora = todo el día"; size: 11; muted: true }
+                Txt { Layout.fillWidth: true; text: win.addKind === "tarea" ? (win.sameDay(win.day, win.today) ? "Sin fecha" : "Vence " + win.dayTitle.toLowerCase()) : "Sin hora = todo el día"; size: 11; muted: true }
                 Btn {
                     id: addBtn
                     kind: "primary"; h: 26; text: "Guardar"
                     enabled: fTitle.text.trim() !== ""
                     onClicked: {
                         if (!enabled) return;
+                        if (win.addKind === "tarea") {
+                            Tasks.add(fTitle.text, win.sameDay(win.day, win.today) ? "" : Events.key(win.day));
+                            fTitle.text = "";
+                            win.adding = false;
+                            keys.forceActiveFocus();
+                            return;
+                        }
                         const t = s => { const m = s.trim().match(/^(\d{1,2})(?:[:.h](\d{2}))?$/); return m ? [+m[1], +(m[2] || 0)] : null; };
                         const a = t(fFrom.text), b = t(fTo.text);
                         const s = new Date(win.day), e = new Date(win.day);
@@ -286,8 +311,43 @@ Glass {
                 MouseArea { id: evMa; anchors.fill: parent; z: -1; hoverEnabled: true }
             }
         }
+        // Tareas del día: casilla para marcarlas; las vencidas en rojo; papelera al pasar por encima
+        Repeater {
+            model: win.dayTasks
+            RowLayout {
+                id: tk
+                required property var modelData
+                readonly property bool late: !modelData.done && !!modelData.due && modelData.due < Tasks.today
+                Layout.fillWidth: true
+                Layout.leftMargin: 3
+                spacing: 8
+                Rectangle {
+                    implicitWidth: 16; implicitHeight: 16; radius: Theme.r(4)
+                    color: tk.modelData.done ? Theme.p : "transparent"
+                    border.width: tk.modelData.done ? 0 : 1.5
+                    border.color: tk.late ? Theme.danger : Theme.o
+                    Icon { anchors.centerIn: parent; visible: tk.modelData.done; name: "check"; size: 11; color: Theme.pText }
+                    MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: Tasks.toggle(tk.modelData.id) }
+                }
+                Txt {
+                    Layout.fillWidth: true
+                    text: tk.modelData.text + (tk.late ? " · vencida" : "")
+                    color: tk.late ? Theme.danger : tk.modelData.done ? Theme.tv : Theme.t
+                    font.strikeout: tk.modelData.done
+                    elide: Text.ElideRight
+                }
+                IconBtn {
+                    opacity: tkHov.hovered ? 1 : 0
+                    implicitWidth: 22; implicitHeight: 22
+                    icon: "trash"; iconSize: 11
+                    tooltip: "Borrar tarea"
+                    onClicked: Tasks.remove(tk.modelData.id)
+                }
+                HoverHandler { id: tkHov }
+            }
+        }
         RowLayout {
-            visible: win.dayEvents.length === 0 && !win.adding
+            visible: win.dayEvents.length === 0 && win.dayTasks.length === 0 && !win.adding
             Layout.fillWidth: true
             Layout.leftMargin: 3
             spacing: 6
@@ -300,7 +360,7 @@ Glass {
                 visible: !Events.loading && Events.sources.length === 0
                 text: "Añadir calendarios"; size: 11.5
                 color: icsMa.containsMouse ? Theme.t : Theme.p
-                MouseArea { id: icsMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Shell.open("ajustesapp", "fecha") }
+                MouseArea { id: icsMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Shell.open("ajustesapp", "agenda") }
             }
         }
 

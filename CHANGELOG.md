@@ -3,6 +3,22 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.4] — 2026-11-11
+
+### Añadido
+- **Tareas**: una lista sencilla con fecha opcional. Se ven en la agenda (Super + C) bajo los eventos del día, con casilla para marcarlas; las vencidas salen arriba en rojo. Se crean con el «+» de la agenda (Evento o Tarea), escribiendo `+texto` en Spotlight («+llamar al banco mañana») o pidiéndoselo al asistente (con Deshacer), y se gestionan en Ajustes › Productividad › Tareas.
+- **Portapapeles**: tamaño del historial (100 a 2000) y borrar lo copiado tras 1, 7 o 30 días. Lo que copias con una app privada delante (gestores de contraseñas y las que añadas) no se guarda.
+- **Alarmas en Ajustes** (Productividad › Agenda y alarmas), además de en la ventana del pomodoro.
+
+### Cambiado
+- **Productividad es una sola entrada en Ajustes** con pestañas: Enfoque y pomodoro, Portapapeles, Agenda y alarmas y Tareas. Los calendarios .ics pasan de Fecha a Agenda y los ajustes del portapapeles de Teclado a Portapapeles (con enlaces desde donde estaban).
+
+### Seguridad
+- El asistente no lee la pantalla si una app privada se ve en cualquier monitor (antes solo miraba la ventana activa), ni el portapapeles si lo último se copió desde una app privada o el gestor lo marcó como contraseña.
+
+### Nota
+- El portapapeles nuevo arranca al iniciar sesión; hasta entonces sigue el de antes.
+
 ## [0.9.3] — 2026-11-11
 
 ### Añadido

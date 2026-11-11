@@ -187,6 +187,7 @@ SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden
 - {"type":"dnd","value":true|false,"minutes":60}   no molestar (minutes opcional)
 - {"type":"caffeine","value":true|false,"minutes":0}   cafeína: que no se apague ni suspenda la pantalla
 - {"type":"timer","minutes":10,"label":"Té"}  temporizador con aviso al acabar · {"type":"timer","cancel":"all"|ID}
+- {"type":"task","text":"Llamar al banco","due":"AAAA-MM-DD"}  tarea en la agenda (due solo si dice cuándo)
 - {"type":"pomodoro","value":"start"|"pause"|"reset","minutes":25}
 - {"type":"focus","value":true|false}        modo sin distracciones
 - {"type":"notifications","op":"clear"}      borrar las notificaciones
@@ -344,6 +345,8 @@ def label(a):
         return ("Activar No molestar" + (f" durante {a['minutes']} min" if a.get("minutes") else "")) if v else "Desactivar No molestar"
     if t == "caffeine":
         return ("Activar cafeína" + (f" durante {a['minutes']} min" if a.get("minutes") else "")) if v else "Desactivar cafeína"
+    if t == "task":
+        return f"Nueva tarea: {a.get('text')}" + (f" (vence el {a['due']})" if a.get("due") else "")
     if t == "timer":
         if a.get("cancel"):
             return "Cancelar " + ("todos los temporizadores" if a["cancel"] == "all" else "el temporizador")
@@ -433,7 +436,7 @@ def preview(a, s=None):
 
 KIND_LABELS = {"wallpaper": "Cambiar el fondo", "workspace": "Ir a otro espacio", "launch": "Abrir apps", "url": "Abrir webs",
                "volume": "Cambiar el volumen", "brightness": "Cambiar el brillo", "media": "Controlar la música", "dnd": "No molestar",
-               "caffeine": "Cafeína", "timer": "Temporizadores", "pomodoro": "Pomodoro", "focus": "Modo sin distracciones",
+               "caffeine": "Cafeína", "timer": "Temporizadores", "task": "Crear tareas", "pomodoro": "Pomodoro", "focus": "Modo sin distracciones",
                "open": "Abrir paneles del shell", "winmode": "Modo de ventanas",
                "download": "Añadir descargas", "device:mount": "Montar unidades", "device:unmount": "Desmontar unidades",
                "device:open": "Abrir unidades", "download_ctl:pause": "Pausar descargas", "download_ctl:resume": "Reanudar descargas",
@@ -551,6 +554,11 @@ def validate(actions):
             elif t in ("dnd", "focus", "caffeine") and isinstance(a.get("value"), bool):
                 if a.get("minutes") is not None:
                     a["minutes"] = max(0, min(1440, int(_num(a["minutes"]))))
+                ok.append(a)
+            elif t == "task" and isinstance(a.get("text"), str) and a["text"].strip():
+                a["text"] = " ".join(a["text"].split())[:200]
+                if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(a.get("due") or "")):
+                    a.pop("due", None)
                 ok.append(a)
             elif t == "timer":
                 if a.get("cancel"):
@@ -743,6 +751,19 @@ def timer_start(minutes, lab):
     TIMERS.write_text(json.dumps(ts, ensure_ascii=False))
     return tid
 
+# Tareas (services/Tasks.qml las lee y se recarga sola al cambiar el archivo)
+TASKS = HOME / ".local/share/hyprfrijol/tasks.json"
+
+def task_add(text, due=None):
+    n, tid = int(time.time() * 1000), ""
+    while n:
+        n, r = divmod(n, 36)
+        tid = "0123456789abcdefghijklmnopqrstuvwxyz"[r] + tid
+    task = {"id": tid, "text": text, "done": False, "created": int(time.time() * 1000), **({"due": due} if due else {})}
+    TASKS.parent.mkdir(parents=True, exist_ok=True)
+    TASKS.write_text(json.dumps((load(TASKS, []) or []) + [task], ensure_ascii=False, indent=1))
+    return tid
+
 def timer_cancel(which):
     keep = []
     for t in timers_list():
@@ -871,6 +892,8 @@ def exec_action(a):
         else:
             qs_call("caffeine", "off")
         return {"kind": "caffeine", "on": was}
+    elif t == "task":
+        return {"kind": "task", "id": task_add(a["text"], a.get("due"))}
     elif t == "timer":
         if a.get("cancel"):
             timer_cancel(a["cancel"])
@@ -956,6 +979,8 @@ def undo_record(r):
             qs_call("caffeine", "off")
     elif k == "timer":
         timer_cancel(r["id"])
+    elif k == "task":
+        TASKS.write_text(json.dumps([x for x in load(TASKS, []) or [] if x.get("id") != r["id"]], ensure_ascii=False, indent=1))
     elif k == "device" and r.get("op"):
         script_json("hf-devices", r["op"], r["dev"], timeout=120)
     elif k == "download":
@@ -1098,8 +1123,8 @@ def run_query(q, ctx=None, s=None):
                 out["text"] = run(["tesseract", img, "-", "-l", "spa+eng"], timeout=30)[:5000]
         return lab, json.dumps(out, ensure_ascii=False)
     if t == "screen":
-        if is_private(jrun(["hyprctl", "activewindow", "-j"]).get("class"), s):
-            return lab, "Hay una app privada delante: no se lee la pantalla"
+        if private_visible(s):
+            return lab, "Hay una app privada a la vista: no se lee la pantalla"
         return lab, capture_text() or "(sin texto legible)"
     if t == "notifications":
         return lab, run(QS + ["ipc", "call", "notifs", "recent", "20"]) or "{}"
@@ -1200,6 +1225,23 @@ def private_apps(s=None):
 def is_private(cls, s=None):
     c = str(cls or "").lower()
     return bool(c) and any(p in c for p in private_apps(s))
+
+def private_visible(s=None):
+    """¿Se ve una app privada en alguna pantalla (espacio activo o especial abierto)? Una captura la incluiría."""
+    mons = jrun(["hyprctl", "monitors", "-j"])
+    vis = {(m.get(k) or {}).get("id") for m in (mons if isinstance(mons, list) else []) for k in ("activeWorkspace", "specialWorkspace")}
+    cl = jrun(["hyprctl", "clients", "-j"])
+    return any(c.get("mapped", True) and not c.get("hidden") and (c.get("workspace") or {}).get("id") in vis
+               and is_private(c.get("class"), s) for c in (cl if isinstance(cl, list) else []))
+
+# Lo copiado desde una app privada (lo marca `hf-clip store`) o marcado como contraseña por el gestor
+# (x-kde-passwordManagerHint) no se lee mientras siga en el portapapeles.
+CLIP_PRIVATE = HOME / ".cache/hyprfrijol/clip-private"
+
+def clipboard_private(types=None):
+    if types is None:
+        types = run(["wl-paste", "--list-types"], timeout=3).split("\n")
+    return "x-kde-passwordManagerHint" in types or CLIP_PRIVATE.exists()
 
 # Filtro de secretos («aiRedactSecrets», activado por defecto): lo que va de contexto (portapapeles, OCR, títulos,
 # resultados de consultas) sale sin claves de API, tokens, claves privadas, contraseñas en URL ni tarjetas.
@@ -1352,6 +1394,8 @@ def _uri_paths(text):
 
 def clipboard_images():
     types = run(["wl-paste", "--list-types"], timeout=3).split("\n")
+    if clipboard_private(types):
+        return []
     img = [t for t in types if t.startswith("image/")]
     if img:
         t = "image/png" if "image/png" in img else img[0]
@@ -1609,11 +1653,11 @@ def gather(ctx, ocr=True):
         parts.append("Ventana activa: una app privada (no se lee su contenido ni el portapapeles)")
     elif ctx.get("window", True) and w.get("title"):
         parts.append(f"Ventana activa: {w.get('class', '')} — {w['title']}")
-    if ctx.get("clipboard", True) and not private:
+    if ctx.get("clipboard", True) and not private and not clipboard_private():
         c = run(["wl-paste", "-n", "-t", "text"], timeout=3)
         if c:
             parts.append("Portapapeles:\n" + c[:4000])
-    if s.get("aiContextCapture", True) is not False and ctx.get("capture") and ocr and not private:
+    if s.get("aiContextCapture", True) is not False and ctx.get("capture") and ocr and not private and not private_visible(s):
         t = ctx.get("captureText") or capture_text()
         if t.strip():
             parts.append("Texto en pantalla (OCR):\n" + t)
@@ -2416,6 +2460,9 @@ TOOL_SPECS = [
     ("caffeine", "Cafeína: que la pantalla no se apague ni el equipo se suspenda (minutos opcional; 0 = sin límite).",
      {"type": "object", "properties": {"on": {"type": "boolean"}, "minutes": {"type": "integer"}}, "required": ["on"]},
      "action", lambda a: {"type": "caffeine", "value": bool(a.get("on")), "minutes": a.get("minutes")}),
+    ("task", "Añade una tarea a la agenda: texto y, solo si el usuario dice cuándo, fecha due (AAAA-MM-DD).",
+     {"type": "object", "properties": {"text": {"type": "string"}, "due": {"type": "string"}}, "required": ["text"]},
+     "action", lambda a: {"type": "task", "text": a.get("text", ""), "due": a.get("due")}),
     ("timer", "Temporizador con aviso al terminar (minutos, etiqueta) o cancel: 'all' | id.",
      {"type": "object", "properties": {"minutes": {"type": "number"}, "label": {"type": "string"}, "cancel": {"type": "string"}}},
      "action", lambda a: {"type": "timer", "minutes": a.get("minutes"), "label": a.get("label", ""), "cancel": a.get("cancel")}),

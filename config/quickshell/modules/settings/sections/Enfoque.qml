@@ -8,6 +8,7 @@ import "../ui"
 ColumnLayout {
     id: root
     spacing: 12
+    ProdTabs { current: "enfoque" }   // Enfoque | Portapapeles | Agenda | Tareas (una sola entrada en la lista)
     readonly property int fMin: Settings.get("pomodoroFocus", 25)
     readonly property int brk: Settings.get("pomodoroBreak", 5)
     readonly property int lng: Settings.get("pomodoroLong", 15)

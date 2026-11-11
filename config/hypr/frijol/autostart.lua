@@ -23,8 +23,9 @@ hl.on("hyprland.start", function()
         -- Inactividad: la genera hf-apply (Ajustes › Energía); si aún no existe, la del repo
         hl.exec_cmd("sh -c 'f=" .. HF.state .. "/hypridle.conf; [ -f \"$f\" ] || f=" .. cfg .. "/hypridle.conf; exec hypridle -c \"$f\"'")
         -- Historial del portapapeles (texto e imágenes). Se conserva entre sesiones salvo que actives
-        -- Ajustes › Teclado y atajos › «Vaciar el portapapeles al iniciar sesión» (clipboardClearOnLogin).
-        hl.exec_cmd("sh -c '[ \"$(jq -r .clipboardClearOnLogin " .. HF.user .. "/settings.json 2>/dev/null)\" = true ] && cliphist wipe; exec wl-paste --watch cliphist store'")
+        -- Ajustes › Productividad › Portapapeles › «Vaciar el portapapeles al iniciar sesión» (clipboardClearOnLogin).
+        -- hf-clip store aplica el tamaño, la caducidad y las apps privadas antes de pasarlo a cliphist.
+        hl.exec_cmd("sh -c '[ \"$(jq -r .clipboardClearOnLogin " .. HF.user .. "/settings.json 2>/dev/null)\" = true ] && cliphist wipe; exec wl-paste --watch " .. HF.scripts .. "/hf-clip store'")
         -- Apps de inicio XDG (~/.config/autostart, /etc/xdg/autostart): Hyprland no las lanza solo.
         -- Ajustes › Apps predeterminadas e inicio (autostartApps); hf-defaults evita las que chocan con el shell.
         hl.exec_cmd("sh -c 'sleep 3; [ \"$(jq -r .autostartApps " .. HF.user .. "/settings.json 2>/dev/null)\" = false ] || exec " .. HF.scripts .. "/hf-defaults autostart-run'")

@@ -2,8 +2,8 @@
 // equipo en hora local), formato de 24 h (clock24 → services/Time.qml) y primer día de la semana (weekStart →
 // calendario de la agenda), relojes del mundo (worldClocks), idioma del sistema (localectl set-locale), idioma
 // y formatos de tu sesión (~/.config/locale.conf: LANG y LC_TIME/NUMERIC/MONETARY/MEASUREMENT/PAPER) y añadir
-// idiomas (descomenta /etc/locale.gen y ejecuta locale-gen con pkexec) y calendarios .ics de la agenda
-// (calendarIcs: [{ url, name, color }] → services/Events.qml; ui/IcsCalendars.qml).
+// idiomas (descomenta /etc/locale.gen y ejecuta locale-gen con pkexec). Los calendarios .ics de la agenda
+// están en Productividad › Agenda y alarmas (sections/Agenda.qml).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -176,6 +176,7 @@ RowLayout {
                     onPicked: k => Settings.set("weekStart", k)
                 }
             }
+            LinkRow { label: "Calendarios .ics y alarmas"; section: "agenda"; sectionLabel: "Productividad"; target: "Calendarios (.ics)" }
         }
         // Relojes del mundo (services/WorldClock.qml: worldClocks [[nombre, zona], …]); se ven en la agenda y
         // al pasar el cursor por la hora de la barra. Búsqueda por ciudad, país (en español) o zona, sin tildes.
@@ -321,8 +322,6 @@ RowLayout {
                 }
             }
         }
-        // Calendarios .ics de la agenda (calendarIcs → services/Events.qml) · ui/IcsCalendars.qml
-        IcsCalendars { Layout.fillWidth: true }
         Section {
             Layout.fillWidth: true
             title: "Teclado y métodos de entrada"

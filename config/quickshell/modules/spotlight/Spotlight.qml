@@ -2,6 +2,7 @@
 // Búsqueda difusa de apps (DesktopEntries), web apps, acciones del shell, ventanas, archivos,
 // calculadora (qalc), portapapeles, IA y web.
 // Prefijos: > comandos · = calcular · ? IA · @ ventanas · / archivos · : portapapeles · ; emojis · ! web
+//   · + nueva tarea (services/Tasks.qml; «+texto mañana» o «+texto 2026-12-01» le pone fecha)
 // Teclado: ↑↓ elegir · ↵ abrir · Tab siguiente grupo · Ctrl K más acciones · Esc cerrar
 //   en «:»  ↵ copia (y pega si clipboardAutoPaste) · Mayús ↵ lo contrario · Supr borra · Ctrl K fijar…
 // «Todas las apps» (botón de la cabecera, la fila del mismo nombre o el ⌘ de la barra): cuadrícula alfabética
@@ -234,6 +235,19 @@ Overlay {
                       sub: ni ? (ni === 1 ? "con 1 imagen adjunta" : "con " + ni + " imágenes adjuntas") + " · responde en el panel lateral"
                               : "responde en el panel lateral · Ctrl V adjunta una imagen copiada", ask: ask, hint: "↵",
                       det: [["Modelo", "El de Ajustes › IA"], ["Contexto", "Ventana activa + portapapeles"], ["Puede", "Consultar y manejar el escritorio (con Deshacer)"]] }];
+        }
+        // + nueva tarea: «mañana» o una fecha AAAA-MM-DD al final le ponen fecha
+        if (q.startsWith("+")) {
+            const m = /^(.*?)\s+(mañana|\d{4}-\d{2}-\d{2})$/i.exec(q.slice(1).trim());
+            let text = q.slice(1).trim(), due = "";
+            if (m) {
+                text = m[1];
+                if (/^\d/.test(m[2])) due = m[2];
+                else { const d = new Date(); d.setDate(d.getDate() + 1); due = Events.key(d); }
+            }
+            return [{ key: "task", cat: "Tareas", kind: "task", icon: "check", g: "+", name: text ? "Nueva tarea: " + text : "Escribe la tarea…",
+                      sub: (due ? "vence el " + due : "sin fecha") + " · se ve en la agenda", text: text, due: due, hint: "↵",
+                      det: [["Fecha", "Añade «mañana» o AAAA-MM-DD al final"], ["Dónde", "Agenda (Super + C)"]] }];
         }
         // descargar <dirección…> (o pegar una dirección sola): a la cola de descargas (scripts/hf-download)
         const dlm = /^(descargar|bajar)(\s+|$)(.*)$/i.exec(q);
@@ -510,6 +524,7 @@ Overlay {
         case "file": Shell.exec(["xdg-open", it.path]); Shell.close(); break;
         case "download": Downloads.add(it.urls, it.dlType, it.dlType === "audio" ? Settings.get("downloadsAudioFormat", "mp3") : ""); Shell.open("w-descargas"); break;
         case "dlqueue": Shell.open("w-descargas"); break;
+        case "task": if (it.text) { Tasks.add(it.text, it.due); Shell.close(); } break;
         }
     }
     function runIndex(i) { sel = i; runItem(items[i]); }
@@ -1081,7 +1096,7 @@ Overlay {
                     anchors.rightMargin: 16
                     spacing: 14
                     Repeater {
-                        model: spot.mode === "apps" ? [] : [[">", "comandos"], ["=", "calcular"], ["?", "IA"], ["@", "ventanas"], ["/", "archivos"], [":", "portapapeles"], [";", "emojis"], ["!", "web"]].filter(h => h[0] !== "?" || Settings.get("aiSpotlight", true) !== false)
+                        model: spot.mode === "apps" ? [] : [[">", "comandos"], ["=", "calcular"], ["?", "IA"], ["@", "ventanas"], ["/", "archivos"], [":", "portapapeles"], [";", "emojis"], ["!", "web"], ["+", "tarea"]].filter(h => h[0] !== "?" || Settings.get("aiSpotlight", true) !== false)
                         Text {
                             required property var modelData
                             textFormat: Text.StyledText
