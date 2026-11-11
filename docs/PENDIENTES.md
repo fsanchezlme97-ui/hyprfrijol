@@ -18,7 +18,8 @@ Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar 
        apps privadas), alarmas en Ajustes y tareas (0.9.4). Los relojes del mundo siguen en Fecha.
 6. [ ] Lo que queda de los cuatro planes, en este orden:
        - [x] Productividad F4: Spotlight (grupos, orden, buscador web) (0.9.5).
-       - [ ] Animaciones F4–5: vista previa en vivo y efectos nuevos.
+       - [x] Animaciones F4–5: opacidad sin foco con apps excluidas y onda al pulsar (0.9.6); la vista previa, el
+             borde con degradado y el atenuado ya estaban. Sin entradas escalonadas: no hay ninguna que apagar.
        - [ ] Temas F4: temas propios (guardar, exportar, importar).
        - [ ] Temas F5: creador de temas desde una imagen o colores.
        - [ ] IA F3–6: modelo por tarea y respaldo, recetas, conexiones (tema, evento), mejoras del panel.

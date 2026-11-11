@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.6] — 2026-11-11
+
+### Añadido
+- **Opacidad de las ventanas sin foco** en Ajustes › Animaciones y efectos › Ventanas: automática (como antes), opacas, 92 % o 85 %, con una lista de **apps siempre opacas** (vídeo, videollamadas y OBS por defecto) para que se sigan viendo bien mientras trabajas en otra ventana.
+- **Onda al pulsar**: se puede apagar el efecto de onda de botones y mosaicos.
+
 ## [0.9.5] — 2026-11-11
 
 ### Añadido

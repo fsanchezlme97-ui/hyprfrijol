@@ -579,6 +579,12 @@ def active_border(c, S, s):
 
 def hypr_lua(c, S, s):
     focus = bool(s.get("_focus"))
+    # Opacidad de las ventanas sin foco (inactiveOpacity: 0 = automática, 0.97 con desenfoque; 1 = opacas)
+    try:
+        inact_op = float(s.get("inactiveOpacity") or 0)
+    except (TypeError, ValueError):
+        inact_op = 0
+    inact_op = (0.97 if S["blur"] else 1.0) if not 0.5 <= inact_op <= 1 else round(inact_op, 2)
     gi, go = (0, 0) if focus else (int(s.get("gapsIn", 4)), int(s.get("gapsOut", 4)))
     anim = motion_preset(s)[0] != "ninguno"
     bsize, act, inact = active_border(c, S, s)
@@ -596,13 +602,18 @@ def hypr_lua(c, S, s):
         # Energía, la bienvenida… se ve esmerilado como con transparencia. Con paneles opacos no cambia
         # nada más ni cuesta: solo se desenfoca detrás de lo translúcido. Fuera con «Ahorro» o menos transparencias.
         f"        blur = {{ enabled = {'false' if focus or s.get('blurQuality') == 'ahorro' or s.get('reduceTransparency') else 'true'} }},",
-        f"        inactive_opacity = {0.97 if S['blur'] else 1.0},",
+        f"        inactive_opacity = {inact_op},",
         f"        dim_inactive = {'true' if s.get('dimInactive') and not focus else 'false'}, dim_strength = 0.12,",
         "    },",
         f"    animations = {{ enabled = {'true' if anim else 'false'} }},",
         f'    misc = {{ background_color = "{rgba_hypr(c["bg"])}" }},',
         "})",
     ]
+    # Apps que no se transparentan sin foco (reproductores, videollamadas): Animaciones › Ventanas
+    excl = [str(x) for x in s.get("inactiveOpacityExclude") or [] if re.fullmatch(r"[A-Za-z0-9._ -]{1,120}", str(x))]
+    if excl and inact_op < 1:
+        rx = "(?i)^(" + "|".join(re.escape(c).replace("\\", "\\\\") for c in excl) + ")$"
+        lines.append(f'hl.window_rule({{ name = "hf-opaque-apps", match = {{ class = "{rx}" }}, opacity = "1.0 override 1.0 override" }})')
     lines += motion_lua(s)
     # Extensiones: cada archivo config/apply/*.py puede añadir líneas (los usa la app de Ajustes)
     for ext in sorted((ROOT / "config/apply").glob("*.py")) if (ROOT / "config/apply").is_dir() else []:

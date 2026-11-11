@@ -70,6 +70,7 @@ ColumnLayout {
                     onPicked: k => Settings.set("workspaceAnim", k)
                 }
             }
+            SwRow { label: "Onda al pulsar"; sub: "botones y mosaicos dibujan una onda desde el punto pulsado"; key: "ripple"; def: true; enabled: !Theme.reduceMotion }
             LinkRow {
                 visible: Theme.reduceMotion
                 label: "Reducir movimiento está activado"; value: "Sin animaciones"
@@ -112,6 +113,35 @@ ColumnLayout {
                 })[Settings.get("activeBorder", "sutil")] ?? ""
             }
             SwRow { label: "Atenuar ventanas inactivas"; sub: "oscurece un poco las que no tienen el foco · decoration.dim_inactive"; key: "dimInactive" }
+            LabeledRow {
+                label: "Sin foco"; labelWidth: 80
+                hint: "opacidad de las ventanas inactivas"
+                Seg {
+                    model: [[0, "Automática"], [1, "Opacas"], [0.92, "92 %"], [0.85, "85 %"]]
+                    current: Settings.get("inactiveOpacity", 0)
+                    onPicked: k => Settings.set("inactiveOpacity", k)
+                }
+            }
+        }
+    }
+
+    // Apps que no se transparentan sin foco (inactiveOpacityExclude → hf-apply: regla hf-opaque-apps)
+    Section {
+        Layout.fillWidth: true
+        visible: Settings.get("inactiveOpacity", 0) !== 1
+        title: "Siempre opacas"
+        headerRight: Mono { text: "opacity override" }
+        FloatApps {
+            Layout.fillWidth: true
+            settingKey: "inactiveOpacityExclude"
+            intro: "Estas apps no se vuelven translúcidas al perder el foco: vídeos y videollamadas se siguen viendo bien mientras trabajas en otra ventana. "
+                + "«Automática» deja el resto un 3 % translúcido solo con desenfoque."
+            groups: [
+                { key: "video", label: "Vídeo", sub: "mpv, Celluloid, Showtime, Totem, VLC", classes: ["mpv", "io.github.celluloid_player.Celluloid", "org.gnome.Showtime", "org.gnome.Totem", "vlc"] },
+                { key: "llamadas", label: "Videollamadas", sub: "Zoom, Teams, Discord, Vesktop", classes: ["zoom", "teams-for-linux", "discord", "vesktop"] },
+                { key: "grabar", label: "Grabación", sub: "OBS Studio", classes: ["com.obsproject.Studio", "obs"] }
+            ]
+            onApply: l => Settings.set("inactiveOpacityExclude", l)
         }
     }
 

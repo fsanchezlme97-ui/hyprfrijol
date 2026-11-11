@@ -116,6 +116,9 @@ portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si o
 | `animSpeed` | 0.4–2.5 (UI: 0.7 · 0.85 · 1 · 1.25 · 1.5) | multiplicador de velocidad: divide `speed` de Hyprland y las duraciones del shell |
 | `workspaceAnim` | `auto` · `slide` · `slidefade` · `fade` · `slidevert` | cambio de espacio (Animaciones y efectos); `auto` = el del preset |
 | `dimInactive` | `true` · `false` | oscurece un poco las ventanas sin foco (`decoration.dim_inactive`, fuerza 0.12) |
+| `inactiveOpacity` | `0` (automática: 0.97 con desenfoque) · `1` · `0.92` · `0.85` | opacidad de las ventanas sin foco (`decoration.inactive_opacity`) |
+| `inactiveOpacityExclude` | clases de ventana | siempre opacas (regla `hf-opaque-apps` de hf-apply) |
+| `ripple` | `true` · `false` | onda al pulsar (`components/Ripple.qml`) |
 | `shadows` | `ninguna` · `suaves` · `marcadas` | sombras de ventana (10-look.py: `decoration.shadow` range/render_power/offset/color, más tenues y teñidas del acento en modo claro) y de los paneles del shell (`S.shadow*`, `S.shBlur/shY…` → `Glass`) |
 | `activeBorder` | `sutil` · `color` · `brillo` · `ninguno` | resaltado de la ventana activa: borde de 1 px con el acento rebajado e inactivas casi invisibles · 2 px con degradado acento → terciario · sutil + halo del acento (`shadow.color` de la activa) · sin borde. Con `highContrast` manda el borde de alto contraste |
 | `roundness` | `recto` · `sobrio` · `auto` · `redondo` · `maximo` | multiplica los radios del shell (`Theme.r()`, `Theme.ctl()`) |
