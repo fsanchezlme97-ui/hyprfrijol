@@ -21,10 +21,6 @@ Singleton {
     property string lastRaw: ""
 
     readonly property var focusedMonitor: monitors.find(m => m.focused) ?? monitors[0] ?? null
-    // Pantalla de la última ventana con el foco (no cambia al pasar a una pantalla vacía): el gato bongo de la barra
-    readonly property string activeMon: monitorById(client(activeAddress)?.monitor)?.name ?? ""
-    property string lastWinMonitor: ""
-    onActiveMonChanged: if (activeMon) lastWinMonitor = activeMon
     // Ventanas ordenadas por uso reciente (0 = la activa)
     readonly property var byRecent: clients.filter(c => c.workspace?.id > 0)
         .slice().sort((a, b) => a.focusHistoryID - b.focusHistoryID)
