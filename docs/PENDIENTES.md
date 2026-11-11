@@ -20,8 +20,9 @@ Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar 
        - [x] Productividad F4: Spotlight (grupos, orden, buscador web) (0.9.5).
        - [x] Animaciones F4–5: opacidad sin foco con apps excluidas y onda al pulsar (0.9.6); la vista previa, el
              borde con degradado y el atenuado ya estaban. Sin entradas escalonadas: no hay ninguna que apagar.
-       - [ ] Temas F4: temas propios (guardar, exportar, importar).
-       - [ ] Temas F5: creador de temas desde una imagen o colores.
+       - [x] Temas F4–5: temas propios y creador desde colores o una imagen, exportar e importar (0.9.7). Falta:
+             editar los colores uno a uno, la vista previa sobre la barra y el centro de control (hoy, dos
+             tarjetas), y que la IA asigne los papeles de cada color (opcional en el plan).
        - [ ] IA F3–6: modelo por tarea y respaldo, recetas, conexiones (tema, evento), mejoras del panel.
        - [ ] Productividad F5: revisión con uso real (la hace el autor usando el escritorio).
 

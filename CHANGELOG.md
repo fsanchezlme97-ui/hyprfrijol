@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.7] — 2026-11-11
+
+### Añadido
+- **Mis temas** en Ajustes › Apariencia: crea un tema con tus colores pegando de 1 a 8 códigos (#RRGGBB) o eligiendo una imagen. De una paleta con los códigos escritos se leen tal cual; de una foto se sacan sus colores. Cada tema sale en oscuro y en claro, con el contraste corregido para que todo se lea, y se ve antes de guardarlo.
+- Los temas propios se **exportan** a un .json (en Descargas) y se **importan** desde otro equipo. También desde la terminal con `hf-theme`.
+
 ## [0.9.6] — 2026-11-11
 
 ### Añadido

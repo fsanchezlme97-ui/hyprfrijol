@@ -66,6 +66,7 @@ ColumnLayout {
     readonly property var palShown: palKeys.filter(k => {
         const p = pals[k];
         const g = p.group ?? "";
+        if (g === "propio") return false;     // los propios van en «Mis temas» (ui/MyThemes.qml)
         if (palGroup === "originales" && g !== "") return false;
         if (palGroup === "pastel" && g !== "pastel") return false;
         if (palGroup === "populares" && g !== "popular") return false;
@@ -322,6 +323,15 @@ ColumnLayout {
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
             text: "Las que tienen pareja (Catppuccin, Nord, Gruvbox, Rosé Pine…) cambian a su versión clara u oscura con el modo; las demás (☀/☾) lo fijan. Con «Aplicar el tema a las apps», el terminal usa sus 16 colores."
         }
+    }
+
+    // Temas propios y creador (scripts/hf-theme)
+    MyThemes {
+        Layout.fillWidth: true
+        pals: root.pals
+        current: root.paletteKey
+        themeMode: root.themeMode
+        onPicked: (k, mode) => Settings.setMany(mode === "" ? { colorMode: "elegir", palette: k } : { colorMode: "elegir", palette: k, themeMode: mode })
     }
 
     // Movimiento, ventanas y rendimiento de los efectos: Ajustes › Animaciones y efectos

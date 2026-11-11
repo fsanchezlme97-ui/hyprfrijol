@@ -1,0 +1,288 @@
+#!/usr/bin/env python3
+"""hf-theme — temas propios (Ajustes › Apariencia › Mis temas): crearlos, guardarlos, exportarlos e importarlos.
+
+  hf-theme make [--name N] --hex "#1E1219 #CEB2BD …"   tema a partir de 1 a 8 colores (JSON, sin guardar)
+  hf-theme make [--name N] --image RUTA                 de una imagen: si trae códigos hex escritos (una paleta)
+                                                        se leen con tesseract; si no, sus colores con matugen
+  hf-theme save ARCHIVO|-          guarda el JSON de «make» (o uno editado) y escribe su clave
+  hf-theme list                    los temas propios: [{key, name, origen}]
+  hf-theme remove CLAVE            borra el tema (las dos variantes)
+  hf-theme export CLAVE [ARCHIVO]  un .json pequeño para compartirlo (sin ARCHIVO: <clave>.json en Descargas)
+  hf-theme import ARCHIVO          valida el esquema y el contraste y lo guarda
+
+Cada tema es un par oscuro + claro en ~/.config/hyprfrijol/palettes-user.json (el mismo archivo que los temas
+importados de Omarchy, que hf-apply ya lee): «propio-<nombre>» (oscuro, group "propio") y «propio-<nombre>-claro»
+(variant). Las actualizaciones no lo tocan. Roles sin IA: el color más oscuro es el fondo oscuro, el más claro el
+fondo claro, el más saturado el acento y el siguiente de otro tono el terciario; lo que falte se deriva, y
+fix_contrast de hf-apply deja todo el texto en AA (4,5:1).
+"""
+import colorsys, json, pathlib, re, runpy, subprocess, sys, tempfile, time
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+HOME = pathlib.Path.home()
+USER_PALETTES = HOME / ".config/hyprfrijol/palettes-user.json"
+A = runpy.run_path(str(ROOT / "scripts/hf-apply"), run_name="hf_apply")
+mix, contrast, luminance, best_on, fix_contrast, fit_lightness = (A[k] for k in ("mix", "contrast", "luminance", "best_on", "fix_contrast", "fit_lightness"))
+KEYS = ["bg", "s1", "s3", "s4", "p", "onP", "pc", "onPc", "sc", "onSc", "ter", "t", "tv", "o", "ov"]
+HEX = re.compile(r"#?\b([0-9A-Fa-f]{6})\b")
+W, K = "#FFFFFF", "#000000"
+NAMES = {"t": "el texto", "tv": "el texto secundario", "p": "el acento", "ter": "el color terciario", "onP": "el texto sobre el acento",
+         "onPc": "el texto de los botones", "onSc": "el texto de las selecciones"}
+
+
+def die(msg, code=1):
+    print(json.dumps({"error": msg}, ensure_ascii=False))
+    sys.exit(code)
+
+
+def load(p, d):
+    try:
+        return json.loads(pathlib.Path(p).read_text())
+    except Exception:
+        return d
+
+
+def save_pals(pals):
+    USER_PALETTES.parent.mkdir(parents=True, exist_ok=True)
+    tmp = USER_PALETTES.with_suffix(".tmp")
+    tmp.write_text(json.dumps(pals, ensure_ascii=False, indent=1))
+    tmp.replace(USER_PALETTES)
+
+
+def slug(s):
+    import unicodedata
+    s = unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "-", s).strip("-")[:40] or "tema"
+
+
+def sat(h):
+    r, g, b = (int(h[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    _, l, s = colorsys.rgb_to_hls(r, g, b)
+    return s * (1 - abs(2 * l - 1))       # croma: lo gris o casi blanco/negro cuenta poco
+
+
+def hue(h):
+    r, g, b = (int(h[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    return colorsys.rgb_to_hls(r, g, b)[0] * 360
+
+
+def hexes(text):
+    out = []
+    for m in HEX.finditer(text):
+        h = "#" + m.group(1).upper()
+        if h not in out:
+            out.append(h)
+    return out
+
+
+# ---------- roles y variantes ----------
+def from_colors(cols):
+    cols = cols[:8]
+    by_l = sorted(cols, key=luminance)
+    dark_bg = by_l[0] if luminance(by_l[0]) < 0.05 else None
+    light_bg = by_l[-1] if luminance(by_l[-1]) > 0.55 else None
+    rest = [c for c in cols if c not in (dark_bg, light_bg)] or cols
+    p = max(rest, key=sat)
+    others = [c for c in rest if c != p and min(abs(hue(c) - hue(p)), 360 - abs(hue(c) - hue(p))) > 25]
+    ter = max(others, key=sat) if others else rotate(p, 50)
+    dark_bg = dark_bg or mix(p, K, .9)
+    light_bg = light_bg or mix(p, W, .93)
+    return variant(dark_bg, p, ter, False), variant(light_bg, p, ter, True)
+
+
+def rotate(h, deg):
+    r, g, b = (int(h[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    hh, l, s = colorsys.rgb_to_hls(r, g, b)
+    r, g, b = colorsys.hls_to_rgb((hh + deg / 360) % 1, l, s)
+    return "#%02X%02X%02X" % (round(r * 255), round(g * 255), round(b * 255))
+
+
+def variant(bg, p, ter, light):
+    if light:
+        s1, s3, s4 = mix(bg, W, .6), mix(bg, K, .03), mix(bg, K, .07)
+        p = fit_lightness(p, [s1, s3, s4], 4.5)
+        t = mix(p, K, .85)
+        c = {"bg": bg, "s1": s1, "s3": s3, "s4": s4, "p": p, "pc": mix(p, W, .7), "onPc": mix(p, K, .75),
+             "sc": mix(s3, p, .15), "onSc": t, "ter": fit_lightness(ter, [s1, s3], 4.5), "t": t,
+             "tv": mix(t, bg, .35), "o": mix(t, bg, .55), "ov": mix(t, bg, .82)}
+    else:
+        tint = lambda k: mix(mix(bg, W, k), p, .04)
+        s1, s3, s4 = tint(.04), tint(.09), tint(.15)
+        p = fit_lightness(p, [s1, s3, s4], 4.5)
+        t = mix(p, W, .88)
+        c = {"bg": bg, "s1": s1, "s3": s3, "s4": s4, "p": p, "pc": mix(p, bg, .6), "onPc": mix(p, W, .85),
+             "sc": mix(s3, p, .2), "onSc": t, "ter": fit_lightness(ter, [s1, s3], 4.5), "t": t,
+             "tv": mix(t, bg, .3), "o": mix(t, bg, .5), "ov": mix(t, bg, .8)}
+    c["onP"] = best_on(c["p"], 4.5, mix(c["p"], K if luminance(c["p"]) > .18 else W, .8))
+    c["light"] = light
+    return c
+
+
+def from_photo(img):
+    with tempfile.TemporaryDirectory(prefix="hf-theme-") as d:
+        cfg = pathlib.Path(d) / "m.toml"
+        cfg.write_text("[config]\nversion_check = false\n[templates.t]\n"
+                       f"input_path = '{ROOT}/config/matugen/templates/colors.json'\noutput_path = '{d}/colors.json'\n")
+        r = subprocess.run(["matugen", "image", str(img), "-c", str(cfg), "-m", "dark", "-t", "scheme-tonal-spot",
+                            "--source-color-index", "0"], capture_output=True, text=True, timeout=60)
+        out = load(pathlib.Path(d) / "colors.json", None)
+        if r.returncode or not out:
+            die("No se pudieron sacar colores de la imagen (matugen): " + (r.stderr.strip()[-200:] or "sin salida"))
+    dk, lt = dict(out["dark"]), dict(out["light"])
+    dk["light"], lt["light"] = False, True
+    return dk, lt
+
+
+def finish(name, origen, dk, lt):
+    notes = []
+    pair = []
+    for c in (dk, lt):
+        c = {k: str(c[k]).upper() for k in KEYS if A["valid_hex"](c.get(k))} | {"light": bool(c.get("light"))}
+        miss = [k for k in KEYS if k not in c]
+        if miss:
+            die("Faltan colores: " + ", ".join(miss))
+        fixed = fix_contrast(c)
+        ch = [k for k in KEYS if fixed.get(k, c[k]).upper() != c[k]]
+        if ch:
+            names = sorted({NAMES.get(k, k) for k in ch})
+            notes.append(("En claro" if c["light"] else "En oscuro") + " se ajustó " + (", ".join(names[:-1]) + " y " + names[-1] if len(names) > 1 else names[0]) + " para que se lea bien")
+        pair.append({k: fixed[k].upper() if isinstance(fixed[k], str) else fixed[k] for k in KEYS} | {"light": c["light"]})
+    worst = min(min(contrast(c["t"], c[s]) for s in ("bg", "s1", "s3")) for c in pair)
+    return {"key": "propio-" + slug(name), "name": name, "origen": origen, "dark": pair[0], "light": pair[1],
+            "notes": notes, "minContrast": round(worst, 2)}
+
+
+def cmd_make(args):
+    name, hexarg, image = None, None, None
+    it = iter(args)
+    for a in it:
+        if a == "--name": name = next(it, None)
+        elif a == "--hex": hexarg = next(it, "")
+        elif a == "--image": image = next(it, "")
+    if hexarg is not None:
+        cols, origen = hexes(hexarg), "hex"
+        if not cols:
+            die("No hay ningún color #RRGGBB")
+        dk, lt = from_photo_seed(cols[0]) if len(cols) == 1 else from_colors(cols)
+    elif image:
+        img = pathlib.Path(image).expanduser()
+        if not img.is_file():
+            die(f"No existe {img}")
+        txt = subprocess.run(["tesseract", str(img), "-", "--psm", "11"], capture_output=True, text=True, timeout=60).stdout \
+            if shutil_which("tesseract") else ""
+        cols = hexes(txt)
+        if len(cols) >= 2:
+            dk, lt, origen = *from_colors(cols), "paleta"
+        else:
+            dk, lt, origen = *from_photo(img), "imagen"
+        name = name or re.sub(r"[-_]+", " ", img.stem).strip().title()[:40]
+    else:
+        die("uso: hf-theme make [--name N] --hex \"#… #…\" | --image RUTA")
+    print(json.dumps(finish((name or "Mi tema").strip()[:40], origen, dk, lt), ensure_ascii=False))
+
+
+def from_photo_seed(h):
+    """Un solo color: el esquema de Material (matugen color) con ese acento."""
+    with tempfile.TemporaryDirectory(prefix="hf-theme-") as d:
+        cfg = pathlib.Path(d) / "m.toml"
+        cfg.write_text("[config]\nversion_check = false\n[templates.t]\n"
+                       f"input_path = '{ROOT}/config/matugen/templates/colors.json'\noutput_path = '{d}/colors.json'\n")
+        r = subprocess.run(["matugen", "color", "hex", h, "-c", str(cfg), "-m", "dark", "-t", "scheme-tonal-spot"],
+                           capture_output=True, text=True, timeout=60)
+        out = load(pathlib.Path(d) / "colors.json", None)
+    if r.returncode or not out:
+        return from_colors([h])
+    dk, lt = dict(out["dark"]), dict(out["light"])
+    dk["light"], lt["light"] = False, True
+    return dk, lt
+
+
+def shutil_which(x):
+    import shutil
+    return shutil.which(x)
+
+
+def store(theme):
+    name = str(theme.get("name") or "Mi tema").strip()[:40]
+    t = finish(name, str(theme.get("origen") or "hex"), theme.get("dark") or theme.get("oscuro") or {},
+               theme.get("light") or theme.get("claro") or {})
+    key = t["key"]
+    pals = load(USER_PALETTES, {}) or {}
+    pals[key] = {"name": name, "group": "propio", "origen": t["origen"], "creado": time.strftime("%Y-%m-%d"),
+                 "pair": key + "-claro", **t["dark"], "light": False}
+    pals[key + "-claro"] = {"name": name + " · claro", "group": "propio", "pair": key, "variant": True, **t["light"], "light": True}
+    save_pals(pals)
+    return t
+
+
+def cmd_save(args):
+    if len(args) != 1:
+        die("uso: hf-theme save ARCHIVO|-")
+    raw = sys.stdin.read() if args[0] == "-" else pathlib.Path(args[0]).expanduser().read_text()
+    try:
+        theme = json.loads(raw)
+    except Exception:
+        die("JSON no válido")
+    t = store(theme)
+    print(json.dumps({"key": t["key"], "notes": t["notes"]}, ensure_ascii=False))
+
+
+def own():
+    return {k: v for k, v in (load(USER_PALETTES, {}) or {}).items() if isinstance(v, dict) and v.get("group") == "propio"}
+
+
+def cmd_list(args):
+    print(json.dumps([{"key": k, "name": v.get("name"), "origen": v.get("origen", "")} for k, v in own().items() if not v.get("variant")],
+                     ensure_ascii=False))
+
+
+def cmd_remove(args):
+    if len(args) != 1 or args[0] not in own():
+        die("No hay ningún tema propio con esa clave")
+    pals = load(USER_PALETTES, {}) or {}
+    for k in (args[0], pals[args[0]].get("pair")):
+        pals.pop(k, None)
+    save_pals(pals)
+    print(json.dumps({"ok": True}))
+
+
+def cmd_export(args):
+    o = own()
+    if len(args) not in (1, 2) or args[0] not in o or o[args[0]].get("variant"):
+        die("uso: hf-theme export CLAVE [ARCHIVO]")
+    d, l = o[args[0]], o.get(o[args[0]].get("pair"), {})
+    out = {"hyprfrijol-tema": 1, "name": d.get("name"), "origen": d.get("origen", ""),
+           "oscuro": {k: d[k] for k in KEYS}, "claro": {k: l[k] for k in KEYS if k in l}}
+    if len(args) == 2:
+        dest = pathlib.Path(args[1]).expanduser()
+    else:
+        dl = subprocess.run(["xdg-user-dir", "DOWNLOAD"], capture_output=True, text=True).stdout.strip() if shutil_which("xdg-user-dir") else ""
+        dest = pathlib.Path(dl if dl and dl != str(HOME) else HOME) / f"{args[0]}.json"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps(out, ensure_ascii=False, indent=1))
+    print(json.dumps({"ok": True, "file": str(dest)}, ensure_ascii=False))
+
+
+def cmd_import(args):
+    if len(args) != 1:
+        die("uso: hf-theme import ARCHIVO")
+    d = load(pathlib.Path(args[0]).expanduser(), None)
+    if not isinstance(d, dict) or d.get("hyprfrijol-tema") != 1 or not isinstance(d.get("oscuro"), dict):
+        die("No es un tema de HyprFrijol (falta «hyprfrijol-tema»: 1)")
+    oscuro = dict(d["oscuro"], light=False)
+    claro = dict(d["claro"], light=True) if isinstance(d.get("claro"), dict) and d["claro"] else \
+        variant(mix(oscuro.get("p", "#888888"), W, .93), oscuro.get("p", "#888888"), oscuro.get("ter", oscuro.get("p", "#888888")), True)
+    t = store({"name": d.get("name"), "origen": "importado", "dark": oscuro, "light": claro})
+    print(json.dumps({"key": t["key"], "notes": t["notes"]}, ensure_ascii=False))
+
+
+def main(argv):
+    table = {"make": cmd_make, "save": cmd_save, "list": cmd_list, "remove": cmd_remove, "export": cmd_export, "import": cmd_import}
+    if not argv or argv[0] not in table:
+        print(__doc__.strip())
+        sys.exit(0 if argv[:1] in (["-h"], ["--help"]) else 2)
+    table[argv[0]](argv[1:])
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

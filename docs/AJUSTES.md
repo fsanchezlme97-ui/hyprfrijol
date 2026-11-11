@@ -116,6 +116,7 @@ portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si o
 | `animSpeed` | 0.4–2.5 (UI: 0.7 · 0.85 · 1 · 1.25 · 1.5) | multiplicador de velocidad: divide `speed` de Hyprland y las duraciones del shell |
 | `workspaceAnim` | `auto` · `slide` · `slidefade` · `fade` · `slidevert` | cambio de espacio (Animaciones y efectos); `auto` = el del preset |
 | `dimInactive` | `true` · `false` | oscurece un poco las ventanas sin foco (`decoration.dim_inactive`, fuerza 0.12) |
+| Mis temas (Apariencia, `ui/MyThemes.qml`) | `scripts/hf-theme` make/save/list/remove/export/import | pares `propio-<nombre>` + `propio-<nombre>-claro` (group `propio`) en `~/.config/hyprfrijol/palettes-user.json`; se eligen como cualquier paleta (`palette`) |
 | `inactiveOpacity` | `0` (automática: 0.97 con desenfoque) · `1` · `0.92` · `0.85` | opacidad de las ventanas sin foco (`decoration.inactive_opacity`) |
 | `inactiveOpacityExclude` | clases de ventana | siempre opacas (regla `hf-opaque-apps` de hf-apply) |
 | `ripple` | `true` · `false` | onda al pulsar (`components/Ripple.qml`) |
