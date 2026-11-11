@@ -138,7 +138,7 @@ WINDOW_OPS = {"focus": "Enfocar", "close": "Cerrar", "fullscreen": "Pantalla com
 MEDIA_OPS = {"play": "Reproducir", "pause": "Pausar", "play-pause": "Reproducir / pausar", "next": "Siguiente pista",
              "previous": "Pista anterior", "stop": "Detener la música"}
 # Claves de settings.json que la IA NO puede tocar aunque existan (sus propios permisos, comandos, red, seguridad)
-DENY_KEYS = re.compile(r"^(ai[A-Z]|windowMode$|monitors$|kb|binds?$|keybinds|terminal$|browser$|fileManager$|codeEditor$|textEditor$"
+DENY_KEYS = re.compile(r"^(ai[A-Z]|privateApps$|windowMode$|monitors$|kb|binds?$|keybinds|terminal$|browser$|fileManager$|codeEditor$|textEditor$"
                        r"|office$|taskManager$|volumeMixer$|welcomeDone$|primaryMonitor$|printer|remote|vnc|cockpit|sync"
                        r"|plugins|autostart|lock|idleLock|gpuMode|updatesSnapshot|weatherLat|weatherLon|wallhavenPurity"
                        r"|voiceCommands|voiceAliases|voiceAiFallback)"
@@ -1996,7 +1996,7 @@ def speak(text, s=None, sophia=False):
       Sophia (avisos: saludo, recordatorios, urgentes; sophia=True): Gemini TTS, voz aiVoiceName.
     Sin clave de Gemini, o si Gemini falla antes de sonar (cuota…), lo dice Helpert; sin Piper, habla Gemini."""
     s = s or settings()
-    key = gemini_key()[0] if (sophia or not piper_ready()) else ""
+    key = gemini_key()[0] if (sophia or not piper_ready()) and not local_only(s) else ""
     local = piper_ready() and not (sophia and key)
     t = speakable(text, PIPER_MAX if local else TTS_MAX)
     speak_stop()
@@ -2324,13 +2324,39 @@ def prune_history(s):
         except OSError:
             pass
 
-def do_chat(req, print_request=False):
-    s = settings()
-    prune_history(s)
+# Modelos (Ajustes › Asistente de IA › Asistente): un modelo por tarea (aiModelQuick para lo que llega de Spotlight
+# o de la voz, aiModelVision cuando hay imágenes; vacío = el general), un respaldo si el proveedor falla
+# (aiFallbackProvider/aiFallbackModel) y el modo local (aiLocalOnly): solo Ollama, sin voces ni nada en la nube.
+def local_only(s):
+    return bool(s.get("aiLocalOnly"))
+
+def provider_for(s, task=""):
+    """(proveedor, ajustes con el modelo que toca). En modo local, Ollama con el modelo del respaldo si es Ollama."""
+    s = dict(s)
     prov = s.get("aiProvider") or "claude-code"
-    if prov == "off":
+    if local_only(s) and prov not in ("off", "mock", "ollama"):
+        prov = "ollama"
+        s["aiModel"] = s.get("aiFallbackModel") if s.get("aiFallbackProvider") == "ollama" else ""
+    m = str(s.get({"quick": "aiModelQuick", "vision": "aiModelVision"}.get(task, "_"), "") or "").strip()
+    if m:
+        s["aiModel"] = m
+    return prov, s
+
+def fallback_for(s, prov):
+    fb = s.get("aiFallbackProvider") or ""
+    if not fb or fb == prov or fb not in PROVIDERS or (local_only(s) and fb != "ollama"):
+        return None, None
+    return fb, dict(s, aiProvider=fb, aiModel=s.get("aiFallbackModel") or "")
+
+def do_chat(req, print_request=False):
+    s0 = settings()
+    prune_history(s0)
+    if (s0.get("aiProvider") or "claude-code") == "off":
         return {"text": "", "actions": [], "labels": [], "code": "",
                 "error": "El asistente está desactivado. Actívalo en Ajustes › Asistente de IA."}
+    prov, s = provider_for(s0, "quick" if req.get("task") == "quick" else "")
+    if req.get("model"):                     # «Repetir con otro modelo» del panel
+        s["aiModel"] = str(req["model"])[:80]
     fn = PROVIDERS.get(prov)
     if not fn:
         return {"error": f"Proveedor desconocido: {prov}"}
@@ -2338,6 +2364,8 @@ def do_chat(req, print_request=False):
     info = ctx.get("windowInfo") or {}
     cap = attached_image(ctx)
     msgs0, nimg = message_images(list(req.get("messages") or []), ctx, s)
+    if (nimg or cap) and str(s0.get("aiModelVision") or "").strip() and not req.get("model") and prov == (s0.get("aiProvider") or "claude-code"):
+        s["aiModel"] = str(s0["aiModelVision"]).strip()
     vision = (nimg or cap) and provider_vision(prov, s)
     if cap and vision:    # «+ Captura» con visión: va la captura en vez de su OCR
         msgs0, nimg = message_images(list(req.get("messages") or []), {**ctx, "images": list(ctx.get("images") or []) + [cap]}, s)
@@ -2403,6 +2431,14 @@ def do_chat(req, print_request=False):
                            {"role": "user", "text": QUERY_RESULT_HEAD + " (datos del escritorio, no los escribió el usuario):\n\n"
                             + res_text + "\n\nAhora responde al usuario (sin repetir consultas ya hechas)."}]
     except AIError as e:
+        fb, sfb = fallback_for(s0, prov)
+        if fb and not req.get("_fallback"):
+            out = do_chat_with(req, fb, sfb)
+            if not out.get("error"):
+                out["steps"] = [f"{PROVIDER_NAMES.get(prov, prov)[:1].upper()}{PROVIDER_NAMES.get(prov, prov)[1:]} no respondió ({str(e)[:80]}); respondió el respaldo, "
+                                f"{PROVIDER_NAMES.get(fb, fb)}"] + list(out.get("steps") or [])
+                out["fallback"] = fb
+                return out
         return {"text": "", "actions": [], "labels": [], "code": "", "steps": steps, "error": str(e)}
     out = parse_reply(raw, s)
     out["steps"] = list(dict.fromkeys(steps))
@@ -2410,6 +2446,19 @@ def do_chat(req, print_request=False):
     if hidden:
         out["redacted"] = hidden
     return out
+
+PROVIDER_NAMES = {"claude-code": "Claude Code", "ollama": "Ollama", "openai-compatible": "el servidor compatible con OpenAI",
+                  "gemini": "Gemini", "mock": "Prueba"}
+
+def do_chat_with(req, prov, s):
+    """Repite la petición con otro proveedor (el respaldo): mismos ajustes guardados con ese proveedor y modelo."""
+    global settings
+    orig = settings
+    settings = lambda: dict(s, aiLocalOnly=False, aiModelQuick="", aiModelVision="", aiFallbackProvider="")
+    try:
+        return do_chat(dict(req, _fallback=True))
+    finally:
+        settings = orig
 
 # ---------------------------------------------------------------- herramientas (las mismas para el panel y hf-mcp)
 # (nombre, descripción, esquema de argumentos, tipo, constructor) · tipo "action" → do_apply([acción]) · "query" → run_query

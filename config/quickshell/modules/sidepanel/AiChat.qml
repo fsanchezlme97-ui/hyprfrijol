@@ -69,15 +69,20 @@ Item {
                  captureText: allowCapture ? captureText : "",
                  windowInfo: useWindow && winInfo ? winInfo : null };
     }
+    // Tarea de la próxima petición: "quick" para lo que llega de Spotlight o de la voz (hf-ai usa aiModelQuick)
+    property string nextTask: ""
     function payload() {
-        return JSON.stringify({ messages: messages.filter(m => !m.error && !m.local)
+        const task = nextTask;
+        nextTask = "";
+        return JSON.stringify({ task: task, messages: messages.filter(m => !m.error && !m.local)
                                     .map(m => Object.assign({ role: m.role, text: String(m.text).slice(0, 6000) },
                                                             m.images?.length ? { images: m.images } : {},
                                                             m.files?.length ? { files: m.files } : {})),
                                 context: context() });
     }
 
-    function ask(text) {
+    function ask(text, task) {
+        nextTask = task ?? "";
         text = String(text ?? "").trim();
         if ((text === "" && !pending.length && !pendingDocs.length) || busy) return;
         const m = { role: "user", text: text };

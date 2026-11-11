@@ -23,7 +23,8 @@ Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar 
        - [x] Temas F4–5: temas propios y creador desde colores o una imagen, exportar e importar (0.9.7). Falta:
              editar los colores uno a uno, la vista previa sobre la barra y el centro de control (hoy, dos
              tarjetas), y que la IA asigne los papeles de cada color (opcional en el plan).
-       - [ ] IA F3–6: modelo por tarea y respaldo, recetas, conexiones (tema, evento), mejoras del panel.
+       - [x] IA F3: modelo por tarea, respaldo y modo local (0.9.8).
+       - [ ] IA F4–6: recetas, conexiones (tema, evento), mejoras del panel.
        - [ ] Productividad F5: revisión con uso real (la hace el autor usando el escritorio).
 
 ## Baratos de añadir (primero)

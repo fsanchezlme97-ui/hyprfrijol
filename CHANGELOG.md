@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.8] — 2026-11-11
+
+### Añadido
+- **Modelos del asistente** (Ajustes › Asistente de IA › Modelos): un modelo para las respuestas rápidas (lo que llega de Spotlight y de la voz) y otro para las imágenes; un **respaldo** que responde si el proveedor falla o no hay red (la respuesta lo dice), y el modo **Solo en este equipo**, que usa Ollama y apaga las voces en la nube.
+
+### Seguridad
+- El asistente ya no puede cambiar la lista de apps privadas.
+
 ## [0.9.7] — 2026-11-11
 
 ### Añadido

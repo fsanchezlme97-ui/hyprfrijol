@@ -232,6 +232,48 @@ ColumnLayout {
         }
     }
 
+    // Modelos (hf-ai provider_for / fallback_for): modelo por tarea, respaldo si el proveedor falla y modo local
+    Section {
+        Layout.fillWidth: true
+        visible: root.prov !== "off"
+        title: "Modelos"
+        headerRight: Mono { text: "aiModelQuick · aiModelVision · aiFallbackProvider" }
+        SwRow {
+            separator: false
+            label: "Solo en este equipo"
+            sub: "usa Ollama y apaga lo que sale a la nube (voces de Gemini incluidas); el modelo, el del respaldo si es Ollama"
+            key: "aiLocalOnly"; def: false
+        }
+        LabeledRow {
+            label: "Respuestas rápidas"; labelWidth: 140
+            hint: "Spotlight y voz"
+            Field { icon: ""; text: Settings.get("aiModelQuick", ""); placeholder: "El mismo que el general (p. ej. haiku)"; onAccepted: Settings.set("aiModelQuick", text.trim()) }
+        }
+        LabeledRow {
+            label: "Con imágenes"; labelWidth: 140
+            hint: "capturas"
+            Field { icon: ""; text: Settings.get("aiModelVision", ""); placeholder: "El mismo que el general"; onAccepted: Settings.set("aiModelVision", text.trim()) }
+        }
+        LabeledRow {
+            label: "Si no responde"; labelWidth: 140
+            Seg {
+                model: [["", "Nada"], ["ollama", "Ollama"], ["claude-code", "Claude"], ["gemini", "Gemini"]].filter(x => x[0] !== root.prov)
+                current: Settings.get("aiFallbackProvider", "")
+                onPicked: k => Settings.setMany({ aiFallbackProvider: k, aiFallbackModel: "" })
+            }
+        }
+        LabeledRow {
+            visible: Settings.get("aiFallbackProvider", "") !== ""
+            label: "Modelo del respaldo"; labelWidth: 140
+            Field {
+                icon: ""
+                text: Settings.get("aiFallbackModel", "")
+                placeholder: ({ ollama: "llama3.2", "claude-code": "haiku", gemini: "gemini-flash-latest" })[Settings.get("aiFallbackProvider", "")] ?? ""
+                onAccepted: Settings.set("aiFallbackModel", text.trim())
+            }
+        }
+    }
+
     // Personalidad (aiName, aiPersona): scripts/hf-ai persona_doc las AÑADE al prompt base, que no se puede
     // sustituir (sus reglas de acciones y permisos mandan siempre). La IA no puede tocarlas (DENY_KEYS ^ai[A-Z]).
     Section {

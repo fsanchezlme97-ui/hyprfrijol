@@ -160,8 +160,8 @@ PanelWindow {
         if (a && typeof a === "object" && a.window) chat.setWindow(a.window);    // hf-ai summon (Super+Ctrl+A)
         if (a && typeof a === "object" && a.image) chat.attach(String(a.image));
         if (a && typeof a === "object" && Array.isArray(a.images)) a.images.forEach(p => chat.attach(String(p)));
-        if (a && typeof a === "object" && a.ask !== undefined) chat.ask(String(a.ask));
-        else if (typeof a === "string" && a.startsWith("ask:")) chat.ask(a.slice(4));
+        if (a && typeof a === "object" && a.ask !== undefined) chat.ask(String(a.ask), "quick");
+        else if (typeof a === "string" && a.startsWith("ask:")) chat.ask(a.slice(4), "quick");
         Qt.callLater(() => win.chat.focusInput());
     }
     Connections {
@@ -173,7 +173,7 @@ PanelWindow {
     function askHidden(text) {
         chatHeld = true;
         if (!chatLoader.item) { pendingArg = { ask: text, hidden: true }; return; }
-        chat.ask(String(text));
+        chat.ask(String(text), "quick");
     }
     // ======================================================================= dibujo
     Item {
@@ -261,7 +261,7 @@ PanelWindow {
                 source: Qt.resolvedUrl("AiChat.qml")
                 onLoaded: {
                     item.active = Qt.binding(() => win.shown);
-                    if (win.pendingArg !== null) { const a = win.pendingArg; win.pendingArg = null; a.hidden ? item.ask(String(a.ask)) : win.handleArg(a); }
+                    if (win.pendingArg !== null) { const a = win.pendingArg; win.pendingArg = null; a.hidden ? item.ask(String(a.ask), "quick") : win.handleArg(a); }
                 }
             }
         }
