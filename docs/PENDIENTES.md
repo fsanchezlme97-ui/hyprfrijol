@@ -24,7 +24,8 @@ Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar 
              editar los colores uno a uno, la vista previa sobre la barra y el centro de control (hoy, dos
              tarjetas), y que la IA asigne los papeles de cada color (opcional en el plan).
        - [x] IA F3: modelo por tarea, respaldo y modo local (0.9.8).
-       - [ ] IA F4–6: recetas, conexiones (tema, evento), mejoras del panel.
+       - [x] IA F4–5: recetas (Ajustes y Spotlight) y acciones de evento y tema (0.9.9).
+       - [ ] IA F6: mejoras del panel (contexto antes de enviar, respuesta en directo, repetir con otro modelo).
        - [ ] Productividad F5: revisión con uso real (la hace el autor usando el escritorio).
 
 ## Baratos de añadir (primero)

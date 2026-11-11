@@ -25,6 +25,8 @@
   hf-ai models [gemini]      modelos disponibles del proveedor → {"models": [[id, nombre]…], "error": …}
   hf-ai test                 prueba la conexión con el proveedor → {"ok": bool, "text": "…"}
   hf-ai transform "instrucción" < texto   aplica la instrucción al texto y lo imprime en plano (hf-dictate)
+  hf-ai recipes | recipe <id> | recipe-save '<json>' | recipe-remove <id>   recetas (Resumir, Traducir, Corregir…):
+                             la lista, ejecutar una, guardar o borrar una propia (~/.local/share/hyprfrijol/ai-recetas.json)
   hf-ai talk                 hablar con el asistente por voz (como Super + Alt + H): empieza o termina de escuchar
   hf-ai speak "texto" | - | --stop   Helpert lo lee en voz alta (corta lo anterior): voz local Piper (sharvard);
                              sin Piper, Gemini TTS
@@ -52,7 +54,7 @@ Imágenes: con visión (claude-code por stream-json, Gemini inline_data, OpenAI 
   "vision") se mandan reducidas a 1568 px (ImageMagick); si no, su texto por OCR. aiVision true/false lo fuerza.
 Pruebas sin gastar: aiProvider "mock" responde con la lista JSON de $HF_AI_MOCK o ~/.cache/hyprfrijol/ai-mock.json.
 """
-import json, os, re, subprocess, sys, time, pathlib, shutil, urllib.request, urllib.error
+import json, os, re, subprocess, sys, time, pathlib, shutil, urllib.request, urllib.error, urllib.parse
 for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
     if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
@@ -188,6 +190,10 @@ SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden
 - {"type":"caffeine","value":true|false,"minutes":0}   cafeína: que no se apague ni suspenda la pantalla
 - {"type":"timer","minutes":10,"label":"Té"}  temporizador con aviso al acabar · {"type":"timer","cancel":"all"|ID}
 - {"type":"task","text":"Llamar al banco","due":"AAAA-MM-DD"}  tarea en la agenda (due solo si dice cuándo)
+- {"type":"event","title":"Dentista","start":"AAAA-MM-DDTHH:MM","end":"AAAA-MM-DDTHH:MM","where":"…"}  evento en la
+  agenda (start "AAAA-MM-DD" sin hora = todo el día; end opcional: una hora)
+- {"type":"theme","name":"Otoño","colors":["#1C1410","#E8A04A","#7A9A6B"]}  tema de colores propio (de 1 a 8 colores;
+  el más oscuro hace de fondo, el más vivo de acento) y lo pone
 - {"type":"pomodoro","value":"start"|"pause"|"reset","minutes":25}
 - {"type":"focus","value":true|false}        modo sin distracciones
 - {"type":"notifications","op":"clear"}      borrar las notificaciones
@@ -345,6 +351,11 @@ def label(a):
         return ("Activar No molestar" + (f" durante {a['minutes']} min" if a.get("minutes") else "")) if v else "Desactivar No molestar"
     if t == "caffeine":
         return ("Activar cafeína" + (f" durante {a['minutes']} min" if a.get("minutes") else "")) if v else "Desactivar cafeína"
+    if t == "event":
+        when = str(a.get("start", "")).replace("T", " ")
+        return f"Nuevo evento: {a.get('title')} ({when})"
+    if t == "theme":
+        return f"Crear y usar el tema «{a.get('name')}»"
     if t == "task":
         return f"Nueva tarea: {a.get('text')}" + (f" (vence el {a['due']})" if a.get("due") else "")
     if t == "timer":
@@ -436,7 +447,7 @@ def preview(a, s=None):
 
 KIND_LABELS = {"wallpaper": "Cambiar el fondo", "workspace": "Ir a otro espacio", "launch": "Abrir apps", "url": "Abrir webs",
                "volume": "Cambiar el volumen", "brightness": "Cambiar el brillo", "media": "Controlar la música", "dnd": "No molestar",
-               "caffeine": "Cafeína", "timer": "Temporizadores", "task": "Crear tareas", "pomodoro": "Pomodoro", "focus": "Modo sin distracciones",
+               "caffeine": "Cafeína", "timer": "Temporizadores", "task": "Crear tareas", "event": "Crear eventos", "theme": "Crear temas", "pomodoro": "Pomodoro", "focus": "Modo sin distracciones",
                "open": "Abrir paneles del shell", "winmode": "Modo de ventanas",
                "download": "Añadir descargas", "device:mount": "Montar unidades", "device:unmount": "Desmontar unidades",
                "device:open": "Abrir unidades", "download_ctl:pause": "Pausar descargas", "download_ctl:resume": "Reanudar descargas",
@@ -555,6 +566,18 @@ def validate(actions):
                 if a.get("minutes") is not None:
                     a["minutes"] = max(0, min(1440, int(_num(a["minutes"]))))
                 ok.append(a)
+            elif t == "event" and isinstance(a.get("title"), str) and a["title"].strip() \
+                    and re.fullmatch(r"\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?", str(a.get("start") or "")):
+                a["title"] = " ".join(a["title"].split())[:120]
+                if not re.fullmatch(r"\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?", str(a.get("end") or "")):
+                    a.pop("end", None)
+                a["where"] = str(a.get("where") or "")[:200]
+                ok.append(a)
+            elif t == "theme" and isinstance(a.get("colors"), list):
+                cols = [c.upper() for c in a["colors"] if isinstance(c, str) and re.fullmatch(r"#[0-9A-Fa-f]{6}", c)][:8]
+                if cols:
+                    a["colors"], a["name"] = cols, " ".join(str(a.get("name") or "Tema del asistente").split())[:40]
+                    ok.append(a)
             elif t == "task" and isinstance(a.get("text"), str) and a["text"].strip():
                 a["text"] = " ".join(a["text"].split())[:200]
                 if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(a.get("due") or "")):
@@ -764,6 +787,26 @@ def task_add(text, due=None):
     TASKS.write_text(json.dumps((load(TASKS, []) or []) + [task], ensure_ascii=False, indent=1))
     return tid
 
+# Eventos locales de la agenda (services/Events.qml: fechas en ISO UTC, como toISOString)
+EVENTS = HOME / ".local/share/hyprfrijol/events.json"
+
+def event_add(a):
+    import datetime as dt
+    def parse(v):
+        return dt.datetime.strptime(v, "%Y-%m-%dT%H:%M" if "T" in v else "%Y-%m-%d").astimezone()
+    all_day = "T" not in a["start"]
+    start = parse(a["start"])
+    end = parse(a["end"]) if a.get("end") else start + dt.timedelta(days=1 if all_day else 0, hours=0 if all_day else 1)
+    if end <= start:
+        end = start + dt.timedelta(hours=1)
+    iso = lambda d: d.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    eid = str(time.time_ns() // 1000)
+    ev = {"id": eid, "title": a["title"], "start": iso(start), "end": iso(end), "allDay": all_day,
+          "where": a.get("where", ""), "link": "", "color": "p"}
+    EVENTS.parent.mkdir(parents=True, exist_ok=True)
+    EVENTS.write_text(json.dumps((load(EVENTS, []) or []) + [ev], ensure_ascii=False, indent=1))
+    return eid
+
 def timer_cancel(which):
     keep = []
     for t in timers_list():
@@ -894,6 +937,17 @@ def exec_action(a):
         return {"kind": "caffeine", "on": was}
     elif t == "task":
         return {"kind": "task", "id": task_add(a["text"], a.get("due"))}
+    elif t == "event":
+        return {"kind": "event", "id": event_add(a)}
+    elif t == "theme":
+        s = settings()
+        made = json.loads(run([str(ROOT / "scripts/hf-theme"), "make", "--name", a["name"], "--hex", " ".join(a["colors"])], timeout=60) or "{}")
+        if made.get("error") or not made.get("key"):
+            return {"kind": "error", "msg": made.get("error") or "No se pudo crear el tema"}
+        subprocess.run([str(ROOT / "scripts/hf-theme"), "save", "-"], input=json.dumps(made), text=True, capture_output=True, timeout=30)
+        prev = {"colorMode": s.get("colorMode"), "palette": s.get("palette")}
+        set_settings({"colorMode": "elegir", "palette": made["key"]})
+        return {"kind": "theme", "key": made["key"], "prev": prev}
     elif t == "timer":
         if a.get("cancel"):
             timer_cancel(a["cancel"])
@@ -979,6 +1033,12 @@ def undo_record(r):
             qs_call("caffeine", "off")
     elif k == "timer":
         timer_cancel(r["id"])
+    elif k == "event":
+        EVENTS.write_text(json.dumps([x for x in load(EVENTS, []) or [] if x.get("id") != r["id"]], ensure_ascii=False, indent=1))
+    elif k == "theme":
+        prev = r.get("prev") or {}
+        set_settings({"colorMode": prev.get("colorMode") or "auto", "palette": prev.get("palette") or "grafito"})
+        run([str(ROOT / "scripts/hf-theme"), "remove", r["key"]])
     elif k == "task":
         TASKS.write_text(json.dumps([x for x in load(TASKS, []) or [] if x.get("id") != r["id"]], ensure_ascii=False, indent=1))
     elif k == "device" and r.get("op"):
@@ -1750,15 +1810,25 @@ def chat_messages(system, messages, ctx_text, fmt="openai"):
 def ollama_body(system, messages, ctx_text, s):
     return {"model": s.get("aiModel") or "llama3.2", "stream": False, "messages": chat_messages(system, messages, ctx_text, "ollama")}
 
-def call_ollama(system, messages, ctx_text, s):
+def ollama_ep(s):
+    """El servidor de Ollama. En modo local solo vale uno de este equipo (localhost, 127.x, ::1): si aiEndpoint apunta
+    a otra máquina no se envía nada."""
     ep = (s.get("aiEndpoint") or "http://localhost:11434").rstrip("/")
+    if local_only(s):
+        host = (urllib.parse.urlsplit(ep).hostname or "").lower()
+        if not (host == "localhost" or host == "::1" or host.startswith("127.")):
+            raise AIError("Modo solo en este equipo: el servidor de Ollama (aiEndpoint) no es de este equipo")
+    return ep
+
+def call_ollama(system, messages, ctx_text, s):
+    ep = ollama_ep(s)
     data = http_json(ep + "/api/chat", ollama_body(system, messages, ctx_text, s))
     return data.get("message", {}).get("content", "")
 
 def ollama_vision(s):
     """¿El modelo de Ollama ve imágenes? (/api/show → capabilities contiene "vision")."""
-    ep = (s.get("aiEndpoint") or "http://localhost:11434").rstrip("/")
     try:
+        ep = ollama_ep(s)
         caps = http_json(ep + "/api/show", {"model": s.get("aiModel") or "llama3.2"}, timeout=5).get("capabilities") or []
         return "vision" in caps
     except Exception:
@@ -2337,6 +2407,7 @@ def provider_for(s, task=""):
     if local_only(s) and prov not in ("off", "mock", "ollama"):
         prov = "ollama"
         s["aiModel"] = s.get("aiFallbackModel") if s.get("aiFallbackProvider") == "ollama" else ""
+        s["aiEndpoint"] = ""                 # el de otro proveedor (p. ej. api.openai.com) no es un Ollama local
     m = str(s.get({"quick": "aiModelQuick", "vision": "aiModelVision"}.get(task, "_"), "") or "").strip()
     if m:
         s["aiModel"] = m
@@ -2346,7 +2417,7 @@ def fallback_for(s, prov):
     fb = s.get("aiFallbackProvider") or ""
     if not fb or fb == prov or fb not in PROVIDERS or (local_only(s) and fb != "ollama"):
         return None, None
-    return fb, dict(s, aiProvider=fb, aiModel=s.get("aiFallbackModel") or "")
+    return fb, dict(s, aiProvider=fb, aiModel=s.get("aiFallbackModel") or "", aiEndpoint="")
 
 def do_chat(req, print_request=False):
     s0 = settings()
@@ -2460,6 +2531,126 @@ def do_chat_with(req, prov, s):
     finally:
         settings = orig
 
+def transform_text(instr, text):
+    """Instrucción + texto → texto en plano (dictado, recetas de copiar o reemplazar). Modelo rápido, modo local y
+    respaldo como el chat. Lanza AIError si no hay proveedor o falla."""
+    s0 = settings()
+    if not text.strip():
+        return ""
+    prov, s = provider_for(s0, "quick")
+    fn = PROVIDERS.get(prov)
+    if prov == "off" or not fn:
+        raise AIError("El asistente está desactivado")
+    try:
+        return (fn(instr, [{"role": "user", "text": text}], "", s) or "").strip()
+    except AIError:
+        fb, sfb = fallback_for(s0, prov)
+        if not fb:
+            raise
+        return (PROVIDERS[fb](instr, [{"role": "user", "text": text}], "", sfb) or "").strip()
+
+# ---------------------------------------------------------------- recetas (Ajustes › Asistente de IA › Recetas)
+# Una instrucción + de dónde sale el texto + qué se hace con el resultado. Las incluidas no se borran; las propias van
+# en ~/.local/share/hyprfrijol/ai-recetas.json. Salen en Spotlight (por su nombre) y en Ajustes.
+#   input:  portapapeles · seleccion (selección primaria; si no hay, el portapapeles) · pantalla (OCR) · imagen
+#           (la del portapapeles, va adjunta) · nada
+#   output: panel (la pregunta va al panel lateral: puede proponer acciones con su tarjeta) · copiar · reemplazar
+#           (copia el resultado y lo pega sobre la selección con Ctrl + V)
+RECIPES_FILE = HOME / ".local/share/hyprfrijol/ai-recetas.json"
+RECIPE_IN, RECIPE_OUT = ("portapapeles", "seleccion", "pantalla", "imagen", "nada"), ("panel", "copiar", "reemplazar")
+BUILTIN_RECIPES = [
+    {"id": "resumir", "name": "Resumir", "input": "portapapeles", "output": "panel",
+     "prompt": "Resume este texto en pocas frases claras:"},
+    {"id": "traducir-es", "name": "Traducir al español", "input": "seleccion", "output": "copiar",
+     "prompt": "Traduce el texto al español. Responde solo con la traducción, sin comentarios."},
+    {"id": "traducir-en", "name": "Traducir al inglés", "input": "seleccion", "output": "copiar",
+     "prompt": "Translate the text into natural English. Reply with the translation only, no comments."},
+    {"id": "corregir", "name": "Corregir redacción", "input": "seleccion", "output": "reemplazar",
+     "prompt": "Corrige la ortografía, la gramática y el estilo sin cambiar el sentido ni el idioma. Responde solo con el texto corregido."},
+    {"id": "explicar-error", "name": "Explicar el error", "input": "pantalla", "output": "panel",
+     "prompt": "En la pantalla hay un error. Explica qué significa y cómo arreglarlo:"},
+    {"id": "crear-tarea", "name": "Crear tarea", "input": "seleccion", "output": "panel",
+     "prompt": "Crea una tarea (acción task) con esto; si dice cuándo, ponle fecha:"},
+    {"id": "crear-evento", "name": "Crear evento", "input": "seleccion", "output": "panel",
+     "prompt": "Crea un evento en la agenda (acción event) con esto:"},
+    {"id": "tema-imagen", "name": "Crear tema desde imagen", "input": "imagen", "output": "panel",
+     "prompt": "Mira la imagen y crea un tema de colores (acción theme) con sus 3 a 6 colores principales en #RRGGBB y un nombre corto."},
+]
+
+def recipes():
+    own = [dict(r, own=True) for r in (load(RECIPES_FILE, []) or []) if isinstance(r, dict) and r.get("id")]
+    return [dict(r, own=False) for r in BUILTIN_RECIPES] + own
+
+def recipe_save(r):
+    name = " ".join(str(r.get("name") or "").split())[:40]
+    prompt = str(r.get("prompt") or "").strip()[:1000]
+    if not name or not prompt:
+        return {"error": "Falta el nombre o la instrucción"}
+    rid = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40] or "receta"
+    if any(b["id"] == rid for b in BUILTIN_RECIPES):
+        rid += "-propia"
+    rec = {"id": str(r.get("id") or rid)[:60], "name": name, "prompt": prompt,
+           "input": r.get("input") if r.get("input") in RECIPE_IN else "seleccion",
+           "output": r.get("output") if r.get("output") in RECIPE_OUT else "panel"}
+    own = [x for x in (load(RECIPES_FILE, []) or []) if isinstance(x, dict) and x.get("id") != rec["id"]]
+    RECIPES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    RECIPES_FILE.write_text(json.dumps(own + [rec], ensure_ascii=False, indent=1))
+    return {"ok": True, "id": rec["id"]}
+
+def recipe_remove(rid):
+    own = [x for x in (load(RECIPES_FILE, []) or []) if isinstance(x, dict)]
+    if not any(x.get("id") == rid for x in own):
+        return {"error": "Solo se pueden borrar las recetas propias"}
+    RECIPES_FILE.write_text(json.dumps([x for x in own if x.get("id") != rid], ensure_ascii=False, indent=1))
+    return {"ok": True}
+
+def recipe_input(kind, s):
+    """(texto, imágenes, error) según la entrada; respeta las apps privadas y el filtro de secretos."""
+    if kind == "nada":
+        return "", [], ""
+    if kind == "pantalla":
+        if private_visible(s):
+            return "", [], "Hay una app privada a la vista: no se lee la pantalla"
+        return redact(capture_text() or "", s)[0], [], ""
+    if is_private(jrun(["hyprctl", "activewindow", "-j"]).get("class"), s) or clipboard_private():
+        return "", [], "Hay una app privada delante o lo copiado viene de una: no se lee"
+    if kind == "imagen":
+        imgs = clipboard_images()
+        return "", imgs, "" if imgs else "Copia antes una imagen (o una ruta a una imagen)"
+    text = run(["wl-paste", "-p", "-n", "-t", "text"], timeout=3) if kind == "seleccion" else ""
+    text = text or run(["wl-paste", "-n", "-t", "text"], timeout=3)
+    return redact(text[:12000], s)[0], [], "" if text.strip() else "No hay texto seleccionado ni copiado"
+
+def run_recipe(rid):
+    s = settings()
+    r = next((x for x in recipes() if x["id"] == rid), None)
+    if not r:
+        return {"error": f"No hay ninguna receta «{rid}»"}
+    text, imgs, err = recipe_input(r["input"], s)
+    if err:
+        run(["notify-send", "-a", "Asistente", "-i", "dialog-information", r["name"], err])
+        return {"error": err}
+    if r["output"] == "panel":
+        arg = {"ask": r["prompt"] + ("\n\n" + text if text else "")}
+        if imgs:
+            arg["images"] = imgs
+        run(QS + ["ipc", "call", "shell", "openWith", "ia", json.dumps(arg, ensure_ascii=False)])
+        return {"ok": True, "output": "panel"}
+    try:
+        res = transform_text(r["prompt"], text)
+    except AIError as e:
+        run(["notify-send", "-a", "Asistente", "-i", "dialog-error", r["name"], str(e)[:200]])
+        return {"error": str(e)}
+    if not res:
+        return {"error": "Respuesta vacía"}
+    subprocess.run(["wl-copy"], input=res, text=True, timeout=5)
+    if r["output"] == "reemplazar" and shutil.which("wtype"):
+        time.sleep(0.15)
+        run(["wtype", "-M", "ctrl", "v", "-m", "ctrl"])
+    else:
+        run(["notify-send", "-a", "Asistente", "-i", "edit-copy", r["name"], "Copiado: " + res[:160]])
+    return {"ok": True, "output": r["output"], "text": res}
+
 # ---------------------------------------------------------------- herramientas (las mismas para el panel y hf-mcp)
 # (nombre, descripción, esquema de argumentos, tipo, constructor) · tipo "action" → do_apply([acción]) · "query" → run_query
 def _ws(a):
@@ -2509,6 +2700,13 @@ TOOL_SPECS = [
     ("caffeine", "Cafeína: que la pantalla no se apague ni el equipo se suspenda (minutos opcional; 0 = sin límite).",
      {"type": "object", "properties": {"on": {"type": "boolean"}, "minutes": {"type": "integer"}}, "required": ["on"]},
      "action", lambda a: {"type": "caffeine", "value": bool(a.get("on")), "minutes": a.get("minutes")}),
+    ("event", "Añade un evento a la agenda local: title, start (AAAA-MM-DD o AAAA-MM-DDTHH:MM), end opcional, where opcional.",
+     {"type": "object", "properties": {"title": {"type": "string"}, "start": {"type": "string"}, "end": {"type": "string"}, "where": {"type": "string"}},
+      "required": ["title", "start"]},
+     "action", lambda a: {"type": "event", "title": a.get("title", ""), "start": a.get("start", ""), "end": a.get("end"), "where": a.get("where", "")}),
+    ("theme", "Crea un tema de colores propio a partir de 1 a 8 colores #RRGGBB y lo pone (con nombre).",
+     {"type": "object", "properties": {"name": {"type": "string"}, "colors": {"type": "array", "items": {"type": "string"}}}, "required": ["colors"]},
+     "action", lambda a: {"type": "theme", "name": a.get("name", ""), "colors": a.get("colors") or []}),
     ("task", "Añade una tarea a la agenda: texto y, solo si el usuario dice cuándo, fecha due (AAAA-MM-DD).",
      {"type": "object", "properties": {"text": {"type": "string"}, "due": {"type": "string"}}, "required": ["text"]},
      "action", lambda a: {"type": "task", "text": a.get("text", ""), "due": a.get("due")}),
@@ -2704,17 +2902,20 @@ def main(argv):
         out = test_provider()
     elif cmd == "transform":
         # hf-ai transform "<instrucción>" < texto  → texto transformado en plano (lo usa hf-dictate)
-        s = settings()
-        prov = s.get("aiProvider") or "claude-code"
         text = sys.stdin.read()
-        fn = PROVIDERS.get(prov)
-        if prov == "off" or not fn or not text.strip():
-            print(text.strip()); sys.exit(1)
         try:
-            print((fn(" ".join(rest), [{"role": "user", "text": text}], "", s) or "").strip() or text.strip())
+            print(transform_text(" ".join(rest), text) or text.strip())
         except AIError as e:
             print(text.strip()); print(str(e), file=sys.stderr); sys.exit(1)
         return
+    elif cmd == "recipes":
+        out = recipes()
+    elif cmd == "recipe":
+        out = run_recipe(arg)
+    elif cmd == "recipe-save":
+        out = recipe_save(json.loads(arg))
+    elif cmd == "recipe-remove":
+        out = recipe_remove(arg)
     elif cmd == "talk":                     # Super + Alt + H: hablar con el asistente (empieza / termina)
         run(QS + ["ipc", "call", "dictado", "talk"]); return
     elif cmd == "speak":

@@ -20,12 +20,13 @@ ColumnLayout {
         { key: "acciones", label: "Acciones", sub: "bloquear, captura, pomodoro, portapapeles, emojis…" },
         { key: "ventanas", label: "Ventanas abiertas", sub: "a partir de dos letras" },
         { key: "calculadora", label: "Calculadora", sub: "al escribir una operación (con = siempre)" },
+        { key: "recetas", label: "Recetas del asistente", sub: "Resumir, Traducir, Corregir… (Ajustes › Asistente de IA › Recetas)" },
         { key: "ia", label: "Preguntar a la IA", sub: "fila al final (con ? siempre)" },
         { key: "web", label: "Buscar en la web", sub: "fila al final (con ! siempre)" }
     ]
     readonly property var shown: { const g = Settings.get("spotlightGroups", null); return Array.isArray(g) ? g : all.map(x => x.key); }
     readonly property var order: { const o = Settings.get("spotlightOrder", []); return Array.isArray(o) ? o : []; }
-    readonly property var movable: ["apps", "acciones", "ventanas"]
+    readonly property var movable: ["apps", "acciones", "ventanas", "recetas"]
     readonly property var listed: order.length ? order.filter(k => movable.includes(k)).concat(movable.filter(k => !order.includes(k))) : movable
     readonly property string ws: String(Settings.get("webSearch", "duckduckgo"))
     readonly property bool custom: !["duckduckgo", "google", "brave", "kagi", "startpage"].includes(ws)

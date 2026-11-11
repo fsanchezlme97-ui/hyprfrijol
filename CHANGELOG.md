@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.9] — 2026-11-11
+
+### Añadido
+- **Recetas del asistente** (Ajustes › Asistente de IA › Recetas): instrucciones guardadas que se aplican de un golpe a la selección, lo copiado, la pantalla o una imagen copiada. Vienen Resumir, Traducir al español y al inglés, Corregir redacción, Explicar el error, Crear tarea, Crear evento y Crear tema desde imagen, y puedes guardar las tuyas. El resultado va al panel lateral, se copia o reemplaza la selección. Salen en **Spotlight** por su nombre.
+- El asistente puede **crear eventos en la agenda** y **temas de colores** (con su tarjeta para confirmar y Deshacer).
+
+### Seguridad
+- En el modo **Solo en este equipo** el asistente solo habla con un Ollama de esta máquina: si la dirección configurada es de otra, no envía nada.
+
 ## [0.9.8] — 2026-11-11
 
 ### Añadido

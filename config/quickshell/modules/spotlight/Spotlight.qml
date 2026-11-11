@@ -45,6 +45,7 @@ Overlay {
     property var usage: ({ counts: {}, pinned: [] })
     property var calc: ({ expr: "", result: "", ok: false, busy: false })
     property var files: []
+    property var recipes: []            // recetas del asistente (hf-ai recipes; se recargan al abrir)
     property var aiImages: []           // «?»: imágenes pegadas con Ctrl+V (van al panel de la IA con la pregunta)
     property bool filesBusy: false
     property string mode: "search"      // "search" | "apps" (Todas las apps)
@@ -54,7 +55,7 @@ Overlay {
 
     readonly property var apps: DesktopEntries.applications.values.filter(e => !e.noDisplay)
     readonly property var windows: Hyprland.toplevels.values
-    readonly property var items: mode === "apps" || emojiMode ? [] : build(query, apps, usage, calc, files, windows, Pomodoro.running, Clip.history, Clip.pins)
+    readonly property var items: mode === "apps" || emojiMode ? [] : build(query, apps, usage, calc, files, windows, Pomodoro.running, Clip.history, Clip.pins, recipes)
     readonly property var rows: rowsOf(items)
     readonly property var cur: mode === "apps" ? (gridApps[gsel] ? appItem(gridApps[gsel]) : null)
                                                : items[Math.max(0, Math.min(sel, items.length - 1))] ?? null
@@ -77,6 +78,13 @@ Overlay {
         input.forceActiveFocus();
         input.cursorPosition = input.text.length;
         Clip.refresh();
+        recipeProc.running = false;
+        recipeProc.running = Settings.get("aiProvider", "claude-code") !== "off";
+    }
+    Process {
+        id: recipeProc
+        command: [Paths.script("hf-ai"), "recipes"]
+        stdout: StdioCollector { onStreamFinished: { try { spot.recipes = JSON.parse(text); } catch (e) { spot.recipes = []; } } }
     }
     function setMode(m) {
         mode = m; appsDirect = false; moreMode = false;
@@ -215,7 +223,7 @@ Overlay {
 
     // Ajustes › Productividad › Spotlight: grupos que salen sin prefijo (spotlightGroups), su orden
     // (spotlightOrder: [] = por relevancia) y el buscador de «!» y de la fila «Buscar en la web» (webSearch)
-    readonly property var groupKeys: ({ Apps: "apps", Acciones: "acciones", Ventanas: "ventanas", Calculadora: "calculadora", IA: "ia", Web: "web" })
+    readonly property var groupKeys: ({ Apps: "apps", Acciones: "acciones", Ventanas: "ventanas", Calculadora: "calculadora", Recetas: "recetas", IA: "ia", Web: "web" })
     function groupOn(cat) { const g = Settings.get("spotlightGroups", null); return !Array.isArray(g) || g.includes(groupKeys[cat] ?? cat); }
     readonly property var engines: ({ duckduckgo: ["DuckDuckGo", "https://duckduckgo.com/?q=%s"], google: ["Google", "https://www.google.com/search?q=%s"],
                                       brave: ["Brave Search", "https://search.brave.com/search?q=%s"], kagi: ["Kagi", "https://kagi.com/search?q=%s"],
@@ -232,7 +240,7 @@ Overlay {
         return { key: "clip:" + (r.pinned ? "p" + r.pinIndex : r.id), cat: cat, kind: "clip", clip: r, img: r.img ?? "",
                  g: Clip.glyphs[r.kind] ?? "¶", name: r.text.replace(/\s*\n\s*/g, " ⏎ ").slice(0, 200), sub: r.meta + (r.pinned ? " · fijado" : "") };
     }
-    function build(qRaw, appList, use, calcState, fileList, wins, pomoRunning, clipHist, clipPins) {
+    function build(qRaw, appList, use, calcState, fileList, wins, pomoRunning, clipHist, clipPins, recipeList) {
         const q = qRaw.trim();
         const out = [];
         // : portapapeles (fijados + recientes de cliphist)
@@ -370,6 +378,13 @@ Overlay {
         for (const s of stat) {
             const sc = Cat.multiScore([s.name, s.sub, s.kw, s.cat], q);
             if (sc > 0) scored.push({ it: s, sc: sc + Math.min(25, Math.log(1 + uses(s.key)) * 8) });
+        }
+        for (const r of recipeList) {
+            const sc = Cat.multiScore([r.name, r.prompt, "receta"], q);
+            if (sc > 0) scored.push({ it: { key: "recipe:" + r.id, cat: "Recetas", kind: "recipe", icon: "ai", name: r.name, rid: r.id,
+                                            sub: { seleccion: "con la selección", portapapeles: "con lo copiado", pantalla: "con la pantalla", imagen: "con la imagen copiada", nada: "" }[r.input] ?? "",
+                                            det: [["Instrucción", r.prompt], ["Resultado", { panel: "En el panel lateral", copiar: "Se copia", reemplazar: "Reemplaza la selección" }[r.output] ?? r.output]] },
+                                      sc: sc + Math.min(25, Math.log(1 + uses("recipe:" + r.id)) * 8) });
         }
         if (q.length >= 2) for (const t of wins) {
             const sc = Cat.multiScore([t.title, classOf(t)], q);
@@ -543,6 +558,7 @@ Overlay {
         case "download": Downloads.add(it.urls, it.dlType, it.dlType === "audio" ? Settings.get("downloadsAudioFormat", "mp3") : ""); Shell.open("w-descargas"); break;
         case "dlqueue": Shell.open("w-descargas"); break;
         case "task": if (it.text) { Tasks.add(it.text, it.due); Shell.close(); } break;
+        case "recipe": Shell.close(); Quickshell.execDetached([Paths.script("hf-ai"), "recipe", it.rid]); break;
         }
     }
     function runIndex(i) { sel = i; runItem(items[i]); }
@@ -902,7 +918,7 @@ Overlay {
                         Btn {
                             kind: "primary"; h: 32; padX: 16
                             text: spot.cur?.kind === "clip" ? (Clip.autoPaste ? "Pegar  ↵" : "Copiar  ↵")
-                                  : spot.cur?.kind === "calc" ? "Copiar  ↵" : spot.cur?.kind === "window" ? "Ir  ↵" : spot.cur?.kind === "download" ? "Descargar  ↵" : "Abrir  ↵"
+                                  : spot.cur?.kind === "calc" ? "Copiar  ↵" : spot.cur?.kind === "recipe" ? "Aplicar  ↵" : spot.cur?.kind === "window" ? "Ir  ↵" : spot.cur?.kind === "download" ? "Descargar  ↵" : "Abrir  ↵"
                             onClicked: spot.runItem(spot.cur)
                         }
                         Btn {

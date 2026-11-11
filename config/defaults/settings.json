@@ -76,7 +76,7 @@
   "wallpaperHora": false,
   "clipboardAutoPaste": true,
   "clipMaxItems": 750,
-  "spotlightGroups": ["apps", "acciones", "ventanas", "calculadora", "ia", "web"],
+  "spotlightGroups": ["apps", "acciones", "ventanas", "calculadora", "recetas", "ia", "web"],
   "spotlightOrder": [],
   "webSearch": "duckduckgo",
   "clipExpireDays": 0,
