@@ -131,7 +131,7 @@ Singleton {
     Variants {
         model: ["spotlight", "ajustes", "ia", "vista", "agenda", "portapapeles", "snap", "energia", "alttab",
                 "fondos", "captura", "widgets", "actualizaciones", "notificaciones",
-                "ajustesapp", "bienvenida", "herramientas", "emojis", "atajos", "musica", "color"]
+                "ajustesapp", "bienvenida", "herramientas", "emojis", "atajos", "musica", "color", "ventana"]
         GlobalShortcut {
             required property string modelData
             appid: "hf"

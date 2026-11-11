@@ -36,7 +36,8 @@ def hypr_lua(s, c):
         opts.append(sw)
     if s.get("capsEscape"):
         opts.append("caps:escape")
-    follow = 1 if s.get("focusOnHover", True) else 0
+    # flotante = escritorio clásico: enfocar con clic (2: el foco del teclado no sigue al ratón, la ventana bajo el cursor sí recibe la rueda)
+    follow = 2 if s.get("windowMode") == "flotante" else (1 if s.get("focusOnHover", True) else 0)
     out = [
         "hl.config({ input = {",
         f'    kb_layout = "{layouts}", kb_variant = "{variants}", kb_options = "{",".join(opts)}",',

@@ -136,6 +136,7 @@
     "org.gnome.Decibels", "io.bassi.Amberol", "com.github.neithern.g4music", "mpv", "io.github.celluloid_player.Celluloid",
     "org.gnome.Showtime", "org.gnome.Totem", "vlc", "org.gnome.Calculator", "qalculate-gtk", "org.gnome.FileRoller", "xarchiver"],
   "floatAppsSize": 0.65,
+  "barsOwnFrame": ["google-chrome", "chromium", "brave-browser", "microsoft-edge", "vivaldi-stable", "firefox", "zen", "librewolf", "org.gnome.Nautilus", "org.gnome.Loupe", "org.gnome.Calculator", "org.gnome.TextEditor", "org.gnome.FileRoller", "org.gnome.Settings", "org.gnome.Software", "org.gnome.SystemMonitor", "org.gnome.Papers", "org.gnome.Showtime", "org.gnome.Decibels", "org.gnome.Calendar", "org.gnome.Weather", "org.gnome.clocks", "org.gnome.Characters", "org.gnome.Console", "org.gnome.Ptyxis", "org.gnome.Snapshot", "org.gnome.baobab", "org.gnome.DiskUtility", "code", "code-oss", "Code", "cursor", "dev.zed.Zed", "obsidian", "discord", "vesktop", "Slack", "spotify", "com.mitchellh.ghostty"],
   "storeSources": {},
   "appsPreferFlatpak": false,
   "appsAutoDefaults": true,

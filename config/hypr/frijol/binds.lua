@@ -93,6 +93,7 @@ b(mod .. " + SHIFT + H",   hl.dsp.global("hf:restaurar"),     { description = "R
 b(mod .. " + F",           hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }), { description = "Pantalla completa" })
 b(mod .. " + ALT + F",     hl.dsp.window.fullscreen_state({ internal = 0, client = 3, action = "toggle" }), { description = "Pantalla completa simulada" })
 b(mod .. " + ALT + SPACE", hl.dsp.window.float({ action = "toggle" }), { description = "Flotante" })
+b("ALT + SPACE",           hl.dsp.global("hf:ventana"),        { description = "Menú de ventana" })
 b(mod .. " + SHIFT + F",   hl.dsp.window.float({ action = "toggle" }))
 b(mod .. " + SHIFT + SPACE", hl.dsp.global("hf:modoventanas"), { description = "Cambiar modo de ventanas" })
 b(mod .. " + P",           hl.dsp.window.pin(),               { description = "Fijar encima" })

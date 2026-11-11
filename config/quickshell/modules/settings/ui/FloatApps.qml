@@ -15,10 +15,14 @@ import "../../../services"
 ColumnLayout {
     id: root
     spacing: 10
-    signal apply(var list)        // nueva lista de clases → Settings.set("floatApps", …) en Escritorio.qml
+    signal apply(var list)        // nueva lista de clases → Settings.set(settingKey, …) en Escritorio.qml
+    // También edita otras listas de clases con el mismo aspecto (Escritorio › «Apps con su propia barra»: barsOwnFrame)
+    property string settingKey: "floatApps"
+    property string intro: "Estas apps se abren flotando en el centro de la pantalla en vez de repartirse en el mosaico. "
+        + "Las calculadoras y los reproductores de audio pequeños conservan su tamaño. No cambia el modo flotante ni el PiP."
 
     // Mismas clases que los valores por defecto de config/defaults/settings.json (floatApps)
-    readonly property var groups: [
+    property var groups: [
         { key: "archivos", label: "Archivos", sub: "Nautilus, Thunar, Nemo, PCManFM", classes: ["org.gnome.Nautilus", "thunar", "nemo", "pcmanfm"] },
         { key: "imagenes", label: "Imágenes", sub: "Loupe, Ojo de GNOME, imv, swayimg, Ristretto", classes: ["org.gnome.Loupe", "org.gnome.eog", "eog", "imv", "swayimg", "org.xfce.ristretto"] },
         { key: "audio", label: "Audio", sub: "Decibels, Amberol, Gapless", classes: ["org.gnome.Decibels", "io.bassi.Amberol", "com.github.neithern.g4music"] },
@@ -28,7 +32,7 @@ ColumnLayout {
     ]
     readonly property var preset: groups.reduce((a, g) => a.concat(g.classes), [])
 
-    readonly property var list: { const v = Settings.get("floatApps", []); return Array.isArray(v) ? v : []; }
+    readonly property var list: { const v = Settings.get(settingKey, []); return Array.isArray(v) ? v : []; }
     readonly property var lower: list.map(c => String(c).toLowerCase())
     function has(cls): bool { return lower.includes(String(cls).toLowerCase()); }
     function groupOn(g): bool { return g.classes.some(c => has(c)); }
@@ -82,8 +86,7 @@ ColumnLayout {
 
     Txt {
         Layout.fillWidth: true
-        text: "Estas apps se abren flotando en el centro de la pantalla en vez de repartirse en el mosaico. "
-            + "Las calculadoras y los reproductores de audio pequeños conservan su tamaño. No cambia el modo flotante ni el PiP."
+        text: root.intro
         muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
     }
     GridLayout {

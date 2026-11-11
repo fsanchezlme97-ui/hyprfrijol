@@ -5,8 +5,12 @@
 // apps en ventana flotante ("floatApps", "floatAppsSize"; ui/FloatApps.qml, 35-windows.py),
 // diseño de mosaico (general:layout), enfocar al pasar el cursor y acoplar a los bordes; nombres e iconos de los
 // espacios ("wsNames", "wsIcons", "wsBarNames" → barra y vista general; ui/WsNames.qml).
+// Flotante como escritorio clásico: barras de título (Hyprbars, se ofrece instalarlo aquí; estilo y botones en
+// config/apply/70-plugins.py), apps que ya traen su barra ("barsOwnFrame", ui/FloatApps.qml) y enfocar con clic
+// (20-input.py: follow_mouse = 2 en el modo flotante).
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Io
 import "../../.."
 import "../../../components"
 import "../../../services"
@@ -26,6 +30,25 @@ ColumnLayout {
         else Settings.set("windowMode", m);
     }
     readonly property string deskIcons: { const v = Settings.get("deskIcons", "todos"); return v === "flotante" ? "ordenado" : v; }
+
+    // Barras de título (Hyprbars): ¿cargado en Hyprland? (hyprctl plugin list). Instalarlo compila en una terminal y
+    // marca plugins.hyprbars.on; 70-plugins.py solo aplica su configuración si Hyprland lo tiene cargado.
+    property bool barsLoaded: false
+    Process {
+        id: barsProbe
+        running: true
+        command: ["sh", "-c", "hyprctl plugin list 2>/dev/null | grep -qi hyprbars && echo si"]
+        stdout: StdioCollector { onStreamFinished: root.barsLoaded = text.trim() === "si" }
+    }
+    Timer { id: barsPoll; interval: 5000; repeat: true; property int n: 0; onTriggered: { barsProbe.running = true; if (++n > 60 || root.barsLoaded) stop(); } }
+    function installBars(): void {
+        const conf = Object.assign({}, Settings.get("plugins", ({})) ?? {});
+        conf.hyprbars = Object.assign({}, conf.hyprbars ?? {}, { on: true });
+        Settings.set("plugins", conf);
+        Pkg.runInTerminal("hyprpm update && hyprpm add https://github.com/hyprwm/hyprland-plugins; hyprpm enable hyprbars && hyprpm reload -n",
+                          "Barras de título (Hyprbars)");
+        barsPoll.n = 0; barsPoll.restart();
+    }
 
     Section {
         Layout.fillWidth: true
@@ -305,7 +328,11 @@ ColumnLayout {
             text: "Se usa en el modo Mosaico (y en los espacios a los que des ese modo); ahora estás en Desplazamiento."
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }
-        SwRow { label: "Enfocar al pasar el cursor"; sub: "input:follow_mouse = " + (Settings.get("focusOnHover", true) ? 1 : 0); mono: true; key: "focusOnHover"; def: true }
+        SwRow {
+            label: "Enfocar al pasar el cursor"; mono: true; key: "focusOnHover"; def: true
+            sub: root.winMode === "flotante" ? "en el modo flotante se enfoca con clic, como en un escritorio clásico (input:follow_mouse = 2)"
+                                            : "input:follow_mouse = " + (Settings.get("focusOnHover", true) ? 1 : 0)
+        }
         SwRow { label: "Imán al arrastrar (bordes y otras ventanas)"; sub: "general:snap:enabled · ventanas flotantes"; mono: true; key: "snapEdges"; def: true }
     }
     // Modo flotante como un escritorio clásico: encajar al soltar (config/hypr/frijol/floatsnap.lua + Snap.qml),
@@ -316,7 +343,52 @@ ColumnLayout {
         headerRight: Mono { text: root.winMode === "flotante" ? "modo flotante activo" : "también en espacios flotantes" }
         SwRow { label: "Encajar al soltar en los bordes"; sub: "contra un lado: mitad · en una esquina: cuarto · arriba: toda el área · fuera: recupera su tamaño"; key: "dragSnap"; def: true }
         SwRow { label: "Recordar dónde estaba cada app"; sub: "al volver a abrirla flotando, en el mismo sitio y con el mismo tamaño"; key: "floatRemember"; def: true }
-        LinkRow { label: "Barras de título con botones"; value: "minimizar · maximizar · cerrar (Hyprbars)"; section: "plugins"; sectionLabel: "Plugins"; target: "Hyprbars"; separator: false }
+        // Al elegir Flotante sin barras de título, se ofrece instalarlas aquí mismo
+        RowLayout {
+            Layout.fillWidth: true
+            visible: !root.barsLoaded
+            spacing: 12
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 2
+                Txt { text: root.winMode === "flotante" ? "Añade barras de título a las ventanas" : "Barras de título con botones"; weight: Font.DemiBold }
+                Txt {
+                    Layout.fillWidth: true
+                    text: "Menú ⋮, fijar en todos los espacios 📌, minimizar, maximizar y cerrar, solo en las ventanas que no traen la suya. "
+                        + "Se compila una vez (unos minutos) y se recompila tras actualizar Hyprland."
+                    muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                }
+            }
+            Button { kind: root.winMode === "flotante" ? "primary" : ""; text: barsPoll.running ? "Instalando…" : "Instalar"; enabled: !barsPoll.running; onClicked: root.installBars() }
+        }
+        LinkRow { visible: root.barsLoaded; label: "Barras de título con botones"; value: "altura, título, desenfoque (Hyprbars)"; section: "plugins"; sectionLabel: "Plugins"; target: "Hyprbars"; separator: false }
+        Txt {
+            Layout.fillWidth: true
+            text: "Alt + Espacio abre el menú de la ventana activa (también el botón ⋮ de la barra de título)."
+            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+        }
+    }
+    // Apps que dibujan su propia barra de título: Hyprbars no les pone otra (barsOwnFrame → 70-plugins.py)
+    Section {
+        Layout.fillWidth: true
+        visible: root.barsLoaded
+        title: "Apps con su propia barra"
+        headerRight: Mono { text: "hyprbars:no_bar" }
+        FloatApps {
+            Layout.fillWidth: true
+            settingKey: "barsOwnFrame"
+            intro: "Estas apps ya dibujan su barra con sus botones (pestañas del navegador, apps de GNOME, editores…), así que no "
+                + "se les añade otra. Si ves una ventana con dos barras, añádela; si ves una sin ninguna, quítala."
+            // Mismas clases que los valores por defecto de config/defaults/settings.json (barsOwnFrame)
+            groups: [
+                { key: "nav", label: "Navegadores", sub: "Chrome, Chromium, Brave, Edge, Vivaldi, Firefox, Zen", classes: ["google-chrome", "chromium", "brave-browser", "microsoft-edge", "vivaldi-stable", "firefox", "zen", "librewolf"] },
+                { key: "gnome", label: "Apps de GNOME", sub: "Nautilus, Loupe, Calculadora, Editor de texto, Consola…", classes: ["org.gnome.Nautilus", "org.gnome.Loupe", "org.gnome.Calculator", "org.gnome.TextEditor", "org.gnome.FileRoller", "org.gnome.Settings", "org.gnome.Software", "org.gnome.SystemMonitor", "org.gnome.Papers", "org.gnome.Showtime", "org.gnome.Decibels", "org.gnome.Calendar", "org.gnome.Weather", "org.gnome.clocks", "org.gnome.Characters", "org.gnome.Console", "org.gnome.Ptyxis", "org.gnome.Snapshot", "org.gnome.baobab", "org.gnome.DiskUtility"] },
+                { key: "editores", label: "Editores", sub: "VS Code, Cursor, Zed, Obsidian", classes: ["code", "code-oss", "Code", "cursor", "dev.zed.Zed", "obsidian"] },
+                { key: "chat", label: "Chat y música", sub: "Discord, Vesktop, Slack, Spotify", classes: ["discord", "vesktop", "Slack", "spotify"] },
+                { key: "term", label: "Terminales con barra", sub: "Ghostty", classes: ["com.mitchellh.ghostty"] }
+            ]
+            onApply: l => Settings.set("barsOwnFrame", l)
+        }
     }
     Section {
         Layout.fillWidth: true

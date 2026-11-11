@@ -74,6 +74,7 @@ Scope {
     // apertura con el teclado tardaba ~220 ms en crearlos; precargados, ~50 ms. Con lazyModules = false ya lo están.
     Timer { interval: 6000; running: Shell.lazyModules; onTriggered: { Shell.preload("spotlight"); Shell.preload("ajustes"); } }
     LazyView { views: ["energia"]; Energia {} }
+    LazyView { views: ["ventana"]; WinMenu {} }                                     // menú de ventana (⋮ de la barra de título, Alt + Espacio)
     LazyView { views: ["fondos"]; WallpaperSelector {} }
     LazyView { id: capView; views: ["captura"]; keep: item?.busyState ?? false; Capture {} }
     LazyView { id: colorView; views: ["color"]; keep: item?.busyState ?? false; ColorPicker {} }

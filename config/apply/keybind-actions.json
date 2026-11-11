@@ -10,6 +10,7 @@
   "Flotante": "hl.dsp.window.float({ action = \"toggle\" })",
   "Ventanas flotantes / mosaico": "hl.dsp.global(\"hf:modoventanas\")",
   "Fijar encima": "hl.dsp.window.pin()",
+  "Menú de ventana": "hl.dsp.global(\"hf:ventana\")",
   "Bloquear": "hl.dsp.exec_cmd(\"loginctl lock-session\")",
   "Bloquear pantalla": "hl.dsp.exec_cmd(\"loginctl lock-session\")",
   "Siguiente fondo": "hl.dsp.exec_cmd(\"hf-wallpaper next\")",

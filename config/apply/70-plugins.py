@@ -6,7 +6,7 @@
 # config y Hyprland la vuelve a leer al cargarlos, así que en la segunda pasada la guarda ya se cumple.
 # Sin el plugin (o con --verify-config) no se ejecuta nada, así que una opción desconocida nunca rompe la config.
 # Cada bloque va además en pcall: un error de un plugin no corta el resto de settings.lua.
-import json, os, pathlib, sys
+import json, os, pathlib, re, shlex, sys
 
 def _root():
     for p in (pathlib.Path(os.environ.get("HF_ROOT", "/nonexistent")),
@@ -28,6 +28,16 @@ def _rgba(h, a=1.0):
         r, g, b = 0, 0, 0
     return "rgba(%02x%02x%02x%02x)" % (r, g, b, round(max(0, min(1, a)) * 255))
 
+def _classes(v):
+    """Clases de ventana válidas (como 35-windows.py): letras, números y . _ -, sin repetir."""
+    out = []
+    for x in v if isinstance(v, list) else []:
+        x = str(x).strip()
+        if x and re.fullmatch(r"[A-Za-z0-9._-]{1,120}", x) and x.lower() not in (y.lower() for y in out):
+            out.append(x)
+    return out
+def _rx(classes):
+    return "(?i)^(" + "|".join(re.escape(x) for x in classes) + ")$"
 def _lua(v):
     if isinstance(v, bool):
         return "true" if v else "false"
@@ -128,23 +138,34 @@ def hypr_lua(s, c):
             body.append(f"hl.bind({_q(k)}, function() {fn_lua} end, {{ description = {_q(desc)} }})")
 
         if pid == "hyprbars":
+            # Estilo de los controles del PiP (modules/pip/Pip.qml): cristal (s1 casi opaco + desenfoque) y botones sin
+            # fondo, solo el icono; cerrar en el rojo de peligro de Theme.qml
+            danger = "#B3261E" if light else "#F2B8B5"
             tbl.update({"bar_color": _rgba(c.get("s1") or c.get("bg"), 0.94), "col": {"text": _rgba(c.get("t"))},
-                        "inactive_button_color": _rgba(c.get("s4"), 0.6), "bar_text_size": 10, "bar_padding": 10,
-                        "bar_button_padding": 7,
+                        "inactive_button_color": _rgba(c.get("s4"), 0.0), "bar_text_size": 10, "bar_padding": 10,
+                        "bar_button_padding": 6,
                         "on_double_click": "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\", action = \"toggle\" })'"})
             body.append(f"hl.config({{ plugin = {{ hyprbars = {_table(tbl)} }} }})")
             if vals.get("buttons"):
-                size = max(10, vals.get("height", 26) - 12)
-                # de derecha a izquierda: cerrar, maximizar, minimizar (al espacio especial del shell)
+                size = max(12, vals.get("height", 26) - 10)
+                clear = _rgba(c.get("s4"), 0.0)
+                qs = f"qs -p {shlex.quote(str(root / 'config/quickshell'))} ipc call shell open ventana" if root else ""
+                # de derecha a izquierda: cerrar, maximizar, minimizar (al espacio especial del shell), fijar en todos
+                # los espacios y el menú de ventana (WinMenu.qml; pulsar la barra ya enfocó esta ventana)
                 btns = [
-                    (c.get("p"), c.get("onP"), "✕", "hyprctl dispatch 'hl.dsp.window.close()'"),
-                    (c.get("s4"), c.get("t"), "□", "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\", action = \"toggle\" })'"),
-                    (c.get("s4"), c.get("t"), "–", "hyprctl dispatch 'hl.dsp.window.move({ workspace = \"special:minimized\", follow = false })'"),
-                ]
-                for bg, fg, icon, act in btns:
-                    body.append(f"hl.plugin.hyprbars.add_button({{ bg_color = {_q(_rgba(bg))}, fg_color = {_q(_rgba(fg))}, size = {size}, icon = {_q(icon)}, action = {_q(act)} }})")
+                    (danger, "✕", "hyprctl dispatch 'hl.dsp.window.close()'"),
+                    (c.get("t"), "□", "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\", action = \"toggle\" })'"),
+                    (c.get("t"), "–", "hyprctl dispatch 'hl.dsp.window.move({ workspace = \"special:minimized\", follow = false })'"),
+                    (c.get("t"), "📌", "hyprctl dispatch 'hl.dsp.window.pin()'"),
+                ] + ([(c.get("t"), "⋮", qs)] if qs else [])
+                for fg, icon, act in btns:
+                    body.append(f"hl.plugin.hyprbars.add_button({{ bg_color = {_q(clear)}, fg_color = {_q(_rgba(fg))}, size = {size}, icon = {_q(icon)}, action = {_q(act)} }})")
             if vals.get("floatingOnly"):
                 body.append('hl.window_rule({ name = "hf-hyprbars-solo-flotantes", match = { float = false }, ["hyprbars:no_bar"] = true })')
+            # Apps que dibujan su propia barra (Chrome, GNOME, VS Code…: barsOwnFrame) y las ventanas del propio shell:
+            # sin barra, para no tener dos
+            own = _classes(s.get("barsOwnFrame", [])) + ["org.quickshell", "hf-webapp.qml6"]
+            body.append(f'hl.window_rule({{ name = "hf-hyprbars-barra-propia", match = {{ class = {_q(_rx(own))} }}, ["hyprbars:no_bar"] = true }})')
         elif pid == "hyprexpo":
             rad = s.get("rounding")
             tbl.update({"bg_col": _rgba(c.get("bg")), "border_color": _rgba(c.get("ov")), "border_width": 2,
