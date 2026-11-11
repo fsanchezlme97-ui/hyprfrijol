@@ -3,6 +3,11 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.45] — 2026-11-11
+
+### Arreglado
+- Con el login de HyprFrijol (greetd), Chrome ya no pide la contraseña del llavero al abrirse: `./install.sh --greeter` añade `pam_gnome_keyring` a `/etc/pam.d/greetd`, así la contraseña con la que entras desbloquea el llavero. Nuevo paquete en el nivel `greeter` (`gnome-keyring-pam` en Fedora/openSUSE, `libpam-gnome-keyring` en Debian/Ubuntu).
+
 ## [0.8.44] — 2026-11-11
 
 ### Cambiado

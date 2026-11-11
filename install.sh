@@ -682,6 +682,11 @@ greeter() {
   printf '%s\n' '[terminal]' 'vt = 1' '' '[default_session]' \
     '# Login visual de hyprfrijol. Si fallara, desde otra TTY (Ctrl+Alt+F3):  ./install.sh --greeter-off' \
     'command = "start-hyprland -- --config /etc/greetd/hyprland-greeter.lua"' "user = \"$gu\"" | root_write /etc/greetd/config.toml 644
+  # Que la contraseña del login desbloquee el llavero (si no, Chrome la pide al abrirse). optional: si falla, se entra igual.
+  if compgen -G '/usr/lib*/security/pam_gnome_keyring.so' >/dev/null || compgen -G '/usr/lib/*/security/pam_gnome_keyring.so' >/dev/null || compgen -G '/lib/*/security/pam_gnome_keyring.so' >/dev/null \
+     && [ -f /etc/pam.d/greetd ] && ! grep -q pam_gnome_keyring /etc/pam.d/greetd; then
+    { cat /etc/pam.d/greetd 2>/dev/null; printf '%s\n' 'auth       optional     pam_gnome_keyring.so' 'session    optional     pam_gnome_keyring.so auto_start'; } | root_write /etc/pam.d/greetd 644
+  fi
   if [ -n "$cur" ] && [ "$cur" != greetd ]; then svc_disable "$cur"; fi
   svc_enable greetd
   greeter_sync
