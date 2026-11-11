@@ -5,7 +5,7 @@
 // apps en ventana flotante ("floatApps", "floatAppsSize"; ui/FloatApps.qml, 35-windows.py),
 // diseño de mosaico (general:layout), enfocar al pasar el cursor y acoplar a los bordes; nombres e iconos de los
 // espacios ("wsNames", "wsIcons", "wsBarNames" → barra y vista general; ui/WsNames.qml).
-// Flotante como escritorio clásico: barras de título del shell ("titleBars"; modules/desktop/TitleBar.qml), apps
+// Flotante como escritorio clásico: botones de ventana del shell ("titleBars"; modules/desktop/TitleBar.qml), apps
 // que ya traen su barra ("barsOwnFrame", ui/FloatApps.qml), redimensionar desde el borde (resize_on_border, look.lua)
 // y enfocar con clic (20-input.py: follow_mouse = 2 en el modo flotante).
 import QtQuick
@@ -316,7 +316,7 @@ ColumnLayout {
         SwRow { label: "Imán al arrastrar (bordes y otras ventanas)"; sub: "general:snap:enabled · ventanas flotantes"; mono: true; key: "snapEdges"; def: true }
     }
     // Modo flotante como un escritorio clásico: encajar al soltar (config/hypr/frijol/floatsnap.lua + Snap.qml),
-    // recordar posiciones (services/WinMode.qml) y barras de título (modules/desktop/TitleBar.qml)
+    // recordar posiciones (services/WinMode.qml) y botones de ventana (modules/desktop/TitleBar.qml)
     Section {
         Layout.fillWidth: true
         title: "Ventanas flotantes"
@@ -324,21 +324,21 @@ ColumnLayout {
         SwRow { label: "Encajar al soltar en los bordes"; sub: "contra un lado: mitad · en una esquina: cuarto · arriba: toda el área · fuera: recupera su tamaño"; key: "dragSnap"; def: true }
         SwRow { label: "Recordar dónde estaba cada app"; sub: "al volver a abrirla flotando, en el mismo sitio y con el mismo tamaño"; key: "floatRemember"; def: true }
         SwRow {
-            label: "Barras de título"; key: "titleBars"; def: true
-            sub: "en la ventana activa que no trae la suya: arrastrar para mover · doble clic para maximizar · menú, minimizar, maximizar y cerrar"
+            label: "Botones de ventana"; key: "titleBars"; def: true
+            sub: "dentro de la ventana activa, arriba a la derecha, en las apps que no traen los suyos: asa para moverla (doble clic maximiza), minimizar, maximizar y cerrar"
         }
         Txt {
             Layout.fillWidth: true
-            text: "Redimensiona arrastrando el borde de la ventana. Alt + Espacio (o clic derecho en la barra de título) abre el menú de la ventana."
+            text: "Redimensiona arrastrando el borde de la ventana. Alt + Espacio (o clic derecho en los botones) abre el menú de la ventana."
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }
     }
-    // Apps que dibujan su propia barra de título: el shell no les pone otra (barsOwnFrame → TitleBar.qml)
+    // Apps que dibujan su propia barra con botones: el shell no les pone los suyos (barsOwnFrame → TitleBar.qml)
     Section {
         Layout.fillWidth: true
         visible: Settings.get("titleBars", true) !== false
         title: "Apps con su propia barra"
-        headerRight: Mono { text: "sin barra del shell" }
+        headerRight: Mono { text: "sin botones del shell" }
         FloatApps {
             Layout.fillWidth: true
             settingKey: "barsOwnFrame"

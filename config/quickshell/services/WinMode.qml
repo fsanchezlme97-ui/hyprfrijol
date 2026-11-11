@@ -319,7 +319,8 @@ Singleton {
     Connections {
         target: Hyprland
         function onRawEvent(ev) {
-            // La app pide minimizarse (su botón de minimizar): al espacio de las minimizadas
+            // Petición de minimizar (barras de tareas, foreign-toplevel): al espacio de las minimizadas. Ojo: el botón
+            // de minimizar de las propias apps (Chrome, GNOME…) no llega: Hyprland 0.57 lo ignora sin avisar
             if (ev.name === "minimized") {
                 const [a, on] = ev.data.split(",");
                 if (on === "1") root.minimize("0x" + a);

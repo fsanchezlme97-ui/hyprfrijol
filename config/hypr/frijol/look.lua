@@ -14,6 +14,9 @@ hl.config({
         resize_on_border = true,
     },
 
+    -- Enfocar una ventana (desde el dock, Alt + Tab, al restaurarla) no lleva el cursor a su centro
+    cursor = { no_warps = true },
+
     decoration = {
         rounding         = 8,
         active_opacity   = 1.0,

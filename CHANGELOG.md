@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.27] — 2026-11-10
+
+- **Botones de ventana dentro de la ventana**: la barra de título del shell pasa a ser una pastilla pequeña arriba a
+  la derecha de la ventana activa (asa para moverla, minimizar, maximizar y cerrar). Al arrastrar el asa la ventana
+  sigue al cursor sin retraso: se quita la animación de movimiento mientras dura. Doble clic en el asa: maximizar.
+- Enfocar una ventana (desde el dock, Alt + Tab o al restaurarla) ya no lleva el cursor a su centro
+  (`cursor:no_warps`).
+- Las ventanas flotantes pueden maximizarse y restaurarse con sus propios botones también en mosaico; las de mosaico
+  siguen sin poder hacerlo por su cuenta.
+- Límite conocido: Hyprland ignora el botón de minimizar de las apps que dibujan su propia barra (Chrome, apps de
+  GNOME…). Para minimizarlas: su icono del dock, o Alt + Espacio › Minimizar.
+
 ## [0.8.26] — 2026-11-10
 
 - **Barras de título sin plugins**: en el modo flotante, la ventana activa que no trae su propia barra (terminales,

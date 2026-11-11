@@ -1,13 +1,13 @@
-// Barra de título de la ventana activa en los espacios flotantes, dibujada por el shell (sin plugins de Hyprland):
-// icono y título, menú de ventana (WinMenu.qml), minimizar, maximizar / restaurar y cerrar. Arrastrarla mueve la
-// ventana y el doble clic la maximiza. Una por pantalla (la crea Desktop.qml).
-//   - Solo en la ventana activa: en flotante, la ventana activa queda encima, así que la barra no tapa otras.
+// Botones de ventana de la ventana activa en los espacios flotantes, dibujados por el shell (sin plugins de
+// Hyprland): una pastilla pequeña dentro de la ventana, arriba a la derecha, con un asa para moverla, minimizar,
+// maximizar / restaurar y cerrar. Una por pantalla (la crea Desktop.qml).
+//   - Asa: arrastrar mueve la ventana (sin la animación de movimiento mientras dura, para que siga al cursor);
+//     doble clic maximiza o restaura. Clic derecho en la pastilla: menú de ventana (WinMenu.qml).
+//   - Solo en la ventana activa, que en flotante queda encima: la pastilla no tapa otras ventanas.
 //   - No sale en las apps que ya dibujan su barra ("barsOwnFrame": navegadores, GNOME, VS Code…), ni en las del
 //     propio shell, ni a pantalla completa. Se apaga con "titleBars" = false (Ajustes › Escritorio y gestos).
-//   - Va justo encima de la ventana; si no cabe (ventana maximizada o pegada arriba), dentro de la ventana y
-//     escondida: aparece al llevar el cursor al borde de arriba.
 //   - La geometría se sondea cada 100 ms mientras se ve (Hyprland no avisa al mover o redimensionar una flotante).
-// Capa "top" a pantalla completa y transparente: solo la barra recibe clics (mask); durante un arrastre, toda.
+// Capa "top" a pantalla completa y transparente: solo la pastilla recibe clics (mask); durante un arrastre, toda.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -22,13 +22,11 @@ PanelWindow {
     id: root
     required property int wsId                      // espacio activo de esta pantalla
 
-    readonly property int barH: 32
-    readonly property int radius: { const r = Settings.get("rounding", 8); return typeof r === "number" ? r : 8; }
     readonly property bool enabledHere: { WinMode.mode; WinMode.overrides; return Settings.get("titleBars", true) !== false && WinMode.isFloat(wsId); }
     readonly property var ownFrame: (Settings.get("barsOwnFrame", []) ?? []).map(c => String(c).toLowerCase())
         .concat(["org.quickshell", "hf-webapp.qml6"])
 
-    // La ventana a la que pertenece la barra: la activa, si flota en esta pantalla y no trae barra propia
+    // La ventana a la que pertenecen los botones: la activa, si flota en esta pantalla y no trae barra propia
     readonly property var target: {
         HyprClients.refreshes;
         if (!enabledHere) return null;
@@ -64,141 +62,124 @@ PanelWindow {
         }
     }
 
-    property int border: 2
-    Process {
-        id: borderProc
-        running: true
-        command: ["hyprctl", "getoption", "general:border_size", "-j"]
-        stdout: StdioCollector { onStreamFinished: { try { root.border = JSON.parse(text).int ?? 2; } catch (e) {} } }
-    }
-    Connections {
-        target: Hyprland
-        function onRawEvent(ev) { if (ev.name === "configreloaded") borderProc.running = true; }
-    }
-
-    // Colocación, en coordenadas de esta pantalla
-    readonly property int topLimit: { HyprClients.refreshes; return HyprClients.monitorByName(screen?.name ?? "")?.reserved?.[1] ?? 0; }
     readonly property real sx: screen?.x ?? 0
     readonly property real sy: screen?.y ?? 0
-    readonly property bool inside: !!geo && (geo.max || geo.y - sy - border - barH < topLimit)
-    readonly property bool revealed: !inside || hover.hovered || drag.active || strip.hovered
+    readonly property int topLimit: { HyprClients.refreshes; return HyprClients.monitorByName(screen?.name ?? "")?.reserved?.[1] ?? 0; }
 
-    visible: !!geo
+    visible: !!geo && (geo.w >= 200 && geo.h >= 120)
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "hf-titlebar"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore
     anchors { top: true; bottom: true; left: true; right: true }
-    mask: Region { item: drag.active ? full : root.revealed ? bar : stripZone }
+    mask: Region { item: drag.active ? full : pill }
 
     Item { id: full; anchors.fill: parent }
-    // Escondida dentro de la ventana: una franja de 4 px en su borde de arriba la hace aparecer
-    Item {
-        id: stripZone
-        visible: root.inside
-        x: bar.x; y: bar.y; width: bar.width; height: 4
-        HoverHandler { id: strip }
-    }
 
     // ── Arrastre: mueve la ventana (Hyprland, coordenadas globales), ~60 veces por segundo como mucho ──
     property point dragPos: Qt.point(0, 0)
+    function moveLua(): string {
+        return 'hl.dsp.window.move({ x = ' + Math.round(dragPos.x) + ', y = ' + Math.round(dragPos.y) + ', exact = true, ' + WinMode.win(addr) + ' })';
+    }
+    function noAnim(on: bool): void {
+        Hyprland.dispatch('hl.dsp.window.set_prop({ prop = "no_anim", value = "' + (on ? "1" : "unset") + '", ' + WinMode.win(addr) + ' })');
+    }
     Timer {
         id: mover
         interval: 16
         property bool dirty: false
-        onTriggered: if (dirty) {
-            dirty = false;
-            Hyprland.dispatch('hl.dsp.window.move({ x = ' + Math.round(root.dragPos.x) + ', y = ' + Math.round(root.dragPos.y)
-                              + ', exact = true, ' + WinMode.win(root.addr) + ' })');
-        }
+        onTriggered: if (dirty) { dirty = false; Hyprland.dispatch(root.moveLua()); }
     }
 
     Rectangle {
-        id: bar
+        id: pill
+        // la esquina de arriba a la derecha de la ventana (durante el arrastre, donde la lleva el cursor)
         readonly property real gx: drag.active ? root.dragPos.x : (root.geo?.x ?? 0)
         readonly property real gy: drag.active ? root.dragPos.y : (root.geo?.y ?? 0)
-        x: gx - root.sx - root.border
-        y: root.inside && !drag.active ? gy - root.sy : gy - root.sy - root.border - root.barH
-        width: (root.geo?.w ?? 0) + 2 * root.border
-        height: root.barH
-        topLeftRadius: root.radius; topRightRadius: root.radius
-        bottomLeftRadius: root.inside && !drag.active ? root.radius : 0
-        bottomRightRadius: bottomLeftRadius
-        color: Qt.alpha(Theme.s1, 0.94)
-        opacity: root.revealed ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 120 } }
+        x: gx - root.sx + (root.geo?.w ?? 0) - width - 6
+        y: gy - root.sy + 6
+        width: row.implicitWidth + 6
+        height: 26
+        radius: Theme.ctl(26)
+        color: Qt.alpha(Theme.s1, hover.hovered || drag.active ? 0.96 : 0.78)
+        border.width: 1
+        border.color: Qt.alpha(Theme.ov, 0.6)
+        Behavior on color { ColorAnimation { duration: 120 } }
 
         HoverHandler { id: hover }
-
-        MouseArea {
-            id: drag
-            anchors.fill: parent
-            property point start: Qt.point(0, 0)
-            property point startAt: Qt.point(0, 0)
-            property bool active: false
-            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-            onPressed: m => {
-                if (m.button === Qt.RightButton) { Shell.open("ventana"); return; }
-                if (m.button === Qt.MiddleButton) { WinMode.minimize(root.addr); return; }
-                if (root.geo?.max) return;                      // maximizada: no se arrastra (doble clic la restaura)
-                start = mapToItem(full, m.x, m.y);
-                startAt = Qt.point(root.geo.x, root.geo.y);
-                root.dragPos = startAt;
-            }
-            onPositionChanged: m => {
-                if (!(m.buttons & Qt.LeftButton) || root.geo?.max) return;
-                const p = mapToItem(full, m.x, m.y);
-                if (!active && Math.abs(p.x - start.x) + Math.abs(p.y - start.y) < 4) return;
-                active = true;
-                // la barra no se mete bajo la del shell
-                const minY = root.sy + root.topLimit + root.border + root.barH;
-                root.dragPos = Qt.point(startAt.x + p.x - start.x, Math.max(minY, startAt.y + p.y - start.y));
-                mover.dirty = true;
-                if (!mover.running) mover.start();
-            }
-            onReleased: {
-                if (active) {
-                    mover.stop(); mover.dirty = true; mover.triggered();
-                    // hasta el siguiente sondeo, la ventana está donde se soltó (sin saltar a la posición vieja)
-                    root.live = Object.assign({}, root.live ?? root.target, { address: root.addr, at: [Math.round(root.dragPos.x), Math.round(root.dragPos.y)] });
-                }
-                active = false;
-            }
-            onDoubleClicked: m => { if (m.button === Qt.LeftButton) WinMode.toggleMaximize(root.addr); }
-        }
+        // clic derecho en cualquier parte de la pastilla: menú de ventana
+        TapHandler { acceptedButtons: Qt.RightButton; onTapped: Shell.open("ventana") }
 
         RowLayout {
-            anchors { fill: parent; leftMargin: 10; rightMargin: 4 }
-            spacing: 8
-            Image {
-                Layout.preferredWidth: 16; Layout.preferredHeight: 16
-                source: root.target ? HyprClients.iconFor(root.target.class) : ""
-                sourceSize: Qt.size(32, 32)
-                visible: status === Image.Ready
+            id: row
+            anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: 3 }
+            spacing: 0
+
+            // Asa para mover (seis puntos)
+            Item {
+                Layout.preferredWidth: 26; Layout.preferredHeight: 22
+                Icon {
+                    anchors.centerIn: parent
+                    size: 14; stroke: 2.4
+                    color: drag.active || drag.containsMouse ? Theme.t : Theme.tv
+                    svg: '<path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/>'
+                }
+                MouseArea {
+                    id: drag
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                    property point start: Qt.point(0, 0)
+                    property point startAt: Qt.point(0, 0)
+                    property bool active: false
+                    onPressed: m => {
+                        start = mapToItem(full, m.x, m.y);
+                        startAt = Qt.point(root.geo?.x ?? 0, root.geo?.y ?? 0);
+                        root.dragPos = startAt;
+                    }
+                    onPositionChanged: m => {
+                        if (!pressed || !root.geo || root.geo.max) return;
+                        const p = mapToItem(full, m.x, m.y);
+                        if (!active) {
+                            if (Math.abs(p.x - start.x) + Math.abs(p.y - start.y) < 4) return;
+                            active = true;
+                            root.noAnim(true);
+                        }
+                        // sin meter la ventana bajo la barra del shell
+                        root.dragPos = Qt.point(startAt.x + p.x - start.x, Math.max(root.sy + root.topLimit, startAt.y + p.y - start.y));
+                        mover.dirty = true;
+                        if (!mover.running) mover.start();
+                    }
+                    onReleased: {
+                        if (active) {
+                            mover.stop(); mover.dirty = false;
+                            Hyprland.dispatch(root.moveLua());
+                            root.noAnim(false);
+                            // hasta el siguiente sondeo, la ventana está donde se soltó (sin saltar a la posición vieja)
+                            root.live = Object.assign({}, root.live ?? root.target, { address: root.addr, at: [Math.round(root.dragPos.x), Math.round(root.dragPos.y)] });
+                        }
+                        active = false;
+                    }
+                    onDoubleClicked: WinMode.toggleMaximize(root.addr)
+                }
             }
-            Txt {
-                Layout.fillWidth: true
-                text: root.target?.title || (root.target ? HyprClients.appName(root.target.class) : "")
-                size: 12; weight: Font.Medium
-                color: Theme.t
-            }
+
             Repeater {
                 model: [
-                    { k: "menu", icon: "more", tip: "Menú de ventana" },
-                    { k: "min", icon: "minus", tip: "Minimizar" },
-                    { k: "max", icon: root.geo?.max ? "window" : "maximize", tip: root.geo?.max ? "Restaurar" : "Maximizar" },
-                    { k: "close", icon: "x", tip: "Cerrar", danger: true }
+                    { k: "min", icon: "minus" },
+                    { k: "max", icon: root.geo?.max ? "window" : "maximize" },
+                    { k: "close", icon: "x", danger: true }
                 ]
                 Rectangle {
                     id: btn
                     required property var modelData
-                    Layout.preferredWidth: 30; Layout.preferredHeight: 24
-                    radius: Theme.ctl(24)
-                    color: !bma.containsMouse ? "transparent" : btn.modelData.danger ? Qt.alpha(Theme.danger, 0.22) : Theme.s3
+                    Layout.preferredWidth: 26; Layout.preferredHeight: 22
+                    radius: Theme.ctl(22)
+                    color: !bma.containsMouse ? "transparent" : btn.modelData.danger ? Qt.alpha(Theme.danger, 0.24) : Theme.s3
                     Icon {
                         anchors.centerIn: parent
-                        name: btn.modelData.icon; size: 14
+                        name: btn.modelData.icon; size: 13
                         color: btn.modelData.danger && bma.containsMouse ? Theme.danger : Theme.t
                     }
                     MouseArea {
@@ -207,8 +188,7 @@ PanelWindow {
                         hoverEnabled: true
                         onClicked: {
                             const a = root.addr, k = btn.modelData.k;
-                            if (k === "menu") Shell.open("ventana");
-                            else if (k === "min") WinMode.minimize(a);
+                            if (k === "min") WinMode.minimize(a);
                             else if (k === "max") WinMode.toggleMaximize(a);
                             else WinMode.close(a);
                         }
