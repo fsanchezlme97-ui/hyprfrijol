@@ -213,6 +213,21 @@ Overlay {
         return Cat.ACTIONS.map(it => Object.assign({ kind: "static" }, it));
     }
 
+    // Ajustes › Productividad › Spotlight: grupos que salen sin prefijo (spotlightGroups), su orden
+    // (spotlightOrder: [] = por relevancia) y el buscador de «!» y de la fila «Buscar en la web» (webSearch)
+    readonly property var groupKeys: ({ Apps: "apps", Acciones: "acciones", Ventanas: "ventanas", Calculadora: "calculadora", IA: "ia", Web: "web" })
+    function groupOn(cat) { const g = Settings.get("spotlightGroups", null); return !Array.isArray(g) || g.includes(groupKeys[cat] ?? cat); }
+    readonly property var engines: ({ duckduckgo: ["DuckDuckGo", "https://duckduckgo.com/?q=%s"], google: ["Google", "https://www.google.com/search?q=%s"],
+                                      brave: ["Brave Search", "https://search.brave.com/search?q=%s"], kagi: ["Kagi", "https://kagi.com/search?q=%s"],
+                                      startpage: ["Startpage", "https://www.startpage.com/do/search?q=%s"] })
+    readonly property var engine: {
+        const w = String(Settings.get("webSearch", "duckduckgo"));
+        if (engines[w]) return { name: engines[w][0], url: engines[w][1] };
+        const m = /^https?:\/\/([^\/]+)\S*%s/.exec(w);
+        return m ? { name: m[1].replace(/^www\./, ""), url: w } : { name: engines.duckduckgo[0], url: engines.duckduckgo[1] };
+    }
+    function webUrl(s) { return engine.url.replace("%s", encodeURIComponent(s)); }
+
     function clipItem(r, cat) {
         return { key: "clip:" + (r.pinned ? "p" + r.pinIndex : r.id), cat: cat, kind: "clip", clip: r, img: r.img ?? "",
                  g: Clip.glyphs[r.kind] ?? "¶", name: r.text.replace(/\s*\n\s*/g, " ⏎ ").slice(0, 200), sub: r.meta + (r.pinned ? " · fijado" : "") };
@@ -280,8 +295,8 @@ Overlay {
         if (q.startsWith("!")) {
             const s = q.slice(1).trim();
             return [
-                { key: "web", cat: "Web", kind: "web", g: "!", icon: "globe", name: s ? "Buscar en la web: " + s : "Escribe qué buscar…", sub: "DuckDuckGo",
-                  url: "https://duckduckgo.com/?q=" + encodeURIComponent(s), hint: "↵", det: [["Motor", "DuckDuckGo"], ["Abre en", "Tu navegador"]] },
+                { key: "web", cat: "Web", kind: "web", g: "!", icon: "globe", name: s ? "Buscar en la web: " + s : "Escribe qué buscar…", sub: spot.engine.name,
+                  url: spot.webUrl(s), hint: "↵", det: [["Motor", spot.engine.name], ["Abre en", "Tu navegador"]] },
                 { key: "web-yt", cat: "Web", kind: "web", g: "Y", name: s ? "Buscar en YouTube: " + s : "Buscar en YouTube", sub: "youtube.com",
                   url: "https://www.youtube.com/results?search_query=" + encodeURIComponent(s), det: [["Abre en", "Tu navegador"]] },
                 { key: "web-wiki", cat: "Web", kind: "web", g: "W", name: s ? "Wikipedia: " + s : "Buscar en Wikipedia", sub: "es.wikipedia.org",
@@ -320,7 +335,7 @@ Overlay {
         }
         // = calculadora (o aritmética directa)
         const isCalc = q.startsWith("=") || Cat.isArithmetic(q);
-        if (isCalc) {
+        if (isCalc && (q.startsWith("=") || groupOn("Calculadora"))) {
             const expr = q.replace(/^=/, "").trim();
             const res = calcState.expr === expr ? calcState.result : "";
             out.push({ key: "calc", cat: "Calculadora", kind: "calc", g: "=", name: !expr ? "Escribe una operación…" : res || "…",
@@ -362,14 +377,17 @@ Overlay {
         }
         const groups = {};
         for (const x of scored.sort((a, b) => b.sc - a.sc)) {
+            if (!groupOn(x.it.cat)) continue;
             const g = groups[x.it.cat] ?? (groups[x.it.cat] = { best: x.sc, items: [] });
             if (g.items.length < (x.it.cat === "Apps" ? 6 : x.it.cat === "Ventanas" ? 3 : 5)) g.items.push(x.it);
         }
-        Object.keys(groups).sort((a, b) => groups[b].best - groups[a].best).forEach(k => out.push(...groups[k].items));
+        const order = Settings.get("spotlightOrder", []);
+        const pos = k => { const i = Array.isArray(order) ? order.indexOf(groupKeys[k] ?? k) : -1; return i < 0 ? 99 : i; };
+        Object.keys(groups).sort((a, b) => (order?.length ? pos(a) - pos(b) : 0) || groups[b].best - groups[a].best).forEach(k => out.push(...groups[k].items));
         // Siempre al final: IA y web
-        out.push({ key: "ask", cat: "IA", kind: "ask", icon: "ai", g: "", name: "Preguntar a la IA: «" + q + "»", sub: "", ask: q, det: [["Modelo", "El de Ajustes › IA"]] });
-        out.push({ key: "web", cat: "Web", kind: "web", g: "!", icon: "globe", name: "Buscar en la web: " + q, sub: "DuckDuckGo",
-                   url: "https://duckduckgo.com/?q=" + encodeURIComponent(q), det: [["Motor", "DuckDuckGo"]] });
+        if (groupOn("IA") && Settings.get("aiSpotlight", true) !== false) out.push({ key: "ask", cat: "IA", kind: "ask", icon: "ai", g: "", name: "Preguntar a la IA: «" + q + "»", sub: "", ask: q, det: [["Modelo", "El de Ajustes › IA"]] });
+        if (groupOn("Web")) out.push({ key: "web", cat: "Web", kind: "web", g: "!", icon: "globe", name: "Buscar en la web: " + q, sub: spot.engine.name,
+                   url: spot.webUrl(q), det: [["Motor", spot.engine.name]] });
         return out;
     }
 

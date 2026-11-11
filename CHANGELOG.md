@@ -3,6 +3,11 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.5] — 2026-11-11
+
+### Añadido
+- **Ajustes › Productividad › Spotlight**: qué grupos salen al buscar sin prefijo (apps, acciones, ventanas, calculadora, IA y web), su orden (por relevancia o el que elijas) y el buscador web de «!» (DuckDuckGo, Google, Brave, Kagi, Startpage u otro con una dirección con %s). También la lista de prefijos.
+
 ## [0.9.4] — 2026-11-11
 
 ### Añadido

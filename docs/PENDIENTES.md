@@ -16,7 +16,13 @@ Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar 
        conexión» siguen arriba de la pestaña Asistente).
 5. [x] [Productividad](planes/productividad.md), fases 1–3: una entrada con pestañas, portapapeles (tamaño, caducidad,
        apps privadas), alarmas en Ajustes y tareas (0.9.4). Los relojes del mundo siguen en Fecha.
-6. [ ] Lo que queda de los cuatro planes (creador de temas, recetas, vista previa, Spotlight…).
+6. [ ] Lo que queda de los cuatro planes, en este orden:
+       - [x] Productividad F4: Spotlight (grupos, orden, buscador web) (0.9.5).
+       - [ ] Animaciones F4–5: vista previa en vivo y efectos nuevos.
+       - [ ] Temas F4: temas propios (guardar, exportar, importar).
+       - [ ] Temas F5: creador de temas desde una imagen o colores.
+       - [ ] IA F3–6: modelo por tarea y respaldo, recetas, conexiones (tema, evento), mejoras del panel.
+       - [ ] Productividad F5: revisión con uso real (la hace el autor usando el escritorio).
 
 ## Baratos de añadir (primero)
 
