@@ -29,8 +29,26 @@ illogical-impulse (end-4) y Omarchy 4.5 (noviembre de 2026). Al terminar algo, s
 - [ ] **Chat en vivo con el asistente** (hablar y que responda en voz): conversación fluida, interrumpirlo,
       latencia baja.
 - [ ] **Comandos por voz**: más órdenes, entender frases naturales, confirmar antes de lo peligroso.
+- [ ] **Micrófono de tres modos** (v0.8.42): probar en uso real dictar y hablar con el asistente con Super + Alt + M
+      (mantener); solo se probó por IPC el cambio de modo y el silencio.
+- [ ] **Consumo por programa** (barra secundaria): la memoria suma el RSS de cada proceso (lo compartido cuenta
+      varias veces); un programa pequeño que gasta mucha CPU puede quedar escondido tras «+N».
+
+## Ideas propuestas (sin empezar)
+
+- [ ] **Dos pantallas**: abrir ciertas apps en la secundaria, Super + Tab para saltar de pantalla, modo concentración
+      que atenúa la secundaria, elegir en qué pantalla salen los avisos, imagen en imagen a la secundaria, reloj en la
+      barra secundaria.
+- [ ] **Transiciones**: minimizar al dock, inercia al cambiar de espacio con gestos, avisos apilados, un preset de
+      animaciones «Cinemático» (los paneles que salen de su botón ya están en «Pulido de animaciones»).
 
 ## Equipo del autor
 
-- [ ] Tras reiniciar, comprobar que la GT 710 usa `nouveau` y que la pantalla VGA da imagen (antes fallaba la copia
-      entre GPUs con `nvidia-470xx`, ya desinstalado).
+- [ ] Elegir otra vez la pantalla principal (HDMI-A-2) en Ajustes › Pantallas: la guardada sigue siendo «HDMI-A-1»,
+      de antes de añadir la gráfica (ahora se usa la más grande y funciona, pero el ajuste está desfasado).
+- [ ] Ver en hardware real los iconos que solo se vieron en vista previa: wifi por señal, batería cargando, volumen
+      silenciado y micrófono silenciado (v0.8.44).
+- [ ] Conectar y quitar una pantalla de verdad para comprobar que los espacios se renumeran sin mover ventanas
+      (v0.8.40; solo se probó en sesión anidada).
+- [ ] VGA por la GT 710 (`nouveau`): ya da imagen, pero la copia entre GPUs puede hacer las animaciones menos
+      fluidas en esa pantalla.
