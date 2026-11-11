@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.3] — 2026-11-11
+
+### Añadido
+- **El asistente oculta datos sensibles** antes de enviarlos al proveedor: claves de API, tokens, claves privadas, contraseñas en URLs y números de tarjeta que vengan del portapapeles, la pantalla, los títulos o las consultas. El panel avisa («Se ocultó 1 dato sensible del contexto»). Lo que escribes tú no se toca. Se apaga en Ajustes › Asistente de IA › Privacidad.
+- **Apps privadas**: con un gestor de contraseñas (u otra app que añadas) delante, el asistente no lee su ventana ni su título, no mira la pantalla y no toca el portapapeles.
+- **Registro de acciones** con Deshacer en Ajustes › Asistente de IA › Privacidad (`hf-ai log`), y **días que se guarda el historial** (7, 30, 90 o siempre) con «Borrar todo».
+
+### Cambiado
+- **Asistente de IA es una sola entrada en Ajustes** con pestañas: Asistente, Privacidad, Dictado y Panel lateral y PiP (Dictado y Panel ya no salen sueltos en la lista; sus enlaces siguen funcionando). Privacidad y seguridad enlaza a la privacidad del asistente.
+
 ## [0.9.2] — 2026-11-11
 
 ### Cambiado

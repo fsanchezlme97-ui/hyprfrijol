@@ -243,6 +243,7 @@ RowLayout {
                 enabled: !!root.sec.thumbs && root.sec.thumbs !== "0"
                 onGo: root.clean("Miniaturas borradas", "rm -rf \"$HOME/.cache/thumbnails\"")
             }
+            LinkRow { label: "Asistente de IA: datos sensibles, apps privadas y conversaciones"; section: "iaprivacidad"; sectionLabel: "Asistente de IA"; target: "Ocultar datos sensibles" }
         }
         Section {
             Layout.fillWidth: true

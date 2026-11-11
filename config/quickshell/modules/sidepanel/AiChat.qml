@@ -231,7 +231,9 @@ Item {
                     if (!root.active) Quickshell.execDetached(["notify-send", "-a", Settings.get("aiName", "") || "Asistente", "-i", "dialog-error", r.error]);
                 } else {
                     root.push({ role: "ai", text: r.text || (r.actions?.length ? "Puedo hacerlo. Estos son los pasos:" : "…"),
-                                actions: r.actions ?? [], labels: r.labels ?? [], plan: r.plan ?? [], steps: r.steps ?? [],
+                                actions: r.actions ?? [], labels: r.labels ?? [], plan: r.plan ?? [],
+                                // filtro de secretos de hf-ai: se avisa cuántos datos sensibles no salieron del equipo
+                                steps: (r.steps ?? []).concat(r.redacted ? [(r.redacted === 1 ? "Se ocultó 1 dato sensible" : "Se ocultaron " + r.redacted + " datos sensibles") + " del contexto"] : []),
                                 code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto });
                     if (Settings.get("aiVoice", false)) Quickshell.execDetached([Paths.script("hf-ai"), "speak", r.text || ""]);
                     // Sin confirmación (Ajustes › IA) o todo «aprobado siempre» (aiAlwaysApprove): se aplica ya y queda
@@ -774,7 +776,7 @@ print(json.dumps(out[:300]))
                                         Row {
                                             required property string modelData
                                             spacing: 6
-                                            Icon { anchors.verticalCenter: parent.verticalCenter; name: "search"; size: 10; color: Theme.tv }
+                                            Icon { anchors.verticalCenter: parent.verticalCenter; name: parent.modelData.startsWith("Se ocult") ? "shield" : "search"; size: 10; color: Theme.tv }
                                             Txt { text: parent.modelData; size: 11; muted: true }
                                         }
                                     }

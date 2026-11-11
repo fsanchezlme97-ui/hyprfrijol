@@ -12,6 +12,7 @@ import "../ui"
 ColumnLayout {
     id: root
     spacing: 12
+    AiTabs { current: "panel" }   // Asistente | Privacidad | Dictado | Panel (una sola entrada en la lista)
     readonly property var apps: Settings.get("sidePanelApps", ["ia"])
     readonly property var catalog: [["ia", "", "Asistente de IA", "hf-ai", ""]]
     function toggleTab(k, v) { Settings.set("sidePanelApps", v ? apps.concat([k]) : apps.filter(x => x !== k)); }

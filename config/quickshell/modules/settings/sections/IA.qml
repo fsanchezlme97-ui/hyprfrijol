@@ -14,6 +14,7 @@ import "../ui"
 ColumnLayout {
     id: root
     spacing: 12
+    AiTabs { current: "ia" }   // Asistente | Privacidad | Dictado | Panel (una sola entrada en la lista)
     readonly property string prov: Settings.get("aiProvider", "claude-code")
     property var ollamaModels: []
     property var geminiModels: []
@@ -227,7 +228,7 @@ ColumnLayout {
             SwRow { label: "Consultar el escritorio"; sub: "ventanas abiertas, avisos, archivos y estado, solo cuando lo necesite"; key: "aiReadDesktop"; def: true }
             SwRow { label: "Confirmar antes de aplicar cambios"; sub: "y siempre se pueden deshacer"; key: "aiConfirm"; def: true }
             SwRow { label: "Responder desde Spotlight"; sub: "escribe ? y tu pregunta"; key: "aiSpotlight"; def: true }
-            SwRow { label: "Guardar historial de conversaciones"; sub: "~/.local/share/hyprfrijol/ai"; key: "aiHistory"; def: true }
+            LinkRow { label: "Privacidad, historial y registro de acciones"; section: "iaprivacidad"; sectionLabel: "Privacidad"; target: "Ocultar datos sensibles" }
         }
     }
 

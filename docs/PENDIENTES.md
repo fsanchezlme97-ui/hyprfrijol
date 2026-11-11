@@ -11,7 +11,9 @@ Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar 
 2. [x] [Animaciones y efectos](planes/animaciones.md), fases 1–3: tokens de movimiento, duraciones fijas, sección
        unificada y atajo de modo juego (0.9.1).
 3. [x] [Temas](planes/temas.md), fase 2: 12 temas en pares oscuro y claro, más Monocromo (0.9.2).
-4. [ ] [Asistente de IA](planes/asistente-ia.md), fases 1–2: categoría propia y privacidad.
+4. [x] [Asistente de IA](planes/asistente-ia.md), fases 1–2: una entrada con pestañas, filtro de secretos, apps privadas,
+       registro de acciones e historial (0.9.3). Falta de esas fases: la página de Inicio (el estado y «Probar
+       conexión» siguen arriba de la pestaña Asistente).
 5. [ ] [Productividad](planes/productividad.md), fases 1–3: categoría, portapapeles y tareas.
 6. [ ] Lo que queda de los cuatro planes (creador de temas, recetas, vista previa, Spotlight…).
 

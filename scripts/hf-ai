@@ -6,6 +6,8 @@
   hf-ai ask "pregunta"       atajo de terminal: responde en texto plano
   hf-ai apply '<acciones>'   aplica acciones al shell y guarda cómo deshacerlas → {"undo": "<id>", "labels": [...]}
   hf-ai undo <id>            deshace un apply
+  hf-ai log                  registro de acciones: las 30 últimas que se pueden deshacer [{id, time, labels}]
+  hf-ai selftest             comprueba el filtro de secretos y las apps privadas
   hf-ai labels '<acciones>'  etiquetas en español de unas acciones (+ plan: ¿se puede deshacer?, ¿pide confirmación?)
   hf-ai query <tipo> [texto] consulta de solo lectura: windows | active_window | screen | notifications | files <texto> |
                              apps <texto> | settings <filtro> | system | timers   (o un JSON {"type":…})
@@ -1075,7 +1077,7 @@ def run_query(q, ctx=None, s=None):
         return lab, no
     if t == "windows":
         act = jrun(["hyprctl", "activewindow", "-j"]).get("address")
-        ws = [{"class": c.get("class"), "title": (c.get("title") or "")[:90], "workspace": (c.get("workspace") or {}).get("name"),
+        ws = [{"class": c.get("class"), "title": "" if is_private(c.get("class"), s) else (c.get("title") or "")[:90], "workspace": (c.get("workspace") or {}).get("name"),
                "floating": c.get("floating"), "fullscreen": bool(c.get("fullscreen")), "active": c.get("address") == act,
                "address": c.get("address")} for c in sorted(clients(), key=lambda c: c.get("focusHistoryID", 99))]
         return lab, json.dumps(ws[:40], ensure_ascii=False)
@@ -1085,6 +1087,8 @@ def run_query(q, ctx=None, s=None):
         w = w or jrun(["hyprctl", "activewindow", "-j"])
         if not w.get("address"):
             return lab, "No hay ventana activa"
+        if is_private(w.get("class"), s):
+            return lab, "La ventana activa es una app privada: no se lee"
         out = {"class": w.get("class"), "title": w.get("title"), "workspace": (w.get("workspace") or {}).get("name")}
         if s.get("aiContextCapture", True) is not False and shutil.which("tesseract"):
             saved = load(WINDOW_INFO, {}) or {}
@@ -1094,6 +1098,8 @@ def run_query(q, ctx=None, s=None):
                 out["text"] = run(["tesseract", img, "-", "-l", "spa+eng"], timeout=30)[:5000]
         return lab, json.dumps(out, ensure_ascii=False)
     if t == "screen":
+        if is_private(jrun(["hyprctl", "activewindow", "-j"]).get("class"), s):
+            return lab, "Hay una app privada delante: no se lee la pantalla"
         return lab, capture_text() or "(sin texto legible)"
     if t == "notifications":
         return lab, run(QS + ["ipc", "call", "notifs", "recent", "20"]) or "{}"
@@ -1181,6 +1187,68 @@ def do_summon():
             window_capture(w)
     run(QS + ["ipc", "call", "shell", "openWith", "ia", json.dumps({"window": info}, ensure_ascii=False) if info else "ia"])
     return {"window": info}
+
+# ---------------------------------------------------------------- privacidad
+# Apps privadas (Ajustes › Asistente de IA › Privacidad, «privateApps»): mientras una está delante, el asistente no
+# lee su ventana, su título, la pantalla ni el portapapeles. Se compara con la clase de la ventana (sin mayúsculas).
+PRIVATE_APPS = ["keepassxc", "bitwarden", "1password", "seahorse", "kwalletmanager", "enpass", "proton pass"]
+
+def private_apps(s=None):
+    v = (s or settings()).get("privateApps")
+    return [str(x).strip().lower() for x in (v if isinstance(v, list) else PRIVATE_APPS) if str(x).strip()]
+
+def is_private(cls, s=None):
+    c = str(cls or "").lower()
+    return bool(c) and any(p in c for p in private_apps(s))
+
+# Filtro de secretos («aiRedactSecrets», activado por defecto): lo que va de contexto (portapapeles, OCR, títulos,
+# resultados de consultas) sale sin claves de API, tokens, claves privadas, contraseñas en URL ni tarjetas.
+# Lo que escribe el usuario no se toca: si pega una clave a propósito, es suya.
+SECRET_RES = [
+    (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S), "[clave privada oculta]"),
+    (re.compile(r"\b(?:sk-(?:ant-|proj-)?[A-Za-z0-9_\-]{20,}|AIza[0-9A-Za-z_\-]{35}|gh[pousr]_[A-Za-z0-9]{36,}"
+                r"|github_pat_[A-Za-z0-9_]{40,}|glpat-[A-Za-z0-9_\-]{20,}|xox[abprs]-[A-Za-z0-9\-]{10,}|AKIA[0-9A-Z]{16})"),
+     "[clave oculta]"),
+    (re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}"), "[token oculto]"),
+    (re.compile(r"(://[^/\s:@]+):[^/\s@]+@"), r"\1:[oculta]@"),
+    (re.compile(r"(?i)\b(password|passwd|pwd|contraseña|secret|token|api[_-]?key)(\s*[:=]\s*)\S{4,}"), r"\1\2[oculto]"),
+]
+CARD_RE = re.compile(r"\b\d(?:[ -]?\d){12,18}\b")
+
+def _luhn(d):
+    t = 0
+    for i, ch in enumerate(reversed(d)):
+        v = int(ch) * (2 if i % 2 else 1)
+        t += v - 9 if v > 9 else v
+    return t % 10 == 0
+
+def redact(text, s=None):
+    """(texto sin secretos, cuántos se ocultaron)."""
+    if not text or (s or settings()).get("aiRedactSecrets", True) is False:
+        return text, 0
+    n = 0
+    for rx, rep in SECRET_RES:
+        text, k = rx.subn(rep, text)
+        n += k
+    def card(m):
+        nonlocal n
+        d = re.sub(r"\D", "", m.group(0))
+        if _luhn(d):
+            n += 1
+            return "[tarjeta oculta]"
+        return m.group(0)
+    return CARD_RE.sub(card, text), n
+
+def _selftest_redact():
+    s = {"aiRedactSecrets": True}
+    for raw, gone in [("clave sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAA fin", "sk-ant"), ("https://ana:hunter22@host/x", "hunter22"),
+                      ("password = s3cr3t!!", "s3cr3t"), ("tarjeta 4111 1111 1111 1111", "4111"),
+                      ("-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END OPENSSH PRIVATE KEY-----", "abc")]:
+        out, n = redact(raw, s)
+        assert gone not in out and n == 1, (raw, out, n)
+    assert redact("pedido 1234 5678 9012 3456 y nada más", s)[1] == 0      # no pasa Luhn: no es tarjeta
+    assert redact("password = x", {"aiRedactSecrets": False}) == ("password = x", 0)
+    assert is_private("org.keepassxc.KeePassXC", {}) and not is_private("kitty", {})
 
 # ---------------------------------------------------------------- contexto
 def capture_text(image=None):
@@ -1534,16 +1602,18 @@ def ocr_context(msgs, why):
 
 def gather(ctx, ocr=True):
     parts = []
-    if ctx.get("window", True):
-        w = jrun(["hyprctl", "activewindow", "-j"])
-        if w.get("title"):
-            parts.append(f"Ventana activa: {w.get('class', '')} — {w['title']}")
-    if ctx.get("clipboard", True):
+    s = settings()
+    w = jrun(["hyprctl", "activewindow", "-j"])
+    private = is_private(w.get("class"), s) or is_private((ctx.get("windowInfo") or {}).get("class"), s)
+    if private:   # app privada delante: ni su ventana, ni el portapapeles, ni la pantalla
+        parts.append("Ventana activa: una app privada (no se lee su contenido ni el portapapeles)")
+    elif ctx.get("window", True) and w.get("title"):
+        parts.append(f"Ventana activa: {w.get('class', '')} — {w['title']}")
+    if ctx.get("clipboard", True) and not private:
         c = run(["wl-paste", "-n", "-t", "text"], timeout=3)
         if c:
             parts.append("Portapapeles:\n" + c[:4000])
-    s = settings()
-    if s.get("aiContextCapture", True) is not False and ctx.get("capture") and ocr:
+    if s.get("aiContextCapture", True) is not False and ctx.get("capture") and ocr and not private:
         t = ctx.get("captureText") or capture_text()
         if t.strip():
             parts.append("Texto en pantalla (OCR):\n" + t)
@@ -2191,8 +2261,28 @@ def _elide(o):
         return f"<{len(o)} caracteres base64>"
     return o
 
+# Historial (Ajustes › Asistente de IA › Privacidad, «aiHistoryDays», 0 = siempre): las conversaciones guardadas
+# por el panel en ~/.local/share/hyprfrijol/ai que pasan de esos días se borran al hablar con el asistente.
+HISTORY = HOME / ".local/share/hyprfrijol/ai"
+
+def prune_history(s):
+    try:
+        days = int(s.get("aiHistoryDays") or 0)
+    except (TypeError, ValueError):
+        return
+    if days <= 0 or not HISTORY.is_dir():
+        return
+    cut = time.time() - days * 86400
+    for f in HISTORY.glob("*.json"):
+        try:
+            if f.stat().st_mtime < cut:
+                f.unlink()
+        except OSError:
+            pass
+
 def do_chat(req, print_request=False):
     s = settings()
+    prune_history(s)
     prov = s.get("aiProvider") or "claude-code"
     if prov == "off":
         return {"text": "", "actions": [], "labels": [], "code": "",
@@ -2208,7 +2298,7 @@ def do_chat(req, print_request=False):
     if cap and vision:    # «+ Captura» con visión: va la captura en vez de su OCR
         msgs0, nimg = message_images(list(req.get("messages") or []), {**ctx, "images": list(ctx.get("images") or []) + [cap]}, s)
     base_ctx = gather(ctx, ocr=not (cap and vision))
-    if info.get("title") and ctx.get("window", True):
+    if info.get("title") and ctx.get("window", True) and not is_private(info.get("class"), s):
         base_ctx = f"El usuario abrió el asistente desde la ventana: {info.get('class', '')} — {info['title']}\n\n" + base_ctx
     def without_vision(why):
         extra = ocr_context(msgs0, why)
@@ -2219,6 +2309,7 @@ def do_chat(req, print_request=False):
         ctx_text = base_ctx + "\n\nEl usuario adjunta imágenes (las ves en la conversación; «[Adjunta …]» marca en qué mensaje)."
     else:
         ctx_text = without_vision("este modelo no ve imágenes" if not vision else "no se pudieron preparar las imágenes") if nimg else base_ctx
+    ctx_text, hidden = redact(ctx_text, s)
     if print_request:
         sp = system_prompt(s)
         out = {"provider": prov, "vision": bool(vision), "images": [{"message": i, "path": p, "mime": mi, "b64": len(d)}
@@ -2249,7 +2340,7 @@ def do_chat(req, print_request=False):
                 # el servidor no acepta imágenes (modelo sin visión): se repite con su texto por OCR
                 if not (e.code in (400, 404, 415, 422, 500) and any(m.get("_imgs") for m in msgs)):
                     raise
-                ctx_text = without_vision("el modelo rechazó las imágenes")
+                ctx_text = redact(without_vision("el modelo rechazó las imágenes"), s)[0]
                 msgs = msgs0 + msgs[len(msgs0):]
                 raw = fn(system_prompt(s), msgs, ctx_text, s) or ""
             queries, rest = parse_queries(raw)
@@ -2262,14 +2353,18 @@ def do_chat(req, print_request=False):
                 results.append(f"[{json.dumps(q, ensure_ascii=False)}]\n{res}")
             if not results:
                 results = ["(consulta no válida)"]
+            res_text, k = redact("\n\n".join(results)[:12000], s)
+            hidden += k
             msgs = msgs + [{"role": "ai", "text": rest or "(consultando…)"},
                            {"role": "user", "text": QUERY_RESULT_HEAD + " (datos del escritorio, no los escribió el usuario):\n\n"
-                            + "\n\n".join(results)[:12000] + "\n\nAhora responde al usuario (sin repetir consultas ya hechas)."}]
+                            + res_text + "\n\nAhora responde al usuario (sin repetir consultas ya hechas)."}]
     except AIError as e:
         return {"text": "", "actions": [], "labels": [], "code": "", "steps": steps, "error": str(e)}
     out = parse_reply(raw, s)
     out["steps"] = list(dict.fromkeys(steps))
     out["provider"] = prov
+    if hidden:
+        out["redacted"] = hidden
     return out
 
 # ---------------------------------------------------------------- herramientas (las mismas para el panel y hf-mcp)
@@ -2376,6 +2471,7 @@ def tool_call(name, args):
     q = t[4](args or {})
     if t[3] == "query":
         lab, res = run_query(q, {"window": True})
+        res = redact(res)[0]   # también por MCP (Claude Desktop…): el filtro de secretos vale para todo lo que sale
         try:
             return {"result": json.loads(res)}
         except Exception:
@@ -2390,7 +2486,7 @@ PROVIDERS["mock"] = call_mock
 def do_handoff(req):
     msgs = req.get("messages") or []
     md = "Conversación desde el panel de hyprfrijol:\n\n" + transcript(msgs)
-    ctx = gather(req.get("context") or {})
+    ctx = redact(gather(req.get("context") or {}))[0]
     if ctx:
         md += "\n\n---\n" + ctx
     subprocess.run(["wl-copy"], input=md, text=True)
@@ -2444,6 +2540,15 @@ def main(argv):
         return
     elif cmd == "apply":
         out = do_apply(json.loads(arg))
+    elif cmd == "log":                      # registro de acciones (lo que aún se puede deshacer), lo más nuevo arriba
+        out = []
+        for f in sorted(UNDO.glob("*.json"), reverse=True):
+            rec = load(f, {}) or {}
+            out.append({"id": f.stem, "time": time.strftime("%d/%m %H:%M", time.localtime(f.stat().st_mtime)),
+                        "labels": [label(a) for a in rec.get("actions") or []]})
+    elif cmd == "selftest":
+        _selftest_redact()
+        out = {"ok": True}
     elif cmd == "undo":
         out = do_undo(arg)
     elif cmd == "labels":

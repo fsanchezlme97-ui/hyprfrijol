@@ -16,6 +16,7 @@ import "../ui"
 ColumnLayout {
     id: root
     spacing: 12
+    AiTabs { current: "dictado" }   // Asistente | Privacidad | Dictado | Panel (una sola entrada en la lista)
     readonly property string cmd: Paths.script("hf-dictate")
     property var st: ({ models: [], voskModels: [], ready: false, gpu: [] })
     property var dl: ({})            // modelo → { pct, mb, total } mientras se descarga
