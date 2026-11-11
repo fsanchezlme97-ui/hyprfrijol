@@ -44,11 +44,11 @@ Item {
         Loader { Layout.alignment: Qt.AlignHCenter; visible: !root.secondary && (item?.want ?? false); sourceComponent: DownloadsChip { vertical: true } }
         Loader { Layout.alignment: Qt.AlignHCenter; visible: !root.secondary && (item?.want ?? false); sourceComponent: TestChip { vertical: true } }
         // Utilidades
-        PomodoroChip { visible: !root.secondary && (Settings.barHas("pomodoro")); Layout.alignment: Qt.AlignHCenter; vertical: true }
         BongoChip { visible: !root.secondary && (Settings.barHas("bongo")); Layout.alignment: Qt.AlignHCenter; vertical: true }
+        PomodoroChip { visible: !root.secondary && (Settings.barHas("pomodoro")); Layout.alignment: Qt.AlignHCenter; vertical: true }
         CaffeineChip { visible: !root.secondary && (Settings.barHas("cafeina")); Layout.alignment: Qt.AlignHCenter; vertical: true }
-        MicBtn { visible: !root.secondary && (Settings.barHas("dictado")); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26 }
         IconBtn { visible: !root.secondary && (Settings.barHas("portapapeles")); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26; icon: "clipboard"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // Spotlight en modo portapapeles
+        MicBtn { visible: !root.secondary && (Settings.barHas("dictado")); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26 }
         IconBtn { visible: !root.secondary && (Settings.barHas("ia")); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26; icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") }
         IconBtn { visible: !root.secondary && (Settings.barHas("ajustes")); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26; icon: "gear"; onClicked: Shell.open("ajustesapp") }   // Ajustes (tuerca)
         OmarchySlot { barWindow: root.barWindow; visible: any && !root.secondary; vertical: true; place: Settings.get("omarchyBarSlot", "derecha"); Layout.alignment: Qt.AlignHCenter }   // plugins de Omarchy

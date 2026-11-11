@@ -1,6 +1,7 @@
 // Contenido de la barra horizontal (design/Main.dc.html, «Barra»), de izquierda a derecha:
 //   [Aplicaciones][一 二 三 … 九] | título ······ onda ······
-//   información (clima · sistema · impresora) → utilidades (gato bongo · pomodoro · cafeína · portapapeles · IA · ajustes) → bandeja
+//   información (clima · sistema · impresora) → utilidades: lo que acompaña (gato bongo · pomodoro · cafeína), lo que
+//   escribe y habla (portapapeles · micrófono · asistente) y ajustes → bandeja
 //   | [privacidad] [wifi vol bat · campana · vie 6 nov 10:11] ← grupo de estado: abre el centro de control
 // Archipiélago: izquierda, onda, información+utilidades+bandeja y grupo de estado, cada uno en su píldora.
 import QtQuick
@@ -100,8 +101,8 @@ Item {
         BongoChip { id: bongo; visible: Settings.barHas("bongo") }
         PomodoroChip { id: pomo; visible: Settings.barHas("pomodoro") }
         CaffeineChip { id: cafe; visible: Settings.barHas("cafeina") }
-        MicBtn { id: dictBtn; visible: Settings.barHas("dictado") }
         IconBtn { id: clipBtn; visible: Settings.barHas("portapapeles"); icon: "clipboard"; tooltip: "Portapapeles"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // abre Spotlight en modo portapapeles
+        MicBtn { id: dictBtn; visible: Settings.barHas("dictado") }
         IconBtn { id: aiBtn; visible: Settings.barHas("ia"); icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") }
         IconBtn { id: gearBtn; visible: Settings.barHas("ajustes"); icon: "gear"; onClicked: Shell.open("ajustesapp") }   // Ajustes (tuerca; opcional, ya está en el panel)
         OmarchySlot { barWindow: root.barWindow; place: "derecha" }     // widgets de plugins de Omarchy (omarchyBarSlot)

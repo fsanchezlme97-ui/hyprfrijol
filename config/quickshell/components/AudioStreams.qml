@@ -89,7 +89,7 @@ ColumnLayout {
             Txt { Layout.preferredWidth: root.compact ? 40 : 44; horizontalAlignment: Text.AlignRight; text: Math.round(st.vol * 100) + " %"; muted: true; tabular: true; size: root.compact ? 11 : 12.5 }
             IconBtn {
                 implicitWidth: root.compact ? 24 : 26
-                icon: st.muted ? "volume_low" : "volume"
+                icon: st.muted ? "volume_mute" : "volume"
                 active: st.muted
                 activeBg: Theme.fill2; activeFg: Theme.tv
                 tooltip: st.muted ? "Activar el sonido" : "Silenciar"

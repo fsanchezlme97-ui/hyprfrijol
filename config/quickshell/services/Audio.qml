@@ -19,6 +19,8 @@ Singleton {
     readonly property bool muted: sink?.audio?.muted ?? false
     readonly property real micVolume: source?.audio?.volume ?? 0
     readonly property bool micMuted: source?.audio?.muted ?? false
+    // Icono del volumen (barra, OSD, centro de control, música): silenciado (con aspa) · bajo · medio · alto
+    readonly property string icon: muted || volume < 0.01 ? "volume_mute" : volume < 0.34 ? "volume_1" : volume < 0.67 ? "volume" : "volume_high"
     // Sobreamplificar (Ajustes › Sonido, overAmplify): permite subir la salida hasta el 150 %
     readonly property real maxVolume: Settings.get("overAmplify", false) ? 1.5 : 1.0
     // Balance -1 (izquierda) … 1 (derecha) de la salida estéreo

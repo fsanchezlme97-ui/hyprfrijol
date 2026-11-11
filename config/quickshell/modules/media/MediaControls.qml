@@ -323,7 +323,7 @@ Overlay {
                     SliderBar {
                         Layout.fillWidth: true
                         implicitHeight: 28
-                        icon: Audio.muted || Audio.volume < 0.01 ? "volume_low" : Audio.volume < 0.5 ? "volume" : "volume_high"
+                        icon: Audio.icon
                         value: Audio.muted ? 0 : Audio.volume
                         to: Audio.maxVolume
                         onMoved: v => Audio.setVolume(v)

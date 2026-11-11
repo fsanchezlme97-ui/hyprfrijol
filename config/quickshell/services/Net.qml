@@ -13,6 +13,9 @@ Singleton {
     property string ssid: ""
     property int signal: 0
     property string type: ""          // "wifi" | "ethernet" | ""
+    // Icono de la barra: cable (tachado sin conexión) o wifi con los arcos según la señal (tachado si no hay)
+    readonly property string icon: type === "ethernet" ? (connected ? "ethernet" : "ethernet_off")
+        : !wifiEnabled || !connected ? "wifi_off" : signal < 34 ? "wifi_1" : signal < 67 ? "wifi_2" : "wifi"
     property var networks: []         // [{ ssid, signal, secure, active }]
     // Portal cautivo (hoteles, aeropuertos…): NetworkManager dice «portal» cuando la red pide iniciar sesión.
     // Al detectarlo avisa una vez con una notificación; openPortal() abre una página http que el portal intercepta.

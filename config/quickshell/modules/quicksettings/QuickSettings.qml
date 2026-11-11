@@ -222,7 +222,7 @@ Overlay {
                         spacing: 5
                         AjusteSlider {
                             Layout.fillWidth: true
-                            icon: Audio.muted ? "volume" : Audio.volume < 0.34 ? "volume_low" : "volume_high"
+                            icon: Audio.icon
                             value: Audio.volume
                             muted: Audio.muted
                             onMoved: v => Audio.setVolume(v)
@@ -299,7 +299,7 @@ Overlay {
                                     rowSpacing: 5; columnSpacing: 5
                                     AjusteTile {
                                         Layout.fillWidth: true; Layout.preferredWidth: 10
-                                        icon: Net.type === "ethernet" ? "monitor" : "wifi_off"
+                                        icon: Net.type === "ethernet" ? "ethernet" : "wifi"
                                         label: Net.type === "ethernet" ? "Red" : "Wi‑Fi"
                                         active: Net.wifiEnabled || Net.type === "ethernet"
                                         sub: Net.portal ? "Pide iniciar sesión · tocar" : Net.type === "ethernet" ? "Cable conectado" : !Net.wifiEnabled ? "Apagado" : Net.connected ? Net.ssid : "Sin conectar"

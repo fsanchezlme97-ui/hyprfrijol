@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.44] — 2026-11-11
+
+### Cambiado
+- Iconos del micrófono por modo: dictado (micrófono con líneas de texto, relleno mientras escucha), asistente (con chispas), silenciar (el micrófono solo) y silenciado (tachado con el trazo cortado, en rojo).
+- Orden de las utilidades de la barra (horizontal y vertical): lo que acompaña (gato bongo · pomodoro · cafeína), lo que escribe y habla (portapapeles · micrófono · asistente) y ajustes.
+- Iconos de estado: la red por cable ya no es una pantalla (tres equipos unidos); el wifi tiene punto y atenúa los arcos según la señal; sin conexión se tacha. Volumen silenciado con aspa y nivel bajo con una onda (barra, OSD, centro de control y música, desde `Audio.icon`); batería con rayo al cargar; campana más redonda y tachada en no molestar.
+
 ## [0.8.43] — 2026-11-11
 
 ### Cambiado

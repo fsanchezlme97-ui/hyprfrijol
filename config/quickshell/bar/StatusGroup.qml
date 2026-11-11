@@ -36,13 +36,13 @@ Rectangle {
     component StatusIcons: GridLayout {
         flow: root.vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
         rowSpacing: 6; columnSpacing: 9
-        Icon { visible: Settings.barHas("red"); Layout.alignment: Qt.AlignCenter; name: !Net.wifiEnabled || !Net.connected ? (Net.type === "ethernet" ? "monitor" : "wifi_off") : Net.type === "ethernet" ? "monitor" : "wifi"; opacity: Net.connected ? 1 : 0.6; color: Net.portal ? Theme.danger : Theme.t }   // rojo: la red pide iniciar sesión (portal cautivo)
-        Icon { Layout.alignment: Qt.AlignCenter; name: Audio.muted || Audio.volume === 0 ? "volume_low" : Audio.volume > 0.66 ? "volume_high" : "volume" }
-        Icon { visible: Battery.present && Settings.barHas("bateria"); Layout.alignment: Qt.AlignCenter; name: Battery.percent < 0.25 ? "battery_low" : "battery"; color: Battery.percent < 0.15 && !Battery.charging ? Theme.danger : Theme.t }
+        Icon { visible: Settings.barHas("red"); Layout.alignment: Qt.AlignCenter; name: Net.icon; color: Net.portal ? Theme.danger : Theme.t }   // rojo: la red pide iniciar sesión (portal cautivo)
+        Icon { Layout.alignment: Qt.AlignCenter; name: Audio.icon }
+        Icon { visible: Battery.present && Settings.barHas("bateria"); Layout.alignment: Qt.AlignCenter; name: Battery.charging ? "battery_charging" : Battery.percent < 0.25 ? "battery_low" : "battery"; color: Battery.percent < 0.15 && !Battery.charging ? Theme.danger : Theme.t }
     }
     component Bell: Item {
         implicitWidth: 16; implicitHeight: 16
-        Icon { anchors.centerIn: parent; name: Notifs.dnd ? "dnd" : "bell" }
+        Icon { anchors.centerIn: parent; name: Notifs.dnd ? "bell_off" : "bell" }
         Rectangle {
             visible: Notifs.list.values.length > 0 && !Notifs.dnd
             width: 5; height: 5; radius: 2.5

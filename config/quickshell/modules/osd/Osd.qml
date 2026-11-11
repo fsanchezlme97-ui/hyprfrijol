@@ -47,7 +47,7 @@ PanelWindow {
 
     readonly property real level: kind === "volumen" ? Audio.volume : kind === "brillo" ? Brightness.value : 0
     readonly property bool hasBar: kind === "volumen" || kind === "brillo"
-    readonly property string iconName: kind === "volumen" ? (Audio.muted || Audio.volume === 0 ? "volume" : Audio.volume < 0.34 ? "volume_low" : "volume_high")
+    readonly property string iconName: kind === "volumen" ? Audio.icon
                                      : kind === "brillo" ? "sun" : kind === "mayus" ? "caps" : kind === "ventanas" ? "" : kind === "cafeina" ? "coffee" : "mic_off"
     readonly property string label: kind === "volumen" ? (Audio.muted ? "Silencio" : Math.round(Audio.volume * 100) + " %")
                                   : kind === "brillo" ? Math.round(Brightness.value * 100) + " %"
