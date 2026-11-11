@@ -33,7 +33,8 @@ Singleton {
     // Dictado (modules/dictado): fase que pinta el botón de la barra (idle | rec | trans…) y la orden de empezar/terminar
     property string dictPhase: "idle"
     property bool aiSpeaking: false        // hf-ai speak mientras suena la voz del asistente (onda rellena en la barra)
-    signal dictToggle()
+    signal dictToggle()                    // botón del micrófono: lo de su modo (micMode, modules/dictado)
+    signal micCycle()                      // siguiente modo del micrófono
     signal aiAskHidden(string text)        // pregunta al asistente sin abrir el panel (hablar por voz: Super + Alt + H)
     // Pantalla donde se abren los paneles: la del monitor con foco
     readonly property var screen: {

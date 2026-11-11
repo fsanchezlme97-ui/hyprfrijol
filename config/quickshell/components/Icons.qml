@@ -89,6 +89,7 @@ Singleton {
         "speaker": '<rect x="6" y="2" width="12" height="20" rx="2"/><circle cx="12" cy="14" r="3.5"/><path d="M12 6.5h.01"/>',
         "hdmi": '<path d="M3 8h18v5l-3 3H6l-3-3z"/><path d="M7 11h10"/>',
         "mic": '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',
+        "mic-off": '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M3 3l18 18"/>',
         "cpu": '<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
         // RAM: módulo de memoria con sus chips y contactos
         "ram": '<rect x="2.5" y="7" width="19" height="9" rx="1.5"/><path d="M6.5 10v3M10 10v3M14 10v3M17.5 10v3M5 16v3M9 16v3M15 16v3M19 16v3"/>',

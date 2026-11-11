@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.42] — 2026-11-11
+
+### Cambiado
+- El botón del micrófono de la barra tiene tres modos (`micMode`): dictado, hablar con el asistente y silenciar. Clic: lo del modo; clic derecho: el siguiente. Silenciado se ve tachado en rojo en cualquier modo. También en Ajustes › Dictado.
+- Super + Alt + M hace lo del modo del micrófono (antes solo silenciaba) y Super + Shift + Alt + M cambia de modo (atajos globales `hf:micro` y `hf:micro-modo`; IPC `dictado micro` / `microModo`). La tecla de silenciar el micrófono sigue igual.
+- El gato bongo se queda en la pantalla de la última ventana con el foco: pasar a una pantalla vacía ya no lo mueve.
+
 ## [0.8.41] — 2026-11-11
 
 - Gato bongo: va justo después del título de la ventana activa, en la barra de la pantalla con el foco (donde

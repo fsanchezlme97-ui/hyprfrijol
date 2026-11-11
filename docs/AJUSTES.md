@@ -217,6 +217,7 @@ El dictado es local y **sin IA**. Solo una orden que `hf-voice` no entienda va a
 | `dictationVoskModel` | `vosk-model-small-es-0.42` | modelo de Vosk (39 MB, ~300 MB de RAM); `vosk-model-es-0.42` (1,4 GB) acierta más pero pide varios GB de RAM. Si falta Vosk, la sección ofrece «Instalar» (Arch: `pacman -S python-vosk vosk-api`; otras: `hf-dictate install-vosk`) y se dicta con whisper mientras tanto |
 | `dictationModel` | `base` | modelo de whisper.cpp (`tiny` · `base` · `small` · `medium` · `turbo`) |
 | `dictationMode` | `ptt` | `ptt` (mantener) · `toggle` · `continuo` (para tras `dictationSilenceSec` s en silencio) |
+| `micMode` | `dictado` | botón del micrófono de la barra y Super + Alt + M: `dictado` · `ia` (hablar con el asistente) · `silencio` (silenciar o activar el micrófono); clic derecho o Super + Shift + Alt + M: el siguiente |
 | `dictationPauseMs` | `600` | pausa que cierra una frase (Vosk: retardo del fin de frase; whisper: VAD) |
 | `dictationLang` / `dictationOutput` / `dictationPrompt` | `es` / `escribir` / `""` | idioma, cómo se entrega el texto (escribe · pega · copia) y vocabulario para whisper |
 | `dictationPunct` / `dictationLive` | `true` / `true` | puntuación y mayúsculas automáticas («coma», «punto y aparte»…) · texto provisional en la píldora |

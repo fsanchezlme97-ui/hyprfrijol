@@ -56,8 +56,9 @@ Item {
         Workspaces { id: ws; visible: Settings.barHas("espacios") || root.secondary; screen: root.barWindow.screen }
         Divider { visible: Settings.barHas("espacios") && title.visible }
         ActiveTitle { id: title; screenName: root.barWindow.screen?.name ?? ""; visible: Settings.get("barShowTitle", true) && Settings.barHas("titulo") && text !== "" && root.titleMax >= 48; Layout.leftMargin: 2; Layout.maximumWidth: root.titleMax }
-        // Gato bongo tras el título, solo en la barra de la pantalla con el foco (donde escribes)
-        BongoChip { id: bongo; visible: Settings.barHas("bongo") && root.barWindow.screen?.name === Hyprland.focusedMonitor?.name; Layout.leftMargin: -2 }
+        // Gato bongo tras el título, solo en la pantalla de la última ventana con el foco (donde escribes): pasar a
+        // una pantalla sin ventanas no lo mueve
+        BongoChip { id: bongo; visible: Settings.barHas("bongo") && root.barWindow.screen?.name === (HyprClients.lastWinMonitor || Hyprland.focusedMonitor?.name); Layout.leftMargin: -2 }
         OmarchySlot { barWindow: root.barWindow; place: "izquierda"; visible: any && !root.secondary }   // widgets de plugins de Omarchy (omarchyBarSlot)
     }
 
@@ -102,7 +103,7 @@ Item {
         Divider { visible: root.hasInfo && root.hasUtil; Layout.leftMargin: 4; Layout.rightMargin: 4 }
         PomodoroChip { id: pomo; visible: Settings.barHas("pomodoro") }
         CaffeineChip { id: cafe; visible: Settings.barHas("cafeina") }
-        IconBtn { id: dictBtn; visible: Settings.barHas("dictado"); icon: "mic"; active: Shell.dictPhase === "rec"; tooltip: Shell.dictPhase === "rec" ? "Dictando · clic para terminar" : "Dictado · Super + Alt + D"; onClicked: Shell.dictToggle() }
+        MicBtn { id: dictBtn; visible: Settings.barHas("dictado") }
         IconBtn { id: clipBtn; visible: Settings.barHas("portapapeles"); icon: "clipboard"; tooltip: "Portapapeles"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // abre Spotlight en modo portapapeles
         IconBtn { id: aiBtn; visible: Settings.barHas("ia"); icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") }
         IconBtn { id: gearBtn; visible: Settings.barHas("ajustes"); icon: "gear"; onClicked: Shell.open("ajustesapp") }   // Ajustes (tuerca; opcional, ya está en el panel)

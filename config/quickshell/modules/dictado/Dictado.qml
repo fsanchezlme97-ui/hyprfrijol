@@ -8,7 +8,7 @@
 // IPC:  qs -p <repo>/config/quickshell ipc call dictado toggle|start|stop|cancel|state|command
 //       … dictado file <clip.wav> [dictado|comando]  (pruebas: el audio sale del archivo, a tiempo real)
 // Ajustes › Dictado (sections/Dictado.qml).
-// Botón de la barra: módulo «dictado» de barModules (Shell.dictToggle / Shell.dictPhase).
+// Botón de la barra: módulo «dictado» de barModules (bar/MicBtn.qml: Shell.dictToggle / micCycle / dictPhase).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -122,7 +122,18 @@ Scope {
         onExited: if (["rec", "trans", "cmd"].includes(root.phase)) { root.phase = "idle"; }
     }
     Binding { target: Shell; property: "dictPhase"; value: root.phase }
-    Connections { target: Shell; function onDictToggle() { root.toggle("dictado"); } }   // botón de la barra
+    // Micrófono de la barra y hf:micro (Super + Alt + M): según micMode, dictar, hablar con el asistente o silenciar.
+    // hf:micro-modo (Super + Shift + Alt + M) y el clic derecho del botón pasan al siguiente modo.
+    readonly property string micMode: Settings.get("micMode", "dictado")
+    readonly property var micModes: ({ dictado: "dictado", ia: "hablar con el asistente", silencio: "silenciar" })
+    function micAction(): void { if (micMode === "silencio") Audio.toggleMic(); else toggle(micMode === "ia" ? "ia" : "dictado"); }
+    function micCycle(): void {
+        const m = Object.keys(micModes), next = m[(m.indexOf(micMode) + 1) % m.length];
+        Settings.set("micMode", next);
+        if (!proc.running) { phase = "done"; msg = "Micrófono: " + micModes[next]; hider.interval = 1400; hider.restart(); }
+    }
+    Connections { target: Shell; function onDictToggle() { root.micAction(); } function onMicCycle() { root.micCycle(); } }
+    property bool micHeld: false            // hf:micro pulsado en modo dictado o asistente (al soltar, released())
     Timer { id: hider; interval: 1600; onTriggered: root.phase = "idle" }
     Timer { id: cmdHider; interval: 3000; onTriggered: { root.cmdText = ""; root.cmdMsg = ""; } }
 
@@ -158,11 +169,19 @@ Scope {
         onPressed: root.pressed("ia")
         onReleased: root.released()
     }
+    GlobalShortcut {
+        appid: "hf"; name: "micro"; description: "HyprFrijol: micrófono (lo de su modo)"
+        onPressed: { root.micHeld = root.micMode !== "silencio"; if (root.micHeld) root.pressed(root.micMode === "ia" ? "ia" : "dictado"); else Audio.toggleMic(); }
+        onReleased: if (root.micHeld) root.released()
+    }
+    GlobalShortcut { appid: "hf"; name: "micro-modo"; description: "HyprFrijol: siguiente modo del micrófono"; onPressed: root.micCycle() }
     IpcHandler {
         target: "dictado"
         function toggle(): void { root.toggle("dictado"); }
         function talk(): void { root.toggle("ia"); }          // hablar con el asistente (hf-ai talk)
         function command(): void { root.toggle("comando"); }
+        function micro(): void { root.micAction(); }          // lo del modo del micrófono (micMode)
+        function microModo(): void { root.micCycle(); }
         function start(): void { root.start("dictado", null); }
         function stop(): void { root.stop(); }
         function cancel(): void { root.cancel(); }

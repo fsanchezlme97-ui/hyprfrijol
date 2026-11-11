@@ -244,7 +244,8 @@ b("XF86AudioLowerVolume",  exec("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), me
 b("XF86AudioMute",         exec("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
 b(mod .. " + SHIFT + M",   exec("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true, description = "Silenciar" })
 b("XF86AudioMicMute",      exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
-b(mod .. " + ALT + M",     exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true, description = "Silenciar micrófono" })
+b(mod .. " + ALT + M",     hl.dsp.global("hf:micro"),          { description = "Micrófono (dictado · asistente · silenciar)" })   -- lo del modo del botón de la barra
+b(mod .. " + SHIFT + ALT + M", hl.dsp.global("hf:micro-modo"), { description = "Modo del micrófono" })
 b("XF86MonBrightnessUp",   exec("brightnessctl s 5%+" .. osd .. "brillo"), media)
 b("XF86MonBrightnessDown", exec("brightnessctl s 5%-" .. osd .. "brillo"), media)
 b("XF86AudioPlay",  exec("playerctl play-pause"), { locked = true })

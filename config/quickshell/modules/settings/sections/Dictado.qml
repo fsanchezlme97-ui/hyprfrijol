@@ -394,6 +394,19 @@ ColumnLayout {
                     : "Una pulsación empieza a escuchar y otra termina."
             }
             LabeledRow {
+                label: "Micrófono"
+                labelWidth: 110
+                Seg {
+                    model: [["dictado", "Dictado"], ["ia", "Asistente"], ["silencio", "Silenciar"]]
+                    current: Settings.get("micMode", "dictado")
+                    onPicked: k => Settings.set("micMode", k)
+                }
+            }
+            Txt {
+                Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
+                text: "Lo que hacen el botón del micrófono de la barra y Super + Alt + M. Clic derecho en el botón o Super + Shift + Alt + M: el siguiente."
+            }
+            LabeledRow {
                 label: "Motor"
                 labelWidth: 110
                 Seg {

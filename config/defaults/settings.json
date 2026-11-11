@@ -254,6 +254,7 @@
   "dictationModel": "base",
   "dictationLang": "es+en",
   "dictationMode": "ptt",
+  "micMode": "dictado",
   "dictationEngine": "auto",
   "dictationOutput": "escribir",
   "dictationPrompt": "",
