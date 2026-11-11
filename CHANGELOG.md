@@ -3,6 +3,10 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.31] — 2026-11-10
+
+- README: el resumen ya no anuncia el panel con WhatsApp, YouTube y Pinterest (retirado en 0.8.28).
+
 ## [0.8.30] — 2026-11-10
 
 - **Modo de ventanas por espacio, guardado**: Super + Ctrl + Espacio (o clic en el icono nuevo junto a los espacios

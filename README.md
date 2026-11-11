@@ -7,7 +7,7 @@
 
 # HyprFrijol
 
-Rice/shell propio para **Hyprland**, hecho desde cero, con tres estilos: *Material* (Material 3, sólido), *SkySoul* (Material de cristal, transparente y desenfocado) y *Chroma* (al estilo Nothing Phone); tono empresarial y minimalista, y varios agregados: Spotlight, panel flotante con IA + WhatsApp + YouTube + Pinterest, PiP mínimo, selector de fondos, widgets, centro de actualizaciones con punto de restauración, captura/grabación y login propio.
+Rice/shell propio para **Hyprland**, hecho desde cero, con tres estilos: *Material* (Material 3, sólido), *SkySoul* (Material de cristal, transparente y desenfocado) y *Chroma* (al estilo Nothing Phone); tono empresarial y minimalista, y varios agregados: Spotlight, panel lateral con asistente de IA, PiP mínimo, selector de fondos, widgets, centro de actualizaciones con punto de restauración, captura/grabación y login propio.
 
 Pensado para correr en **cualquier distro que tenga Hyprland 0.57 o posterior** (Arch y derivadas, Fedora, openSUSE Tumbleweed, Debian testing, Ubuntu, Void, Gentoo, NixOS), también en una instalación mínima o de servidor **sin escritorio**: el instalador pone lo que falta. No depende de GNOME, KDE ni de GDM.
 
