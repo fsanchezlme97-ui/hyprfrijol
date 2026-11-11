@@ -32,8 +32,10 @@ PanelWindow {
     readonly property int off: Settings.barOffset
     readonly property int thickness: Settings.barThickness
     readonly property real k: Settings.barScale
-    // Barra escondida con Super + J (Shell.barHidden) = se esconde sola: nunca desaparece sin forma de volver
-    readonly property bool autoHide: Settings.barAutoHide || Shell.barHidden
+    // Barra escondida con Super + J (Shell.barHidden) = se esconde sola: nunca desaparece sin forma de volver.
+    // En las pantallas secundarias (solo espacios y título) también se esconde sola.
+    readonly property bool secondary: screen !== Shell.primaryScreen
+    readonly property bool autoHide: Settings.barAutoHide || Shell.barHidden || secondary
     // Ocultación inteligente: se esconde si una ventana tapa su franja (WinMode.covered)
     readonly property bool smart: Settings.barSmartHide && !autoHide
     readonly property bool edgeMode: autoHide || smart

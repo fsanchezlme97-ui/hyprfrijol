@@ -111,6 +111,7 @@
   "dockApps": [],
   "dockBehavior": "auto",
   "dockInTiling": false,
+  "dockPos": "auto",
   "widgets": [
     "clima",
     "sistema",

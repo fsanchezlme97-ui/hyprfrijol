@@ -248,6 +248,7 @@ Scope {
             readonly property int wsId: hmon?.activeWorkspace?.id ?? -1
             // Escritorio ordenado ("deskIcons" = "ordenado") · dock: donde las ventanas flotan (o en todos, "dockInTiling")
             readonly property bool active: { WinMode.deskIcons; return WinMode.isDeskWs(wsId) && !Shell.focusMode; }
+            readonly property bool dockBottom: { HyprClients.monitors; return WinMode.dockSide(modelData?.name ?? "") === "abajo"; }
             readonly property bool dockShown: { WinMode.mode; WinMode.overrides; WinMode.dockInTiling; return wsId > 0 && WinMode.dockOn(wsId) && !Shell.focusMode; }
             readonly property bool deskOn: active && root.deskMode !== "no"
 
@@ -256,7 +257,8 @@ Scope {
                 screen: perScreen.modelData
                 desk: root
                 shown: root.deskMode === "todos" && !Shell.focusMode
-                leftReserve: perScreen.dockShown && Settings.get("dockBehavior", "inteligente") !== "fijo" ? 6 + 54 + 4 : 0
+                leftReserve: perScreen.dockShown && !perScreen.dockBottom && Settings.get("dockBehavior", "inteligente") !== "fijo" ? 6 + 54 + 4 : 0
+                bottomReserve: perScreen.dockShown && perScreen.dockBottom && Settings.get("dockBehavior", "inteligente") !== "fijo" ? 6 + 54 + 4 : 0
             }
 
             // ===== Escritorio ordenado (capa inferior, debajo de las ventanas) =====
@@ -506,6 +508,7 @@ Scope {
                 screen: perScreen.modelData
                 desk: root
                 shown: perScreen.dockShown
+                bottom: perScreen.dockBottom
                 wsId: perScreen.wsId
             }
 

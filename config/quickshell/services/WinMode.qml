@@ -76,6 +76,18 @@ Singleton {
     // ¿Hay dock en este espacio? Donde las ventanas flotan, o en todos con «Mostrar el dock también en mosaico»
     readonly property bool dockInTiling: Settings.get("dockInTiling", false) === true
     function dockOn(ws: int): bool { return ws > 0 && (isFloat(ws) || dockInTiling); }
+    // Lado del dock en cada pantalla (ajuste "dockPos"): "izquierda" · "abajo" · "auto" (por defecto: a la izquierda,
+    // salvo que ese borde toque otra pantalla —el cursor se pasaría a ella en vez de tocar el borde—; entonces abajo)
+    readonly property string dockPos: { const p = Settings.get("dockPos", "auto"); return ["izquierda", "abajo"].includes(p) ? p : "auto"; }
+    function dockSide(monName: string): string {
+        if (dockPos !== "auto") return dockPos;
+        const ms = HyprClients.monitors, m = ms.find(x => x.name === monName);
+        if (!m) return "izquierda";
+        const L = HyprClients.logical(m);
+        const touches = fn => ms.some(o => o.name !== monName && fn(HyprClients.logical(o)));
+        if (!touches(o => Math.abs(o.x + o.w - L.x) < 2 && o.y < L.y + L.h && o.y + o.h > L.y)) return "izquierda";
+        return touches(o => Math.abs(o.y - (L.y + L.h)) < 2 && o.x < L.x + L.w && o.x + o.w > L.x) ? "izquierda" : "abajo";
+    }
 
     // Cambia el modo general. Al volver a «Mosaico» con el antiguo layout = "scrolling", el mosaico pasa a dwindle.
     function setMode(m: string): void {

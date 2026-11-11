@@ -93,7 +93,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Dock"
-        headerRight: Mono { text: root.winMode === "flotante" || Settings.get("dockInTiling", false) ? "a la izquierda" : "solo en espacios flotantes" }
+        headerRight: Mono { text: root.winMode === "flotante" || Settings.get("dockInTiling", false) ? "en todos los espacios" : "solo en espacios flotantes" }
         LabeledRow {
             label: "Mostrar el dock"
             labelWidth: 150
@@ -107,8 +107,23 @@ ColumnLayout {
             Layout.fillWidth: true
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
             text: ({ fijo: "Siempre a la vista y las ventanas maximizadas se quedan a su lado.",
-                     auto: "Se esconde y aparece al llevar el cursor al borde izquierdo.",
+                     auto: "Se esconde y aparece al llevar el cursor a su borde.",
                      inteligente: "Esquiva las ventanas: se aparta cuando una ventana pasa por encima de él y vuelve cuando queda sitio libre (o al llevar el cursor al borde)." })[Settings.get("dockBehavior", "inteligente")] ?? ""
+        }
+        LabeledRow {
+            label: "Posición"
+            labelWidth: 150
+            Seg {
+                model: [["auto", "Automática"], ["izquierda", "Izquierda"], ["abajo", "Abajo"]]
+                current: Settings.get("dockPos", "auto")
+                onPicked: k => Settings.set("dockPos", k)
+            }
+        }
+        Txt {
+            Layout.fillWidth: true
+            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+            visible: Settings.get("dockPos", "auto") === "auto"
+            text: "A la izquierda, salvo en una pantalla con otra pegada a su izquierda: ahí el cursor se pasaría a la otra en vez de tocar el borde, así que va abajo."
         }
         SwRow { label: "Mostrar el dock también en mosaico y desplazamiento"; sub: "en el modo flotante se ve siempre"; key: "dockInTiling" }
         Txt {

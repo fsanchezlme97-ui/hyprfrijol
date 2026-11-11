@@ -15,7 +15,7 @@ Item {
     required property var barWindow
     property bool compact: false          // isla central: los tres grupos seguidos, sin huecos
     property bool islands: false          // archipiélago: cada grupo en su propia píldora (BarPill)
-    // Pantalla secundaria: solo sus espacios (sin aplicaciones, título, onda, chips, bandeja ni estado)
+    // Pantalla secundaria: solo sus espacios y el título de su ventana (sin aplicaciones, onda, chips, bandeja ni estado)
     readonly property bool secondary: barWindow.screen !== Shell.primaryScreen
     // Píldoras del archipiélago (Bar.qml las usa de máscara para el ratón)
     readonly property var pills: [pillL, pillC, pillR, pillS]
@@ -51,7 +51,7 @@ Item {
         AppsBtn { id: apps; visible: !root.secondary }   // Aplicaciones (Spotlight): logo de la distribución
         Workspaces { id: ws; visible: Settings.barHas("espacios") || root.secondary; screen: root.barWindow.screen }
         Divider { visible: Settings.barHas("espacios") && title.visible }
-        ActiveTitle { id: title; visible: !root.secondary && Settings.get("barShowTitle", true) && Settings.barHas("titulo") && text !== "" && root.titleMax >= 48; Layout.leftMargin: 2; Layout.maximumWidth: root.titleMax }
+        ActiveTitle { id: title; screenName: root.barWindow.screen?.name ?? ""; visible: Settings.get("barShowTitle", true) && Settings.barHas("titulo") && text !== "" && root.titleMax >= 48; Layout.leftMargin: 2; Layout.maximumWidth: root.titleMax }
         OmarchySlot { barWindow: root.barWindow; place: "izquierda"; visible: any && !root.secondary }   // widgets de plugins de Omarchy (omarchyBarSlot)
     }
 

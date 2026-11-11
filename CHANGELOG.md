@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.35] — 2026-11-10
+
+- Pantallas secundarias: su barra se esconde sola (vuelve al llevar el cursor al borde) y muestra el título de su
+  ventana.
+- El título de la barra es el de la ventana activa de esa pantalla (la última enfocada en su espacio visible), no
+  el de la que tiene el foco en otra.
+- Dock: nuevo ajuste de posición (Ajustes › Escritorio y gestos › Dock › Posición: Automática · Izquierda · Abajo,
+  `dockPos`). Abajo va en horizontal. Automática: a la izquierda, salvo en una pantalla con otra pegada a su
+  izquierda, donde el cursor se pasaría a la otra sin tocar el borde: ahí va abajo.
+
 ## [0.8.34] — 2026-11-10
 
 - Pantallas secundarias: su barra solo muestra sus espacios (sin aplicaciones, título, onda de audio, chips,
