@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.20] — 2026-11-10
+
+- **Dos voces: Helpert y Sophia.** El asistente se llama ahora **Helpert** (antes Samantha), con una personalidad
+  nueva, sobria y directa, como un buen mayordomo. Habla con la voz local. **Sophia** pone la voz de Google a los
+  avisos puntuales. Se cubren entre sí: sin clave de Google, o si Google falla, los avisos los dice Helpert.
+  Tus ajustes se actualizan solos (copia en `settings.json.antes-de-helpert`). Si habías escrito tu propia
+  personalidad, se respeta.
+- **Sophia te saluda al entrar** con la hora y el tiempo, una sola vez por sesión (Ajustes › Asistente de IA ›
+  «Sophia: saludo al entrar»).
+- **Sophia lee los avisos importantes**: los recordatorios del asistente y las notificaciones urgentes. Calla en
+  «no molestar» y con las apps que hayas silenciado, y no repite el mismo aviso en menos de un minuto («Sophia:
+  avisos importantes»). Las dos opciones vienen apagadas.
+- `hf-ai announce "texto"` (Sophia) sustituye a `hf-ai speak --google`.
+
 ## [0.8.19] — 2026-11-10
 
 - **Samantha habla con una voz local**: Piper con la voz «sharvard» (español de España). Empieza a sonar en ~1 s

@@ -37,6 +37,8 @@ def _profiles_left():
         return True
     if '"dictationWakeWord": "Frijol"' in t:      # nombre de antes: pasa a «Distro» (hf-migrate, paso 6)
         return True
+    if '"aiName": "Samantha"' in t:               # asistente de antes: pasa a «Helpert» (hf-migrate, paso 6)
+        return True
     try:                                            # web apps del panel lateral (retiradas en 0.8.8)
         d = json.loads(t)
         return any(isinstance(a, dict) and a.get("mode") == "panel" for a in d.get("webapps") or []) \

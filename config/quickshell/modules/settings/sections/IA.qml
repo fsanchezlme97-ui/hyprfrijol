@@ -21,7 +21,8 @@ ColumnLayout {
     property string status: ""
     property var key: ({ stored: false, where: "", hint: "" })
     property var voiceLocal: undefined     // hf-ai status: voz local (Piper) instalada; sin ella la voz usa Gemini TTS
-    readonly property bool needKey: prov === "gemini" || (Settings.get("aiVoice", false) && root.voiceLocal === false)
+    readonly property bool announces: Settings.get("aiAnnounceGreet", false) || Settings.get("aiAnnounceUrgent", false)
+    readonly property bool needKey: prov === "gemini" || root.announces || (Settings.get("aiVoice", false) && root.voiceLocal === false)
     property string keyMsg: ""
     property bool keyErr: false
     property string testMsg: ""
@@ -305,6 +306,9 @@ ColumnLayout {
             onClicked: { Pkg.runInTerminal(Paths.script("hf-ai") + " voice-install --tty", "Voz del asistente"); voiceLater.n = 0; voiceLater.restart(); }
         }
         Timer { id: voiceLater; interval: 5000; repeat: true; property int n: 0; onTriggered: { stat.running = false; stat.running = true; if (++n > 24 || root.voiceLocal) stop(); } }
+        // Sophia (hf-ai announce): avisos con la voz de Gemini; sin clave, los dice la voz local. Nunca en «no molestar».
+        SwRow { label: "Sophia: saludo al entrar"; sub: "al iniciar sesión dice la hora y el tiempo (voz de Google; sin clave, la voz local)"; key: "aiAnnounceGreet"; def: false }
+        SwRow { label: "Sophia: avisos importantes"; sub: "lee los recordatorios y las notificaciones urgentes; calla en «no molestar»"; key: "aiAnnounceUrgent"; def: false }
         Txt {
             Layout.alignment: Qt.AlignRight
             visible: persona.text.length > 1500

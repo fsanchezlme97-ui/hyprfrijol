@@ -29,6 +29,8 @@
 #      Dictado sin IA: quita dictationAI y cambia dictationWakeWord «Frijol» (la de antes) por «Distro»
 #      (copia en settings.json.antes-sin-ia-dictado).
 #      Web apps del panel lateral (0.8.8): mode «panel» → «navegador», sidePanelApps → ["ia"], cierra sus hosts.
+#      Asistente «Samantha» → «Helpert» (0.8.20), y su personalidad si era la de fábrica (copia en
+#      settings.json.antes-de-helpert).
 #      hf-apply lo lanza solo (--retired-only) si queda algo de esto.
 set -euo pipefail
 for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
@@ -116,6 +118,25 @@ d = json.load(open(p))
 d.pop("dictationAI", None)
 if str(d.get("dictationWakeWord", "")).strip().lower() == "frijol":
     d["dictationWakeWord"] = "Distro"
+tmp = p + ".tmp"
+with open(tmp, "w") as f:
+    f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
+os.replace(tmp, p)
+PY
+  fi
+  # Asistente «Samantha» (0.8.13) → «Helpert» (0.8.20); la personalidad solo si era la de fábrica (huella sha256)
+  if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(d,dict) and d.get("aiName")=="Samantha" else 1)' "$cfg" 2>/dev/null; then
+    local bak="$cfg.antes-de-helpert"; [ -e "$bak" ] && bak="$bak-$(date +%Y%m%d-%H%M%S)"
+    say "Asistente: «Samantha» pasa a llamarse «Helpert» en $cfg (copia: $bak)"
+    run cp -p "$cfg" "$bak"
+    [ "$DRY" = 1 ] || python3 -I - "$cfg" "$root/config/defaults/settings.json" <<'PY'
+import hashlib, json, os, sys
+p = os.path.realpath(sys.argv[1])
+d = json.load(open(p))
+new = json.load(open(sys.argv[2]))
+d["aiName"] = new["aiName"]
+if hashlib.sha256(str(d.get("aiPersona", "")).encode()).hexdigest() == "4f3f37d99edaa9aaf0eb7e2ef2441e9b32049714bbe810e1c75ab60516a18bbd":
+    d["aiPersona"] = new["aiPersona"]
 tmp = p + ".tmp"
 with open(tmp, "w") as f:
     f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")

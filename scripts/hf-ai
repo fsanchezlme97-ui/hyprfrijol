@@ -24,8 +24,11 @@
   hf-ai test                 prueba la conexión con el proveedor → {"ok": bool, "text": "…"}
   hf-ai transform "instrucción" < texto   aplica la instrucción al texto y lo imprime en plano (hf-dictate)
   hf-ai talk                 hablar con el asistente por voz (como Super + Alt + H): empieza o termina de escuchar
-  hf-ai speak [--google] "texto" | - | --stop   lo lee en voz alta (corta lo anterior): voz local Piper (sharvard)
-                             si está instalada; con --google, o sin Piper, Gemini TTS (voz aiVoiceName)
+  hf-ai speak "texto" | - | --stop   Helpert lo lee en voz alta (corta lo anterior): voz local Piper (sharvard);
+                             sin Piper, Gemini TTS
+  hf-ai announce "texto" | - | --greet   Sophia lo anuncia (Gemini TTS, voz aiVoiceName; sin clave o si falla, Helpert).
+                             Calla en «no molestar». --greet: saludo con la hora y el tiempo, una vez por sesión
+                             (aiAnnounceGreet)
   hf-ai voice-install [--tty]  instala la voz local: venv con piper-tts y la voz es_ES-sharvard-medium (~77 MB)
   hf-ai key status|set|clear gemini   clave de Gemini: set la lee de stdin (o de HF_AI_KEY_IN), nunca de argv
 
@@ -1741,9 +1744,9 @@ TTS_MODELS = ["gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts", "gemini-2.5-f
 TTS_DIR = pathlib.Path(os.environ.get("XDG_RUNTIME_DIR") or HOME / ".cache/hyprfrijol")   # privado: nunca /tmp
 TTS_PID = TTS_DIR / "hf-ai-voice.pid"
 TTS_MAX = 900                                                            # caracteres: cuida la cuota gratuita
-# Voz local (conversación): Piper con «sharvard» (es_ES, hablante 0 = M). ~150 MB de RAM y empieza a sonar en ~1 s
+# Voz local (conversación, Helpert): Piper con «sharvard» (es_ES, hablante 0 = M). ~150 MB de RAM y empieza a sonar en ~1 s
 # (arrancar Python y cargar el modelo); luego genera ×30 más rápido de lo que habla. Lo instala `hf-ai voice-install`.
-# Gemini queda para lo puntual (`hf-ai speak --google`) y de respaldo si Piper no está.
+# Es la voz de Helpert (conversación); Sophia (avisos, `hf-ai announce`) usa Gemini y, sin clave, esta.
 PIPER_DIR = HOME / ".local/share/hyprfrijol/tts"
 PIPER_VENV = PIPER_DIR / "piper-venv"
 PIPER_VOICE, PIPER_SPEAKER = "es_ES-sharvard-medium", 0
@@ -1772,7 +1775,7 @@ def voice_install(tty=False):
     r = subprocess.run([py, "-I", "-m", "piper.download_voices", "--data-dir", str(PIPER_MODEL.parent), PIPER_VOICE])
     if r.returncode != 0 or not piper_ready():
         say("No se pudo descargar la voz"); return 1
-    say("Voz local lista: Samantha ya habla sin depender de Google.")
+    say("Voz local lista: Helpert ya habla sin depender de Google.")
     return 0
 
 def speakable(text, limit=TTS_MAX):
@@ -1872,13 +1875,15 @@ def speak_piper(t, player):
     ok = stopped or gen.returncode == 0
     return {"ok": ok, "error": "" if ok else "La voz local (Piper) falló. Reinstálala: hf-ai voice-install"}
 
-def speak(text, s=None, google=False):
-    """Lee «text» en voz alta (aiVoice). Corta lo que estuviera diciendo. → {"ok", "error"}
-    Con Piper instalado y sin «google»: voz local. Si no, Gemini (voz aiVoiceName) trozo a trozo: un hilo genera
-    el siguiente mientras suena el actual."""
-    import queue, tempfile, threading
+def speak(text, s=None, sophia=False):
+    """Lee «text» en voz alta y corta lo que estuviera diciendo. → {"ok", "error"}
+    Dos voces que se cubren una a otra:
+      Helpert (conversación): voz local Piper.
+      Sophia (avisos: saludo, recordatorios, urgentes; sophia=True): Gemini TTS, voz aiVoiceName.
+    Sin clave de Gemini, o si Gemini falla antes de sonar (cuota…), lo dice Helpert; sin Piper, habla Gemini."""
     s = s or settings()
-    local = not google and piper_ready()
+    key = gemini_key()[0] if (sophia or not piper_ready()) else ""
+    local = piper_ready() and not (sophia and key)
     t = speakable(text, PIPER_MAX if local else TTS_MAX)
     speak_stop()
     if not t:
@@ -1889,10 +1894,18 @@ def speak(text, s=None, google=False):
     tts_claim()
     if local:
         return speak_piper(t, player)
-    key, _ = gemini_key()
     if not key:
         tts_done(False)
-        return {"ok": False, "error": "Falta la clave de Gemini (Ajustes › Asistente de IA)"}
+        return {"ok": False, "error": "Falta la clave de Gemini (Ajustes › Asistente de IA) o la voz local (hf-ai voice-install)"}
+    r = speak_gemini(t, key, s, player)
+    if not r["ok"] and r["error"] and piper_ready() and not TTS_OWNER.exists():   # nadie nos relevó: habla Helpert
+        tts_claim()
+        return speak_piper(speakable(text, PIPER_MAX), player)
+    return r
+
+def speak_gemini(t, key, s, player):
+    """Gemini trozo a trozo: un hilo genera el siguiente mientras suena el actual."""
+    import queue, tempfile, threading
     voice, models = str(s.get("aiVoiceName") or "Aoede"), list(TTS_MODELS)
     mine = tts_mine
     q = queue.Queue()
@@ -1932,6 +1945,54 @@ def speak(text, s=None, google=False):
             item.unlink(missing_ok=True)
     tts_done(played)
     return {"ok": played, "error": err}
+
+def dnd_on():
+    """«No molestar» de los avisos (Notifs.qml): ~/.local/state/hyprfrijol/dnd con la hora de fin en ms (o vacío)."""
+    try:
+        until = (STATE / "dnd").read_text().strip()
+    except OSError:
+        return False
+    return not until.isdigit() or int(until) > time.time() * 1000
+
+def announce(text, s=None):
+    """Sophia lee un aviso (sin emojis ni marcas HTML del cuerpo de las notificaciones). Calla en «no molestar»."""
+    if dnd_on():
+        return {"ok": False, "error": "No molestar"}
+    t = re.sub(r"<[^>]+>", " ", str(text or ""))
+    t = re.sub(r"[\U0001F000-\U0001FAFF⌀-⏿☀-➿️]", "", t)
+    return speak(t, s, sophia=True)
+
+WEATHER_DESC = ((0, "despejado"), (2, "poco nuboso"), (3, "nublado"), (48, "niebla"), (57, "llovizna"), (67, "lluvia"),
+                (77, "nieve"), (82, "chubascos"), (86, "chubascos de nieve"), (99, "tormenta"))   # como Weather.qml
+
+def greeting():
+    """«Buenas tardes. Son las 7 y 05. En San Isidro, 24 grados y nublado.» (el tiempo solo si la caché es de < 3 h)."""
+    now = time.localtime()
+    hi = "Buenos días" if 6 <= now.tm_hour < 12 else "Buenas tardes" if 12 <= now.tm_hour < 20 else "Buenas noches"
+    h12 = now.tm_hour % 12 or 12
+    parts = [f"{hi}.", f"{'Es la' if h12 == 1 else 'Son las'} {h12}" + (f" y {now.tm_min:02d}." if now.tm_min else " en punto.")]
+    try:
+        w = HOME / ".cache/hyprfrijol/weather.json"
+        if time.time() - w.stat().st_mtime < 3 * 3600:
+            d = json.loads(w.read_text())
+            cur, city = d["data"]["current"], (d.get("loc") or {}).get("city") or ""
+            desc = next(n for c, n in WEATHER_DESC if int(cur["weather_code"]) <= c)
+            parts.append(f"{'En ' + city + ', ' if city else ''}{round(cur['temperature_2m'])} grados y {desc}.")
+    except Exception:
+        pass
+    return " ".join(parts)
+
+def greet():
+    """Saludo de Sophia al entrar (aiAnnounceGreet): una vez por sesión de Hyprland, aunque el shell se reinicie."""
+    s = settings()
+    if not s.get("aiAnnounceGreet"):
+        return {"ok": False, "error": "Saludo desactivado"}
+    mark = TTS_DIR / f"hf-ai-greeted-{os.environ.get('HYPRLAND_INSTANCE_SIGNATURE', 'x')}"
+    if mark.exists():
+        return {"ok": False, "error": "Ya saludé en esta sesión"}
+    TTS_DIR.mkdir(parents=True, exist_ok=True)
+    mark.touch()
+    return announce(greeting(), s)
 
 def gemini_model(s):
     m = str(s.get("aiModel") or "").strip().removeprefix("models/")
@@ -2456,15 +2517,12 @@ def main(argv):
     elif cmd == "talk":                     # Super + Alt + H: hablar con el asistente (empieza / termina)
         run(QS + ["ipc", "call", "dictado", "talk"]); return
     elif cmd == "speak":
-        google = "--google" in rest
-        rest = [r for r in rest if r != "--google"]
-        arg = rest[0] if rest else ""
-        if arg == "-":
-            arg = sys.stdin.read()
         if arg == "--stop":
             speak_stop(); out = {"ok": True, "error": ""}
         else:
-            out = speak(arg, google=google)
+            out = speak(arg)
+    elif cmd == "announce":
+        out = greet() if arg == "--greet" else announce(arg)
     elif cmd == "voice-install":
         sys.exit(voice_install(tty="--tty" in rest))
     elif cmd == "key":
