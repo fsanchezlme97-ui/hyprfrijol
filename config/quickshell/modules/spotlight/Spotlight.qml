@@ -792,7 +792,7 @@ Overlay {
                         Image {
                             anchors.fill: parent; anchors.margins: 6
                             visible: status === Image.Ready
-                            source: spot.cur?.kind === "clip" && spot.cur.img ? "file://" + spot.cur.img + "?" + Clip.imgGen : ""
+                            source: spot.cur?.kind === "clip" ? Clip.imgUrl(spot.cur.img) : ""
                             fillMode: Image.PreserveAspectFit
                             sourceSize: Qt.size(720, 360)
                             asynchronous: true
@@ -1228,7 +1228,7 @@ Overlay {
             id: thumb
             anchors.fill: parent
             visible: status === Image.Ready
-            source: root.item.img ? "file://" + root.item.img + "?" + Clip.imgGen : ""
+            source: Clip.imgUrl(root.item.img)
             fillMode: Image.PreserveAspectCrop
             sourceSize: Qt.size(root.size * 2, root.size * 2)
             asynchronous: true

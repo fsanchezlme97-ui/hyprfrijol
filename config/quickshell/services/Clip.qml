@@ -1,7 +1,8 @@
 pragma Singleton
 // Historial del portapapeles (cliphist) y fijados: los datos y acciones que comparten el Portapapeles
 // (Super + V, modules/clipboard) y el modo «:» del Spotlight.
-//   Clip.history  [{ id, line, text, kind, meta, img }]   (img = miniatura en ~/.cache/hyprfrijol/clip/<id>.png)
+//   Clip.history  [{ id, line, text, kind, meta, img, file? }]   (img = miniatura en ~/.cache/hyprfrijol/clip/<id>.png;
+//                 file = imagen copiada como archivo desde el gestor de archivos: la miniatura es el propio archivo)
 //   Clip.pins     [{ text, kind, meta, img, ts }]         (~/.local/share/hyprfrijol/clipboard-pins.json)
 //   Clip.refresh() · Clip.rows(q) → { pinned: [...], recent: [...] } (filas { pinned, pinIndex?, text, kind, meta, img, line? })
 //   Clip.copy(r, paste) · Clip.remove(r) · Clip.togglePin(r) · Clip.wipe() · Clip.classify(t) · Clip.glyphs · Clip.isMono(kind)
@@ -31,6 +32,9 @@ Singleton {
         if ((m = s.match(/^\[\[ binary data (.+?) (\w+) (\d+)x(\d+) \]\]$/)))
             return { kind: "imagen", meta: "Imagen · " + m[3] + " × " + m[4] };
         if (/^\[\[ binary data/.test(s)) return { kind: "imagen", meta: "Imagen" };
+        // Un archivo de imagen copiado en el gestor de archivos llega como ruta (text/uri-list): se ve como imagen
+        const f = imageFile(s);
+        if (f) return { kind: "imagen", meta: "Imagen · " + f.split("/").pop(), file: f };
         if (/^(#[0-9a-f]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\))$/i.test(s)) return { kind: "color", meta: "Color" };
         if ((m = s.match(/^https?:\/\/([^\/\s]+)\S*$/i))) return { kind: "enlace", meta: "Enlace · " + m[1].replace(/^www\./, "") };
         if (/^(~?\/[^\s]+)$/.test(s)) return { kind: "archivo", meta: "Ruta" };
@@ -41,6 +45,17 @@ Singleton {
         const words = s.split(/\s+/).filter(x => x).length;
         return { kind: "texto", meta: "Texto · " + (words === 1 ? "1 palabra" : words + " palabras") };
     }
+    readonly property var imageTypes: ({ png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp",
+                                         gif: "image/gif", bmp: "image/bmp", avif: "image/avif" })
+    function imageFile(s: string): string {
+        const m = s.match(/^(?:file:\/\/)?(\/[^\n]*\.(\w+))$/);
+        if (!m || !imageTypes[m[2].toLowerCase()] || /\sfile:\/\//.test(s)) return "";   // varias a la vez: se quedan en texto
+        try { return s.startsWith("file://") ? decodeURIComponent(m[1]) : m[1]; } catch (e) { return m[1]; }
+    }
+    // URL de la miniatura: cada trozo de la ruta codificado (las rutas del usuario pueden traer #, ? o %) + imgGen
+    // (sin tipo en «path»: con «path: string», undefined llegaba como el texto "undefined")
+    function imgUrl(path): string { return path ? "file://" + path.split("/").map(encodeURIComponent).join("/") + "?" + imgGen : ""; }
+    function mimeOf(path: string): string { return imageTypes[String(path).split(".").pop().toLowerCase()] ?? "image/png"; }
     readonly property var glyphs: ({ texto: "¶", codigo: "</>", terminal: "›", enlace: "↗", imagen: "▣", color: "", archivo: "/" })
     function isMono(kind: string): bool { return kind === "terminal" || kind === "codigo" || kind === "color" || kind === "archivo"; }
 
@@ -67,8 +82,9 @@ Singleton {
     function copy(r, paste: bool): void {
         if (!r) return;
         let cmd;
-        if (r.pinned) cmd = r.img ? ["sh", "-c", 'wl-copy --type image/png < "$1"', "sh", r.img]
+        if (r.pinned) cmd = r.img ? ["sh", "-c", 'wl-copy --type "$2" < "$1"', "sh", r.img, mimeOf(r.img)]
                                   : ["wl-copy", "--", r.text];
+        else if (r.file) cmd = ["sh", "-c", 'wl-copy --type "$2" < "$1"', "sh", r.file, mimeOf(r.file)];   // la imagen, no su ruta
         else cmd = ["sh", "-c", 'printf "%s" "$1" | cliphist decode | wl-copy', "sh", r.line];
         Quickshell.execDetached(cmd);
         Shell.close();
@@ -87,9 +103,11 @@ Singleton {
             pins = pins.filter((_, i) => i !== r.pinIndex);
             if (p?.img) Quickshell.execDetached(["rm", "-f", p.img]);
         } else if (r.kind === "imagen") {
-            // Las imágenes fijadas se copian a ~/.local/share/hyprfrijol/clipboard-pins/
-            const dest = pinDir + "/" + Date.now() + ".png";
-            Quickshell.execDetached(["sh", "-c", 'mkdir -p "$(dirname "$2")" && printf "%s" "$1" | cliphist decode > "$2"', "sh", r.line, dest]);
+            // Las imágenes fijadas se copian a ~/.local/share/hyprfrijol/clipboard-pins/ (la del archivo, tal cual:
+            // así sigue fijada aunque se borre o mueva el original)
+            const dest = pinDir + "/" + Date.now() + "." + (r.file ? r.file.split(".").pop().toLowerCase() : "png");
+            Quickshell.execDetached(r.file ? ["sh", "-c", 'mkdir -p "$(dirname "$2")" && cp -- "$1" "$2"', "sh", r.file, dest]
+                                           : ["sh", "-c", 'mkdir -p "$(dirname "$2")" && printf "%s" "$1" | cliphist decode > "$2"', "sh", r.line, dest]);
             pins = [{ text: r.text, kind: r.kind, meta: r.meta, img: dest, ts: Date.now() }, ...pins];
         } else {
             // Texto completo (el historial solo guarda una vista previa de una línea)
@@ -109,7 +127,7 @@ Singleton {
     // ── Datos ────────────────────────────────────────────────────────────
     Process {
         id: lister
-        command: ["cliphist", "list"]
+        command: ["cliphist", "-preview-width", "400", "list"]   // rutas largas de imágenes enteras (por defecto 100)
         stdout: StdioCollector {
             onStreamFinished: {
                 const out = [];
@@ -120,8 +138,9 @@ Singleton {
                     const id = line.slice(0, tab), t = line.slice(tab + 1).replace(/\u0000/g, "");
                     const c = root.classify(t);
                     // img se rellena cuando la miniatura ya está en disco (thumbs)
-                    out.push({ id, line, text: c.kind === "imagen" ? "Imagen " + id : t, kind: c.kind, meta: c.meta,
-                               img: c.kind === "imagen" && root.thumbIds[id] ? root.imgCache + "/" + id + ".png" : "" });
+                    out.push({ id, line, text: c.file ? c.file.split("/").pop() : c.kind === "imagen" ? "Imagen " + id : t,
+                               kind: c.kind, meta: c.meta, file: c.file ?? "",
+                               img: c.file ? c.file : c.kind === "imagen" && root.thumbIds[id] ? root.imgCache + "/" + id + ".png" : "" });
                 }
                 root.history = out;
                 root.loaded = true;
@@ -141,7 +160,7 @@ Singleton {
                 const ids = {};
                 for (const id of text.split("\n")) if (id) ids[id] = true;
                 root.thumbIds = ids;
-                root.history = root.history.map(h => h.kind === "imagen" && ids[h.id] ? Object.assign({}, h, { img: root.imgCache + "/" + h.id + ".png" }) : h);
+                root.history = root.history.map(h => h.kind === "imagen" && !h.file && ids[h.id] ? Object.assign({}, h, { img: root.imgCache + "/" + h.id + ".png" }) : h);
                 root.imgGen++;
             }
         }

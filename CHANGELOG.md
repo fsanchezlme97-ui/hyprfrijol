@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.21] — 2026-11-10
+
+- **El portapapeles muestra las imágenes copiadas desde el gestor de archivos**: Nautilus, Thunar o Dolphin solo
+  copian la ruta del archivo y se veía `file:///…/foto.png`. Ahora sale la miniatura y el nombre, y al copiarla desde
+  el historial se pega la imagen, no la ruta. Si la fijas, se guarda una copia, así que sigue aunque borres o muevas
+  el original. Si copias varias a la vez, siguen saliendo como texto.
+- Las miniaturas cargan aunque el nombre del archivo lleve `#`, `?`, `%`, espacios o tildes.
+
 ## [0.8.20] — 2026-11-10
 
 - **Dos voces: Helpert y Sophia.** El asistente se llama ahora **Helpert** (antes Samantha), con una personalidad
