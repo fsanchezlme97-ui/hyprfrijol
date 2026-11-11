@@ -124,10 +124,12 @@ Scope {
     Binding { target: Shell; property: "dictPhase"; value: root.phase }
     // Micrófono de la barra y hf:micro (Super + Alt + M): según micMode, dictar, hablar con el asistente o silenciar.
     // hf:micro-modo (Super + Shift + Alt + M) y el clic derecho del botón pasan al siguiente modo.
+    // Silenciado, ningún modo funcionaría: no se cambia de modo y el botón (o el atajo) solo lo vuelve a activar.
     readonly property string micMode: Settings.get("micMode", "dictado")
     readonly property var micModes: ({ dictado: "dictado", ia: "hablar con el asistente", silencio: "silenciar" })
-    function micAction(): void { if (micMode === "silencio") Audio.toggleMic(); else toggle(micMode === "ia" ? "ia" : "dictado"); }
+    function micAction(): void { if (micMode === "silencio" || Audio.micMuted) Audio.toggleMic(); else toggle(micMode === "ia" ? "ia" : "dictado"); }
     function micCycle(): void {
+        if (Audio.micMuted) { if (!proc.running) { phase = "done"; msg = "Micrófono silenciado: actívalo para cambiar de modo"; hider.interval = 1800; hider.restart(); } return; }
         const m = Object.keys(micModes), next = m[(m.indexOf(micMode) + 1) % m.length];
         Settings.set("micMode", next);
         if (!proc.running) { phase = "done"; msg = "Micrófono: " + micModes[next]; hider.interval = 1400; hider.restart(); }
@@ -171,7 +173,7 @@ Scope {
     }
     GlobalShortcut {
         appid: "hf"; name: "micro"; description: "HyprFrijol: micrófono (lo de su modo)"
-        onPressed: { root.micHeld = root.micMode !== "silencio"; if (root.micHeld) root.pressed(root.micMode === "ia" ? "ia" : "dictado"); else Audio.toggleMic(); }
+        onPressed: { root.micHeld = root.micMode !== "silencio" && !Audio.micMuted; if (root.micHeld) root.pressed(root.micMode === "ia" ? "ia" : "dictado"); else Audio.toggleMic(); }
         onReleased: if (root.micHeld) root.released()
     }
     GlobalShortcut { appid: "hf"; name: "micro-modo"; description: "HyprFrijol: siguiente modo del micrófono"; onPressed: root.micCycle() }

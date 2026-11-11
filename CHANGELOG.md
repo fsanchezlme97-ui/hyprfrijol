@@ -3,6 +3,11 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.46] — 2026-11-11
+
+### Arreglado
+- Micrófono de la barra: silenciado ya no deja cambiar de modo (clic derecho, Super + Shift + Alt + M o `hf:micro-modo`), porque ningún modo funcionaría; avisa «actívalo para cambiar de modo». El clic y Super + Alt + M, silenciado, solo lo vuelven a activar, aunque el modo sea dictado o asistente (por si se silenció desde otro sitio).
+
 ## [0.8.45] — 2026-11-11
 
 ### Arreglado
