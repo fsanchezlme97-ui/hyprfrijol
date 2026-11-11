@@ -20,8 +20,7 @@ HF.rules.pip = hl.window_rule({
     move  = { "(monitor_w-window_w-12)", "12" },
 })
 
--- Las apps no maximizan por su cuenta (respeta el mosaico)
-hl.window_rule({ name = "no-maximize", match = { class = ".*" }, suppress_event = "maximize" })
+-- (Las apps no maximizan por su cuenta en mosaico y desplazamiento: regla "no-maximize" de config/apply/35-windows.py)
 
 -- Juegos: sin desenfoque y con tearing permitido
 hl.window_rule({

@@ -508,6 +508,12 @@ Scope {
                 shown: perScreen.dockShown
                 wsId: perScreen.wsId
             }
+
+            // ===== Barra de título de la ventana activa en los espacios flotantes · TitleBar.qml =====
+            TitleBar {
+                screen: perScreen.modelData
+                wsId: perScreen.wsId
+            }
         }
     }
 }

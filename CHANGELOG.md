@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.26] — 2026-11-10
+
+- **Barras de título sin plugins**: en el modo flotante, la ventana activa que no trae su propia barra (terminales,
+  apps Qt…) lleva una barra dibujada por el shell. Tiene icono, título, menú, minimizar, maximizar o restaurar y
+  cerrar. Arrastrarla mueve la ventana, el doble clic maximiza y el clic derecho abre el menú. Si la ventana está
+  maximizada, la barra aparece al llevar el cursor al borde de arriba. Se apaga en Ajustes › Escritorio y gestos.
+  Si algo falla, como mucho la barra no aparece: el shell va aparte y no puede cerrar la sesión.
+- En el modo flotante funciona el botón de maximizar de las apps que traen su propia barra (Chrome, Firefox, GNOME…).
+  En mosaico siguen sin poder maximizarse por su cuenta.
+- Para redimensionar sin Super basta con arrastrar el borde de la ventana.
+- Hyprbars ya no se ofrece en Ajustes › Plugins y el instalador ya no descarga la fuente Nerd Font: ninguno hace falta.
+
 ## [0.8.25] — 2026-11-10
 
 - **El instalador trae la fuente de iconos en todas las distros**: en Arch la instala pacman

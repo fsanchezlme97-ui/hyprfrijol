@@ -5,12 +5,11 @@
 // apps en ventana flotante ("floatApps", "floatAppsSize"; ui/FloatApps.qml, 35-windows.py),
 // diseño de mosaico (general:layout), enfocar al pasar el cursor y acoplar a los bordes; nombres e iconos de los
 // espacios ("wsNames", "wsIcons", "wsBarNames" → barra y vista general; ui/WsNames.qml).
-// Flotante como escritorio clásico: barras de título (Hyprbars, se ofrece instalarlo aquí; estilo y botones en
-// config/apply/70-plugins.py), apps que ya traen su barra ("barsOwnFrame", ui/FloatApps.qml) y enfocar con clic
-// (20-input.py: follow_mouse = 2 en el modo flotante).
+// Flotante como escritorio clásico: barras de título del shell ("titleBars"; modules/desktop/TitleBar.qml), apps
+// que ya traen su barra ("barsOwnFrame", ui/FloatApps.qml), redimensionar desde el borde (resize_on_border, look.lua)
+// y enfocar con clic (20-input.py: follow_mouse = 2 en el modo flotante).
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Io
 import "../../.."
 import "../../../components"
 import "../../../services"
@@ -30,25 +29,6 @@ ColumnLayout {
         else Settings.set("windowMode", m);
     }
     readonly property string deskIcons: { const v = Settings.get("deskIcons", "todos"); return v === "flotante" ? "ordenado" : v; }
-
-    // Barras de título (Hyprbars): ¿cargado en Hyprland? (hyprctl plugin list). Instalarlo compila en una terminal y
-    // marca plugins.hyprbars.on; 70-plugins.py solo aplica su configuración si Hyprland lo tiene cargado.
-    property bool barsLoaded: false
-    Process {
-        id: barsProbe
-        running: true
-        command: ["sh", "-c", "hyprctl plugin list 2>/dev/null | grep -qi hyprbars && echo si"]
-        stdout: StdioCollector { onStreamFinished: root.barsLoaded = text.trim() === "si" }
-    }
-    Timer { id: barsPoll; interval: 5000; repeat: true; property int n: 0; onTriggered: { barsProbe.running = true; if (++n > 60 || root.barsLoaded) stop(); } }
-    function installBars(): void {
-        const conf = Object.assign({}, Settings.get("plugins", ({})) ?? {});
-        conf.hyprbars = Object.assign({}, conf.hyprbars ?? {}, { on: true });
-        Settings.set("plugins", conf);
-        Pkg.runInTerminal("hyprpm update && hyprpm add https://github.com/hyprwm/hyprland-plugins; hyprpm enable hyprbars && hyprpm reload -n",
-                          "Barras de título (Hyprbars)");
-        barsPoll.n = 0; barsPoll.restart();
-    }
 
     Section {
         Layout.fillWidth: true
@@ -336,44 +316,29 @@ ColumnLayout {
         SwRow { label: "Imán al arrastrar (bordes y otras ventanas)"; sub: "general:snap:enabled · ventanas flotantes"; mono: true; key: "snapEdges"; def: true }
     }
     // Modo flotante como un escritorio clásico: encajar al soltar (config/hypr/frijol/floatsnap.lua + Snap.qml),
-    // recordar posiciones (services/WinMode.qml) y barras de título (plugin Hyprbars, Ajustes › Plugins)
+    // recordar posiciones (services/WinMode.qml) y barras de título (modules/desktop/TitleBar.qml)
     Section {
         Layout.fillWidth: true
         title: "Ventanas flotantes"
         headerRight: Mono { text: root.winMode === "flotante" ? "modo flotante activo" : "también en espacios flotantes" }
         SwRow { label: "Encajar al soltar en los bordes"; sub: "contra un lado: mitad · en una esquina: cuarto · arriba: toda el área · fuera: recupera su tamaño"; key: "dragSnap"; def: true }
         SwRow { label: "Recordar dónde estaba cada app"; sub: "al volver a abrirla flotando, en el mismo sitio y con el mismo tamaño"; key: "floatRemember"; def: true }
-        // Al elegir Flotante sin barras de título, se ofrece instalarlas aquí mismo
-        RowLayout {
-            Layout.fillWidth: true
-            visible: !root.barsLoaded
-            spacing: 12
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 2
-                Txt { text: root.winMode === "flotante" ? "Añade barras de título a las ventanas" : "Barras de título con botones"; weight: Font.DemiBold }
-                Txt {
-                    Layout.fillWidth: true
-                    text: "Botones de menú, mostrar en todos los espacios, minimizar, maximizar y cerrar, solo en las ventanas que no traen la suya. "
-                        + "Se compila una vez (unos minutos) y se recompila tras actualizar Hyprland."
-                    muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-                }
-            }
-            Button { kind: root.winMode === "flotante" ? "primary" : ""; text: barsPoll.running ? "Instalando…" : "Instalar"; enabled: !barsPoll.running; onClicked: root.installBars() }
+        SwRow {
+            label: "Barras de título"; key: "titleBars"; def: true
+            sub: "en la ventana activa que no trae la suya: arrastrar para mover · doble clic para maximizar · menú, minimizar, maximizar y cerrar"
         }
-        LinkRow { visible: root.barsLoaded; label: "Barras de título con botones"; value: "altura, título, desenfoque (Hyprbars)"; section: "plugins"; sectionLabel: "Plugins"; target: "Hyprbars"; separator: false }
         Txt {
             Layout.fillWidth: true
-            text: "Alt + Espacio abre el menú de la ventana activa (también el botón ⋮ de la barra de título)."
+            text: "Redimensiona arrastrando el borde de la ventana. Alt + Espacio (o clic derecho en la barra de título) abre el menú de la ventana."
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }
     }
-    // Apps que dibujan su propia barra de título: Hyprbars no les pone otra (barsOwnFrame → 70-plugins.py)
+    // Apps que dibujan su propia barra de título: el shell no les pone otra (barsOwnFrame → TitleBar.qml)
     Section {
         Layout.fillWidth: true
-        visible: root.barsLoaded
+        visible: Settings.get("titleBars", true) !== false
         title: "Apps con su propia barra"
-        headerRight: Mono { text: "hyprbars:no_bar" }
+        headerRight: Mono { text: "sin barra del shell" }
         FloatApps {
             Layout.fillWidth: true
             settingKey: "barsOwnFrame"

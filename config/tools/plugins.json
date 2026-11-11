@@ -1,23 +1,7 @@
 {
  "_doc": "Catálogo de Ajustes › Plugins (plugins de Hyprland con hyprpm). id = clave en settings.json «plugins»; repo = URL para «hyprpm add»; repoName = nombre del repositorio en «hyprpm list»; plugin = nombre para «hyprpm enable»; loaded = nombre en hl.get_loaded_plugins(); ns = tabla de hl.config({ plugin = { <ns> = … } }) y de hl.plugin.<ns> (Hyprland pasa «:» a «.» y «-» a «_»). install: hyprpm | manual. compat (Hyprland 0.57 con config Lua): ok = el repo documenta Lua y fija (pin) o sigue 0.57 · probable = documenta Lua pero su hyprpm.toml no tiene pin de 0.57 · sin verificar · manual = no se instala con hyprpm. options: lo que se ajusta desde la app; lua = ruta dentro de la tabla del plugin (sin lua = lo trata config/apply/70-plugins.py a mano). Revisado el 2026-11-07 leyendo los README y hyprpm.toml de cada repo.",
- "retired": "hyprexpo, hyprtrails, hyprwinwrap, xtra-dispatchers y hyprscrolling salieron de hyprland-plugins en mayo de 2026 (sin mantenimiento). hyprexpo y hyprwinwrap siguen en forks mantenidos (abajo); el diseño «scrolling» ya viene integrado en Hyprland (Ajustes › Escritorio).",
+ "retired": "hyprexpo, hyprtrails, hyprwinwrap, xtra-dispatchers y hyprscrolling salieron de hyprland-plugins en mayo de 2026 (sin mantenimiento). hyprexpo y hyprwinwrap siguen en forks mantenidos (abajo); el diseño «scrolling» ya viene integrado en Hyprland (Ajustes › Escritorio). Hyprbars ya no se ofrece: las barras de título las dibuja el propio shell en el modo flotante (Ajustes › Escritorio).",
  "plugins": [
-  {
-   "id": "hyprbars", "name": "Hyprbars", "by": "hyprwm", "official": true, "cat": "ventanas",
-   "desc": "Barra de título con botones (cerrar, maximizar, minimizar) en las ventanas. Ideal con el modo flotante.",
-   "url": "https://github.com/hyprwm/hyprland-plugins/tree/main/hyprbars",
-   "repo": "https://github.com/hyprwm/hyprland-plugins", "repoName": "hyprland-plugins", "plugin": "hyprbars", "loaded": "hyprbars", "ns": "hyprbars",
-   "install": "hyprpm", "compat": "ok",
-   "compatNote": "Oficial. Documenta la config Lua (hl.config + hl.plugin.hyprbars.add_button); sin pin para 0.57, hyprpm compila main, que sigue a Hyprland.",
-   "options": [
-    { "key": "floatingOnly", "label": "Solo en ventanas flotantes", "type": "bool", "def": true },
-    { "key": "buttons", "label": "Botones cerrar · maximizar · minimizar", "type": "bool", "def": true },
-    { "key": "height", "label": "Altura", "type": "int", "def": 26, "min": 16, "max": 40, "step": 2, "unit": "px", "lua": "bar_height" },
-    { "key": "title", "label": "Mostrar el título", "type": "bool", "def": true, "lua": "bar_title_enabled" },
-    { "key": "align", "label": "Botones", "type": "choice", "def": "right", "choices": [["right", "A la derecha"], ["left", "A la izquierda"]], "lua": "bar_buttons_alignment" },
-    { "key": "blur", "label": "Desenfocar la barra", "type": "bool", "def": true, "lua": "bar_blur" }
-   ]
-  },
   {
    "id": "hyprexpo", "name": "HyprExpo", "by": "sandwichfarm", "official": false, "cat": "ventanas",
    "desc": "Vista de todos los espacios en cuadrícula: elige uno o arrastra ventanas entre ellos. Con atajo y gesto.",

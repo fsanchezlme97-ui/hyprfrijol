@@ -56,13 +56,13 @@ Red, Sonido, Energía, Sistema y recuperación, Accesibilidad y Acerca del siste
 | 10-look.py | `rounding` (null = según el estilo), `blurQuality`, `blurAuto`, `colorFilter` (shaders/), `highContrast`; desenfoque según `estilo` (SkySoul: muy amplio, suave y algo oscurecido en modo oscuro); sombras según `shadows` y `activeBorder` (`brillo`) |
 | 20-input.py | `kbLayouts`, `kbSwitch`, `kbRepeat*`, `numlock`, `capsEscape`, `focusOnHover`, touchpad, gestos 3/4 dedos |
 | 30-layout.py | `windowMode` + `layout` → `general:layout` (dwindle / master, o scrolling en desplazamiento), `scrollColumnWidth`, `scrollFocusFit`, `scrollOneFull`, `snapEdges` |
-| 35-windows.py | `windowMode` (regla `hf-float-all` del modo flotante), `floatApps` + `floatAppsSize` (reglas `hf-float-apps` / `hf-float-apps-compact`) |
+| 35-windows.py | `windowMode` (regla `hf-float-all` del modo flotante; fuera de él, `no-maximize`: las apps no maximizan por su cuenta), `floatApps` + `floatAppsSize` (reglas `hf-float-apps` / `hf-float-apps-compact`) |
 | 40-monitors.py | `monitors` {salida: {mode, position, scale, vrr, disabled, mirror}} |
 | 50-rules.py | ventanas Ajustes/Herramientas flotantes; sin efectos a pantalla completa (`gameNoFx`) |
 | 60-binds.py | `keybinds` {descripción: {from, to}} (acciones en `keybind-actions.json`), atajos de `webapps`, `overAmplify`, lupa (`magnifier`: sustituye la lupa básica de binds.lua) |
 | 15-apps.py | `fileManager` (solo si está instalado; si no, env.lua usa el primero instalado: Nautilus, Dolphin…), `terminal` |
 | 16-gtk.py | con `themeApps`: `gtk-adw.css` (colores de libadwaita: barra lateral, popovers, diálogos) importado en gtk-4.0/gtk.css y `gsettings` `color-scheme` (prefer-dark/default), `accent-color` (el de GNOME 47+ más cercano al color principal) y `gtk-theme` adw-gtk3[-dark] |
-| 70-plugins.py | `plugins` {id: {on, …opciones}} → `hl.config({ plugin = { … } })`, botones de hyprbars, atajo/gesto de HyprExpo y Hyprspace; solo para los activados y dentro de una guarda (`hl.get_loaded_plugins()`) |
+| 70-plugins.py | `plugins` {id: {on, …opciones}} → `hl.config({ plugin = { … } })`, atajo/gesto de HyprExpo y Hyprspace; solo para los activados y dentro de una guarda (`hl.get_loaded_plugins()`) |
 | 85-idle.py | `idleDim`, `idleLock`, `idleScreenOff`, `idleSuspend`, `lockOnSuspend` → `~/.local/state/hyprfrijol/hypridle.conf` (reinicia hypridle si cambia; la suspensión por inactividad es solo de hypridle) |
 | 90-files.py | archivo reduce-motion, `themeApps` (gtk.css / kitty.conf, líneas marcadas), `bigCursor` |
 
@@ -133,6 +133,8 @@ portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si o
 | `windowMode` | `mosaico` (por defecto) · `desplazamiento` · `flotante` | `mosaico`: las ventanas se reparten la pantalla con el diseño `layout` (sin dock salvo `dockInTiling`). `desplazamiento`: columnas en una cinta que se desplaza (diseño `scrolling` nativo de Hyprland 0.57). `flotante`: escritorio clásico, todas las ventanas flotan (regla `hf-float-all`) y hay dock en todos los espacios. El antiguo `mixto` se lee como `mosaico` y `layout = scrolling` con `mosaico` como `desplazamiento`; `floatWorkspace` ya no se usa |
 | `floatApps` | lista de clases de ventana (Nautilus, Loupe, mpv, Celluloid, Showtime, Decibels, Calculadora, File Roller…) | «Apps en ventana flotante» (`ui/FloatApps.qml`): estas apps se abren flotando al centro en vez de en el mosaico (`float` + `center` + `size`; sin distinguir mayúsculas). Interruptores por grupo (Archivos, Imágenes, Audio, Vídeo, Calculadora, Comprimidos), × para quitar una y un buscador entre las ventanas abiertas y las apps instaladas (clase = `StartupWMClass` o id del .desktop). Calculadoras y reproductores de audio pequeños flotan con su propio tamaño (`hf-float-apps-compact`). WinMode no las devuelve al mosaico al salir del modo flotante |
 | `floatAppsSize` | `0.65` (0.5 · 0.65 · 0.8) | ancho de esas ventanas respecto a la pantalla (el alto, +7 %) |
+| `titleBars` | `true` | barras de título del shell (`modules/desktop/TitleBar.qml`) en la ventana activa de los espacios flotantes: icono y título, menú (`WinMenu.qml`, también clic derecho o Alt + Espacio), minimizar, maximizar / restaurar y cerrar; arrastrar mueve la ventana, doble clic maximiza, clic central minimiza. Si no cabe encima (maximizada o pegada arriba), va dentro y aparece al llevar el cursor al borde de arriba. Sin plugins de Hyprland |
+| `barsOwnFrame` | navegadores, apps de GNOME, editores, Discord, Spotify, Ghostty | clases que ya dibujan su barra con botones: no llevan la del shell («Apps con su propia barra», `ui/FloatApps.qml`) |
 | `layout` | `dwindle` (por defecto) · `master` | diseño del modo mosaico (el antiguo `scrolling` es ahora el modo desplazamiento; al elegir otro modo vuelve a `dwindle`) |
 | `scrollColumnWidth` | `0.5` (0.333 · 0.5 · 0.667 · 1.0) | ancho de una columna nueva (`scrolling:column_width`) |
 | `scrollFocusFit` | `ajustar` (por defecto) · `centrar` | al enfocar una columna se trae justo a la vista o se centra (`scrolling:focus_fit_method` 1 / 0) |
@@ -184,8 +186,7 @@ portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si o
 - Opciones por plugin → `plugins` = `{}` ({id: {on, …}}; `on` lo sincroniza la app con hyprpm). `70-plugins.py`
   genera el Lua solo para los activados, dentro de `if has(<plugin>)` + `pcall`: con `--verify-config` o sin el
   plugin cargado no se ejecuta (hyprpm carga el plugin y Hyprland relee la config). Colores de la paleta.
-  Hyprbars: botones cerrar/maximizar/minimizar (al espacio `special:minimized` del shell), por defecto solo en
-  ventanas flotantes (`hyprbars:no_bar` en las que no flotan). HyprExpo / Hyprspace: atajo Super + Mayús + Tab o
+  HyprExpo / Hyprspace: atajo Super + Mayús + Tab o
   Super + Tab (sustituye «Vista general»), sin pisar reasignaciones de Ajustes › Teclado ni gestos en uso.
 - «Cargar al iniciar» (`pluginsAutoload` = `true`): `hyprpm reload -n` en `autostart.lua` (no en sesiones anidadas).
 

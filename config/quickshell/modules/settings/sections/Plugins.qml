@@ -177,8 +177,6 @@ ColumnLayout {
     function hints(p): var {
         const h = [];
         if (!p) return h;
-        if (p.id === "hyprbars")
-            h.push(["Con Hyprbars activado, las ventanas flotantes llevan barra de título con botones para cerrar, maximizar y minimizar (el modo flotante se elige en Ajustes › Escritorio). Doble clic en la barra: maximizar.", false]);
         if (p.id === "hyprexpo" || p.id === "Hyprspace") {
             const b = opt(p.id, "bind", (p.options ?? []).find(o => o.key === "bind")?.def ?? "");
             if (b === "SUPER + TAB") h.push(["Super + Tab abrirá " + p.name + " en lugar de la «Vista general» del shell mientras esté activado.", false]);

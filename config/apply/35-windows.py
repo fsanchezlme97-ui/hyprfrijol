@@ -55,6 +55,9 @@ def hypr_lua(s, c):
     out = []
     if s.get("windowMode", "mosaico") == "flotante":
         out.append('hl.window_rule({ name = "hf-float-all", match = { class = ".*" }, float = true })')
+    else:
+        # En mosaico las apps no maximizan por su cuenta; en flotante su botón de maximizar sí funciona
+        out.append('hl.window_rule({ name = "no-maximize", match = { class = ".*" }, suppress_event = "maximize" })')
     cls = _classes(s)
     big = [x for x in cls if x.lower() not in COMPACT]
     small = [x for x in cls if x.lower() in COMPACT]

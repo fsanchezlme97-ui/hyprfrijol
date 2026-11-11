@@ -1,7 +1,7 @@
 // Menú de ventana (vista "ventana"), como el de GNOME u Openbox: Minimizar, Maximizar / Restaurar, Fijar en
 // todos los espacios, Organizar (snap layouts), Mover a otro espacio y Cerrar, para la ventana activa.
-// Se abre con el botón ⋮ de la barra de título (Hyprbars, config/apply/70-plugins.py: pulsar la barra enfoca antes
-// la ventana) o con Alt + Espacio (hf:ventana). Sale junto al cursor si está sobre la ventana; si no, en su esquina.
+// Se abre con el botón de menú o el clic derecho en la barra de título (TitleBar.qml, solo en la ventana activa) o
+// con Alt + Espacio (hf:ventana). Sale junto al cursor si está sobre la ventana; si no, en su esquina.
 // Esc o un clic fuera lo cierran (Overlay).
 import QtQuick
 import QtQuick.Layouts
