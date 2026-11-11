@@ -1,11 +1,12 @@
 // Contenido de la barra horizontal (design/Main.dc.html, «Barra»), de izquierda a derecha:
-//   [Aplicaciones][一 二 三 … 九] | título ······ onda ······
+//   [Aplicaciones][一 二 三 … 九] | título [gato bongo] ······ onda ······
 //   información (clima · sistema · impresora) → utilidades (pomodoro · cafeína · portapapeles · IA · ajustes) → bandeja
 //   | [privacidad] [wifi vol bat · campana · vie 6 nov 10:11] ← grupo de estado: abre el centro de control
 // Archipiélago: izquierda, onda, información+utilidades+bandeja y grupo de estado, cada uno en su píldora.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Hyprland
 import ".."
 import "../components"
 import "../services"
@@ -33,7 +34,7 @@ Item {
     readonly property real centerStart: !wave.active || !waveFits ? (secondary ? usage.x - 12 : right.x)
         : islands ? Math.min((width - wave.width) / 2, right.x - 26 - wave.width) - 22 - 10
         : waveX
-    readonly property real titleMax: compact ? 240 : Math.max(0, Math.min(300, width * 0.3, centerStart - gapC - titleStart))
+    readonly property real titleMax: compact ? 240 : Math.max(0, Math.min(300, width * 0.3, centerStart - gapC - titleStart - (bongo.visible ? bongo.width + 6 : 0)))
 
     BarPill { id: pillL; bar: root.barWindow; visible: root.islands; x: 0; height: parent.height; width: left.x + left.implicitWidth + (title.visible ? 10 : 3) }
     BarPill { id: pillC; bar: root.barWindow; visible: root.islands && wave.active && root.waveFits; x: wave.x - 10; height: parent.height; width: wave.width + 20 }
@@ -55,6 +56,8 @@ Item {
         Workspaces { id: ws; visible: Settings.barHas("espacios") || root.secondary; screen: root.barWindow.screen }
         Divider { visible: Settings.barHas("espacios") && title.visible }
         ActiveTitle { id: title; screenName: root.barWindow.screen?.name ?? ""; visible: Settings.get("barShowTitle", true) && Settings.barHas("titulo") && text !== "" && root.titleMax >= 48; Layout.leftMargin: 2; Layout.maximumWidth: root.titleMax }
+        // Gato bongo tras el título, solo en la barra de la pantalla con el foco (donde escribes)
+        BongoChip { id: bongo; visible: Settings.barHas("bongo") && root.barWindow.screen?.name === Hyprland.focusedMonitor?.name; Layout.leftMargin: -2 }
         OmarchySlot { barWindow: root.barWindow; place: "izquierda"; visible: any && !root.secondary }   // widgets de plugins de Omarchy (omarchyBarSlot)
     }
 
@@ -71,7 +74,7 @@ Item {
     }
 
     readonly property bool hasInfo: Settings.barHas("clima") || Settings.barHas("recursos") || Settings.barHas("impresora")
-    readonly property bool hasUtil: pomo.visible || cafe.visible || bongo.visible || dictBtn.visible || clipBtn.visible || aiBtn.visible || gearBtn.visible || tray.visible
+    readonly property bool hasUtil: pomo.visible || cafe.visible || dictBtn.visible || clipBtn.visible || aiBtn.visible || gearBtn.visible || tray.visible
     // Pantalla secundaria: a la derecha, todos los programas abiertos con lo que gastan
     Loader {
         id: usage
@@ -98,7 +101,6 @@ Item {
         // Utilidades
         Divider { visible: root.hasInfo && root.hasUtil; Layout.leftMargin: 4; Layout.rightMargin: 4 }
         PomodoroChip { id: pomo; visible: Settings.barHas("pomodoro") }
-        BongoChip { id: bongo; visible: Settings.barHas("bongo") }   // gato bongo: golpea al escribir (junto al pomodoro)
         CaffeineChip { id: cafe; visible: Settings.barHas("cafeina") }
         IconBtn { id: dictBtn; visible: Settings.barHas("dictado"); icon: "mic"; active: Shell.dictPhase === "rec"; tooltip: Shell.dictPhase === "rec" ? "Dictando · clic para terminar" : "Dictado · Super + Alt + D"; onClicked: Shell.dictToggle() }
         IconBtn { id: clipBtn; visible: Settings.barHas("portapapeles"); icon: "clipboard"; tooltip: "Portapapeles"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // abre Spotlight en modo portapapeles
@@ -106,7 +108,7 @@ Item {
         IconBtn { id: gearBtn; visible: Settings.barHas("ajustes"); icon: "gear"; onClicked: Shell.open("ajustesapp") }   // Ajustes (tuerca; opcional, ya está en el panel)
         OmarchySlot { barWindow: root.barWindow; place: "derecha" }     // widgets de plugins de Omarchy (omarchyBarSlot)
         // Separa los botones propios (asistente, ajustes…) de los iconos de las apps (bandeja)
-        Divider { visible: tray.visible && (pomo.visible || cafe.visible || bongo.visible || clipBtn.visible || aiBtn.visible || gearBtn.visible); Layout.leftMargin: 4; Layout.rightMargin: 0 }
+        Divider { visible: tray.visible && (pomo.visible || cafe.visible || clipBtn.visible || aiBtn.visible || gearBtn.visible); Layout.leftMargin: 4; Layout.rightMargin: 0 }
         Tray { id: tray; barWindow: root.barWindow; visible: Settings.get("barTray", true) && any; Layout.leftMargin: 4 }
         // Estado: privacidad + red, sonido, batería, notificaciones y reloj (un solo botón: centro de control)
         Item {

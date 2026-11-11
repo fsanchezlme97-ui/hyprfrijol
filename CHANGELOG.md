@@ -3,6 +3,11 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.41] — 2026-11-11
+
+- Gato bongo: va justo después del título de la ventana activa, en la barra de la pantalla con el foco (donde
+  escribes); con dos pantallas se pasa a la otra al cambiar el foco. Antes iba entre las utilidades de la derecha.
+
 ## [0.8.40] — 2026-11-11
 
 - Espacios por pantalla arreglados con una principal guardada que ya no existe (HDMI-A-1 → HDMI-A-2 al añadir una
