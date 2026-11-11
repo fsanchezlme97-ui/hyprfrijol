@@ -252,7 +252,7 @@ Item {
                                     font.family: root.emojiFont
                                     font.pixelSize: 24
                                     scale: cellMa.containsMouse ? 1.15 : 1
-                                    Behavior on scale { NumberAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                                    Behavior on scale { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                                 }
                                 MouseArea {
                                     id: cellMa

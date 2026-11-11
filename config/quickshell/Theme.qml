@@ -7,7 +7,7 @@ pragma Singleton
 //                             shadow shadowBig shBlur shY · card cardBorder · barRadius panelRadius winRadius · blur
 //           estilo: Math (Material 3), sólido o con transparencia (cristal: transparente y desenfocado)
 //                    · tonal (cristal con «Reducir transparencia»). La geometría (radios): Ajustes › Apariencia › Redondeo
-//  Movimiento: dur durIn durOut · ease easeIn easeOut (theme.json motion)
+//  Movimiento: dur durIn durOut · durShort durMedium durLong durXLong · ease easeIn easeOut (theme.json motion)
 //  Tipografía: font, size(px) — tamaño base 12.5 como en el diseño
 //  Nota: en QML los nombres "on" + mayúscula son manejadores, por eso pText (=onP), pcText (=onPc)…
 import QtQuick
@@ -112,8 +112,17 @@ Singleton {
     readonly property int dur: still ? 0 : (motion.dur ?? 260)            // transiciones de estado
     readonly property int durIn: still ? 0 : (motion.durIn ?? 420)        // aparición de paneles
     readonly property int durOut: still ? 0 : (motion.durOut ?? 180)      // cierre de paneles
-    // Duración fija de un detalle (hover, pulsación, cambio de color) que sigue la velocidad elegida y se anula con
-    // «Reducir movimiento»: Theme.ms(140)
+    // Tokens de movimiento de Math (como Material 3): salen del preset y la velocidad, como dur/durIn/durOut.
+    //   durShort   hover, cambios de color, interruptores      (Equilibrado ≈ 130 ms)
+    //   durMedium  chips, menús, tooltips                       (≈ 220 ms)
+    //   durLong    paneles, popups, deslizamientos               (≈ 360 ms)
+    //   durXLong   transiciones de pantalla completa, overview   (≈ 500 ms)
+    readonly property int durShort: Math.round(dur * 0.5)
+    readonly property int durMedium: Math.round(dur * 0.85)
+    readonly property int durLong: Math.round(durIn * 0.85)
+    readonly property int durXLong: Math.round(durIn * 1.2)
+    // Duración fija que sigue a un dato o al tiempo real (nivel del micro, progreso, cuenta atrás): sigue la
+    // velocidad elegida y se anula con «Reducir movimiento», pero no el preset. Lo demás usa los tokens.
     function ms(n: real): int { return still ? 0 : Math.round(n / (motion.speed || 1)); }
     // Curvas: «ease» desacelera al entrar; «easeIn» es la de aparición (con un leve rebote en Fluido);
     // «easeOut» acelera al salir

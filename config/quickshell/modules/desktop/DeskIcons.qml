@@ -86,7 +86,7 @@ PanelWindow {
                     border.width: cell.sel ? 1 : 0
                     border.color: Qt.alpha(Theme.p, 0.85)
                     opacity: cell.sel || cell.hot ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: Theme.ms(110); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                    Behavior on opacity { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                 }
 
                 Item {

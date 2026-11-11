@@ -8,8 +8,8 @@ illogical-impulse (end-4) y Omarchy 4.5 (noviembre de 2026). Al terminar algo, s
 Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar una fase se marca aquí.
 
 1. [x] [Temas](planes/temas.md), fase 1: estilo único Math, interruptor de transparencia, fuera Chroma y SkySoul (0.9.0).
-2. [ ] [Animaciones y efectos](planes/animaciones.md), fases 1–3: tokens de movimiento, duraciones fijas, sección
-       unificada y atajo de modo juego.
+2. [x] [Animaciones y efectos](planes/animaciones.md), fases 1–3: tokens de movimiento, duraciones fijas, sección
+       unificada y atajo de modo juego (0.9.1).
 3. [ ] [Temas](planes/temas.md), fase 2: 13 temas oficiales en pares oscuro y claro.
 4. [ ] [Asistente de IA](planes/asistente-ia.md), fases 1–2: categoría propia y privacidad.
 5. [ ] [Productividad](planes/productividad.md), fases 1–3: categoría, portapapeles y tareas.
@@ -17,7 +17,6 @@ Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar 
 
 ## Baratos de añadir (primero)
 
-- [ ] **Modo juego** (va en el plan de Animaciones): un atajo que quita animaciones, desenfoque, sombras, redondeo y huecos (y los devuelve).
 - [ ] **Ajustes de la barra por pantalla**: mostrar u ocultar la barra y sus módulos en cada monitor.
 - [ ] **Paquete en el AUR** (`hyprfrijol-git`), para poder probarlo sin clonar.
 

@@ -21,6 +21,7 @@ Singleton {
     property var arg: null
     // Modo sin distracciones (barra oculta, sin huecos)
     property bool focusMode: false
+    property bool gameMode: false
     // Ancho actual del panel lateral (lo pone el panel: cada web app tiene el suyo); 0 = aún no se sabe
     property real sideW: 0
     // Panel lateral fijado (sidePanelPinned, modules/sidepanel/SidePanel.qml): sidePinned = fijado y activo (reserva su
@@ -123,6 +124,18 @@ Singleton {
         if (on) close();
     }
 
+    // Modo juego (Super + Mayús + G): sin animaciones, desenfoque, sombras, redondeo, huecos ni bordes, en caliente;
+    // al salir, hyprctl reload devuelve lo de settings.lua (como el modo sin distracciones)
+    function setGameMode(on: bool): void {
+        gameMode = on;
+        if (on)
+            Hyprland.dispatch("function() hl.config({ animations = { enabled = false }, general = { gaps_in = 0, gaps_out = 0, border_size = 0 }, decoration = { rounding = 0, blur = { enabled = false }, shadow = { enabled = false } } }) end");
+        else
+            reloader.running = true;
+        exec(["notify-send", "-a", "HyprFrijol", "-i", "input-gaming", on ? "Modo juego activado" : "Modo juego desactivado",
+              on ? "Sin animaciones ni efectos. Super + Mayús + G para volver." : "Vuelven tus animaciones y efectos."]);
+    }
+
     // Ejecuta un comando sin esperar (atajo para todos los módulos)
     function exec(cmd): void { Quickshell.execDetached(Array.isArray(cmd) ? cmd : ["sh", "-c", cmd]); }
     // Dispatch de Hyprland en Lua (0.57+): Shell.dispatch('hl.dsp.focus({ workspace = 3 })')
@@ -139,6 +152,7 @@ Singleton {
         function preload(view: string): void { root.preload(view); }      // carga diferida: crear la vista en segundo plano
         function current(): string { return root.view; }
         function focus(): void { root.setFocusMode(!root.focusMode); }
+        function game(): void { root.setGameMode(!root.gameMode); }
         function toggleBar(): void { root.barHidden = !root.barHidden; }
         function setAiSpeaking(on: bool): void { root.aiSpeaking = on; }
     }
@@ -159,6 +173,10 @@ Singleton {
     GlobalShortcut {
         appid: "hf"; name: "enfoque"; description: "HyprFrijol: modo sin distracciones"
         onPressed: root.setFocusMode(!root.focusMode)
+    }
+    GlobalShortcut {
+        appid: "hf"; name: "juego"; description: "HyprFrijol: modo juego"
+        onPressed: root.setGameMode(!root.gameMode)
     }
     GlobalShortcut {
         appid: "hf"; name: "barra"; description: "HyprFrijol: mostrar / ocultar la barra"

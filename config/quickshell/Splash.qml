@@ -64,7 +64,7 @@ PanelWindow {
             anchors.verticalCenterOffset: -16
             spacing: 26
             opacity: win.logo ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: Theme.ms(220); easing.type: Easing.OutCubic } }
+            Behavior on opacity { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
             Image {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 112; height: 112
@@ -82,7 +82,7 @@ PanelWindow {
                     height: parent.height; radius: 1.5
                     width: parent.width * win.progress
                     color: Theme.p
-                    Behavior on width { enabled: win.progress >= 1; NumberAnimation { duration: Theme.ms(200); easing.type: Easing.OutCubic } }
+                    Behavior on width { enabled: win.progress >= 1; NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
                 }
             }
         }

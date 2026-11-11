@@ -40,11 +40,11 @@ Item {
     }
     ParallelAnimation {
         id: anim
-        NumberAnimation { target: circle; property: "k"; from: 0.1; to: 1; duration: 420; easing.type: Easing.OutCubic }
+        NumberAnimation { target: circle; property: "k"; from: 0.1; to: 1; duration: Theme.durLong; easing.type: Easing.OutCubic }
         SequentialAnimation {
             NumberAnimation { target: circle; property: "opacity"; from: 0; to: 0.16; duration: 80 }
-            PauseAnimation { duration: 140 }
-            NumberAnimation { target: circle; property: "opacity"; to: 0; duration: 280 }
+            PauseAnimation { duration: Theme.durShort }
+            NumberAnimation { target: circle; property: "opacity"; to: 0; duration: Theme.durMedium }
         }
     }
 }

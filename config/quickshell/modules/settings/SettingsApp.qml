@@ -22,6 +22,7 @@ Scope {
 
     readonly property var nav: [
         { key: "apariencia", label: "Apariencia", icon: "palette", file: "Apariencia", sub: "matugen · hf-apply · settings.lua", kw: "tema color estilo math transparencia transparente cristal material vidrio paleta monocromo claro oscuro automático según la hora fondo esquinas redondeo forma squircle espacio gaps escala interfaz tipografía fuente letra tamaño del texto animaciones gtk qt" },
+        { key: "animaciones", label: "Animaciones y efectos", icon: "sparkle", file: "Animaciones", sub: "hl.animation · decoration · blur", kw: "animaciones movimiento velocidad preset fluido rápido mínimo rebote espacios deslizar fundido vertical sombras resaltado borde ventana activa atenuar inactivas dim desenfoque blur cristal transparencia batería juegos modo juego gpu efectos rendimiento" },
         { key: "fondos", label: "Fondos de pantalla", icon: "image", file: "Fondos", sub: "hf-wallpaper · mpvpaper · matugen", kw: "fondo wallpaper video animado movimiento escenas cambio automático cada orden al azar según la hora colección transición fps wallhaven buscar descargar fondos internet caché clave api" },
         { key: "barra", label: "Barra", icon: "layout", file: "Barra", sub: "quickshell · bar/", kw: "barra posición arriba abajo izquierda derecha forma fija flotante isla tamaño altura grosor módulos reloj ocultar automáticamente ocultación inteligente esquivar ventanas comportamiento avisos emergentes osd onda audio título transparente" },
         { key: "escritorio", label: "Escritorio y gestos", icon: "grid", file: "Escritorio", sub: "hyprland · general:layout · gestures", kw: "modo de ventanas flotantes flotante mosaico escritorio clásico iconos del escritorio archivos carpeta widgets dock minimizar maximizar ocultación inteligente esquivar ocultar automáticamente numeración japonesa romana arábiga puntos kanji 1 9 esquinas calientes gestos touchpad mosaico dwindle master scrolling desplazamiento columnas cinta ancho de columna enfocar cursor acoplar espacios de trabajo nombres iconos emoji clima ciudad impresora 3d" },
@@ -321,7 +322,7 @@ Scope {
                                     implicitHeight: 32
                                     radius: Theme.r(5)
                                     color: it.on ? Theme.selBg : ma.containsMouse ? Qt.alpha(Theme.t, 0.05) : "transparent"
-                                    Behavior on color { ColorAnimation { duration: Theme.ms(160); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                                    Behavior on color { ColorAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                                     RowLayout {
                                         anchors.fill: parent
                                         anchors.leftMargin: 12

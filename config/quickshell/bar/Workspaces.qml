@@ -55,9 +55,9 @@ Item {
         width: root.cur?.width ?? 0; height: root.cur?.height ?? 0
         radius: Theme.r(6)
         color: Theme.p
-        Behavior on x { enabled: root.slideOn && !Theme.still; NumberAnimation { duration: Theme.ms(380); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }
-        Behavior on y { enabled: root.slideOn && !Theme.still; NumberAnimation { duration: Theme.ms(380); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }
-        Behavior on width { enabled: root.slideOn && !Theme.still; NumberAnimation { duration: Theme.ms(380); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }
+        Behavior on x { enabled: root.slideOn && !Theme.still; NumberAnimation { duration: Theme.durLong; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }
+        Behavior on y { enabled: root.slideOn && !Theme.still; NumberAnimation { duration: Theme.durLong; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }
+        Behavior on width { enabled: root.slideOn && !Theme.still; NumberAnimation { duration: Theme.durLong; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }
     }
 
     Grid {

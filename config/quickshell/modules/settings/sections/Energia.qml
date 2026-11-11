@@ -207,26 +207,9 @@ RowLayout {
     Layout.alignment: Qt.AlignTop
     spacing: 12
     Section {
-        id: glass
         Layout.fillWidth: true
-        title: "Rendimiento del cristal (transparencia)"
-        readonly property string q: Settings.get("blurQuality", "equilibrada")
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 10
-            Card { title: "Alta"; sub: "Máximo detalle"; selected: glass.q === "alta"; onClicked: Settings.set("blurQuality", "alta") }
-            Card { title: "Equilibrada"; sub: "Menos GPU"; selected: glass.q === "equilibrada"; onClicked: Settings.set("blurQuality", "equilibrada") }
-            Card { title: "Ahorro"; sub: "Sin desenfoque"; selected: glass.q === "ahorro"; onClicked: Settings.set("blurQuality", "ahorro") }
-        }
-        Mono {
-            Layout.fillWidth: true
-            text: glass.q === "alta" ? "decoration:blur → size 10 · passes 3 · vibrancy 0.25"
-                : glass.q === "equilibrada" ? "decoration:blur → size 7 · passes 2 · vibrancy 0.17"
-                : "decoration:blur → enabled = false"
-        }
-        SwRow { label: "Bajar calidad con batería"; sub: "Quita el desenfoque al desconectar el cargador"; key: "blurOnBattery"; def: true }
-        SwRow { label: "Quitar efectos en juegos"; sub: "pantalla completa sin desenfoque ni sombras"; key: "gameNoFx"; def: true }
-        SwRow { label: "Ajustar según la GPU"; sub: "Detecta equipos modestos y elige solo"; key: "blurAuto"; def: true }
+        title: "Efectos y rendimiento"
+        LinkRow { label: "Calidad del desenfoque, efectos en juegos y con batería"; section: "animaciones"; sectionLabel: "Animaciones y efectos"; target: "Desenfoque y rendimiento" }
         SwRow { label: "Pantalla de carga al entrar"; sub: "el frijolito y una barrita si el fondo y la barra tardan en cargar"; key: "startSplash"; def: true }
     }
     Section {

@@ -174,8 +174,8 @@ PanelWindow {
                                 readonly property bool act: modelData.address === HyprClients.activeAddress && !WinMode.isMin(modelData)
                                 width: dockWin.bottom ? (act ? 12 : 4) : 3; height: dockWin.bottom ? 3 : (act ? 12 : 4); radius: 1.5
                                 color: WinMode.isMin(modelData) ? Theme.o : Theme.p
-                                Behavior on width { NumberAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
-                                Behavior on height { NumberAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                                Behavior on width { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                                Behavior on height { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                             }
                         }
                     }

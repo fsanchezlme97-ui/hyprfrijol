@@ -175,3 +175,6 @@ Nuevo `components/Motion.qml` (o funciones en `Theme.qml`) con transiciones list
 - La vista previa en vivo va al final.
 - Nota al comprobar el código: hay 39 duraciones escritas a mano (157 ya usan `Theme`), así que la auditoría es
   corta; y la opacidad de las ventanas inactivas ya existe (`inactive_opacity` 0.97 con desenfoque).
+- Al implementar (0.9.1): no se añadieron los tokens de curvas (`easeStandard`…): `ease`, `easeIn` y `easeOut` ya
+  salen del preset y nada más los usaría. Las 12 duraciones que siguen a un dato (progreso, nivel del micro, cuenta
+  atrás) y los bucles (giros de carga, pulsos) se quedan fijos a propósito.

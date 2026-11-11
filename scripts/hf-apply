@@ -424,17 +424,23 @@ def motion_shell(s):
     m.update(preset=p, speed=k)
     return m
 
+# Cambio de espacio (Ajustes › Animaciones y efectos › Espacios); «auto» = el del preset
+WORKSPACE_ANIM = {"slide": "slide", "slidefade": "slidefade 14%", "fade": "fade", "slidevert": "slidevert"}
+
 def motion_lua(s):
     p, k = motion_preset(s)
     if p == "ninguno":
         return []
     d = MOTION[p]
+    ws = WORKSPACE_ANIM.get(s.get("workspaceAnim"))
     out = ["-- movimiento: " + p + (" ×%g" % k if k != 1 else "")]
     for name, (x1, y1, x2, y2) in d["curves"].items():
         out.append('hl.curve("%s", { type = "bezier", points = { {%g, %g}, {%g, %g} } })' % (name, x1, y1, x2, y2))
     for a in d["anims"]:
         leaf, speed, curve, style = a[:4]
         on = a[4] if len(a) > 4 else True
+        if leaf == "workspaces" and ws:
+            style = ws
         sp = max(0.5, round(speed / k, 2))
         st = (', style = "%s"' % style) if style else ""
         out.append('hl.animation({ leaf = "%s", enabled = %s, speed = %g, bezier = "%s"%s })'
@@ -581,6 +587,7 @@ def hypr_lua(c, S, s):
         # nada más ni cuesta: solo se desenfoca detrás de lo translúcido. Fuera con «Ahorro» o menos transparencias.
         f"        blur = {{ enabled = {'false' if focus or s.get('blurQuality') == 'ahorro' or s.get('reduceTransparency') else 'true'} }},",
         f"        inactive_opacity = {0.97 if S['blur'] else 1.0},",
+        f"        dim_inactive = {'true' if s.get('dimInactive') and not focus else 'false'}, dim_strength = 0.12,",
         "    },",
         f"    animations = {{ enabled = {'true' if anim else 'false'} }},",
         f'    misc = {{ background_color = "{rgba_hypr(c["bg"])}" }},',

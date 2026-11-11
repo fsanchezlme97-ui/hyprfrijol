@@ -95,12 +95,12 @@ Overlay {
                                 border.width: win.sel === cell.index ? 2 : 0
                                 border.color: cell.modelData.primary ? Theme.t : Theme.p
                                 scale: ma.pressed ? 0.95 : cell.hot ? 1.04 : 1
-                                Behavior on scale { NumberAnimation { duration: Theme.ms(140); easing.type: Easing.OutCubic } }
+                                Behavior on scale { NumberAnimation { duration: Theme.durShort; easing.type: Easing.OutCubic } }
                                 Rectangle {
                                     anchors.fill: parent; radius: parent.radius
                                     color: cell.modelData.primary ? Theme.pText : Theme.t
                                     opacity: cell.hot ? 0.08 : 0
-                                    Behavior on opacity { NumberAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                                    Behavior on opacity { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                                 }
                                 Icon {
                                     anchors.centerIn: parent

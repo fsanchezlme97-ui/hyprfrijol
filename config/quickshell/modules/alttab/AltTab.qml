@@ -153,7 +153,7 @@ Overlay {
                         color: on ? Theme.fill2 : ma.containsMouse ? Qt.alpha(Theme.fill2, 0.5) : "transparent"
                         border.width: on ? 2 : 0
                         border.color: Qt.alpha(Theme.p, 0.7)
-                        Behavior on color { ColorAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                        Behavior on color { ColorAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
                         ColumnLayout {
                             id: col

@@ -22,7 +22,7 @@ Rectangle {
         x: root.checked ? parent.width - width - 3 : 5
         color: root.checked ? Theme.pText : Theme.o
         Behavior on x { NumberAnimation { duration: Theme.dur + 60; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
-        Behavior on width { NumberAnimation { duration: Theme.ms(160); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+        Behavior on width { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
         Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
     MouseArea {

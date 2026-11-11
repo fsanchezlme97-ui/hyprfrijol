@@ -97,7 +97,7 @@ PanelWindow {
                     width: parent.width * Math.max(0, Math.min(1, win.level))
                     height: parent.height; radius: 2
                     color: win.kind === "volumen" && Audio.muted ? Theme.o : Theme.p
-                    Behavior on width { NumberAnimation { duration: Theme.ms(120); easing.type: Easing.OutCubic } }
+                    Behavior on width { NumberAnimation { duration: Theme.durShort; easing.type: Easing.OutCubic } }
                 }
             }
             Txt {

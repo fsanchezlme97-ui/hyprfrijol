@@ -206,7 +206,7 @@ Scope {
                     color: Theme.fill2
                     border.width: 1
                     border.color: root.error ? Qt.alpha(Theme.ter, 0.8) : field.activeFocus ? Qt.alpha(Theme.p, 0.6) : Theme.ov
-                    Behavior on border.color { ColorAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                    Behavior on border.color { ColorAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                     Txt {
                         anchors.left: parent.left; anchors.leftMargin: 14
                         anchors.verticalCenter: parent.verticalCenter

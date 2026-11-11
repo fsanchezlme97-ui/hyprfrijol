@@ -3,6 +3,17 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.1] — 2026-11-11
+
+### Añadido
+- **Ajustes › Animaciones y efectos**: una sección con el movimiento, las sombras, el resaltado de la ventana activa y el desenfoque (antes repartidos entre Apariencia y Energía, que ahora enlazan aquí).
+- **Modo juego** (Super + Mayús + G): quita al momento animaciones, desenfoque, sombras, redondeo, huecos y bordes; otra vez, y vuelven.
+- **Atenuar ventanas inactivas** (oscurece un poco las que no tienen el foco).
+- **Estilo del cambio de espacio**: según el preset, deslizar, con fundido, fundido o vertical.
+
+### Cambiado
+- Los detalles del shell (hover, cambios de color, chips, menús, la onda al pulsar) siguen ahora al preset de movimiento: Rápido los acorta y Fluido los alarga. Antes solo seguían a la velocidad.
+
 ## [0.9.0] — 2026-11-11
 
 ### Cambiado

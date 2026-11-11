@@ -24,7 +24,7 @@ Rectangle {
     radius: thick / 2
     color: Theme.t
     opacity: ma.containsMouse || ma.pressed || flick.moving ? 0.45 : 0.22
-    Behavior on opacity { NumberAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+    Behavior on opacity { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
     MouseArea {
         id: ma

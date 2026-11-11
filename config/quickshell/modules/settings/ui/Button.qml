@@ -13,7 +13,7 @@ Rectangle {
     implicitHeight: h
     implicitWidth: kind === "link" ? t.implicitWidth : t.implicitWidth + 26
     radius: Theme.ctl(h)
-    Behavior on scale { NumberAnimation { duration: Theme.ms(160); easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
+    Behavior on scale { NumberAnimation { duration: Theme.durShort; easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
     opacity: enabled ? 1 : 0.45
     color: kind === "primary" ? Theme.p : "transparent"
     border.width: kind === "outline" ? 1 : 0

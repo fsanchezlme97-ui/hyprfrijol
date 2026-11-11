@@ -352,7 +352,7 @@ Scope {
                                 border.width: Qt.colorEqual(root.picked, modelData) ? 2 : 1
                                 border.color: Qt.colorEqual(root.picked, modelData) ? Theme.p : Theme.ov
                                 scale: swMa.containsMouse ? 1.1 : 1
-                                Behavior on scale { NumberAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                                Behavior on scale { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                                 MouseArea {
                                     id: swMa
                                     anchors.fill: parent

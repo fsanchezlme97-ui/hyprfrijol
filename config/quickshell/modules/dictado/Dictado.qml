@@ -250,7 +250,7 @@ Scope {
             scale: win.shown ? 1 : 0.94
             Behavior on opacity { NumberAnimation { id: fade; duration: win.shown ? Theme.durIn : 220; easing.type: Easing.OutCubic } }
             Behavior on scale { NumberAnimation { duration: Theme.durIn; easing.type: Easing.OutCubic } }
-            Behavior on width { NumberAnimation { duration: Theme.ms(180); easing.type: Easing.OutCubic } }
+            Behavior on width { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
 
             RowLayout {
                 id: row

@@ -175,8 +175,8 @@ Scope {
                     anchors.fill: parent
                     opacity: root.state === "ok" ? 0 : 1
                     scale: root.state === "ok" ? 1.02 : 1
-                    Behavior on opacity { NumberAnimation { duration: Theme.ms(220); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
-                    Behavior on scale { NumberAnimation { duration: Theme.ms(260); easing.type: Easing.OutCubic } }
+                    Behavior on opacity { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                    Behavior on scale { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
 
                     // ---- Reloj, fecha y avisos (arriba a la izquierda) ----
                     ColumnLayout {
@@ -251,7 +251,7 @@ Scope {
                             color: Theme.glassPanel
                             border.width: 1
                             border.color: root.state === "error" ? Qt.alpha(Theme.ter, 0.8) : input.activeFocus ? Qt.alpha(Theme.p, 0.55) : Theme.border
-                            Behavior on border.color { ColorAnimation { duration: Theme.ms(160); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                            Behavior on border.color { ColorAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                             transform: Translate { id: shakeT }
                             SequentialAnimation {
                                 id: shakeAnim

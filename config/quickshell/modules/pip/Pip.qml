@@ -401,7 +401,7 @@ Scope {
             color: Theme.glassPopup
             border.width: Theme.borderWidth; border.color: Theme.border
             opacity: ctl.showCtl ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+            Behavior on opacity { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
             Column {
                 id: col
                 anchors.centerIn: parent

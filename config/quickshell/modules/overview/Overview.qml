@@ -187,7 +187,7 @@ Overlay {
                             readonly property bool dropHere: drop.containsDrag && win.dropWs === cell.wsId
                             border.width: dropHere || cell.current || cell.selected ? 2 : (empty ? 0 : 1)
                             border.color: dropHere ? Theme.p : cell.current ? Theme.p : cell.selected ? Qt.alpha(Theme.p, 0.6) : Theme.ov
-                            Behavior on border.color { ColorAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                            Behavior on border.color { ColorAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
                             // borde discontinuo para los vacíos
                             Canvas {
@@ -278,7 +278,7 @@ Overlay {
                                         Drag.hotSpot.x: width / 2
                                         Drag.hotSpot.y: height / 2
                                         scale: dragArea.drag.active ? 0.9 : 1
-                                        Behavior on scale { NumberAnimation { duration: Theme.ms(120); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                                        Behavior on scale { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
                                         WindowThumb {
                                             anchors.fill: parent

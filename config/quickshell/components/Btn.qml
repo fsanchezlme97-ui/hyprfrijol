@@ -22,7 +22,7 @@ Rectangle {
     implicitHeight: h
     implicitWidth: row.implicitWidth + padX * 2
     radius: Theme.ctl(h)
-    Behavior on scale { NumberAnimation { duration: Theme.ms(160); easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
+    Behavior on scale { NumberAnimation { duration: Theme.durShort; easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
     opacity: enabled ? 1 : 0.45
     color: kind === "primary" || active ? Theme.p : kind === "tonal" ? Theme.fill2 : "transparent"
     border.width: kind === "outline" ? 1 : 0
@@ -34,7 +34,7 @@ Rectangle {
         radius: parent.radius
         color: Theme.light ? "#000000" : "#FFFFFF"
         opacity: mouse.containsMouse && root.enabled ? (mouse.pressed ? 0.10 : 0.06) : 0
-        Behavior on opacity { NumberAnimation { duration: Theme.ms(140); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+        Behavior on opacity { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
     Ripple { id: rip; anchors.fill: parent; radius: root.radius; color: root.fg }
     RowLayout {

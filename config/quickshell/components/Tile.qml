@@ -15,7 +15,7 @@ Rectangle {
     implicitHeight: 44
     radius: Theme.pill ? Math.min(height / 2, Theme.r(11)) : Theme.r(8)
     color: on ? Theme.fillOn : Theme.fill2
-    Behavior on scale { NumberAnimation { duration: Theme.ms(180); easing.type: Easing.OutBack; easing.overshoot: 2 } }
+    Behavior on scale { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutBack; easing.overshoot: 2 } }
     Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     readonly property color fg: on ? Theme.fillOnText : Theme.t
     Rectangle {
