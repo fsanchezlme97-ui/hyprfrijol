@@ -225,7 +225,7 @@ Son los mismos que en illogical-impulse (misma tecla, misma función), más los 
 | Super + Alt + flechas · Super + Shift + flechas | Mover el foco · mover la ventana |
 | Super + Alt + W | Organizar ventanas |
 | Alt + Tab · Alt + Shift + Tab · Alt + º | Cambiar de ventana · atrás · misma app |
-| Super + 1…0 · Super + Shift + 1…0 · Super + Alt + 1…0 | Ir a espacio · mover ventana · enviar sin seguirla |
+| Super + 1…0 · Super + Shift + 1…0 · Super + Alt + 1…0 | Ir a espacio · mover ventana · enviar sin seguirla (con varias pantallas, los de la pantalla activa) |
 | Super + Ctrl + ← → | Espacio anterior / siguiente |
 | Super + S · Super + Alt + S | Espacio oculto (scratchpad) · enviar ventana ahí |
 | Impr Pant · Shift/Ctrl + Impr Pant | Captura · pantalla completa |

@@ -3,8 +3,12 @@ pragma Singleton
 //   "japonesa" (por defecto: 一 二 三 …) · "arabiga" (1 2 3) · "romana" (I II III) · "puntos" (•)
 // Los nombres e iconos propios ("wsNames", "wsIcons") ganan siempre al número.
 //   WsLabel.numeral(3) → "三"   ·   WsLabel.font → familia con glifos CJK para la japonesa
+// Espacios por pantalla ("wsPerMonitor", por defecto sí): la pantalla k usa del k·10+1 al k·10+10, como
+// HF.wsBase en binds.lua (la principal primero, luego las de Ajustes por nombre, luego las demás por id).
+//   WsLabel.base("VGA-1") → 10   ·   WsLabel.local(13) → 3 (el número que se ve)   ·   WsLabel.owns("VGA-1", 13)
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import ".."
 
 Singleton {
@@ -37,5 +41,19 @@ Singleton {
         const s = st ?? style;
         return s === "japonesa" ? japanese(n) : s === "romana" ? roman(n) : s === "puntos" ? "•" : String(n);
     }
+    readonly property bool perMonitor: Settings.get("wsPerMonitor", true) !== false
+    readonly property var groups: {
+        const prim = String(Settings.get("primaryMonitor", "") ?? "");
+        const known = Object.keys(Settings.get("monitors", ({})) ?? ({})).filter(n => n !== prim).sort();
+        const g = (prim ? [prim] : []).concat(known);
+        return g.concat(Hyprland.monitors.values.filter(m => !g.includes(m.name)).sort((a, b) => a.id - b.id).map(m => m.name));
+    }
+    function base(monitorName): int {
+        if (!perMonitor) return 0;
+        const i = groups.indexOf(String(monitorName ?? ""));
+        return i < 0 ? 0 : i * 10;
+    }
+    function local(id: int): int { return perMonitor && id > 10 ? (id - 1) % 10 + 1 : id; }
+    function owns(monitorName, id: int): bool { const b = base(monitorName); return !perMonitor || (id > b && id <= b + 10); }
     function fontFor(st): string { return (st ?? style) === "japonesa" ? "Noto Sans CJK JP" : Theme.font; }
 }

@@ -132,6 +132,7 @@ ColumnLayout {
             }
         }
         SwRow { label: "Mostrar siempre los 9"; sub: "si no, solo los espacios con ventanas y el activo"; key: "wsShowAll"; def: true }
+        SwRow { label: "Espacios por pantalla"; sub: "con varias pantallas, cada una tiene sus espacios del 1 al 10 y Super + número va a los de la pantalla activa"; key: "wsPerMonitor"; def: true }
     }
 
     // Nombres e iconos de los espacios 1–10 (wsNames, wsIcons, wsBarNames) · ui/WsNames.qml

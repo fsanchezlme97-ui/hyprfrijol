@@ -96,6 +96,7 @@
   "wsBarNames": false,
   "wsNumerals": "japonesa",
   "wsShowAll": true,
+  "wsPerMonitor": true,
   "chargeLimit": 100,
   "deskSort": "tipo",
   "deskIcons": "no",

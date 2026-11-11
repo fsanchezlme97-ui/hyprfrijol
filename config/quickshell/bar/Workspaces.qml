@@ -3,6 +3,7 @@
 //   "wsShowAll"  true (por defecto) → siempre del 1 al 9 (y cualquier otro ocupado); false → solo los
 //                ocupados y el activo
 //   "wsNumerals" numeración: japonesa (一 二 三, por defecto) · arábiga · romana · puntos (services/WsLabel.qml)
+//   "wsPerMonitor" true (por defecto) → cada pantalla muestra solo sus espacios (WsLabel.base / local)
 // Nombres e iconos ("wsNames", "wsIcons") ganan al número: en horizontal se ven «icono nombre» si
 // "wsBarNames" (si no, el icono o el número); en vertical, el icono o el número.
 import QtQuick
@@ -18,12 +19,15 @@ Grid {
     property bool vertical: false
     readonly property var monitor: Hyprland.monitorFor(screen)
     readonly property int activeId: monitor?.activeWorkspace?.id ?? 1
-    readonly property var occupied: Hyprland.workspaces.values.filter(w => w.id > 0 && w.toplevels.values.length > 0).map(w => w.id)
+    // Espacios por pantalla (WsLabel.perMonitor): solo los de esta pantalla, numerados del 1 al 10
+    readonly property int base: WsLabel.base(monitor?.name)
+    readonly property var occupied: Hyprland.workspaces.values.filter(w => w.id > 0 && w.toplevels.values.length > 0
+        && (!WsLabel.perMonitor || w.monitor === monitor)).map(w => w.id)
     readonly property bool showAll: Settings.get("wsShowAll", true) !== false
     readonly property var ids: {
         const s = new Set(occupied);
         if (activeId > 0) s.add(activeId);
-        if (showAll) for (let i = 1; i <= 9; i++) s.add(i);
+        if (showAll) for (let i = 1; i <= 9; i++) s.add(base + i);
         return [...s].sort((a, b) => a - b);
     }
     readonly property var names: Settings.get("wsNames", ({})) ?? ({})
@@ -49,9 +53,9 @@ Grid {
             readonly property int n: modelData
             readonly property bool active: n === root.activeId
             readonly property bool used: root.occupied.includes(n)
-            readonly property string own: root.custom(n)
+            readonly property string own: root.custom(WsLabel.local(n))
             readonly property bool dot: root.dots && own === ""
-            readonly property string text: own || WsLabel.numeral(n)
+            readonly property string text: own || WsLabel.numeral(WsLabel.local(n))
             readonly property bool wide: own !== "" || text.length > 1
             width: root.vertical ? 24 : dot ? 14 : wide ? Math.max(20, lbl.implicitWidth + 12) : 20
             height: root.vertical ? (dot ? 14 : 22) : 20
@@ -86,7 +90,7 @@ Grid {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: Hyprland.dispatch(`hl.dsp.focus({ workspace = ${cell.n} })`)
-                onWheel: w => Hyprland.dispatch(`hl.dsp.focus({ workspace = "${w.angleDelta.y > 0 ? "e-1" : "e+1"}" })`)
+                onWheel: w => Hyprland.dispatch(`hl.dsp.focus({ workspace = "${WsLabel.perMonitor ? "m" : "e"}${w.angleDelta.y > 0 ? "-1" : "+1"}" })`)
             }
         }
     }

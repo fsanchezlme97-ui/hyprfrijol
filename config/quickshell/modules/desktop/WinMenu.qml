@@ -45,7 +45,9 @@ Overlay {
     readonly property string addr: target?.address ?? ""
     readonly property bool pinned: !!target?.pinned
     readonly property int wsNow: target?.workspace?.id ?? 0
-    readonly property var workspaces: Hyprland.workspaces.values.filter(w => w.id > 0).map(w => w.id).sort((a, b) => a - b)
+    // con espacios por pantalla (WsLabel), solo los de la pantalla de la ventana, con el número de su barra
+    readonly property var workspaces: Hyprland.workspaces.values.filter(w => w.id > 0 && (!WsLabel.perMonitor || w.monitor?.id === target?.monitor))
+        .map(w => w.id).sort((a, b) => a - b)
     readonly property var actions: [
         { k: "min", icon: "minus", l: "Minimizar" },
         { k: "max", icon: "maximize", l: WinMode.isMax(target) ? "Restaurar tamaño" : "Maximizar" },
@@ -120,7 +122,7 @@ Overlay {
                                     width: chip.modelData === "nuevo" ? 30 : 28; height: 26
                                     radius: Theme.ctl(26)
                                     color: here ? Theme.selBg : cma.containsMouse ? Theme.s3 : Theme.s1
-                                    Txt { anchors.centerIn: parent; text: chip.modelData === "nuevo" ? "+" : String(chip.modelData); size: 11.5; color: chip.here ? Theme.selText : Theme.t }
+                                    Txt { anchors.centerIn: parent; text: chip.modelData === "nuevo" ? "+" : String(WsLabel.local(chip.modelData)); size: 11.5; color: chip.here ? Theme.selText : Theme.t }
                                     MouseArea { id: cma; anchors.fill: parent; hoverEnabled: true; enabled: !chip.here; cursorShape: Qt.PointingHandCursor; onClicked: root.moveTo(chip.modelData) }
                                 }
                             }

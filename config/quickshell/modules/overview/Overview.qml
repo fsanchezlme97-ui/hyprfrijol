@@ -48,10 +48,14 @@ Overlay {
     readonly property string selAddress: matchList[Math.min(selMatch, matchList.length - 1)]?.address ?? ""
 
     function wsLabel(id: int): string {
-        const ic = String(wsIcons[String(id)] ?? ""), named = ((ic ? ic + " " : "") + (wsNames[String(id)] ?? "")).trim();
+        // espacios por pantalla: el número que ve esa pantalla en su barra (también para nombre e icono), y el nombre
+        // de la pantalla si no es la principal
+        const n = WsLabel.local(id);
+        const ic = String(wsIcons[String(n)] ?? ""), named = ((ic ? ic + " " : "") + (wsNames[String(n)] ?? "")).trim();
         const apps = [...new Set(HyprClients.onWorkspace(id).map(c => HyprClients.appName(c.class)))];
         // Numeración de la barra (WsLabel) y el número de siempre si no es arábiga
-        const num = WsLabel.style === "arabiga" || WsLabel.style === "puntos" ? String(id) : WsLabel.numeral(id) + " " + id;
+        const mon = n !== id ? " (" + (Hyprland.workspaces.values.find(w => w.id === id)?.monitor?.name ?? WsLabel.groups[Math.floor((id - 1) / 10)] ?? "") + ")" : "";
+        const num = (WsLabel.style === "arabiga" || WsLabel.style === "puntos" ? String(n) : WsLabel.numeral(n) + " " + n) + mon;
         if (!apps.length) return num + " · " + (named || "Vacío");
         const list = apps.length > 3 ? apps.slice(0, 3).join(", ") + "…" : apps.join(", ");
         return num + " · " + (named ? named + " — " + list : list);

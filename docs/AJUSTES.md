@@ -144,6 +144,7 @@ portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si o
 | `barBehavior` | `siempre` (por defecto) · `auto` · `inteligente` | barra siempre visible, oculta (vuelve con el cursor en el borde; antes `barAutoHide = true`, se migra al elegir) o inteligente (se aparta cuando una ventana flotante la tapa o hay una maximizada / a pantalla completa; en mosaico reserva su sitio salvo con una maximizada, en los espacios flotantes no reserva) |
 | `wsNumerals` | `japonesa` (por defecto: 一 二 三) · `arabiga` · `romana` · `puntos` | numeración de los espacios en la barra (`services/WsLabel.qml`, fuente Noto Sans CJK JP); los nombres e iconos propios ganan |
 | `wsShowAll` | `true` | la barra muestra siempre del 1 al 9 (si no, solo los ocupados y el activo) |
+| `wsPerMonitor` | `true` | espacios por pantalla: la principal usa del 1 al 10, la siguiente del 11 al 20 (en su barra, otra vez del 1 al 10); Super + número, Super + Ctrl + flechas y la rueda se quedan en la pantalla activa |
 
 - Al cambiar de modo, las ventanas abiertas de los espacios afectados pasan a flotar o al mosaico al momento
   (las que hiciste flotar a mano en un espacio que no cambia se quedan como están).

@@ -20,6 +20,7 @@ end
 function HF.scroll(msg, other)
     return function()
         if HF.scrolling() then hl.dispatch(hl.dsp.layout(msg))
+        elseif type(other) == "function" then other()
         elseif other then hl.dispatch(other) end
     end
 end
@@ -131,26 +132,70 @@ b("ALT + SHIFT + TAB", hl.dsp.global("hf:altprev"), { description = "Cambiar de 
 b("ALT + code:49",     hl.dsp.global("hf:altapp"),  { description = "Ventanas de la misma app" })
 
 -- ── Espacios ──────────────────────────────────────────────────────────────────
+-- Espacios por pantalla ("wsPerMonitor", por defecto sí; 40-monitors.py rellena HF.wsGroups con las pantallas
+-- en orden: la principal y luego las demás de Ajustes por nombre): la pantalla k (0 = la principal) usa del
+-- k·10+1 al k·10+10 y Super + 1…0 van a los de la pantalla activa. Las que no están en Ajustes van detrás, por id.
+-- Mismo cálculo en WsLabel.qml (barra y vista general).
+function HF.wsBase()
+    if not HF.wsPerMonitor then return 0 end
+    local m = hl.get_active_monitor()
+    if not m then return 0 end
+    local groups = HF.wsGroups or {}
+    for k, n in ipairs(groups) do if n == m.name then return (k - 1) * 10 end end
+    local extra = 0
+    for _, o in ipairs(hl.get_monitors()) do
+        local known = false
+        for _, n in ipairs(groups) do if n == o.name then known = true end end
+        if not known and o.id < m.id then extra = extra + 1 end
+    end
+    return (#groups + extra) * 10
+end
+local function wsGo(i, move, follow)
+    return function()
+        local ws = HF.wsBase() + i
+        if move then hl.dispatch(hl.dsp.window.move({ workspace = ws, follow = follow }))
+        else hl.dispatch(hl.dsp.focus({ workspace = ws })) end
+    end
+end
+-- anterior / siguiente: por número (crea el siguiente vacío); con espacios por pantalla, sin salir de los suyos
+function HF.wsStep(d, move)
+    return function()
+        if not HF.wsPerMonitor then
+            local r = (d > 0 and "r+" or "r-") .. math.abs(d)
+            hl.dispatch(move and hl.dsp.window.move({ workspace = r }) or hl.dsp.focus({ workspace = r }))
+            return
+        end
+        local base, ws = HF.wsBase(), hl.get_active_workspace()
+        local n = ws and ws.id - base or 0
+        n = (n >= 1 and n <= 10) and math.max(1, math.min(10, n + d)) or 1
+        if move then hl.dispatch(hl.dsp.window.move({ workspace = base + n }))
+        else hl.dispatch(hl.dsp.focus({ workspace = base + n })) end
+    end
+end
+-- rueda: los espacios abiertos (con espacios por pantalla, solo los de la pantalla activa)
+local function wsWheel(d)
+    return function() hl.dispatch(hl.dsp.focus({ workspace = (HF.wsPerMonitor and "m" or "e") .. d })) end
+end
 for i = 1, 10 do
     local key, code = tostring(i % 10), 9 + i              -- 1…9, 0 · code:10…19 (fila de números)
-    b(mod .. " + " .. key,             hl.dsp.focus({ workspace = i }))
-    b(mod .. " + code:" .. code,       hl.dsp.focus({ workspace = i }))
-    b(mod .. " + SHIFT + " .. key,     hl.dsp.window.move({ workspace = i }))
-    b(mod .. " + ALT + " .. key,       hl.dsp.window.move({ workspace = i, follow = false }))   -- enviar sin seguir
+    b(mod .. " + " .. key,             wsGo(i))
+    b(mod .. " + code:" .. code,       wsGo(i))
+    b(mod .. " + SHIFT + " .. key,     wsGo(i, true, true))
+    b(mod .. " + ALT + " .. key,       wsGo(i, true, false))   -- enviar sin seguir
 end
-b(mod .. " + CTRL + left",   hl.dsp.focus({ workspace = "r-1" }), { description = "Espacio anterior" })
-b(mod .. " + CTRL + right",  hl.dsp.focus({ workspace = "r+1" }), { description = "Espacio siguiente / nuevo" })
-b(mod .. " + CTRL + up",     hl.dsp.focus({ workspace = "r-5" }))
-b(mod .. " + CTRL + down",   hl.dsp.focus({ workspace = "r+5" }))
+b(mod .. " + CTRL + left",   HF.wsStep(-1), { description = "Espacio anterior" })
+b(mod .. " + CTRL + right",  HF.wsStep(1),  { description = "Espacio siguiente / nuevo" })
+b(mod .. " + CTRL + up",     HF.wsStep(-5))
+b(mod .. " + CTRL + down",   HF.wsStep(5))
 -- Rueda: espacios; en desplazamiento, columnas (Super + Ctrl + rueda: espacios siempre)
-b(mod .. " + mouse_down",    HF.scroll("focus r", hl.dsp.focus({ workspace = "e+1" })), { description = "Espacio / columna siguiente (rueda)" })
-b(mod .. " + mouse_up",      HF.scroll("focus l", hl.dsp.focus({ workspace = "e-1" })), { description = "Espacio / columna anterior (rueda)" })
-b(mod .. " + CTRL + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
-b(mod .. " + CTRL + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
-b(mod .. " + SHIFT + mouse_up",   hl.dsp.window.move({ workspace = "r-1" }))
-b(mod .. " + SHIFT + mouse_down", hl.dsp.window.move({ workspace = "r+1" }))
-b(mod .. " + SHIFT + Page_Up",    hl.dsp.window.move({ workspace = "r-1" }), { description = "Enviar al espacio anterior" })
-b(mod .. " + SHIFT + Page_Down",  hl.dsp.window.move({ workspace = "r+1" }), { description = "Enviar al espacio siguiente" })
+b(mod .. " + mouse_down",    HF.scroll("focus r", wsWheel("+1")), { description = "Espacio / columna siguiente (rueda)" })
+b(mod .. " + mouse_up",      HF.scroll("focus l", wsWheel("-1")), { description = "Espacio / columna anterior (rueda)" })
+b(mod .. " + CTRL + mouse_down", wsWheel("+1"))
+b(mod .. " + CTRL + mouse_up",   wsWheel("-1"))
+b(mod .. " + SHIFT + mouse_up",   HF.wsStep(-1, true))
+b(mod .. " + SHIFT + mouse_down", HF.wsStep(1, true))
+b(mod .. " + SHIFT + Page_Up",    HF.wsStep(-1, true), { description = "Enviar al espacio anterior" })
+b(mod .. " + SHIFT + Page_Down",  HF.wsStep(1, true),  { description = "Enviar al espacio siguiente" })
 -- Bloc de notas (scratchpad)
 b(mod .. " + S",             hl.dsp.workspace.toggle_special("special"), { description = "Espacio oculto (scratchpad)" })
 b("CTRL + " .. mod .. " + S", hl.dsp.workspace.toggle_special("special"))

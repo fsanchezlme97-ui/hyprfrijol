@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.29] — 2026-11-10
+
+- **Espacios por pantalla**: con varias pantallas, cada una tiene sus propios espacios del 1 al 10. Super + número,
+  Super + Shift/Alt + número, Super + Ctrl + flechas y Super + rueda se quedan en la pantalla donde estás, y la barra
+  de cada pantalla muestra solo los suyos. Por dentro, la principal usa del 1 al 10 y la siguiente del 11 al 20 (la
+  vista general las marca con el nombre de la pantalla). Se apaga en Ajustes › Escritorio y gestos › Espacios de
+  trabajo (`wsPerMonitor`). Con una sola pantalla no cambia nada.
+
 ## [0.8.28] — 2026-11-10
 
 - **El menú de los iconos de la bandeja se cierra** al hacer clic fuera o al volver a pulsar el icono. Antes se
