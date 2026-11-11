@@ -24,7 +24,9 @@
   hf-ai test                 prueba la conexión con el proveedor → {"ok": bool, "text": "…"}
   hf-ai transform "instrucción" < texto   aplica la instrucción al texto y lo imprime en plano (hf-dictate)
   hf-ai talk                 hablar con el asistente por voz (como Super + Alt + H): empieza o termina de escuchar
-  hf-ai speak "texto" | - | --stop   lo lee en voz alta con Gemini TTS (aiVoice, voz aiVoiceName; corta lo anterior)
+  hf-ai speak [--google] "texto" | - | --stop   lo lee en voz alta (corta lo anterior): voz local Piper (sharvard)
+                             si está instalada; con --google, o sin Piper, Gemini TTS (voz aiVoiceName)
+  hf-ai voice-install [--tty]  instala la voz local: venv con piper-tts y la voz es_ES-sharvard-medium (~77 MB)
   hf-ai key status|set|clear gemini   clave de Gemini: set la lee de stdin (o de HF_AI_KEY_IN), nunca de argv
 
 Proveedor (Ajustes › IA, settings.json):
@@ -1739,16 +1741,49 @@ TTS_MODELS = ["gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts", "gemini-2.5-f
 TTS_DIR = pathlib.Path(os.environ.get("XDG_RUNTIME_DIR") or HOME / ".cache/hyprfrijol")   # privado: nunca /tmp
 TTS_PID = TTS_DIR / "hf-ai-voice.pid"
 TTS_MAX = 900                                                            # caracteres: cuida la cuota gratuita
+# Voz local (conversación): Piper con «sharvard» (es_ES, hablante 0 = M). ~150 MB de RAM y empieza a sonar en ~1 s
+# (arrancar Python y cargar el modelo); luego genera ×30 más rápido de lo que habla. Lo instala `hf-ai voice-install`.
+# Gemini queda para lo puntual (`hf-ai speak --google`) y de respaldo si Piper no está.
+PIPER_DIR = HOME / ".local/share/hyprfrijol/tts"
+PIPER_VENV = PIPER_DIR / "piper-venv"
+PIPER_VOICE, PIPER_SPEAKER = "es_ES-sharvard-medium", 0
+PIPER_MODEL = PIPER_DIR / "models/piper" / f"{PIPER_VOICE}.onnx"
+PIPER_MAX = 4000                                                         # sin cuota: solo que no lea un libro entero
 
-def speakable(text):
+def piper_ready():
+    return (PIPER_VENV / "bin/python").exists() and PIPER_MODEL.exists() and PIPER_MODEL.with_suffix(".onnx.json").exists()
+
+def voice_install(tty=False):
+    """Instalación pedida por el usuario: venv con piper-tts (uv si está; si no, venv + pip) y la voz (~77 MB)."""
+    say = print if tty else (lambda m: print(json.dumps({"progress": m}, ensure_ascii=False), flush=True))
+    PIPER_MODEL.parent.mkdir(parents=True, exist_ok=True)
+    say(f"Creando el entorno de Python en {PIPER_VENV} (piper-tts desde PyPI)…")
+    py = str(PIPER_VENV / "bin/python")
+    uv = shutil.which("uv")
+    if uv:
+        ok = subprocess.run([uv, "venv", "-q", "--allow-existing", "--python", "3.12", str(PIPER_VENV)]).returncode == 0 and \
+             subprocess.run([uv, "pip", "install", "-q", "--python", py, "piper-tts"]).returncode == 0
+    else:
+        ok = subprocess.run([sys.executable, "-m", "venv", str(PIPER_VENV)]).returncode == 0 and \
+             subprocess.run([str(PIPER_VENV / "bin/pip"), "install", "-q", "piper-tts"]).returncode == 0
+    if not ok:
+        say("No se pudo crear el entorno (¿falta python-virtualenv o uv?)"); return 1
+    say(f"Descargando la voz {PIPER_VOICE} (~77 MB)…")
+    r = subprocess.run([py, "-I", "-m", "piper.download_voices", "--data-dir", str(PIPER_MODEL.parent), PIPER_VOICE])
+    if r.returncode != 0 or not piper_ready():
+        say("No se pudo descargar la voz"); return 1
+    say("Voz local lista: Samantha ya habla sin depender de Google.")
+    return 0
+
+def speakable(text, limit=TTS_MAX):
     """Lo que se lee de una respuesta: sin bloques de código, enlaces ni marcas de Markdown."""
     t = re.sub(r"```.*?(```|$)", " ", str(text or ""), flags=re.S)
     t = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", t)
     t = re.sub(r"https?://\S+", "", t)
     t = re.sub(r"[`*_#>|~]+", "", t)
     t = re.sub(r"\s+", " ", t).strip()
-    if len(t) > TTS_MAX:
-        cut = t[:TTS_MAX]
+    if len(t) > limit:
+        cut = t[:limit]
         t = cut[:max(cut.rfind(". "), cut.rfind("? "), cut.rfind("! ")) + 1] or cut
     return t
 
@@ -1798,26 +1833,68 @@ def gemini_tts(t, key, voice, models):
         return buf.getvalue()
     raise AIError(err or "Gemini no devolvió audio")
 
-def speak(text, s=None):
-    """Lee «text» en voz alta (aiVoice; voz aiVoiceName). Corta lo que estuviera diciendo. → {"ok", "error"}
-    Trozo a trozo: un hilo genera el siguiente mientras suena el actual."""
+def tts_claim():
+    TTS_DIR.mkdir(parents=True, exist_ok=True)
+    TTS_OWNER.write_text(str(os.getpid()))
+
+def tts_mine():
+    return TTS_OWNER.exists() and TTS_OWNER.read_text() == str(os.getpid())
+
+def tts_done(played):
+    """Apaga la onda de la barra, salvo que otra respuesta nos haya relevado (ella la encendió y la apagará)."""
+    if played and (tts_mine() or not TTS_OWNER.exists()):
+        run(QS + ["ipc", "call", "shell", "setAiSpeaking", "false"])
+    if tts_mine():
+        TTS_OWNER.unlink(missing_ok=True)
+        TTS_PID.unlink(missing_ok=True)
+
+def speak_piper(t, player):
+    """Piper → reproductor por una tubería: Piper suelta el audio frase a frase y suena según llega (sin archivos)."""
+    sr = json.loads(PIPER_MODEL.with_suffix(".onnx.json").read_text())["audio"]["sample_rate"]
+    tag = "hf-ai-voice-piper"                       # en la línea de órdenes: speak_stop solo mata a nuestro reproductor
+    play = ([player, "-a", "--rate", str(sr), "--channels", "1", "--format", "s16", "-P", f'{{ media.name = "{tag}" }}', "-"]
+            if player.endswith("pw-play") else
+            [player, "--raw", f"--rate={sr}", "--channels=1", "--format=s16le", f"--client-name={tag}"])
+    gen = subprocess.Popen([str(PIPER_VENV / "bin/python"), "-I", "-m", "piper", "-m", str(PIPER_MODEL),
+                            "-s", str(PIPER_SPEAKER), "--output-raw"],
+                           stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    p = subprocess.Popen(play, stdin=gen.stdout, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    gen.stdout.close()                              # si cortan el reproductor, Piper recibe SIGPIPE y termina
+    TTS_PID.write_text(str(p.pid))
+    gen.stdin.write(t.encode() + b"\n"); gen.stdin.close()
+    run(QS + ["ipc", "call", "shell", "setAiSpeaking", "true"])         # la barra pinta la onda rellena
+    p.wait()
+    stopped = not (TTS_PID.exists() and TTS_PID.read_text() == str(p.pid))
+    if gen.poll() is None:
+        gen.kill()
+    gen.wait()
+    tts_done(True)
+    ok = stopped or gen.returncode == 0
+    return {"ok": ok, "error": "" if ok else "La voz local (Piper) falló. Reinstálala: hf-ai voice-install"}
+
+def speak(text, s=None, google=False):
+    """Lee «text» en voz alta (aiVoice). Corta lo que estuviera diciendo. → {"ok", "error"}
+    Con Piper instalado y sin «google»: voz local. Si no, Gemini (voz aiVoiceName) trozo a trozo: un hilo genera
+    el siguiente mientras suena el actual."""
     import queue, tempfile, threading
     s = s or settings()
-    t = speakable(text)
+    local = not google and piper_ready()
+    t = speakable(text, PIPER_MAX if local else TTS_MAX)
     speak_stop()
     if not t:
         return {"ok": False, "error": "Nada que leer"}
-    key, _ = gemini_key()
-    if not key:
-        return {"ok": False, "error": "Falta la clave de Gemini (Ajustes › Asistente de IA)"}
     player = shutil.which("pw-play") or shutil.which("paplay")
     if not player:
         return {"ok": False, "error": "Falta pw-play o paplay"}
+    tts_claim()
+    if local:
+        return speak_piper(t, player)
+    key, _ = gemini_key()
+    if not key:
+        tts_done(False)
+        return {"ok": False, "error": "Falta la clave de Gemini (Ajustes › Asistente de IA)"}
     voice, models = str(s.get("aiVoiceName") or "Aoede"), list(TTS_MODELS)
-    TTS_DIR.mkdir(parents=True, exist_ok=True)
-    me = str(os.getpid())
-    TTS_OWNER.write_text(me)
-    mine = lambda: TTS_OWNER.exists() and TTS_OWNER.read_text() == me
+    mine = tts_mine
     q = queue.Queue()
 
     def produce():
@@ -1853,11 +1930,7 @@ def speak(text, s=None):
     while not q.empty():                                # trozos ya generados que no llegaron a sonar
         if isinstance(item := q.get(), pathlib.Path):
             item.unlink(missing_ok=True)
-    if played:                  # también si nos cortaron: la nueva respuesta la vuelve a encender cuando suene
-        run(QS + ["ipc", "call", "shell", "setAiSpeaking", "false"])
-    if mine():
-        TTS_OWNER.unlink(missing_ok=True)
-        TTS_PID.unlink(missing_ok=True)
+    tts_done(played)
     return {"ok": played, "error": err}
 
 def gemini_model(s):
@@ -2284,7 +2357,7 @@ def status():
         ok, hint = False, "Desactivado"
     model = gemini_model(s) if prov == "gemini" else (s.get("aiModel") or "")
     return {"provider": prov, "model": model, "available": ok, "hint": hint,
-            "desktop": bool(shutil.which("claude-desktop") or shutil.which("claude-desktop-bin"))}
+            "desktop": bool(shutil.which("claude-desktop") or shutil.which("claude-desktop-bin")), "voiceLocal": piper_ready()}
 
 def main(argv):
     if not argv or argv[0] in ("-h", "--help"):
@@ -2383,10 +2456,17 @@ def main(argv):
     elif cmd == "talk":                     # Super + Alt + H: hablar con el asistente (empieza / termina)
         run(QS + ["ipc", "call", "dictado", "talk"]); return
     elif cmd == "speak":
+        google = "--google" in rest
+        rest = [r for r in rest if r != "--google"]
+        arg = rest[0] if rest else ""
+        if arg == "-":
+            arg = sys.stdin.read()
         if arg == "--stop":
             speak_stop(); out = {"ok": True, "error": ""}
         else:
-            out = speak(arg)
+            out = speak(arg, google=google)
+    elif cmd == "voice-install":
+        sys.exit(voice_install(tty="--tty" in rest))
     elif cmd == "key":
         sub, prov = (rest + ["", ""])[:2]
         prov = prov or "gemini"

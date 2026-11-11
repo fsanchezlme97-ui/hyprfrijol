@@ -8,6 +8,7 @@ import Quickshell
 import Quickshell.Io
 import "../../.."
 import "../../../components"
+import "../../../services"
 import "../ui"
 
 ColumnLayout {
@@ -19,7 +20,8 @@ ColumnLayout {
     property string geminiModelsErr: ""
     property string status: ""
     property var key: ({ stored: false, where: "", hint: "" })
-    readonly property bool needKey: prov === "gemini" || Settings.get("aiVoice", false)   // la voz usa Gemini TTS
+    property var voiceLocal: undefined     // hf-ai status: voz local (Piper) instalada; sin ella la voz usa Gemini TTS
+    readonly property bool needKey: prov === "gemini" || (Settings.get("aiVoice", false) && root.voiceLocal === false)
     property string keyMsg: ""
     property bool keyErr: false
     property string testMsg: ""
@@ -35,7 +37,7 @@ ColumnLayout {
         id: stat
         running: true
         command: [Paths.script("hf-ai"), "status"]
-        stdout: StdioCollector { onStreamFinished: { try { const j = JSON.parse(text); root.status = j.available ? "Disponible" : (j.hint || j.error || "No disponible"); } catch (e) { root.status = ""; } } }
+        stdout: StdioCollector { onStreamFinished: { try { const j = JSON.parse(text); root.voiceLocal = !!j.voiceLocal; root.status = j.available ? "Disponible" : (j.hint || j.error || "No disponible"); } catch (e) { root.status = ""; } } }
     }
     Timer { id: statTimer; interval: 900; onTriggered: { stat.running = false; stat.running = true; } }
 
@@ -291,8 +293,18 @@ ColumnLayout {
             }
             Timer { id: personaSave; interval: 800; onTriggered: persona.save() }
         }
-        // Voz (aiVoice, aiVoiceName): hf-ai speak lee cada respuesta con Gemini TTS, con la clave de Gemini de arriba
-        SwRow { label: "Hablar con voz"; sub: "lee las respuestas en voz alta con Gemini (clave gratuita de Google; Google recibe el texto)"; key: "aiVoice"; def: false }
+        // Voz (aiVoice): hf-ai speak lee cada respuesta con la voz local (Piper); sin ella, con Gemini TTS (aiVoiceName)
+        SwRow {
+            label: "Hablar con voz"; key: "aiVoice"; def: false
+            sub: root.voiceLocal === false ? "lee las respuestas en voz alta con Gemini (clave gratuita de Google; Google recibe el texto)"
+                                           : "lee las respuestas en voz alta con una voz local (Piper): rápida y sin internet"
+        }
+        Button {
+            visible: root.voiceLocal === false
+            text: "Instalar la voz local (Piper, ~250 MB: más rápida y sin depender de Google)"
+            onClicked: { Pkg.runInTerminal(Paths.script("hf-ai") + " voice-install --tty", "Voz del asistente"); voiceLater.n = 0; voiceLater.restart(); }
+        }
+        Timer { id: voiceLater; interval: 5000; repeat: true; property int n: 0; onTriggered: { stat.running = false; stat.running = true; if (++n > 24 || root.voiceLocal) stop(); } }
         Txt {
             Layout.alignment: Qt.AlignRight
             visible: persona.text.length > 1500

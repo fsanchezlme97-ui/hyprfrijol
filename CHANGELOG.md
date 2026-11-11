@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.19] — 2026-11-10
+
+- **Samantha habla con una voz local**: Piper con la voz «sharvard» (español de España). Empieza a sonar en ~1 s
+  (antes ~4,6 s con Gemini), no necesita internet ni gasta la cuota gratuita de Google, así que ya no se calla al
+  llegar al límite. Ocupa ~250 MB y ~150 MB de RAM solo mientras habla. Se instala desde Ajustes › Asistente de IA
+  («Instalar la voz local») o con `hf-ai voice-install`. Sin ella, la voz sigue siendo la de Gemini.
+- `hf-ai speak --google "texto"` usa la voz de Gemini a propósito, para avisos puntuales.
+
 ## [0.8.18] — 2026-11-10
 
 - **Samantha empieza a hablar antes**: la respuesta se lee en dos trozos. Suena la primera frase en unos 4 s y el
