@@ -78,3 +78,15 @@ hl.layer_rule({ match = { namespace = "^hf-wallpaper$" }, blur = false, no_anim 
 -- y el viejo salía con otro fundido: a medio camino se veía negro (o los dos mezclados)
 hl.layer_rule({ match = { namespace = "^(mpvpaper|linux-wallpaperengine)$" }, blur = false, no_anim = true })
 hl.layer_rule({ match = { namespace = "^hf-notifications$" }, animation = "slide right" })
+
+-- Pantallas en dos tarjetas gráficas (p. ej. AMD + una NVIDIA con nouveau): el cursor por hardware en la
+-- segunda sale como un cuadrado negro. Con salidas conectadas en más de una tarjeta, cursor por software.
+local function cursorPorGpu()
+    local p = io.popen([[grep -lx connected /sys/class/drm/card*-*/status 2>/dev/null | sed 's|.*/\(card[0-9]*\)-.*|\1|' | sort -u | wc -l]])
+    local n = tonumber(p and p:read("*a") or "") or 1
+    if p then p:close() end
+    hl.config({ cursor = { no_hardware_cursors = n > 1 and 1 or 2 } })
+end
+cursorPorGpu()
+hl.on("monitor.added", cursorPorGpu)
+hl.on("monitor.removed", cursorPorGpu)

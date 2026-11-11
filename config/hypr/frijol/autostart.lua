@@ -32,6 +32,7 @@ hl.on("hyprland.start", function()
         hl.exec_cmd("sh -c 'command -v easyeffects >/dev/null && exec easyeffects --hide-window --service-mode'")
         -- Plugins de Hyprland instalados con hyprpm (Ajustes › Plugins › «Cargar al iniciar», pluginsAutoload).
         -- -n avisa con una notificación; los errores (p. ej. cabeceras viejas tras actualizar Hyprland) avisan siempre.
-        hl.exec_cmd("sh -c '[ \"$(jq -r .pluginsAutoload " .. HF.user .. "/settings.json 2>/dev/null)\" = false ] || ! command -v hyprpm >/dev/null || exec hyprpm reload -n'")
+        -- Sin plugins instalados (hyprpm list vacío) no se llama: si no, avisaba de cabeceras viejas sin motivo.
+        hl.exec_cmd("sh -c '[ \"$(jq -r .pluginsAutoload " .. HF.user .. "/settings.json 2>/dev/null)\" = false ] || ! command -v hyprpm >/dev/null || [ -z \"$(hyprpm list 2>/dev/null)\" ] || exec hyprpm reload -n'")
     end
 end)

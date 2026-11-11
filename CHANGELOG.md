@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.33] — 2026-11-10
+
+- Pantallas en dos tarjetas gráficas: el cursor ya no sale como un cuadrado negro en la segunda (cursor por software
+  cuando hay salidas conectadas en más de una tarjeta; se revisa al conectar o quitar pantallas).
+- Al iniciar ya no aparece «[hyprpm] Failed to load plugins: Outdated headers» si no tienes plugins de Hyprland instalados.
+
 ## [0.8.32] — 2026-11-10
 
 - Nueva lista de trabajo en `docs/PENDIENTES.md`.
