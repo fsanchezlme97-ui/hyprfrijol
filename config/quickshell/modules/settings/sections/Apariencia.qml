@@ -57,7 +57,8 @@ ColumnLayout {
     readonly property string colorMode: Settings.get("colorMode", "auto")
     readonly property string themeMode: Settings.get("themeMode", "oscuro")
     readonly property string paletteKey: Settings.get("palette", "grafito")
-    // Paletas que se pueden elegir (las variantes claras van con su pareja; «mono» y «atardecer» son internas)
+    // Temas que se pueden elegir: pares oscuro y claro (la variante va con su pareja); «mono» va en Color y
+    // «atardecer» es la del login
     readonly property var palKeys: Object.keys(pals).filter(k => !["mono", "monoclaro", "atardecer"].includes(k) && !pals[k].variant)
     property string palGroup: "todas"
     property string palQuery: ""
@@ -69,8 +70,6 @@ ColumnLayout {
         if (palGroup === "pastel" && g !== "pastel") return false;
         if (palGroup === "populares" && g !== "popular") return false;
         if (palGroup === "omarchy" && g !== "omarchy") return false;
-        if (palGroup === "claras" && !(p.light || (p.pair && pals[p.pair]?.light))) return false;
-        if (palGroup === "oscuras" && !(!p.light || (p.pair && !pals[p.pair]?.light))) return false;
         return palQuery === "" || norm(p.name).includes(norm(palQuery)) || norm(k).includes(norm(palQuery));
     })
     readonly property string schedule: Settings.get("themeSchedule", "horas")
@@ -282,7 +281,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 fill: false
                 h: 28
-                model: [["todas", "Todas"], ["originales", "Originales"], ["populares", "Populares"], ["pastel", "Pastel"], ["oscuras", "Oscuras"], ["claras", "Claras"]].concat(Object.keys(root.userPals).length ? [["omarchy", "Importadas"]] : [])
+                model: [["todas", "Todas"], ["originales", "Originales"], ["populares", "Populares"], ["pastel", "Pastel"]].concat(Object.keys(root.userPals).length ? [["omarchy", "Importadas"]] : [])
                 current: root.palGroup
                 onPicked: k => root.palGroup = k
             }

@@ -196,6 +196,43 @@ with open(tmp, "w") as f:
 os.replace(tmp, p)
 PY
   fi
+  # Paletas retiradas (0.9.2: 12 temas en pares oscuro y claro): la que tengas pasa a la más parecida.
+  # Solo si ya no existe en el repo ni en palettes-user.json (los temas importados no se tocan).
+  if [ -f "$cfg" ] && python3 -I - "$cfg" "$root/config/themes/palettes.json" "$HOME/.config/$NEW/palettes-user.json" <<'PY' 2>/dev/null
+import json, os, sys
+d = json.load(open(sys.argv[1]))
+k = d.get("palette") if isinstance(d, dict) else None
+have = set(json.load(open(sys.argv[2])))
+if os.path.exists(sys.argv[3]):
+    have |= set(json.load(open(sys.argv[3])) or {})
+sys.exit(0 if k and k not in have else 1)
+PY
+  then
+    say "Paleta retirada: la cambio por la más parecida de las 12 de ahora en $cfg"
+    run cp -n "$cfg" "$cfg.antes-de-temas"
+    [ "$DRY" = 1 ] || python3 -I - "$cfg" <<'PY'
+import json, os, sys
+# shortcut: tabla fija de 0.9.2; si se retiran más paletas, se añaden aquí
+NEAR = {"pizarra": "grafito", "lavanda": "lila", "verde": "everforest", "ambar": "gruvbox", "azul": "nord",
+        "menta": "everforest", "menta-claro": "everforest-claro", "melocoton": "rosa", "melocoton-claro": "rosa-claro",
+        "cielo": "nord", "cielo-claro": "nord-claro", "catppuccin-macchiato": "catppuccin-mocha",
+        "catppuccin-frappe": "catppuccin-mocha", "tokyo-night-storm": "tokyo-night", "rose-pine-moon": "rose-pine",
+        "kanagawa-dragon": "kanagawa", "dracula": "tokyo-night", "alucard": "tokyo-night-dia", "solarized": "nord",
+        "solarized-claro": "gruvbox-claro", "one-dark": "tokyo-night", "one-light": "tokyo-night-dia", "ayu": "gruvbox",
+        "ayu-claro": "gruvbox-claro", "ayu-mirage": "tokyo-night", "github": "grafito", "github-claro": "claro",
+        "flexoki": "gruvbox", "flexoki-claro": "gruvbox-claro", "monokai-pro": "grafito", "nightfox": "tokyo-night",
+        "medianoche": "nord", "carbon": "oxocarbon", "bosque": "everforest", "vino": "ciruela", "oceano": "nord",
+        "cobre": "gruvbox", "neon": "tokyo-night", "hielo": "nord-claro", "papel": "claro", "arena": "gruvbox-claro",
+        "salvia": "everforest-claro"}
+p = os.path.realpath(sys.argv[1])
+d = json.load(open(p))
+d["palette"] = NEAR.get(d.get("palette"), "grafito")
+tmp = p + ".tmp"
+with open(tmp, "w") as f:
+    f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
+os.replace(tmp, p)
+PY
+  fi
   # Fuente Doto de Chroma (retirada en 0.9.0): el enlace en ~/.local/share/fonts ya no lleva a nada
   if [ -L "$HOME/.local/share/fonts/hyprfrijol/Doto.ttf" ] && [ ! -e "$HOME/.local/share/fonts/hyprfrijol/Doto.ttf" ]; then
     say "Chroma retirado: borro el enlace roto a la fuente Doto"

@@ -10,7 +10,7 @@ Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar 
 1. [x] [Temas](planes/temas.md), fase 1: estilo único Math, interruptor de transparencia, fuera Chroma y SkySoul (0.9.0).
 2. [x] [Animaciones y efectos](planes/animaciones.md), fases 1–3: tokens de movimiento, duraciones fijas, sección
        unificada y atajo de modo juego (0.9.1).
-3. [ ] [Temas](planes/temas.md), fase 2: 13 temas oficiales en pares oscuro y claro.
+3. [x] [Temas](planes/temas.md), fase 2: 12 temas en pares oscuro y claro, más Monocromo (0.9.2).
 4. [ ] [Asistente de IA](planes/asistente-ia.md), fases 1–2: categoría propia y privacidad.
 5. [ ] [Productividad](planes/productividad.md), fases 1–3: categoría, portapapeles y tareas.
 6. [ ] Lo que queda de los cuatro planes (creador de temas, recetas, vista previa, Spotlight…).

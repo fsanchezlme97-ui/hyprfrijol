@@ -92,10 +92,10 @@ def run(cmd, timeout=10, input=None):
 SET_KEYS = {
     "transparencia": ("Transparencia", {True: "activada", False: "desactivada"}),
     "colorMode": ("Color", {"auto": "Automático (del fondo)", "elegir": "Paleta elegida", "mono": "Monocromo"}),
-    "palette": ("Paleta", {"grafito": "Grafito", "pizarra": "Pizarra", "claro": "Claro", "lavanda": "Lavanda",
-                           "verde": "Verde", "ambar": "Ámbar", "azul": "Azul", "rosa": "Rosa pastel",
-                           "menta": "Menta pastel", "lila": "Lila pastel", "melocoton": "Melocotón pastel",
-                           "cielo": "Cielo pastel"}),
+    "palette": ("Paleta", {"grafito": "Grafito", "oxocarbon": "Oxocarbon", "ciruela": "Ciruela", "rosa": "Rosa pastel",
+                           "catppuccin-mocha": "Catppuccin", "rose-pine": "Rosé Pine", "nord": "Nord",
+                           "tokyo-night": "Tokyo Night", "gruvbox": "Gruvbox", "everforest": "Everforest",
+                           "kanagawa": "Kanagawa", "lila": "Lila pastel"}),
     "themeMode": ("Tema", {"oscuro": "Oscuro", "claro": "Claro", "auto": "Automático (por horas o según el sol)"}),
     "barPos": ("Barra", {"abajo": "abajo", "arriba": "arriba", "izquierda": "lateral izquierda"}),
     "barMode": ("Barra", {"fija": "fija", "flotante": "flotante"}),
@@ -165,7 +165,7 @@ def settable(k, d=None):
 
 SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden: puedes encadenar varios pasos):
 - {"type":"set","key":K,"value":V}  ajustes del escritorio. Claves principales: transparencia (true|false),
-  colorMode (auto|elegir|mono), palette (grafito|pizarra|claro|lavanda|verde|ambar|azul|rosa|menta|lila|melocoton|cielo;
+  colorMode (auto|elegir|mono), palette (grafito|oxocarbon|ciruela|rosa|catppuccin-mocha|rose-pine|nord|tokyo-night|gruvbox|everforest|kanagawa|lila;
   implica colorMode "elegir"), themeMode (oscuro|claro|auto), animPreset (fluido|equilibrado|rapido|minimo|ninguno),
   shadows (ninguna|suaves|marcadas), activeBorder (sutil|color|brillo|ninguno), barPos (abajo|arriba|izquierda),
   barMode (fija|flotante), animado, reduceTransparency, reduceMotion, nightLight, clock24 (bool), gapsIn (0-30),

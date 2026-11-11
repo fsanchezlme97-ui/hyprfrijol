@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.2] — 2026-11-11
+
+### Cambiado
+- **12 temas, cada uno con su variante oscura y clara** ajustada a mano (antes 66 paletas, muchas de un solo modo): Grafito, Oxocarbon, Ciruela, Rosa pastel, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox, Everforest, Kanagawa y Lila pastel; Monocromo sigue en «Color». Al cambiar entre claro y oscuro se usa siempre la pareja del tema, no una variante calculada.
+- Nuevos: **Ciruela** (oscuro y claro) y **Oxocarbon claro** (IBM Carbon). Grafito y Claro pasan a ser el mismo tema.
+
+### Migración
+- Si tenías una paleta retirada, pasa a la más parecida (p. ej. Lavanda → Lila pastel, Vino → Ciruela, Carbón → Oxocarbon). Copia antes en `settings.json.antes-de-temas`. Los temas importados de Omarchy no se tocan.
+
 ## [0.9.1] — 2026-11-11
 
 ### Añadido

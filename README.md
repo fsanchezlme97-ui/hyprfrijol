@@ -33,7 +33,7 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 |---|---|
 | Hyprland en Lua, validado con `Hyprland --verify-config` | `config/hypr/frijol/` |
 | Sesión aparte y modo de prueba en ventana (`hf-session --nested`) | `scripts/hf-session` |
-| Colores del fondo (matugen) o paletas del diseño, estilos Material (tipo Android) / SkySoul (cristal) / Chroma (tipo Nothing), claro / oscuro / auto, redondeo ajustable | `scripts/hf-apply`, `config/themes/` |
+| Colores del fondo (matugen) o 12 temas en pares oscuro y claro, estilo Math (Material 3) con o sin transparencia, claro / oscuro / auto, redondeo ajustable | `scripts/hf-apply`, `config/themes/` |
 | Barra abajo / arriba / izquierda, fija o flotante | `quickshell/bar/` |
 | Spotlight (apps, archivos, calculadora, comandos, ventanas) | `modules/spotlight` |
 | Ajustes rápidos, notificaciones con respuesta, OSD | `modules/quicksettings`, `notifications`, `osd` |
@@ -65,7 +65,7 @@ Capturas reales a 1920×1080 de una sesión de HyprFrijol 0.8.6 con la configura
 | ![Selector de fondos](docs/capturas/selector-de-fondos.webp) | ![Pantalla de bloqueo](docs/capturas/bloqueo.webp) |
 | **Selector de fondos** · vista previa al instante (también vídeo), por pantalla o según la hora | **Bloqueo** · reloj, tu foto y tu fondo, con contraseña o huella |
 | ![Ajustes › Apariencia](docs/capturas/ajustes-apariencia.webp) | ![Ajustes › Aplicaciones](docs/capturas/ajustes-aplicaciones.webp) |
-| **Ajustes › Apariencia** · tres estilos, 45 paletas (aquí Oxocarbon) y acento | **Ajustes › Aplicaciones** · centro de aplicaciones por categorías y origen |
+| **Ajustes › Apariencia** · estilo Math, temas en pares oscuro y claro (aquí Oxocarbon) y acento | **Ajustes › Aplicaciones** · centro de aplicaciones por categorías y origen |
 | ![Ajustes › Barra](docs/capturas/ajustes-barra.webp) | ![Ajustes › Sistema y recuperación](docs/capturas/ajustes-sistema.webp) |
 | **Ajustes › Barra** · posición, forma, tamaño y módulos visibles | **Ajustes › Sistema** · puntos de restauración, diagnóstico, actualizaciones y modo seguro |
 | ![Ajustes › Plugins de Omarchy](docs/capturas/ajustes-plugins-omarchy.webp) | |

@@ -7,7 +7,7 @@
 
 # HyprFrijol (English summary)
 
-HyprFrijol is a from-scratch shell and rice for **Hyprland ≥ 0.57** (Lua config) built with **Quickshell**: three styles — solid *Material*, glassy *SkySoul* (Material made of frosted glass) and *Chroma* (Nothing Phone-like), Spotlight, an AI assistant side panel, web apps, wallpaper picker, widgets, an update center with restore points, screenshots/recording, and its own greetd login. The interface and docs are in Spanish; see [README.md](README.md) for the full guide.
+HyprFrijol is a from-scratch shell and rice for **Hyprland ≥ 0.57** (Lua config) built with **Quickshell**: one style, *Math* (Material 3), solid or with frosted-glass transparency, 12 themes in dark and light pairs, Spotlight, an AI assistant side panel, web apps, wallpaper picker, widgets, an update center with restore points, screenshots/recording, and its own greetd login. The interface and docs are in Spanish; see [README.md](README.md) for the full guide.
 
 It runs as a **separate session** from the repo folder and never touches `~/.config/hypr`, `~/.config/quickshell` or `~/.config/matugen`.
 
