@@ -30,6 +30,8 @@ hl.on("hyprland.start", function()
         hl.exec_cmd("sh -c 'sleep 3; [ \"$(jq -r .autostartApps " .. HF.user .. "/settings.json 2>/dev/null)\" = false ] || exec " .. HF.scripts .. "/hf-defaults autostart-run'")
         -- Efectos de audio si los usas
         hl.exec_cmd("sh -c 'command -v easyeffects >/dev/null && exec easyeffects --hide-window --service-mode'")
+        -- Icono de Tailscale en la bandeja: tailscaled no lo pone; espera a que la bandeja del shell esté lista
+        hl.exec_cmd("sh -c 'command -v tailscale >/dev/null && sleep 3 && exec tailscale systray'")
         -- Plugins de Hyprland instalados con hyprpm (Ajustes › Plugins › «Cargar al iniciar», pluginsAutoload).
         -- -n avisa con una notificación; los errores (p. ej. cabeceras viejas tras actualizar Hyprland) avisan siempre.
         -- Sin plugins instalados (hyprpm list vacío) no se llama: si no, avisaba de cabeceras viejas sin motivo.
