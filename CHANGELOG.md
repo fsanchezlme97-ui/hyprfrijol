@@ -3,11 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.23] — 2026-11-10
+
+- Sin emojis en Ajustes ni en la barra de título: el botón de mostrar en todos los espacios es ahora ⊙.
+
 ## [0.8.22] — 2026-11-10
 
 - **El modo flotante se comporta como un escritorio clásico** (Openbox, GNOME):
   - **Barras de título** en las ventanas que no traen la suya, con el estilo de la ventana PiP: menú ⋮,
-    fijar en todos los espacios 📌, minimizar, maximizar y cerrar. Usa el plugin Hyprbars; al elegir Flotante en
+    mostrar en todos los espacios ⊙, minimizar, maximizar y cerrar. Usa el plugin Hyprbars; al elegir Flotante en
     Ajustes › Escritorio y gestos se ofrece instalarlo (se compila una vez).
   - Chrome, Firefox, las apps de GNOME, VS Code, Discord, Spotify… ya dibujan su barra y no se les pone otra.
     La lista se puede cambiar en **Apps con su propia barra**.

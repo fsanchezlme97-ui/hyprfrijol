@@ -156,7 +156,7 @@ def hypr_lua(s, c):
                     (danger, "✕", "hyprctl dispatch 'hl.dsp.window.close()'"),
                     (c.get("t"), "□", "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\", action = \"toggle\" })'"),
                     (c.get("t"), "–", "hyprctl dispatch 'hl.dsp.window.move({ workspace = \"special:minimized\", follow = false })'"),
-                    (c.get("t"), "📌", "hyprctl dispatch 'hl.dsp.window.pin()'"),
+                    (c.get("t"), "⊙", "hyprctl dispatch 'hl.dsp.window.pin()'"),
                 ] + ([(c.get("t"), "⋮", qs)] if qs else [])
                 for fg, icon, act in btns:
                     body.append(f"hl.plugin.hyprbars.add_button({{ bg_color = {_q(clear)}, fg_color = {_q(_rgba(fg))}, size = {size}, icon = {_q(icon)}, action = {_q(act)} }})")
