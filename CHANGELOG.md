@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.18] — 2026-11-10
+
+- **Samantha empieza a hablar antes**: la respuesta se lee en dos trozos. Suena la primera frase en unos 4 s y el
+  resto se genera mientras tanto, en vez de esperar a tener todo el audio (con respuestas largas eran 15–30 s de
+  silencio). Si Gemini falla a mitad, lo ya generado se oye igual. Cortar la voz o una respuesta nueva siguen
+  callando la anterior al momento.
+
 ## [0.8.17] — 2026-11-09
 
 - **Hablar con Samantha ya no abre el panel lateral**: con «Hablar con voz» activo, Super + Alt + H (o `hf-ai talk`)

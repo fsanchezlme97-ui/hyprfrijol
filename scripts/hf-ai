@@ -1752,7 +1752,10 @@ def speakable(text):
         t = cut[:max(cut.rfind(". "), cut.rfind("? "), cut.rfind("! ")) + 1] or cut
     return t
 
+TTS_OWNER = TTS_DIR / "hf-ai-voice.owner"   # pid del «hf-ai speak» que tiene la palabra; los anteriores se retiran
+
 def speak_stop():
+    TTS_OWNER.unlink(missing_ok=True)
     try:
         pid = int(TTS_PID.read_text())
         if b"hf-ai-voice-" in pathlib.Path(f"/proc/{pid}/cmdline").read_bytes():   # solo nuestro reproductor
@@ -1761,9 +1764,44 @@ def speak_stop():
         pass
     TTS_PID.unlink(missing_ok=True)
 
+def speech_chunks(t, first=40):
+    """[primera frase (≥ «first» caracteres si hay más), resto]: suena la primera mientras se genera lo demás.
+    Dos trozos y no uno por frase: cada trozo es una petición y la cuota gratuita de Gemini va por peticiones."""
+    parts = re.split(r"(?<=[.!?…])\s+", t)
+    head = ""
+    while parts and len(head) < first:
+        head = (head + " " + parts.pop(0)).strip()
+    return [c for c in (head, " ".join(parts)) if c]
+
+def gemini_tts(t, key, voice, models):
+    """Audio WAV (bytes) de «t». Prueba los modelos en orden y deja delante el que respondió."""
+    import base64, io, wave
+    # Solo el texto: los modelos TTS nuevos leían en voz alta cualquier instrucción de estilo puesta delante
+    body = {"contents": [{"parts": [{"text": t}]}],
+            "generationConfig": {"responseModalities": ["AUDIO"],
+                                 "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}}}}
+    err = ""
+    for m in list(models):
+        try:
+            r = gemini_http("POST", f"/models/{m}:generateContent", key, body, timeout=60)
+            audio = base64.b64decode(r["candidates"][0]["content"]["parts"][0]["inlineData"]["data"])
+        except AIError as e:
+            err = str(e); continue
+        except Exception:
+            err = "Gemini no devolvió audio"; continue
+        models.remove(m); models.insert(0, m)
+        if audio[:4] == b"RIFF":               # los modelos nuevos ya mandan un WAV entero (con bloques tras el audio)
+            return audio
+        buf = io.BytesIO()                     # los de antes: PCM 16 bits, 24 kHz, mono, sin cabecera
+        with wave.open(buf, "wb") as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(audio)
+        return buf.getvalue()
+    raise AIError(err or "Gemini no devolvió audio")
+
 def speak(text, s=None):
-    """Lee «text» en voz alta (aiVoice; voz aiVoiceName). Corta lo que estuviera diciendo. → {"ok", "error"}"""
-    import base64, tempfile, wave
+    """Lee «text» en voz alta (aiVoice; voz aiVoiceName). Corta lo que estuviera diciendo. → {"ok", "error"}
+    Trozo a trozo: un hilo genera el siguiente mientras suena el actual."""
+    import queue, tempfile, threading
     s = s or settings()
     t = speakable(text)
     speak_stop()
@@ -1772,45 +1810,55 @@ def speak(text, s=None):
     key, _ = gemini_key()
     if not key:
         return {"ok": False, "error": "Falta la clave de Gemini (Ajustes › Asistente de IA)"}
-    voice = str(s.get("aiVoiceName") or "Aoede")
-    # Solo el texto: los modelos TTS nuevos leían en voz alta cualquier instrucción de estilo puesta delante
-    body = {"contents": [{"parts": [{"text": t}]}],
-            "generationConfig": {"responseModalities": ["AUDIO"],
-                                 "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}}}}
-    r, err = None, ""
-    for m in TTS_MODELS:
-        try:
-            r = gemini_http("POST", f"/models/{m}:generateContent", key, body, timeout=60)
-            break
-        except AIError as e:
-            err = str(e)
-    try:
-        audio = base64.b64decode(r["candidates"][0]["content"]["parts"][0]["inlineData"]["data"])
-    except Exception:
-        return {"ok": False, "error": err or "Gemini no devolvió audio"}
-    TTS_DIR.mkdir(parents=True, exist_ok=True)
-    fd, name = tempfile.mkstemp(prefix="hf-ai-voice-", suffix=".wav", dir=TTS_DIR)
-    f = pathlib.Path(name)
-    with os.fdopen(fd, "wb") as fo:
-        if audio[:4] == b"RIFF":               # los modelos nuevos ya mandan un WAV entero (con bloques tras el audio)
-            fo.write(audio)
-        else:                                  # los de antes: PCM 16 bits, 24 kHz, mono, sin cabecera
-            with wave.open(fo, "wb") as w:
-                w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(audio)
     player = shutil.which("pw-play") or shutil.which("paplay")
     if not player:
-        f.unlink(missing_ok=True)
         return {"ok": False, "error": "Falta pw-play o paplay"}
-    speak_stop()                                    # otra respuesta pudo empezar mientras se generaba esta
-    p = subprocess.Popen([player, str(f)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    TTS_PID.write_text(str(p.pid))
-    run(QS + ["ipc", "call", "shell", "setAiSpeaking", "true"])     # la barra pinta la onda rellena
-    p.wait()
-    run(QS + ["ipc", "call", "shell", "setAiSpeaking", "false"])
-    f.unlink(missing_ok=True)
-    if TTS_PID.exists() and TTS_PID.read_text() == str(p.pid):
+    voice, models = str(s.get("aiVoiceName") or "Aoede"), list(TTS_MODELS)
+    TTS_DIR.mkdir(parents=True, exist_ok=True)
+    me = str(os.getpid())
+    TTS_OWNER.write_text(me)
+    mine = lambda: TTS_OWNER.exists() and TTS_OWNER.read_text() == me
+    q = queue.Queue()
+
+    def produce():
+        for c in speech_chunks(t):
+            if not mine():
+                break
+            try:
+                audio = gemini_tts(c, key, voice, models)
+            except AIError as e:
+                q.put(e); return
+            fd, name = tempfile.mkstemp(prefix="hf-ai-voice-", suffix=".wav", dir=TTS_DIR)
+            with os.fdopen(fd, "wb") as fo:
+                fo.write(audio)
+            q.put(pathlib.Path(name))
+        q.put(None)
+
+    threading.Thread(target=produce, daemon=True).start()
+    played, err = False, ""
+    while (item := q.get()) is not None:
+        if isinstance(item, AIError):
+            err = str(item); break
+        if not mine():                                  # otra respuesta empezó mientras se generaba esta
+            item.unlink(missing_ok=True); break
+        p = subprocess.Popen([player, str(item)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        TTS_PID.write_text(str(p.pid))
+        if not played:
+            run(QS + ["ipc", "call", "shell", "setAiSpeaking", "true"])     # la barra pinta la onda rellena
+            played = True
+        p.wait()
+        item.unlink(missing_ok=True)
+        if not (TTS_PID.exists() and TTS_PID.read_text() == str(p.pid)):   # speak --stop o una respuesta nueva
+            break
+    while not q.empty():                                # trozos ya generados que no llegaron a sonar
+        if isinstance(item := q.get(), pathlib.Path):
+            item.unlink(missing_ok=True)
+    if played:                  # también si nos cortaron: la nueva respuesta la vuelve a encender cuando suene
+        run(QS + ["ipc", "call", "shell", "setAiSpeaking", "false"])
+    if mine():
+        TTS_OWNER.unlink(missing_ok=True)
         TTS_PID.unlink(missing_ok=True)
-    return {"ok": True, "error": ""}
+    return {"ok": played, "error": err}
 
 def gemini_model(s):
     m = str(s.get("aiModel") or "").strip().removeprefix("models/")
