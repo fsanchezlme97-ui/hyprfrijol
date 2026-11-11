@@ -14,6 +14,11 @@ Singleton {
     property int signal: 0
     property string type: ""          // "wifi" | "ethernet" | ""
     property var networks: []         // [{ ssid, signal, secure, active }]
+    // Portal cautivo (hoteles, aeropuertos…): NetworkManager dice «portal» cuando la red pide iniciar sesión.
+    // Al detectarlo avisa una vez con una notificación; openPortal() abre una página http que el portal intercepta.
+    property bool portal: false
+    function openPortal(): void { Quickshell.execDetached(["xdg-open", "http://neverssl.com"]); }
+    onPortalChanged: if (portal) Quickshell.execDetached(["sh", "-c", 'a=$(notify-send -a Red -i network-wireless -A abrir="Abrir la página de acceso" "Esta red pide iniciar sesión" "Abre la página del portal para conectarte a internet."); [ "$a" = abrir ] && xdg-open http://neverssl.com']);
 
     function refresh(): void { status.running = true; }
     function setWifi(on: bool): void { Quickshell.execDetached(["nmcli", "radio", "wifi", on ? "on" : "off"]); wifiEnabled = on; later.restart(); }
@@ -41,7 +46,7 @@ Singleton {
 
     Process {
         id: status
-        command: ["sh", "-c", "nmcli -t -f WIFI radio; nmcli -t -f TYPE,STATE,CONNECTION device | grep ':connected:' | head -1; nmcli -t -f ACTIVE,SSID,SIGNAL device wifi 2>/dev/null | grep '^yes' | head -1"]
+        command: ["sh", "-c", "nmcli -t -f WIFI radio; nmcli -t -f TYPE,STATE,CONNECTION device | grep ':connected:' | head -1; nmcli -t -f ACTIVE,SSID,SIGNAL device wifi 2>/dev/null | grep '^yes' | head -1; echo \"conn:$(nmcli networking connectivity 2>/dev/null)\""]
         stdout: StdioCollector {
             onStreamFinished: {
                 const l = text.trim().split("\n");
@@ -52,6 +57,7 @@ Singleton {
                 const w = (l.find(x => x.startsWith("yes:")) ?? "").split(":");
                 root.ssid = w.length > 2 ? w[1] : (root.type === "ethernet" ? "Cable" : dev[2] ?? "");
                 root.signal = w.length > 2 ? parseInt(w[2]) : (root.connected ? 100 : 0);
+                root.portal = root.connected && l.includes("conn:portal");
             }
         }
     }

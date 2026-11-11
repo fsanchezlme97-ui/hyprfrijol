@@ -11,6 +11,7 @@ pragma Singleton
 // - popupGroups: los avisos emergentes agrupados (la pila muestra el último y cuántos más hay)
 // - history: historial persistente (~/.local/state/hyprfrijol/notify-history.json, notifyHistory, máx. 300)
 //            [{ uid, app, key, icon, image, summary, body, urgency, t }] · clearHistory() · forget(uid)
+// - repeats[id]: el mismo aviso repetido (app, título y texto iguales) se queda en uno con «×N»
 // - Las apps que reemplazan su aviso (replace-id: volumen, descargas…) vuelven a mostrarlo y reinician su tiempo.
 // - Reglas por app (notifyApps: allow/popups) se miran aquí al llegar, para que no parpadee el emergente.
 // IPC:  qs -p <repo>/config/quickshell ipc call notifs toggleDnd | setDnd true | dndFor 60 | dndPreset noche | clear
@@ -29,6 +30,7 @@ Singleton {
     property real dndUntil: 0             // epoch ms en que se apaga solo; 0 = hasta que lo desactives
     property string dndKind: ""           // último atajo usado ("1h" | "noche" | "manana" | "siempre")
     property var arrived: ({})            // id → epoch ms
+    property var repeats: ({})            // id → veces que ha llegado el mismo aviso (los repetidos se juntan en uno)
     readonly property int defaultTimeout: 6000
     readonly property int count: list.values.length
     readonly property int maxPopups: 24
@@ -242,6 +244,13 @@ Singleton {
             // replace-id: la app actualiza el mismo aviso (no vuelve a llegar por aquí)
             n.summaryChanged.connect(() => bumpT.queue(n));
             n.bodyChanged.connect(() => bumpT.queue(n));
+            // El mismo aviso otra vez (misma app, título y texto): se quita el anterior y este lleva la cuenta (×N)
+            const dup = root.list.values.find(o => o !== n && root.keyOf(o) === root.keyOf(n) && o.summary === n.summary && o.body === n.body);
+            if (dup) {
+                const r = Object.assign({}, root.repeats); r[n.id] = (r[dup.id] ?? 1) + 1; delete r[dup.id]; root.repeats = r;
+                root.dismiss(dup);
+                if (root.huid[dup.id]) root.forget(root.huid[dup.id]);   // en el historial, también una sola vez
+            }
             root.record(n);
             if (root.canPopup(n)) root.showPopup(n);
             root.announce(n);

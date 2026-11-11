@@ -302,10 +302,11 @@ Overlay {
                                         icon: Net.type === "ethernet" ? "monitor" : "wifi_off"
                                         label: Net.type === "ethernet" ? "Red" : "Wi‑Fi"
                                         active: Net.wifiEnabled || Net.type === "ethernet"
-                                        sub: Net.type === "ethernet" ? "Cable conectado" : !Net.wifiEnabled ? "Apagado" : Net.connected ? Net.ssid : "Sin conectar"
+                                        sub: Net.portal ? "Pide iniciar sesión · tocar" : Net.type === "ethernet" ? "Cable conectado" : !Net.wifiEnabled ? "Apagado" : Net.connected ? Net.ssid : "Sin conectar"
                                         expandable: true
                                         expanded: win.expanded === "wifi"
-                                        onClicked: Net.setWifi(!Net.wifiEnabled)
+                                        // portal cautivo: abre la página de acceso en vez de apagar el Wi-Fi
+                                        onClicked: Net.portal ? (Net.openPortal(), Shell.close()) : Net.setWifi(!Net.wifiEnabled)
                                         onExpand: { win.expanded = win.expanded === "wifi" ? "" : "wifi"; win.pwFor = ""; if (win.expanded) Net.scan(); }
                                     }
                                     AjusteTile {

@@ -8,7 +8,8 @@ pragma Singleton
 // como "desplazamiento". general:layout y la regla de flotar las ponen config/apply/30-layout.py y 35-windows.py;
 // aquí:
 // - Cambio en vivo: al cambiar el modo pasa a flotante / mosaico / columnas las ventanas ya abiertas.
-// - Excepción por espacio de la sesión (ajustes rápidos › Ventanas): setWsMode(ws, modo). Flotar se hace
+// - Excepción por espacio (ajustes rápidos › Ventanas, Super + Ctrl + Espacio, icono de la barra): setWsMode(ws, modo),
+//   cycleWs(ws). Se guardan (ws-modes.json). Flotar se hace
 //   convirtiendo las ventanas; el diseño (mosaico ↔ columnas) con una regla de espacio de Hyprland que se vuelve
 //   a poner tras cada recarga de la configuración.
 // - Ventanas nuevas que flotan por el modo: tamaño cómodo (62 % × 70 % del área útil si la app pide poco),
@@ -41,8 +42,26 @@ Singleton {
              : lay === "scrolling" ? "desplazamiento" : "mosaico";
     }
     readonly property string mode: norm(Settings.get("windowMode", "mosaico"), Settings.get("layout", "dwindle"))
-    // Espacios con excepción en esta sesión: { "3": "flotante" } (otro modo que el general solo en ese espacio)
+    // Espacios con excepción: { "3": "flotante" } (otro modo que el general solo en ese espacio). Se guardan en
+    // ~/.local/state/hyprfrijol/ws-modes.json y vuelven al reiniciar el shell; cambiar el modo general las borra.
     property var overrides: ({})
+    property bool overridesLoaded: false
+    onOverridesChanged: if (overridesLoaded) wsModesFile.setText(JSON.stringify(overrides))
+    FileView {
+        id: wsModesFile
+        path: Paths.state + "/ws-modes.json"
+        printErrors: false
+        atomicWrites: true
+        onLoaded: {
+            let o = {};
+            try { o = JSON.parse(text()) ?? {}; } catch (e) {}
+            for (const k in o) if (!root.modes.includes(o[k]) || !(parseInt(k) > 0)) delete o[k];
+            root.overrides = o;
+            root.overridesLoaded = true;
+            root.reapplyRules();
+        }
+        onLoadFailed: root.overridesLoaded = true
+    }
     readonly property bool dry: Quickshell.env("HF_TRY") === "1"
 
     // Modo de un espacio (con su excepción) · ¿flotan sus ventanas? · diseño de Hyprland de un modo
@@ -84,6 +103,13 @@ Singleton {
         if (now === was) return;
         if (layoutFor(now) !== layoutFor(was)) wsLayout(ws, layoutFor(now));
         if ((now === "flotante") !== (was === "flotante")) convert(HyprClients.onWorkspace(ws), now === "flotante");
+    }
+    // Siguiente modo solo para el espacio activo (hf:modoespacio, Super + Ctrl + Espacio; clic en el icono de la barra)
+    function cycleWs(ws: int): void {
+        if (ws <= 0) return;
+        const next = modes[(modes.indexOf(modeOf(ws)) + 1) % modes.length];
+        setWsMode(ws, next);
+        announced(next);
     }
     // Compatibilidad: flotar o no un espacio
     function setFloat(ws: int, on: bool): void { setWsMode(ws, on ? "flotante" : (mode === "flotante" ? "mosaico" : mode)); }
@@ -363,6 +389,7 @@ Singleton {
         function get(ws: int): string { return ws > 0 ? root.modeOf(ws) : root.mode; }
     }
     GlobalShortcut { appid: "hf"; name: "modoventanas"; description: "HyprFrijol: modo de ventanas (mosaico, desplazamiento, flotante)"; onPressed: root.cycle() }
+    GlobalShortcut { appid: "hf"; name: "modoespacio"; description: "HyprFrijol: modo de ventanas solo de este espacio"; onPressed: root.cycleWs(Hyprland.focusedMonitor?.activeWorkspace?.id ?? 0) }
     GlobalShortcut { appid: "hf"; name: "minimizar"; description: "HyprFrijol: minimizar la ventana activa"; onPressed: if (HyprClients.activeAddress) root.minimize(HyprClients.activeAddress) }
     GlobalShortcut { appid: "hf"; name: "restaurar"; description: "HyprFrijol: restaurar la última ventana minimizada"; onPressed: root.restoreLast() }
 }

@@ -42,7 +42,7 @@ Grid {
         if (showNames && nm) return ic ? ic + " " + nm : nm;
         return ic;
     }
-    columns: vertical ? 1 : ids.length
+    columns: vertical ? 1 : ids.length + 1
     spacing: vertical ? 4 : 1
 
     Repeater {
@@ -93,5 +93,23 @@ Grid {
                 onWheel: w => Hyprland.dispatch(`hl.dsp.focus({ workspace = "${WsLabel.perMonitor ? "m" : "e"}${w.angleDelta.y > 0 ? "-1" : "+1"}" })`)
             }
         }
+    }
+
+    // Modo de ventanas del espacio activo (WinMode): atenuado si es el general, de color si este espacio tiene el
+    // suyo. Clic: el siguiente modo solo para este espacio (como Super + Ctrl + Espacio).
+    Item {
+        id: modeCell
+        readonly property string m: { WinMode.overrides; WinMode.mode; return WinMode.modeOf(root.activeId); }
+        readonly property bool own: m !== WinMode.mode
+        width: root.vertical ? 24 : 20; height: 20
+        Icon { anchors.centerIn: parent; name: WinMode.icons[modeCell.m] ?? "tiles"; size: 12; color: modeCell.own ? Theme.p : Theme.o }
+        MouseArea {
+            id: modeMa
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: WinMode.cycleWs(root.activeId)
+        }
+        BarTip { target: modeMa; text: (WinMode.labels[modeCell.m] ?? "") + (modeCell.own ? " · solo este espacio" : "") + " · clic: cambiar" }
     }
 }

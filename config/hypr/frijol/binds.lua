@@ -97,6 +97,7 @@ b(mod .. " + ALT + SPACE", hl.dsp.window.float({ action = "toggle" }), { descrip
 b("ALT + SPACE",           hl.dsp.global("hf:ventana"),        { description = "Menú de ventana" })
 b(mod .. " + SHIFT + F",   hl.dsp.window.float({ action = "toggle" }))
 b(mod .. " + SHIFT + SPACE", hl.dsp.global("hf:modoventanas"), { description = "Cambiar modo de ventanas" })
+b(mod .. " + CTRL + SPACE",  hl.dsp.global("hf:modoespacio"),  { description = "Modo de ventanas de este espacio" })
 b(mod .. " + P",           hl.dsp.window.pin(),               { description = "Fijar encima" })
 -- En desplazamiento: Super + Alt + J saca la ventana a una columna propia; Super + ñ / ´ cambian el ancho de la
 -- columna entre ⅓, ½, ⅔ y toda la pantalla (scrolling:explicit_column_widths)
@@ -122,8 +123,11 @@ for k, d in pairs(dirs) do
 end
 b(mod .. " + left",  HF.scroll("focus l", hl.dsp.global("hf:snapleft")),  { description = "Mitad izquierda / columna anterior" })
 b(mod .. " + right", HF.scroll("focus r", hl.dsp.global("hf:snapright")), { description = "Mitad derecha / columna siguiente" })
-b(mod .. " + CTRL + SHIFT + left",  HF.scroll("swapcol l"), { description = "Mover columna ←" })
-b(mod .. " + CTRL + SHIFT + right", HF.scroll("swapcol r"), { description = "Mover columna →" })
+-- fuera del desplazamiento: la ventana a la pantalla de ese lado (y el foco con ella)
+b(mod .. " + CTRL + SHIFT + left",  HF.scroll("swapcol l", hl.dsp.window.move({ monitor = "l" })), { description = "Mover columna ← / ventana a la pantalla de la izquierda" })
+b(mod .. " + CTRL + SHIFT + right", HF.scroll("swapcol r", hl.dsp.window.move({ monitor = "r" })), { description = "Mover columna → / ventana a la pantalla de la derecha" })
+b(mod .. " + CTRL + SHIFT + up",    hl.dsp.window.move({ monitor = "u" }), { description = "Ventana a la pantalla de arriba" })
+b(mod .. " + CTRL + SHIFT + down",  hl.dsp.window.move({ monitor = "d" }), { description = "Ventana a la pantalla de abajo" })
 b(mod .. " + up",    hl.dsp.global("hf:snapup"),    { description = "Maximizar / mitad superior" })
 b(mod .. " + down",  hl.dsp.global("hf:snapdown"),  { description = "Restaurar / mitad inferior" })
 b(mod .. " + ALT + W", hl.dsp.global("hf:snap"),    { description = "Ajustar ventana" })
@@ -196,6 +200,16 @@ b(mod .. " + SHIFT + mouse_up",   HF.wsStep(-1, true))
 b(mod .. " + SHIFT + mouse_down", HF.wsStep(1, true))
 b(mod .. " + SHIFT + Page_Up",    HF.wsStep(-1, true), { description = "Enviar al espacio anterior" })
 b(mod .. " + SHIFT + Page_Down",  HF.wsStep(1, true),  { description = "Enviar al espacio siguiente" })
+-- Consola desplegable (Super + º, la tecla a la izquierda del 1): una terminal que baja desde arriba sobre el
+-- escritorio atenuado, en el espacio oculto «consola»; la primera vez se abre sola (on_created_empty). Ocupa la
+-- mitad de arriba de la pantalla activa.
+b(mod .. " + code:49", function()
+    local m = hl.get_active_monitor()
+    local h = m and math.floor(m.height / (m.scale or 1)) or 1080
+    hl.workspace_rule({ workspace = "special:consola", gaps_out = { top = 8, right = 8, bottom = math.floor(h * 0.5), left = 8 },
+                        on_created_empty = HF.terminal })
+    hl.dispatch(hl.dsp.workspace.toggle_special("consola"))
+end, { description = "Consola desplegable" })
 -- Bloc de notas (scratchpad)
 b(mod .. " + S",             hl.dsp.workspace.toggle_special("special"), { description = "Espacio oculto (scratchpad)" })
 b("CTRL + " .. mod .. " + S", hl.dsp.workspace.toggle_special("special"))

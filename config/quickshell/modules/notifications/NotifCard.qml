@@ -140,6 +140,11 @@ Item {
                                   color: stMa.containsMouse ? Theme.pcText : Theme.t }
                             MouseArea { id: stMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.stackToggled() }
                         }
+                        Txt {   // el mismo aviso repetido (Notifs.repeats)
+                            readonly property int times: Notifs.repeats[root.n?.id] ?? 1
+                            visible: times > 1
+                            text: "×" + times; size: 11; weight: Font.DemiBold; muted: true; tabular: true
+                        }
                         Txt { text: Notifs.ago(root.n); size: 11; muted: true; tabular: true }
                     }
                     Txt {

@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.30] — 2026-11-10
+
+- **Modo de ventanas por espacio, guardado**: Super + Ctrl + Espacio (o clic en el icono nuevo junto a los espacios
+  de la barra) cambia el modo (mosaico, desplazamiento, flotante) solo del espacio activo. El icono muestra el modo
+  del espacio, de color si tiene el suyo. Estas excepciones ya no se pierden al reiniciar el shell.
+- **Mover una ventana a otra pantalla**: Super + Ctrl + Shift + flechas.
+- **Consola desplegable**: Super + º abre una terminal que baja desde arriba sobre el escritorio atenuado; la misma
+  tecla la esconde y vuelve con lo que tenías.
+- **Avisos repetidos juntos**: el mismo aviso varias veces (misma app, título y texto) se queda en uno con «×N».
+- **Portal cautivo**: si la red pide iniciar sesión (hoteles, aeropuertos), avisa con un botón para abrir la página
+  de acceso; el icono de red de la barra se pone en rojo y el botón de Wi-Fi de los ajustes rápidos la abre.
+
 ## [0.8.29] — 2026-11-10
 
 - **Espacios por pantalla**: con varias pantallas, cada una tiene sus propios espacios del 1 al 10. Super + número,

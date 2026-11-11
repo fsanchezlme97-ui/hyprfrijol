@@ -153,7 +153,10 @@ portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si o
 - Atajo `Super + Mayús + Espacio` (`hf:modoventanas`, «Cambiar modo de ventanas»): mosaico → desplazamiento →
   flotante, con los tres modos en el OSD. IPC: `qs ipc call winmode cycle | set <modo> | setWs <espacio> <modo> | get <espacio>`.
 - Ajustes rápidos › Ventanas: clic = siguiente modo; el desplegable elige el modo de todos los espacios y el de
-  solo el espacio actual (excepción de la sesión; elegir el mismo que el general la quita). Las excepciones de
+  solo el espacio actual (excepción del espacio; elegir el mismo que el general la quita). También
+  `Super + Ctrl + Espacio` (`hf:modoespacio`) o clic en el icono de modo junto a los espacios de la barra. Las
+  excepciones se guardan en `~/.local/state/hyprfrijol/ws-modes.json` (vuelven al reiniciar el shell; cambiar el
+  modo general las borra). Las excepciones de
   flotar convierten las ventanas; las de diseño (mosaico ↔ columnas) son reglas de espacio de Hyprland
   (`hl.workspace_rule({ workspace, layout })`) que el shell vuelve a poner tras cada recarga de la configuración.
 - Desplazamiento (`binds.lua`, `HF.scroll(msg, otro)`: en un espacio con la cinta y la ventana activa en mosaico
