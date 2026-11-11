@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.25] — 2026-11-10
+
+- **El instalador trae la fuente de iconos en todas las distros**: en Arch la instala pacman
+  (`ttf-jetbrains-mono-nerd`). En Fedora, openSUSE, Debian/Ubuntu y Void, que no la empaquetan, descarga Symbols
+  Nerd Font en `~/.local/share/fonts`. En NixOS se añade `nerd-fonts.symbols-only` a la lista de fuentes que
+  propone. Si ya tienes una Nerd Font, no descarga nada.
+
 ## [0.8.24] — 2026-11-10
 
 - Los botones de las barras de título usan iconos de Nerd Font (cerrar, maximizar, minimizar, chincheta y menú)

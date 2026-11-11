@@ -494,6 +494,24 @@ ensure_matugen() {
   return 0
 }
 
+ensure_nerd_font() {   # iconos de las barras de título: si la distro no trae paquete, la fuente de símbolos de Nerd Fonts en ~/.local/share/fonts
+  local n keep=(); for n in ${NOPKG[@]+"${NOPKG[@]}"}; do [ "$n" = fonts-nerd ] || keep+=("$n"); done; NOPKG=(${keep[@]+"${keep[@]}"})
+  if [ "$PROBE" = 1 ] && [ "$DRY" = 0 ] && have fc-list && [ -n "$(fc-list ':charset=f0403' family 2>/dev/null)" ]; then return 0; fi
+  [ "$FAMILY" = arch ] && return 0   # la instala pacman (ttf-jetbrains-mono-nerd)
+  local dir="$HOME/.local/share/fonts/NerdFontsSymbolsOnly"
+  local url="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/NerdFontsSymbolsOnly.tar.xz"
+  say "Fuente de iconos (Symbols Nerd Font) en $dir"
+  if [ "$DRY" = 1 ]; then echo "  [dry-run] curl -fsSL $url | tar -xJ -C $dir && fc-cache -f $dir"; return 0; fi
+  if have curl && have tar && mkdir -p "$dir" && curl -fsSL "$url" | tar -xJ -C "$dir"; then
+    have fc-cache && fc-cache -f "$dir" >/dev/null 2>&1
+    done_ "Symbols Nerd Font (~/.local/share/fonts)"
+  else
+    warn "No pude descargar la fuente de iconos: los botones de las barras de título usarán símbolos de texto."
+    todo_ "fuente de iconos: descarga $url y descomprímela en $dir"
+  fi
+  return 0
+}
+
 ensure_hyprland_version() {
   hdr "Hyprland ≥ $MIN_HYPR"
   if [ "$SIMULATED" = 1 ]; then
@@ -846,7 +864,7 @@ if [ "$DEPS" = 1 ]; then
            "environment.systemPackages = with pkgs; [ quickshell matugen hyprlock hypridle hyprsunset hyprpicker" \
            "  wl-clipboard cliphist grim slurp wf-recorder wtype jq python3 kitty cava playerctl brightnessctl" \
            "  imagemagick ffmpeg tesseract libnotify zenity papirus-icon-theme mpvpaper ];" \
-           "fonts.packages = with pkgs; [ inter noto-fonts noto-fonts-color-emoji jetbrains-mono ];" \
+           "fonts.packages = with pkgs; [ inter noto-fonts noto-fonts-color-emoji jetbrains-mono nerd-fonts.symbols-only ];" \
            "services.pipewire = { enable = true; pulse.enable = true; };  networking.networkmanager.enable = true;" \
            "services.upower.enable = true;  services.power-profiles-daemon.enable = true;  security.polkit.enable = true;"
       HYPR_SRC="nixpkgs (programs.hyprland)" QS_SRC="nixpkgs"
@@ -870,6 +888,7 @@ if [ "$DEPS" = 1 ]; then
   filter_available
   install_packages
   ensure_matugen
+  ensure_nerd_font
   [ ${#NOPKG[@]} -gt 0 ] && skip_ "sin paquete en $FAMILY: ${NOPKG[*]}"
 else
   [ "$FAMILY" = gentoo ] || [ "$FAMILY" = nixos ] || skip_ "paquetes (--no-deps)"
