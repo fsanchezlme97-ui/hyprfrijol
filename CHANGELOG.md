@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.40] — 2026-11-11
+
+- Espacios por pantalla arreglados con una principal guardada que ya no existe (HDMI-A-1 → HDMI-A-2 al añadir una
+  gráfica): esa ya no se queda con el 1–10, hace de principal la más grande conectada. La barra marcaba mal el
+  espacio activo y al hacer clic saltaba a un espacio de la otra pantalla.
+- El orden y las reglas de los espacios los calcula la configuración de Hyprland (`frijol/workspaces.lua`) con las
+  pantallas conectadas de verdad, igual que la barra (`WsLabel`). Al cargar y al conectar o quitar una pantalla,
+  los espacios que tenían un número de otra pantalla se renumeran sin mover sus ventanas.
+- La barra se entera cuando un espacio cambia de número (Quickshell no atendía `changeworkspaceid`).
+- Espacios de la barra: el del espacio activo es una sola píldora que se desliza de un espacio a otro (antes se
+  apagaba en uno y se encendía en el otro).
+
 ## [0.8.39] — 2026-11-11
 
 - Ajustes › Fondos de pantalla: con varias pantallas, «Pantalla: Todas · HDMI-A-2 (principal) · VGA-1». Con una

@@ -1,6 +1,6 @@
 # Pantallas: Settings "monitors" = { "DP-1": { mode, position, scale, transform, vrr, hdr, mirror, disabled } } y uiScale.
 # primaryMonitor: la pantalla principal (el espacio 1 se abre en ella).
-# wsPerMonitor (por defecto true): cada pantalla con sus espacios (1-10, 11-20… en el orden de HF.wsGroups).
+# wsPerMonitor (por defecto true): cada pantalla con sus espacios (1-10, 11-20…; orden y reglas en frijol/workspaces.lua).
 import re
 
 def _q(v):
@@ -33,18 +33,14 @@ def hypr_lua(s, c):
     prim = s.get("primaryMonitor") or ""
     if not (prim and re.match(r"^[\w.-]+$", prim)):
         prim = ""
+    # Espacios por pantalla: el orden (y sus reglas) lo calcula frijol/workspaces.lua con las pantallas conectadas
+    # de verdad (una principal guardada que ya no está no se queda con el 1-10); aquí solo los datos
     if s.get("wsPerMonitor", True) is not False:
-        # Espacios por pantalla (binds.lua: HF.wsBase; WsLabel.qml): la principal del 1 al 10, la siguiente del
-        # 11 al 20… (orden: la principal y luego las demás por nombre; las desconectadas guardan su sitio)
-        groups = ([prim] if prim else []) + sorted(n for n in mons if n != prim and re.match(r"^[\w.-]+$", n))
         out.append("HF.wsPerMonitor = true")
-        out.append("HF.wsGroups = { " + ", ".join(_q(n) for n in groups) + " }")
-        for k, name in enumerate(groups):
-            for i in range(1, 11):
-                d = ", default = true" if i == 1 else ""
-                out.append(f'hl.workspace_rule({{ workspace = "{k * 10 + i}", monitor = {_q(name)}{d} }})')
-    elif prim:
-        out.append(f'hl.workspace_rule({{ workspace = "1", monitor = {_q(prim)}, default = true }})')
+    if prim:
+        out.append(f"HF.wsPrimary = {_q(prim)}")
+    known = sorted(n for n in mons if n != prim and re.match(r"^[\w.-]+$", n))
+    out.append("HF.wsKnown = { " + ", ".join(_q(n) for n in known) + " }")
     ui = float(s.get("uiScale", 1) or 1)
     if ui != 1:
         # resto de pantallas (y las que se conecten): escala de la interfaz

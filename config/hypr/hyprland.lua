@@ -51,4 +51,5 @@ require("frijol.floatsnap")    -- encajar ventanas flotantes al soltarlas en un 
 require("frijol.autostart")
 
 HF.load(HF.state .. "/settings.lua")  -- generado por hf-apply desde ~/.config/hyprfrijol/settings.json
+require("frijol.workspaces")          -- espacios por pantalla (usa HF.wsPrimary / HF.wsKnown de settings.lua)
 HF.load(HF.user .. "/local.lua")      -- ajustes personales

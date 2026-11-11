@@ -136,23 +136,14 @@ b("ALT + SHIFT + TAB", hl.dsp.global("hf:altprev"), { description = "Cambiar de 
 b("ALT + code:49",     hl.dsp.global("hf:altapp"),  { description = "Ventanas de la misma app" })
 
 -- ── Espacios ──────────────────────────────────────────────────────────────────
--- Espacios por pantalla ("wsPerMonitor", por defecto sí; 40-monitors.py rellena HF.wsGroups con las pantallas
--- en orden: la principal y luego las demás de Ajustes por nombre): la pantalla k (0 = la principal) usa del
--- k·10+1 al k·10+10 y Super + 1…0 van a los de la pantalla activa. Las que no están en Ajustes van detrás, por id.
--- Mismo cálculo en WsLabel.qml (barra y vista general).
+-- Espacios por pantalla ("wsPerMonitor", por defecto sí; el orden lo da HF.wsOrder, en workspaces.lua): la pantalla
+-- k (0 = la principal) usa del k·10+1 al k·10+10 y Super + 1…0 van a los de la pantalla activa.
 function HF.wsBase()
-    if not HF.wsPerMonitor then return 0 end
+    if not HF.wsPerMonitor or not HF.wsOrder then return 0 end
     local m = hl.get_active_monitor()
     if not m then return 0 end
-    local groups = HF.wsGroups or {}
-    for k, n in ipairs(groups) do if n == m.name then return (k - 1) * 10 end end
-    local extra = 0
-    for _, o in ipairs(hl.get_monitors()) do
-        local known = false
-        for _, n in ipairs(groups) do if n == o.name then known = true end end
-        if not known and o.id < m.id then extra = extra + 1 end
-    end
-    return (#groups + extra) * 10
+    for k, n in ipairs(HF.wsOrder()) do if n == m.name then return (k - 1) * 10 end end
+    return 0
 end
 local function wsGo(i, move, follow)
     return function()

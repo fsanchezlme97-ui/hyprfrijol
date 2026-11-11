@@ -42,11 +42,18 @@ Singleton {
         return s === "japonesa" ? japanese(n) : s === "romana" ? roman(n) : s === "puntos" ? "•" : String(n);
     }
     readonly property bool perMonitor: Settings.get("wsPerMonitor", true) !== false
+    // Mismo orden que HF.wsOrder (config/hypr/frijol/workspaces.lua): la principal (la guardada si está conectada; si
+    // no, la más grande conectada), las demás de Ajustes por nombre (no la principal guardada) y las nuevas por id
     readonly property var groups: {
-        const prim = String(Settings.get("primaryMonitor", "") ?? "");
-        const known = Object.keys(Settings.get("monitors", ({})) ?? ({})).filter(n => n !== prim).sort();
+        const mons = Hyprland.monitors.values;
+        const saved = String(Settings.get("primaryMonitor", "") ?? "");
+        let prim = saved;
+        if (!mons.some(m => m.name === prim))
+            prim = mons.reduce((a, m) => !a || m.width * m.height > a.width * a.height ? m : a, null)?.name ?? prim;
+        // (la principal guardada no ocupa sitio si no está conectada)
+        const known = Object.keys(Settings.get("monitors", ({})) ?? ({})).filter(n => n !== prim && n !== saved).sort();
         const g = (prim ? [prim] : []).concat(known);
-        return g.concat(Hyprland.monitors.values.filter(m => !g.includes(m.name)).sort((a, b) => a.id - b.id).map(m => m.name));
+        return g.concat(mons.filter(m => !g.includes(m.name)).sort((a, b) => a.id - b.id).map(m => m.name));
     }
     function base(monitorName): int {
         if (!perMonitor) return 0;

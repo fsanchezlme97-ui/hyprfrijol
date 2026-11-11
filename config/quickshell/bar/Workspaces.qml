@@ -1,4 +1,5 @@
-// Espacios (20×20, radio 6, 11.5 px seminegrita). Activo: fondo p; con ventanas: texto normal, vacío: atenuado. Clic → ir; rueda → siguiente/anterior.
+// Espacios (20×20, radio 6, 11.5 px seminegrita). Activo: fondo p (una sola píldora que se desliza de un espacio al
+// otro y cambia de ancho); con ventanas: texto normal, vacío: atenuado. Clic → ir; rueda → siguiente/anterior.
 // Ajustes (Escritorio y gestos › Espacios de trabajo):
 //   "wsShowAll"  true (por defecto) → siempre del 1 al 9 (y cualquier otro ocupado); false → solo los
 //                ocupados y el activo
@@ -13,7 +14,7 @@ import ".."
 import "../components"
 import "../services"
 
-Grid {
+Item {
     id: root
     required property var screen
     property bool vertical: false
@@ -42,10 +43,31 @@ Grid {
         if (showNames && nm) return ic ? ic + " " + nm : nm;
         return ic;
     }
-    columns: vertical ? 1 : ids.length + 1
-    spacing: vertical ? 4 : 1
+    implicitWidth: grid.implicitWidth
+    implicitHeight: grid.implicitHeight
+
+    // Píldora del espacio activo: una sola, que viaja al nuevo (antes se apagaba en uno y se encendía en otro)
+    readonly property Item cur: { rep.count; return rep.itemAt(ids.indexOf(activeId)); }
+    property bool slideOn: false          // sin viaje al aparecer la barra
+    Component.onCompleted: Qt.callLater(() => slideOn = true)
+    Rectangle {
+        visible: root.cur !== null && !root.cur.dot
+        x: root.cur?.x ?? 0; y: root.cur?.y ?? 0
+        width: root.cur?.width ?? 0; height: root.cur?.height ?? 0
+        radius: Theme.r(6)
+        color: Theme.p
+        Behavior on x { enabled: root.slideOn && !Theme.still; NumberAnimation { duration: Theme.ms(380); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }
+        Behavior on y { enabled: root.slideOn && !Theme.still; NumberAnimation { duration: Theme.ms(380); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }
+        Behavior on width { enabled: root.slideOn && !Theme.still; NumberAnimation { duration: Theme.ms(380); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }
+    }
+
+    Grid {
+    id: grid
+    columns: root.vertical ? 1 : root.ids.length + 1
+    spacing: root.vertical ? 4 : 1
 
     Repeater {
+        id: rep
         model: root.ids
         Rectangle {
             id: cell
@@ -60,8 +82,7 @@ Grid {
             width: root.vertical ? 24 : dot ? 14 : wide ? Math.max(20, lbl.implicitWidth + 12) : 20
             height: root.vertical ? (dot ? 14 : 22) : 20
             radius: Theme.r(6)
-            color: active && !dot ? Theme.p : "transparent"
-            Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+            color: "transparent"                // el fondo del activo es la píldora de root
             Behavior on width { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
             Txt {
                 id: lbl
@@ -74,6 +95,7 @@ Grid {
                 weight: Font.DemiBold
                 tabular: true
                 color: cell.active ? Theme.pText : cell.used ? Theme.t : Theme.o
+                Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
             }
             // Numeración «puntos»: punto por espacio, el activo se alarga
             Rectangle {
@@ -111,5 +133,6 @@ Grid {
             onClicked: WinMode.cycleWs(root.activeId)
         }
         BarTip { target: modeMa; text: (WinMode.labels[modeCell.m] ?? "") + (modeCell.own ? " · solo este espacio" : "") + " · clic: cambiar" }
+    }
     }
 }

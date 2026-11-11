@@ -98,6 +98,9 @@ Singleton {
             // Título nuevo: llega en el propio evento («dirección,título»), no hace falta preguntar a hyprctl
             if (n === "windowtitlev2") { root.setTitle(ev.data); return; }
             if (n === "windowtitle") return;   // siempre llega junto con windowtitlev2
+            // Un espacio cambia de número (frijol/workspaces.lua lo renumera al cambiar las pantallas): Quickshell no
+            // atiende este evento y su lista se quedaría con el número viejo
+            if (n === "changeworkspaceid") { Hyprland.refreshWorkspaces(); Hyprland.refreshMonitors(); Hyprland.refreshToplevels(); root.refresh(); return; }
             if (["openwindow", "closewindow", "movewindow", "movewindowv2", "workspace", "workspacev2", "activewindow",
                  "activewindowv2", "changefloatingmode", "focusedmon", "focusedmonv2",
                  "monitoradded", "monitorremoved", "fullscreen", "createworkspace", "destroyworkspace", "pin",
