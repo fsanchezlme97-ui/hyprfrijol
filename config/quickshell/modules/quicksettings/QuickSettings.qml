@@ -783,7 +783,6 @@ Overlay {
         signal expand()
         implicitHeight: Math.max(46, tcol.implicitHeight + 10)
         radius: Theme.pill ? Math.min(height / 2, Theme.r(11)) : Theme.r(6)
-        scale: Theme.estilo !== "flat" && main.pressed ? 0.97 : 1
         Behavior on scale { NumberAnimation { duration: Theme.ms(180); easing.type: Easing.OutBack; easing.overshoot: 2 } }
         opacity: available ? 1 : 0.55
         color: active ? Theme.fillOn : Theme.fill2

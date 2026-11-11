@@ -16,7 +16,7 @@ Rectangle {
     signal keyPressed(var event)
     implicitHeight: h
     radius: Theme.ctl(h)
-    border.width: input.activeFocus && Theme.estilo === "flat" ? 2 : 0
+    border.width: input.activeFocus ? 2 : 0
     border.color: Theme.p
     color: Theme.fill2
     function focusInput() { input.forceActiveFocus(); }

@@ -1,4 +1,4 @@
-// Onda al pulsar (Material 3). Solo con el estilo Material; en SkySoul y Chroma no se dibuja.
+// Onda al pulsar (Material 3, estilo Math). Con «Reducir movimiento» no se dibuja.
 //   Ripple { id: rip; anchors.fill: parent; radius: parent.radius; color: fg }
 //   MouseArea { onPressed: m => rip.burst(m.x, m.y) }
 import QtQuick
@@ -9,7 +9,7 @@ Item {
     id: root
     property real radius: 0
     property color color: Theme.t
-    readonly property bool on: Theme.estilo === "flat" && !Theme.reduceMotion
+    readonly property bool on: !Theme.reduceMotion
     visible: on && anim.running
     clip: true
     layer.enabled: visible && radius > 0

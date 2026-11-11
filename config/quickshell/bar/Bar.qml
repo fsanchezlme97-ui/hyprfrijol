@@ -63,7 +63,7 @@ PanelWindow {
     // línea). El borde gris de las ventanas sin foco, más claro que el relleno, se leía como un contorno basto.
     // Sin borde de ventanas (Ajustes › Apariencia › Borde: ninguno), tampoco aquí.
     readonly property string borderMode: Settings.get("activeBorder", "sutil")
-    // En vidrio (Aurora/SkySoul) sin filo: el borde lo da el propio cristal, suave; un trazo se veía marcado
+    // Con cristal (transparencia) sin filo: el borde lo da el propio cristal, suave; un trazo se veía marcado
     readonly property real pillBorderW: (borderMode === "ninguno" || Theme.glassy ? 0 : 1) / k
     readonly property color pillBorder: Theme.light ? Qt.rgba(0, 0, 0, 0.08) : Qt.rgba(0, 0, 0, 0.20)
     readonly property real bellLevel: bell.opacity

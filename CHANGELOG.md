@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.0] — 2026-11-11
+
+### Cambiado
+- Un solo estilo, **Math** (Material 3). Lo que antes era el estilo SkySoul es ahora el interruptor **Transparencia** de Ajustes › Apariencia (y de la bienvenida): paneles de cristal desenfocados sobre cualquier paleta. Con «Reducir transparencia» o «Alto contraste» siguen siendo sólidos.
+- Los controles se comportan igual con o sin transparencia: onda al pulsar, interruptores y campos de Material.
+- El rebote al abrir lo decide el preset de movimiento (Fluido), ya no el estilo.
+
+### Quitado
+- El estilo **Chroma** (negro, puntos y rojo) y su fuente Doto.
+
+### Migración
+- `hf-migrate` (lo lanza `hf-update`) pasa tu ajuste: SkySoul → Math con transparencia; Material y Chroma → Math sólido. Copia antes en `settings.json.antes-de-math`.
+- El login (greetd) entiende el tema nuevo; para que use su versión nueva, `hf-greeter-sync`.
+
 ## [0.8.50] — 2026-11-11
 
 ### Arreglado

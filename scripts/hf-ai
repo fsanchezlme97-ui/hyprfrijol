@@ -90,7 +90,7 @@ def run(cmd, timeout=10, input=None):
 # Esquema fijo: el modelo solo puede proponer estas acciones. Cada una tiene etiqueta en español y, casi
 # todas, forma de deshacerse (do_apply guarda el estado anterior; do_undo lo restaura en orden inverso).
 SET_KEYS = {
-    "estilo": ("Estilo", {"flat": "Material", "skysoul": "SkySoul", "chroma": "Chroma"}),
+    "transparencia": ("Transparencia", {True: "activada", False: "desactivada"}),
     "colorMode": ("Color", {"auto": "Automático (del fondo)", "elegir": "Paleta elegida", "mono": "Monocromo"}),
     "palette": ("Paleta", {"grafito": "Grafito", "pizarra": "Pizarra", "claro": "Claro", "lavanda": "Lavanda",
                            "verde": "Verde", "ambar": "Ámbar", "azul": "Azul", "rosa": "Rosa pastel",
@@ -164,7 +164,7 @@ def settable(k, d=None):
     return isinstance(v, (bool, int, float, str)) or (isinstance(v, list) and all(isinstance(x, str) for x in v))
 
 SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden: puedes encadenar varios pasos):
-- {"type":"set","key":K,"value":V}  ajustes del escritorio. Claves principales: estilo (flat|skysoul|chroma),
+- {"type":"set","key":K,"value":V}  ajustes del escritorio. Claves principales: transparencia (true|false),
   colorMode (auto|elegir|mono), palette (grafito|pizarra|claro|lavanda|verde|ambar|azul|rosa|menta|lila|melocoton|cielo;
   implica colorMode "elegir"), themeMode (oscuro|claro|auto), animPreset (fluido|equilibrado|rapido|minimo|ninguno),
   shadows (ninguna|suaves|marcadas), activeBorder (sutil|color|brillo|ninguno), barPos (abajo|arriba|izquierda),
@@ -1547,7 +1547,7 @@ def gather(ctx, ocr=True):
         t = ctx.get("captureText") or capture_text()
         if t.strip():
             parts.append("Texto en pantalla (OCR):\n" + t)
-    parts.append(f"Estado del shell: estilo={s.get('estilo')}, color={s.get('colorMode')}/{s.get('palette')}, "
+    parts.append(f"Estado del shell: transparencia={bool(s.get('transparencia'))}, color={s.get('colorMode')}/{s.get('palette')}, "
                  f"barra={s.get('barPos')}/{s.get('barMode')}")
     return "\n\n".join(parts)
 

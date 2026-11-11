@@ -13,7 +13,6 @@ Rectangle {
     implicitHeight: h
     implicitWidth: kind === "link" ? t.implicitWidth : t.implicitWidth + 26
     radius: Theme.ctl(h)
-    scale: Theme.estilo !== "flat" && ma.pressed && enabled ? 0.96 : 1
     Behavior on scale { NumberAnimation { duration: Theme.ms(160); easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
     opacity: enabled ? 1 : 0.45
     color: kind === "primary" ? Theme.p : "transparent"

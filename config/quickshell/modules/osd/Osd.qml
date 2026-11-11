@@ -89,25 +89,8 @@ PanelWindow {
                     }
                 }
             }
-            // Chroma: barra segmentada de puntos (Nothing OS); lo lleno en blanco, en rojo si está silenciado
-            Row {
-                visible: win.hasBar && Theme.chroma
-                spacing: 4
-                readonly property int n: 16
-                readonly property int lit: Math.round(Math.max(0, Math.min(1, win.level)) * n)
-                Repeater {
-                    model: parent.n
-                    Rectangle {
-                        required property int index
-                        readonly property bool on: index < parent.lit
-                        width: 5.5; height: 5.5; radius: 2.75
-                        color: on ? (win.kind === "volumen" && Audio.muted ? Theme.accent2 : Theme.t) : Theme.fill2
-                        Behavior on color { ColorAnimation { duration: Theme.ms(90); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
-                    }
-                }
-            }
             Rectangle {
-                visible: win.hasBar && !Theme.chroma
+                visible: win.hasBar
                 implicitWidth: 150; implicitHeight: 4; radius: 2
                 color: Theme.fill2
                 Rectangle {

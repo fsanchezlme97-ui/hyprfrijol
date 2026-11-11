@@ -16,23 +16,6 @@ Rectangle {
     radius: Theme.ctl(height)
     color: Theme.fill2
     clip: true
-    // Chroma: la parte vacía de la pista es una fila de puntos (Nothing OS)
-    Canvas {
-        id: dotsTrack
-        visible: Theme.chroma
-        anchors.fill: parent
-        readonly property real from: Math.max(parent.height, parent.width * root.frac)
-        onFromChanged: requestPaint()
-        onWidthChanged: requestPaint()
-        onVisibleChanged: if (visible) requestPaint()
-        onPaint: {
-            const ctx = getContext("2d");
-            ctx.reset();
-            const c = Theme.tv, step = 7, y = height / 2;
-            ctx.fillStyle = Qt.rgba(c.r, c.g, c.b, 0.55);
-            for (let x = from + step; x < width - 6; x += step) { ctx.beginPath(); ctx.arc(x, y, 1.2, 0, 2 * Math.PI); ctx.fill(); }
-        }
-    }
     readonly property real frac: Math.max(0, Math.min(1, (value - from) / (to - from)))
     Rectangle {
         width: Math.max(parent.height, parent.width * root.frac)

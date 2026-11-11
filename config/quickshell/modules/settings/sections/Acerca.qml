@@ -41,7 +41,7 @@ RowLayout {
     function fmtDate(s) { if (!s) return "—"; const d = new Date(s.replace(" ", "T")); return isNaN(d) ? s : Qt.locale("es_ES").toString(d, "d MMM yyyy · HH:mm"); }
     readonly property string report: "Sistema: " + (sys.distro ?? "") + "\nKernel: " + (sys.kernel ?? "") + "\nEscritorio: Hyprland " + (sys.hypr ?? "") + " + Quickshell " + (sys.qs ?? "") + " (HyprFrijol " + (sys.hf ?? "") + ")"
         + "\nProcesador: " + (sys.cpu ?? "") + "\nGráficos: " + (sys.gpu ?? "") + "\nMemoria: " + (sys.mem ?? "") + "\nAlmacenamiento: " + (sys.disk ?? "")
-        + "\nEstilo: " + Theme.estilo + " · " + Theme.paletteName
+        + "\nEstilo: Math" + (Theme.glassy ? " con transparencia" : "") + " · " + Theme.paletteName
 
     Section {
         id: info

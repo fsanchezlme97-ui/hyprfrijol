@@ -22,7 +22,6 @@ Rectangle {
     implicitHeight: h
     implicitWidth: row.implicitWidth + padX * 2
     radius: Theme.ctl(h)
-    scale: Theme.estilo !== "flat" && mouse.pressed && root.enabled ? 0.96 : 1
     Behavior on scale { NumberAnimation { duration: Theme.ms(160); easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
     opacity: enabled ? 1 : 0.45
     color: kind === "primary" || active ? Theme.p : kind === "tonal" ? Theme.fill2 : "transparent"

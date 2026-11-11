@@ -17,7 +17,6 @@ Rectangle {
     color: Theme.fill2
     readonly property int idx: { for (let i = 0; i < model.length; i++) if (model[i].key === current) return i; return -1; }
     readonly property Item sel: idx >= 0 && rep.count > idx ? rep.itemAt(idx) : null
-    readonly property bool material: Theme.tonalSel   // Material y Suave: marca con el contenedor primario
 
     Rectangle {   // marca deslizante
         visible: root.sel !== null
@@ -27,7 +26,7 @@ Rectangle {
         height: row.height
         radius: Theme.ctl(height)
         color: Theme.segThumb
-        border.width: Theme.glassy || Theme.chroma ? 1 : 0
+        border.width: Theme.glassy ? 1 : 0
         border.color: Theme.border
         Behavior on x { NumberAnimation { duration: Theme.dur + 80; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }
         Behavior on width { NumberAnimation { duration: Theme.dur + 80; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }

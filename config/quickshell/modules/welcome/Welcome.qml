@@ -29,7 +29,7 @@ Scope {
     readonly property var steps: ["Idioma y región", "Estilo y color", "Fondo", "Barra", "Aplicaciones", "Listo"]
     readonly property var titles: [
         ["Hola. Empecemos por lo básico", "Detectamos estos valores; cámbialos si hace falta."],
-        ["¿Cómo quieres que se vea?", "Elige el estilo y cómo se eligen los colores."],
+        ["¿Cómo quieres que se vea?", "Elige superficies sólidas o transparentes y cómo se eligen los colores."],
         ["Elige un fondo", "Puedes activar el cambio automático más tarde."],
         ["¿Dónde va la barra?", "Fija abajo aprovecha mejor la pantalla."],
         ["Instala lo que vas a usar", "Opcional. Primero de los repos de " + (Pkg.distroName || "tu distro") + (Pkg.family === "arch" ? ", luego AUR y Flathub." : ", luego Flathub.")],
@@ -260,15 +260,15 @@ Scope {
                 columnSpacing: 10
                 rowSpacing: 10
                 Repeater {
-                    model: [["skysoul", "SkySoul", "Material de cristal: transparente y desenfocado"], ["flat", "Material", "Sólido y ligero, como Android"],
-                            ["chroma", "Chroma", "Negro, puntos y rojo, como Nothing"]]
+                    // Estilo Math: sólido o con transparencia (lo que antes era el estilo SkySoul)
+                    model: [[true, "Transparente", "Cristal desenfocado sobre el fondo"], [false, "Sólido", "Superficies opacas, lo más ligero"]]
                     Rectangle {
                         required property var modelData
-                        readonly property bool on: (({ aurora: "skysoul", mica: "chroma", suave: "flat", soft: "flat" })[Settings.get("estilo", "flat")] ?? Settings.get("estilo", "flat")) === modelData[0]
+                        readonly property bool on: Theme.glassy === modelData[0]
                         Layout.fillWidth: true
                         implicitHeight: 70
                         radius: Theme.r(8)
-                        color: modelData[0] === "skysoul" ? Qt.alpha(Theme.s1, 0.35) : modelData[0] === "chroma" ? (Theme.light ? "#FFFFFF" : "#000000") : Theme.s3
+                        color: modelData[0] ? Qt.alpha(Theme.s1, 0.35) : Theme.s3
                         border.width: on ? 2 : 1
                         border.color: on ? Theme.p : Theme.ov
                         ColumnLayout {
@@ -277,7 +277,7 @@ Scope {
                             Txt { text: parent.parent.modelData[1]; weight: Font.DemiBold }
                             Txt { text: parent.parent.modelData[2]; size: 11.5; muted: true }
                         }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Settings.set("estilo", parent.modelData[0]) }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Settings.set("transparencia", parent.modelData[0]) }
                     }
                 }
             }
@@ -437,7 +437,7 @@ Scope {
             Repeater {
                 model: [
                     ["Idioma", root.localeLabel(root.lang)],
-                    ["Estilo", ({ skysoul: "SkySoul", aurora: "SkySoul", flat: "Material", chroma: "Chroma", mica: "Chroma", soft: "Material", suave: "Material", tonal: "Sólido" })[Settings.get("estilo", "flat")] ?? "Material"],
+                    ["Superficies", Theme.glassy ? "Transparentes" : "Sólidas"],
                     ["Color", Settings.get("colorMode", "auto") === "auto" ? "Automático (del fondo)" : Settings.get("colorMode", "auto") === "mono" ? "Monocromo" : Theme.paletteName],
                     ["Barra", Settings.get("barPos", "abajo") === "izquierda" ? "Lateral" : (Settings.get("barMode", "fija") === "fija" ? "Fija " : "Flotante ") + Settings.get("barPos", "abajo")],
                     ["Archivos", ({ nautilus: "Nautilus", dolphin: "Dolphin", yazi: "Yazi" })[root.fm]],

@@ -85,15 +85,19 @@ ShellRoot {
         readonly property bool light: tm ? tm.light === true : c.light === true
         readonly property bool contrast: root.highContrast
         readonly property bool reduceMotion: tm?.reduceMotion === true
+        // Estilo del shell en los nombres de antes: desde 0.9.0 es siempre Math y el material (S.material) dice
+        // si es sólido (flat), cristal (skysoul) o tonal
+        readonly property string shellEstilo: tm?.S?.material
+            ? ({ cristal: "skysoul", solido: "flat", tonal: "tonal" })[tm.S.material] ?? "flat" : tm?.S?.estilo ?? ""
         readonly property string estilo: {
             // «liquid» ya no se ofrece en el shell: un theme.json antiguo con liquid pasa a Aurora
-            const e = Quickshell.env("HF_GREETER_ESTILO") || tm?.S?.estilo || "aurora";
-            // SkySoul y Chroma (estilos del shell) se muestran con su pariente más cercano del login: aurora y flat
+            const e = Quickshell.env("HF_GREETER_ESTILO") || shellEstilo || "aurora";
+            // SkySoul (cristal) y Chroma (de antes) se muestran con su pariente más cercano del login: aurora y flat
             const m = ({ skysoul: "aurora", mica: "flat", chroma: "flat", suave: "flat", soft: "flat" })[e] ?? e;
             return ["liquid", "flat", "tonal", "aurora"].includes(m) ? m : "aurora";
         }
         // Solo se usan los tokens si son de este estilo (HF_GREETER_ESTILO puede forzar otro)
-        readonly property var st: tm?.S && tm.S.estilo === estilo ? tm.S : ({})
+        readonly property var st: tm?.S && shellEstilo === estilo ? tm.S : ({})
         readonly property bool isLiquid: estilo === "liquid"
         readonly property bool isFlat: estilo === "flat"
         readonly property bool isTonal: estilo === "tonal"

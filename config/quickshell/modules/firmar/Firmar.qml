@@ -58,7 +58,7 @@ Scope {
             visible: true
             color: Theme.blur ? Theme.winSolid : Theme.s1
             // Con alfa siempre: una ventana creada opaca (en Material) no puede volverse transparente después
-            // (al pasar a SkySoul se quedaba negra)
+            // (al activar la transparencia se quedaba negra)
             surfaceFormat.opaque: false
             onVisibleChanged: if (!visible) root.open = false
 

@@ -34,7 +34,7 @@ dev/try.sh                         # escritorio
 dev/try.sh spotlight               # abre una vista y captura a 1440×900 → /tmp/hf-try/spotlight.png
 HF_DEV_MODULES="modules/x/X.qml" dev/try.sh x     # módulo aún no registrado en modules/Modules.qml
 dev/try.sh -c 'notify-send Hola' -w 4             # comando dentro de la sesión antes de capturar
-dev/try.sh -s 'estilo=flat colorMode=elegir palette=claro' spotlight   # ajustes temporales
+dev/try.sh -s 'transparencia=true colorMode=elegir palette=claro' spotlight   # ajustes temporales
 ```
 Imprime avisos/errores de Quickshell: deben salir vacíos. Compara la captura con `design/capturas/`.
 

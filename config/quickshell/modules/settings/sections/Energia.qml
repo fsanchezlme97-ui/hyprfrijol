@@ -1,7 +1,7 @@
 // Ajustes › Energía y rendimiento — perfil (power-profiles-daemon), suspensión por inactividad (hypridle, 85-idle.py),
 // GPU (supergfxctl/envycontrol), límite de carga 80/90/100 (chargeLimit: charge_control_end_threshold con pkexec
 // y regla udev /etc/udev/rules.d/99-hyprfrijol-charge.rules para que dure tras reiniciar), brillo automático,
-// ahorro con poca batería, calidad del desenfoque de SkySoul (config/apply/10-look.py) y salud de la batería con su
+// ahorro con poca batería, calidad del desenfoque del cristal (config/apply/10-look.py) y salud de la batería con su
 // historial (modules/settings/BatteryLog.qml → battery-history.json). $HF_POWER_SUPPLY sustituye a
 // /sys/class/power_supply para probar con datos falsos.
 import QtQuick
@@ -209,7 +209,7 @@ RowLayout {
     Section {
         id: glass
         Layout.fillWidth: true
-        title: "Rendimiento del cristal (SkySoul)"
+        title: "Rendimiento del cristal (transparencia)"
         readonly property string q: Settings.get("blurQuality", "equilibrada")
         RowLayout {
             Layout.fillWidth: true

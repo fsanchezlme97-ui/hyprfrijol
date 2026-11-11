@@ -34,8 +34,7 @@ Item {
     readonly property var names: Settings.get("wsNames", ({})) ?? ({})
     readonly property var icons: Settings.get("wsIcons", ({})) ?? ({})
     readonly property bool showNames: Settings.get("wsBarNames", true) !== false
-    // Chroma: siempre puntos (como los Glyph de los Nothing Phone): el activo, una píldora roja
-    readonly property bool dots: WsLabel.style === "puntos" || Theme.chroma
+    readonly property bool dots: WsLabel.style === "puntos"
     // "" = sin nombre ni icono propio (se usa la numeración)
     function custom(n: int): string {
         const nm = String(names[String(n)] ?? ""), ic = String(icons[String(n)] ?? "");

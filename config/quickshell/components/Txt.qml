@@ -11,14 +11,10 @@ Text {
     property bool tabular: false
     property int weight: Font.Normal
     color: muted ? Theme.tv : Theme.t
-    // Los textos grandes (≥ 17 px: relojes, cifras, títulos) usan la tipografía del estilo (Theme.displayFont):
-    // de puntos en Chroma. `display: false` lo evita.
-    property bool display: size >= 17
-    readonly property bool useDisplay: display && Theme.displayFont !== Theme.font
-    font.family: useDisplay ? Theme.displayFont : Theme.font
+    font.family: Theme.font
     font.pixelSize: Theme.px(size)
-    font.weight: useDisplay ? Theme.displayWeight : weight
-    font.letterSpacing: useDisplay && Theme.chroma ? 0.04 * Theme.px(size) : -0.005 * Theme.px(size)
+    font.weight: weight
+    font.letterSpacing: -0.005 * Theme.px(size)
     font.features: tabular ? { "tnum": 1 } : {}
     elide: Text.ElideRight
     verticalAlignment: Text.AlignVCenter

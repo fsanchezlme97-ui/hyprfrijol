@@ -265,7 +265,7 @@ ColumnLayout {
             Layout.preferredHeight: Math.max(84, Math.min(220, persona.contentHeight + 18))
             radius: Theme.r(8)
             color: Theme.fill2
-            border.width: persona.activeFocus && Theme.estilo === "flat" ? 2 : 0
+            border.width: persona.activeFocus ? 2 : 0
             border.color: Theme.p
             TextEdit {
                 id: persona

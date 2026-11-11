@@ -17,7 +17,7 @@ def _weak_gpu():
             pass
     return "equilibrada" if vendors == {"0x8086"} else None
 
-def _shadow(s, c, est):
+def _shadow(s, c, glass):
     """Sombras de ventana (Ajustes › Apariencia › Ventanas › Sombras):
     suaves    amplias, difusas y con poca opacidad (por defecto); en claro, más tenues y teñidas del acento
     marcadas  más cortas y oscuras (elevación clara)
@@ -37,11 +37,11 @@ def _shadow(s, c, est):
         rng, pw, off, a = 18, 2, "0 0", 0.0
     elif mode == "marcadas":
         rng, pw, off, a = (16, 3, "0 4", 0.30) if light else (20, 3, "0 5", 0.55)
-        if est == "flat":
+        if not glass:   # sólido: sombras más cortas
             rng = rng - 4
     else:
         rng, pw, off, a = (34, 2, "0 8", 0.13) if light else (38, 2, "0 8", 0.30)
-        if est == "flat":
+        if not glass:   # sólido: sombras más cortas
             rng, off = rng - 10, "0 4"
     if glow:
         act = _rgba(ink, 0.30 if light else 0.26)
@@ -61,18 +61,15 @@ def hypr_lua(s, c):
         order = ["ahorro", "equilibrada", "alta"]
         if cap and order.index(cap) < order.index(q):
             q = cap
-    est = s.get("estilo", "flat")
-    est = {"aurora": "skysoul", "liquid": "skysoul", "tonal": "skysoul", "mica": "chroma",
-           "suave": "flat", "soft": "flat"}.get(est, est)
-    if est not in ("flat", "skysoul", "chroma"):
-        est = "flat"
-    glass = est == "skysoul"
-    # El desenfoque (el esmerilado del fondo oscurecido de la vista general) va en todos los estilos; los paneles de
-    # Material y Chroma son opacos, así que solo se nota en los fondos translúcidos
+    # Transparencia (estilo Math); sin el ajuste (settings.json de antes de 0.9.0), el estilo de antes (como hf-apply)
+    t = s.get("transparencia")
+    glass = bool(t) if t is not None else s.get("estilo") in ("skysoul", "aurora", "liquid", "tonal")
+    # El desenfoque (el esmerilado del fondo oscurecido de la vista general) va siempre; los paneles sólidos son
+    # opacos, así que solo se nota en los fondos translúcidos
     if not s.get("reduceTransparency") and not s.get("highContrast"):
-        # SkySoul: desenfoque suave que deja intuir las formas y los colores del fondo, algo de vibración para
+        # Cristal: desenfoque suave que deja intuir las formas y los colores del fondo, algo de vibración para
         # que el color respire detrás del cristal y un poco oscurecido en modo oscuro para que el texto se lea
-        # con tanta transparencia (Material y Chroma son sólidos: no lo necesitan)
+        # con tanta transparencia (los sólidos no lo necesitan)
         if q == "ahorro":
             deco.append("blur = { enabled = false }")
         else:
@@ -81,7 +78,7 @@ def hypr_lua(s, c):
             size, passes = (7, 3) if q == "alta" else (6, 2)
             deco.append("blur = { size = %d, passes = %d, vibrancy = 0.35, vibrancy_darkness = 0.2, contrast = 0.95, brightness = %s, noise = 0.01 }"
                         % (size, passes, "1.05" if c.get("light") else "0.9"))
-    deco.append(_shadow(s, c, est))
+    deco.append(_shadow(s, c, glass))
     filt = s.get("colorFilter", "ninguno")
     if filt and filt != "ninguno":
         for base in (os.environ.get("HF_ROOT", ""), str(pathlib.Path(sys.argv[0]).resolve().parent.parent)):

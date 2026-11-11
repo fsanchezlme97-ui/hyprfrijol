@@ -143,21 +143,6 @@ def text_font(fam):
     return "Sans"
 
 
-def _doto_font():
-    """Chroma usa Doto (letra de puntos) en los títulos de las apps GTK: se enlaza la incluida en el repo a
-    ~/.local/share/fonts para que fontconfig la encuentre."""
-    src = pathlib.Path(__file__).resolve().parents[2] / "config/quickshell/assets/fonts/Doto.ttf"
-    dst = HOME / ".local/share/fonts/hyprfrijol/Doto.ttf"
-    try:
-        if src.is_file() and not dst.exists():
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            dst.symlink_to(src)
-            if shutil.which("fc-cache"):
-                subprocess.Popen(["fc-cache", str(dst.parent)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except Exception:
-        pass
-
-
 def hypr_lua(s, c):
     want = bool(s.get("themeApps")) and s.get("themeGtk", True) is not False
     css = STATE / "gtk-adw.css"
@@ -169,8 +154,6 @@ def hypr_lua(s, c):
                 css.write_text(text)
         except Exception:
             pass
-    if want and str(s.get("estilo")) in ("chroma", "mica"):
-        _doto_font()
     _line_file(HOME / ".config/gtk-4.0/gtk.css", f'@import url("file://{css}"); /* {MARK} */', want)
     if want and shutil.which("gsettings") and _gsettings_allowed():
         light = is_light(c)

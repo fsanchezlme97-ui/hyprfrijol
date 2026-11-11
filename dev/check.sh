@@ -4,13 +4,15 @@
 #
 #   dev/check.sh            todas las vistas y secciones
 #   dev/check.sh -v         además imprime todos los avisos (también los conocidos e inofensivos)
+#   dev/check.sh -s 'transparencia=true'   con ajustes temporales (los pasa a dev/try.sh -s)
 #
 # HOME falso: copia (sin enlaces simbólicos: cp -L) de ~/.config/hyprfrijol y ~/.local/state/hyprfrijol, así la prueba
 # nunca escribe en tus archivos de verdad. Sale con 0 si todo bien, 1 si hay errores (los imprime con la vista en que
 # salieron).
 set -uo pipefail
 ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
-VERBOSE=0; [ "${1:-}" = -v ] && VERBOSE=1
+VERBOSE=0 SET=()
+while [ $# -gt 0 ]; do case "$1" in -v) VERBOSE=1 ;; -s) SET=(-s "$2"); shift ;; esac; shift; done
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/hf-check.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
 FH="$TMP/home"
@@ -43,7 +45,7 @@ EOF
 chmod +x "$TMP/probe.sh"
 
 echo "▸ Sesión anidada con HOME falso; abriendo $(wc -w <<<"$VIEWS") vistas y $(wc -w <<<"$SECTIONS") secciones de Ajustes (~2 min)…"
-( unset HL_ROOT; export HF_ROOT="$ROOT" HOME="$FH"; "$ROOT/dev/try.sh" -w 2 -x "$TMP/probe.sh" -o "$TMP/check.png" >"$TMP/try.log" 2>&1 )
+( unset HL_ROOT; export HF_ROOT="$ROOT" HOME="$FH"; "$ROOT/dev/try.sh" "${SET[@]}" -w 2 -x "$TMP/probe.sh" -o "$TMP/check.png" >"$TMP/try.log" 2>&1 )
 if ! grep -qx fin "$TMP/views.log" 2>/dev/null; then
   echo "✗ La prueba no llegó al final (¿arrancó la sesión anidada?):"; tail -20 "$TMP/try.log"; exit 1
 fi

@@ -32,6 +32,8 @@
 #      settings.json.antes-sin-webapps); sus sesiones guardadas se quedan.
 #      Asistente «Samantha» → «Helpert» (0.8.20), y su personalidad si era la de fábrica (copia en
 #      settings.json.antes-de-helpert).
+#      Estilo único Math (0.9.0): «estilo» pasa a «math» y SkySoul a «transparencia: true» (copia en
+#      settings.json.antes-de-math); borra el enlace roto a la fuente Doto de Chroma.
 #      hf-apply lo lanza solo (--retired-only) si queda algo de esto.
 set -euo pipefail
 for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
@@ -174,6 +176,30 @@ with open(tmp, "w") as f:
     f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
 os.replace(tmp, p)
 PY
+  fi
+  # Estilo único Math (0.9.0): SkySoul (y sus nombres de antes) → transparencia; Material y Chroma → sin ella.
+  # Se repite sin miedo: solo actúa si «estilo» aún no es «math».
+  if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(d,dict) and d.get("estilo","math")!="math" else 1)' "$cfg" 2>/dev/null; then
+    say "Estilo: pasa a Math (Chroma y SkySoul se retiraron; SkySoul queda como «Transparencia») en $cfg"
+    run cp -n "$cfg" "$cfg.antes-de-math"
+    [ "$DRY" = 1 ] || python3 -I - "$cfg" <<'PY'
+import json, os, sys
+p = os.path.realpath(sys.argv[1])
+d = json.load(open(p))
+old = d.get("estilo")
+if "transparencia" not in d:
+    d["transparencia"] = old in ("skysoul", "aurora", "liquid", "tonal")
+d["estilo"] = "math"
+tmp = p + ".tmp"
+with open(tmp, "w") as f:
+    f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
+os.replace(tmp, p)
+PY
+  fi
+  # Fuente Doto de Chroma (retirada en 0.9.0): el enlace en ~/.local/share/fonts ya no lleva a nada
+  if [ -L "$HOME/.local/share/fonts/hyprfrijol/Doto.ttf" ] && [ ! -e "$HOME/.local/share/fonts/hyprfrijol/Doto.ttf" ]; then
+    say "Chroma retirado: borro el enlace roto a la fuente Doto"
+    run rm -f "$HOME/.local/share/fonts/hyprfrijol/Doto.ttf"
   fi
   # Enlace ~/.local/bin/hf-profile que ya no lleva a nada
   if [ -L "$BIN/hf-profile" ] && [ ! -e "$BIN/hf-profile" ]; then

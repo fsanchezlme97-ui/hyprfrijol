@@ -23,7 +23,7 @@ HF_GREETER_PREVIEW=1 qs -p greeter/quickshell                         # cortina 
 HF_GREETER_PREVIEW=1 HF_GREETER_OPEN=1 HF_GREETER_PALETTE=claro qs -p greeter/quickshell
 HF_GREETER_PREVIEW=1 HF_GREETER_OPEN=1 HF_GREETER_MENU=sesion HF_GREETER_SCENE=lago qs -p greeter/quickshell
 hf-greeter-sync --print > /tmp/g.json && HF_GREETER_PREVIEW=1 HF_GREETER_CONFIG=/tmp/g.json qs -p greeter/quickshell   # con tu tema
-HF_GREETER_PREVIEW=1 HF_GREETER_ESTILO=flat qs -p greeter/quickshell   # forzar estilo: flat (Material) · aurora (= SkySoul del shell)
+HF_GREETER_PREVIEW=1 HF_GREETER_ESTILO=flat qs -p greeter/quickshell   # forzar estilo: flat (sólido) · aurora (= transparencia del shell)
 ```
 En vista previa no se inicia nada: la contraseña `error` simula un fallo y cualquier otra simula el inicio (imprime el comando). Mejor dentro de un Hyprland anidado (`dev/try.sh -k`), porque ocupa toda la pantalla (Esc vuelve a la cortina).
 

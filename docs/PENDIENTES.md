@@ -7,7 +7,7 @@ illogical-impulse (end-4) y Omarchy 4.5 (noviembre de 2026). Al terminar algo, s
 
 Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar una fase se marca aquí.
 
-1. [ ] [Temas](planes/temas.md), fase 1: estilo único Math, interruptor de transparencia, fuera Chroma y SkySoul.
+1. [x] [Temas](planes/temas.md), fase 1: estilo único Math, interruptor de transparencia, fuera Chroma y SkySoul (0.9.0).
 2. [ ] [Animaciones y efectos](planes/animaciones.md), fases 1–3: tokens de movimiento, duraciones fijas, sección
        unificada y atajo de modo juego.
 3. [ ] [Temas](planes/temas.md), fase 2: 13 temas oficiales en pares oscuro y claro.

@@ -19,7 +19,6 @@ Rectangle {
     implicitHeight: 22
     property string preload: ""          // vista que abre: al pasar el cursor se va cargando (Shell.preload)
     radius: Theme.pill ? Math.min(width, height) / 2 + 2 : Theme.r(7)
-    scale: Theme.estilo !== "flat" && mouse.pressed ? 0.92 : 1
     Behavior on scale { NumberAnimation { duration: Theme.ms(160); easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
     color: active ? activeBg : "transparent"
     Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }

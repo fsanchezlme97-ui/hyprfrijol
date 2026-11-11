@@ -1,4 +1,4 @@
-// Ajustes › Apariencia — fondo, estilo visual (Material / SkySoul / Chroma), color (automático / paleta /
+// Ajustes › Apariencia — fondo, estilo Math (con o sin transparencia), color (automático / paleta /
 // pastel / monocromo), movimiento (animPreset + animSpeed), ventanas (shadows, activeBorder),
 // modo claro/oscuro (a mano, a unas horas lightFrom/lightTo o según el sol: themeSchedule + services/Sun.qml),
 // tipografía (fontFamily, fontScale), esquinas, espacio entre ventanas, escala y efectos.
@@ -54,8 +54,6 @@ ColumnLayout {
         onExited: code => root.qtReady = code === 0
     }
 
-    // Nombres de antes: aurora → skysoul, mica → chroma, suave/soft (retirado) → flat
-    readonly property string estilo: ({ aurora: "skysoul", mica: "chroma", suave: "flat", soft: "flat" })[Settings.get("estilo", "flat")] ?? Settings.get("estilo", "flat")
     readonly property string colorMode: Settings.get("colorMode", "auto")
     readonly property string themeMode: Settings.get("themeMode", "oscuro")
     readonly property string paletteKey: Settings.get("palette", "grafito")
@@ -144,24 +142,16 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.preferredWidth: 1
             Layout.alignment: Qt.AlignTop
-            title: "Estilo visual"
+            title: "Estilo · Math"
             StylePreview { Layout.fillWidth: true; implicitHeight: 150; wallpaper: wp.current; video: wp.isVideo(wp.current) }
-            LabeledRow {
-                label: "Estilo"; labelWidth: 70
-                Seg {
-                    model: [["flat", "Material"], ["skysoul", "SkySoul"], ["chroma", "Chroma"]]
-                    current: root.estilo
-                    onPicked: k => Confirm.change("Estilo visual", { estilo: k })
-                }
-            }
-            Txt {
-                Layout.fillWidth: true
-                Layout.leftMargin: 80
-                muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-                text: (root.estilo === "flat" ? "Material 3 como Android: superficies sólidas teñidas por el color de acento, sin bordes y con elevación por tono. Lo más ligero."
-                    : root.estilo === "chroma" ? "Como los Nothing Phone: negro puro, gris carbón, títulos, reloj y espacios de trabajo con puntos, deslizadores y anillos de puntos, lo activo en blanco y el rojo solo para lo importante. Usa su propia paleta."
-                    : "El orden de Material hecho de cristal: muy transparente y muy desenfocado, esmerilado arriba, un resplandor suave del acento y bordes de dos trazos (filo exterior y filo interior de luz). Usa algo más de GPU.")
-                    + " Al cambiar de estilo se mantienen tu redondeo, esquinas y huecos."
+            // Estilo único Math (Material 3); la transparencia es lo que antes era el estilo SkySoul
+            SwRow {
+                label: "Transparencia"
+                sub: Settings.get("reduceTransparency", false) || Settings.get("highContrast", false)
+                    ? "sin efecto: Accesibilidad reduce la transparencia"
+                    : "paneles de cristal, muy desenfocados, con un resplandor del acento · algo más de GPU"
+                checked: Theme.glassy || Settings.get("transparencia", false)
+                onToggled: v => Confirm.change("Transparencia", { transparencia: v })
             }
             LabeledRow {
                 label: "Color"; labelWidth: 70

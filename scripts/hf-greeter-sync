@@ -195,7 +195,7 @@ base='{}'
 jq -n --argjson base "$base" --arg user "${USER:-$(id -un)}" \
   '$base | del(.theme, .wallpaper, .wallpaperVideo) + { defaultUser: ($base.defaultUser // $user) }' > "$STAGE/greeter.json"
 chmod 644 "$STAGE"/*
-[ "$THEME_JSON" != null ] && say "Tema: $(jq -r '"\(.paletteName // .paletteKey // "?") · \(.S.estilo // "flat") · \(if .light then "claro" else "oscuro" end)"' <<<"$THEME_JSON")"
+[ "$THEME_JSON" != null ] && say "Tema: $(jq -r '"\(.paletteName // .paletteKey // "?") · \(.S.material // .S.estilo // "solido") · \(if .light then "claro" else "oscuro" end)"' <<<"$THEME_JSON")"
 
 # Un solo paso con permisos: copia el greeter y crea live/ a tu nombre (el fondo viejo de la raíz se quita)
 U_NAME="$(id -un)"; U_GROUP="$(id -gn)"

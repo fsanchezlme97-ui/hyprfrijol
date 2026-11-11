@@ -1,11 +1,10 @@
-// Superficie con los tokens del estilo activo. El desenfoque lo pone Hyprland (layer_rule blur sobre el espacio
-// de nombres "hf-…" de la ventana); aquí se dibuja todo lo demás:
-//   Flat     Material 3: superficie tonal sólida, sin borde, elevación con sombra corta
-//   SkySoul  la estructura de Material hecha de cristal: muy transparente y muy desenfocado, con un esmerilado
-//            más claro arriba, un resplandor suave del acento que se desliza despacio y un filo de luz muy tenue,
-//            más visible arriba y que se desvanece hacia abajo, sin contorno oscuro, como las ventanas de macOS
-//   Chroma   Nothing Phone: negro puro, trazo fino de 1 px, sin brillos
-//   Tonal    (interno: SkySoul con «Reducir transparencia») superficie tonal sólida con borde fino
+// Superficie con los tokens del estilo Math. El desenfoque lo pone Hyprland (layer_rule blur sobre el espacio
+// de nombres "hf-…" de la ventana); aquí se dibuja todo lo demás. Según el material (S.material):
+//   sólido   Material 3: superficie tonal sólida, sin borde, elevación con sombra corta
+//   cristal  (transparencia) la estructura de Material hecha de cristal: muy transparente y muy desenfocado, con un
+//            esmerilado más claro arriba, un resplandor suave del acento que se desliza despacio y un filo de luz muy
+//            tenue, más visible arriba y que se desvanece hacia abajo, sin contorno oscuro, como las ventanas de macOS
+//   tonal    (transparencia con «Reducir transparencia») superficie tonal sólida con borde fino
 //   Glass { kind: "panel" }   kinds: "bar" (S.bg), "panel" (S.bgPanel), "popup" (S.bgPopup), "fill" (S.bg2)
 import QtQuick
 import QtQuick.Shapes
@@ -43,7 +42,7 @@ Item {
         anchors.fill: parent
         radius: root.rr
         color: root.color
-        // SkySoul: el borde lo dibujan los dos trazos de abajo
+        // Cristal: el borde lo dibujan los dos trazos de abajo
         border.width: root.showBorder && !root.glass ? Theme.borderWidth : 0
         border.color: Theme.border
         Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }

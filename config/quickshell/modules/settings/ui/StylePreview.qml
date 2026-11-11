@@ -22,7 +22,7 @@ Rectangle {
         asynchronous: true
         visible: false
     }
-    MultiEffect {   // el «desenfoque» de SkySoul detrás de la ventana
+    MultiEffect {   // el «desenfoque» del cristal detrás de la ventana
         anchors.fill: parent
         source: bgImg
         saturation: Settings.get("colorMode", "auto") === "mono" && Settings.get("monoFondo", true) ? -1 : 0
@@ -101,6 +101,6 @@ Rectangle {
         anchors { top: parent.top; right: parent.right; margins: 8 }
         width: pn.implicitWidth + 12; height: 20; radius: Theme.ctl(20)
         color: Qt.alpha(Theme.s1, 0.8)
-        Txt { id: pn; anchors.centerIn: parent; text: Theme.paletteName + " · " + ({ skysoul: "SkySoul", flat: "Material", chroma: "Chroma", tonal: "Sólido" })[Theme.estilo]; size: 10.5 }
+        Txt { id: pn; anchors.centerIn: parent; text: Theme.paletteName + (Theme.glassy ? " · Transparente" : ""); size: 10.5 }
     }
 }
