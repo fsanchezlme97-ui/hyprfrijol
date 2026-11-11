@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.37] — 2026-11-11
+
+- El consumo de la barra secundaria ya no es por espacio: muestra todos los programas abiertos, en cualquier espacio
+  y pantalla, con lo que gasta cada uno (orden fijo; con más de 8, los que más gastan y «+N»). Con una sola pantalla
+  no aparece: ahí ya está el chip de sistema.
+
 ## [0.8.36] — 2026-11-10
 
 - La barra de las pantallas secundarias vuelve a estar siempre visible.

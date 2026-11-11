@@ -72,13 +72,13 @@ Item {
 
     readonly property bool hasInfo: Settings.barHas("clima") || Settings.barHas("recursos") || Settings.barHas("impresora")
     readonly property bool hasUtil: pomo.visible || cafe.visible || bongo.visible || dictBtn.visible || clipBtn.visible || aiBtn.visible || gearBtn.visible || tray.visible
-    // Pantalla secundaria: a la derecha, los programas de su espacio con lo que gastan
+    // Pantalla secundaria: a la derecha, todos los programas abiertos con lo que gastan
     Loader {
         id: usage
         active: root.secondary
         anchors.verticalCenter: parent.verticalCenter
         x: root.compact ? left.x + left.implicitWidth + root.gapC : parent.width - width - 3
-        sourceComponent: WindowUsage { screenName: root.barWindow.screen?.name ?? "" }
+        sourceComponent: WindowUsage {}
     }
 
     RowLayout {

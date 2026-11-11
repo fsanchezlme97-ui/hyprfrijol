@@ -1,6 +1,8 @@
-// Programas del espacio visible de esta pantalla y lo que gastan (barra de las pantallas secundarias, a la derecha).
-// Una entrada por programa (las ventanas con el mismo pid van juntas): icono, CPU (% de todo el equipo) y memoria,
-// sumando todos sus procesos hijos (SysStats.tree: pestañas de Chrome, apps Electron, lo que corre en una terminal).
+// Todos los programas abiertos y lo que gastan, en cualquier espacio y pantalla (barra de las pantallas secundarias,
+// a la derecha: con una sola pantalla no se ve; ahí ya está el chip de sistema). Una entrada por programa (las
+// ventanas con el mismo pid van juntas): icono, CPU (% de todo el equipo) y memoria, sumando todos sus procesos
+// hijos (SysStats.tree: pestañas de Chrome, apps Electron, lo que corre en una terminal). Orden fijo (los abiertos
+// antes, primero); si hay más de `max`, solo los que más gastan y «+N».
 // En rojo la CPU si pasa del 25 % y la memoria si pasa de 2 GB: dice qué ventana está frenando el equipo.
 // Clic: ir a la ventana · clic central: cerrarla · al pasar el cursor: nombre, ventanas y procesos.
 import QtQuick
@@ -10,19 +12,25 @@ import "../services"
 
 Row {
     id: root
-    required property string screenName
+    property int max: 8
     spacing: 2
     readonly property var groups: {
-        HyprClients.refreshes;
-        const m = HyprClients.monitorByName(screenName);
-        if (!m) return [];
         const by = {}, order = [];
-        for (const c of HyprClients.onWorkspace(m.activeWorkspace?.id)) {
+        for (const c of HyprClients.clients) {
             const k = c.pid > 0 ? "p" + c.pid : c.address;
             if (!by[k]) { by[k] = []; order.push(k); }
             by[k].push(c);
         }
-        return order.map(k => by[k]).sort((a, b) => a[0].at[0] - b[0].at[0]);
+        return order.map(k => by[k]).sort((a, b) => (a[0].pid || 1e9) - (b[0].pid || 1e9));
+    }
+    // Cuánto pesa un programa para elegir cuáles caben: su parte de CPU más su parte de memoria
+    function score(u): real { return u.cpu / 100 + (SysStats.memTotal > 0 ? u.mem / SysStats.memTotal : 0); }
+    // Con más de `max`, el peso mínimo para salir (solo cambia qué se ve, no se rehace la lista cada 2 s)
+    readonly property real cut: {
+        SysStats.procTable;
+        if (groups.length <= max) return -1;
+        const v = groups.map(g => g[0].pid > 0 ? score(SysStats.tree(g[0].pid)) : 0).sort((a, b) => b - a);
+        return v[max - 1];
     }
     Component.onCompleted: { SysStats.users++; SysStats.procUsers++; }
     Component.onDestruction: { SysStats.users--; SysStats.procUsers--; }
@@ -40,6 +48,7 @@ Row {
             readonly property var win: modelData[0]
             readonly property var use: { SysStats.procTable; return win.pid > 0 ? SysStats.tree(win.pid) : { cpu: 0, mem: 0, n: 0 }; }
             readonly property string name: HyprClients.appName(win.class ?? "")
+            visible: root.cut < 0 || root.score(use) >= root.cut
             implicitHeight: 22
             implicitWidth: row.implicitWidth + 12
             radius: Theme.r(7)
@@ -93,5 +102,13 @@ Row {
                       + " · " + chip.use.n + (chip.use.n === 1 ? " proceso" : " procesos") + " · clic central: cerrar"
             }
         }
+    }
+    Txt {
+        readonly property int hidden: root.cut < 0 ? 0 : root.groups.length - root.max
+        visible: hidden > 0
+        anchors.verticalCenter: parent.verticalCenter
+        leftPadding: 4; rightPadding: 4
+        text: "+" + hidden
+        size: 11; muted: true
     }
 }
