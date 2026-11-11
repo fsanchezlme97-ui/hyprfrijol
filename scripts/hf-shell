@@ -57,7 +57,7 @@ case "${1:-}" in
     # Wayland se ha ido y se queda parado para siempre: se reanuda para que termine solo. Solo el de esta sesión.
     wake_player() {
       local p
-      for p in $(cat "$HOME/.local/state/hyprfrijol/motion.pid" 2>/dev/null); do
+      for p in $(cat "$HOME/.local/state/hyprfrijol/"motion*.pid 2>/dev/null); do
         tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null | grep -qx "HYPRLAND_INSTANCE_SIGNATURE=$SIG" && kill -CONT "$p" 2>/dev/null
       done
     }

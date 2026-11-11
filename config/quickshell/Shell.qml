@@ -41,8 +41,10 @@ Singleton {
         return Quickshell.screens.find(s => s.name === name) ?? Quickshell.screens[0];
     }
 
-    // Pantalla principal (Ajustes › Pantallas, primaryMonitor); si no hay, la primera
-    readonly property var primaryScreen: Quickshell.screens.find(s => s.name === Settings.get("primaryMonitor", "")) ?? Quickshell.screens[0]
+    // Pantalla principal (Ajustes › Pantallas, primaryMonitor); si no hay o ya no está conectada (el conector cambia
+    // de nombre al mover el cable o añadir una gráfica: HDMI-A-1 → HDMI-A-2), la más grande
+    readonly property var primaryScreen: Quickshell.screens.find(s => s.name === Settings.get("primaryMonitor", ""))
+        ?? Quickshell.screens.reduce((a, s) => !a || s.width * s.height > a.width * a.height ? s : a, null)
 
     // Centro de control: ajustes rápidos, notificaciones y agenda viven en UN panel (vista "ajustes",
     // modules/quicksettings/QuickSettings.qml). Los nombres antiguos siguen valiendo como alias y dicen

@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.34] — 2026-11-10
+
+- Pantallas secundarias: su barra solo muestra sus espacios (sin aplicaciones, título, onda de audio, chips,
+  bandeja ni grupo de estado). Todo eso queda en la principal.
+- Fondos en movimiento por pantalla: el selector de fondos, con una pantalla elegida, pone un vídeo propio en ella
+  (su propio mpvpaper). El vídeo general solo se reproduce en las pantallas sin fondo propio (antes se decodificaba
+  también debajo de las que lo tenían) y se reparte de nuevo al conectar o quitar pantallas. La pausa (batería,
+  pantalla completa, juego…) para todos los reproductores.
+- Pantalla principal: si la guardada ya no está conectada (el conector cambia de nombre, p. ej. HDMI-A-1 → HDMI-A-2
+  al añadir una gráfica), se usa la más grande en vez de la primera de la lista.
+- `hf-wallpaper` ya no se corta a medias si un reproductor recién cerrado sigue en la lista de procesos.
+
 ## [0.8.33] — 2026-11-10
 
 - Pantallas en dos tarjetas gráficas: el cursor ya no sale como un cuadrado negro en la segunda (cursor por software

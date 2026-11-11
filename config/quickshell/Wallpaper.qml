@@ -1,6 +1,7 @@
 // Fondo de pantalla dibujado por el propio shell (sustituye a swww).
 // hf-wallpaper escribe ~/.local/state/hyprfrijol/wallpaper.json y aquí se hace el fundido:
 //   { image, video, fadeMs, monitors: { "DP-1": "/ruta.jpg" } }   (monitors = fondo propio por pantalla)
+//   motions: { "DP-1": "/vídeo.mp4" } + motionOn: { "DP-1": true } = esa pantalla tiene vídeo propio y ya pinta
 // - Modo de color «mono» + ajuste monoFondo (por defecto sí) → el fondo se ve en blanco y negro.
 // - Rotación: wallpaperRotateMin > 0 cambia el fondo cada N minutos (wallpaperRandom = al azar);
 //   wallpaperHora = true pone el fondo de la hora del día (amanecer, bruma, lago, noche).
@@ -23,7 +24,7 @@ PanelWindow {
     anchors { top: true; bottom: true; left: true; right: true }
     // Con vídeo (mpvpaper, también en la capa Background) esta ventana debe ser transparente: al reiniciar el shell
     // se crea por encima de mpvpaper y, con color opaco, taparía el fondo en movimiento.
-    color: wp.video && win.ownImage === "" ? "transparent" : Theme.bg
+    color: win.showVideo ? "transparent" : Theme.bg
     // Sin esto, una ventana que nace opaca (al arrancar, antes de leer wallpaper.json) ya no puede volverse
     // transparente: el escritorio se quedaba negro con el vídeo detrás.
     surfaceFormat.opaque: false
@@ -36,6 +37,8 @@ PanelWindow {
     // Fondo propio de esta pantalla, si lo tiene
     readonly property string ownImage: (wp.monitors ?? {})[outName] ?? ""
     readonly property string image: ownImage || wp.image
+    // Se ve un vídeo detrás: el propio de la pantalla (cuando ya pinta) o, sin fondo propio, el global
+    readonly property bool showVideo: ownImage !== "" ? !!(wp.motionOn ?? {})[outName] : wp.video
     readonly property bool mono: Settings.get("colorMode", "auto") === "mono"
                                  && Settings.get("monoFondo", true) !== false && Settings.get("monoFondo", true) !== "false"
     // Solo la primera pantalla se encarga de rotar (hay una instancia de esto por pantalla)
@@ -68,6 +71,7 @@ PanelWindow {
             property bool video: false
             property int fadeMs: 1200
             property var monitors: ({})
+            property var motionOn: ({})
             property real changed: 0
         }
     }
@@ -84,7 +88,7 @@ PanelWindow {
     Item {
         id: stack
         anchors.fill: parent
-        visible: !wp.video || win.ownImage !== ""
+        visible: !win.showVideo
         // Fundido sin huecos: la imagen nueva aparece ENCIMA y la anterior sigue opaca debajo hasta que la nueva está
         // entera. Antes las dos se cruzaban (1→0 y 0→1) y a medio camino se veía lo de detrás: negro, o el vídeo viejo.
         Layer {
@@ -139,14 +143,14 @@ PanelWindow {
         });
     }
 
-    // ── Pausar el fondo en movimiento (solo la primera pantalla; mpvpaper es uno para todas) ──
+    // ── Pausar el fondo en movimiento (lo manda la primera pantalla, para todos los reproductores) ──
     readonly property var pauseOn: {
         const l = Settings.get("wallpaperPauseOn", ["fullscreen", "bateria", "juego"]);
         return (Array.isArray(l) ? l : []).map(x => x === "pantalla-completa" ? "fullscreen" : x);
     }
     // Un juego en un espacio visible (Steam, gamescope: las mismas clases que rules.lua y Focus.qml)
     readonly property bool anyGame: shownClients.some(c => /^(steam_app_\d+|gamescope)$/i.test(c.class ?? ""))
-    readonly property bool paused: wp.video && (
+    readonly property bool paused: (wp.video || Object.keys(wp.motionOn ?? {}).length > 0) && (
         (pauseOn.includes("fullscreen") && anyFullscreen) ||
         (pauseOn.includes("maximizada") && anyMaximized) ||
         (pauseOn.includes("cubierto") && covered) ||
@@ -158,9 +162,10 @@ PanelWindow {
     function syncPause() {
         if (paused === sentPause) return;
         sentPause = paused;
-        // Solo el reproductor de esta sesión (hf-wallpaper guarda su pid): ni otras sesiones ni otros usuarios
-        Quickshell.execDetached(["sh", "-c", 'for p in $(cat "$1" 2>/dev/null); do kill "$2" "$p" 2>/dev/null; done',
-                                 "sh", Paths.state + "/motion.pid", paused ? "-STOP" : "-CONT"]);
+        // Solo los reproductores de esta sesión (hf-wallpaper guarda sus pids: el global y los propios de cada
+        // pantalla): ni otras sesiones ni otros usuarios
+        Quickshell.execDetached(["sh", "-c", 'for p in $(cat "$1"/motion*.pid 2>/dev/null); do kill "$2" "$p" 2>/dev/null; done',
+                                 "sh", Paths.state, paused ? "-STOP" : "-CONT"]);
     }
     // Un fondo nuevo arranca otro reproductor: volver a aplicar la pausa
     Timer { id: pauseRe; interval: 1500; onTriggered: if (win.paused) win.syncPause() }

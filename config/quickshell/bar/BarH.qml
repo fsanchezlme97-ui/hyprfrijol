@@ -15,10 +15,12 @@ Item {
     required property var barWindow
     property bool compact: false          // isla central: los tres grupos seguidos, sin huecos
     property bool islands: false          // archipiélago: cada grupo en su propia píldora (BarPill)
+    // Pantalla secundaria: solo sus espacios (sin aplicaciones, título, onda, chips, bandeja ni estado)
+    readonly property bool secondary: barWindow.screen !== Shell.primaryScreen
     // Píldoras del archipiélago (Bar.qml las usa de máscara para el ratón)
     readonly property var pills: [pillL, pillC, pillR, pillS]
     readonly property real gapC: 14
-    readonly property real naturalLength: left.implicitWidth + (wave.active ? wave.width + gapC * 2 : gapC) + right.implicitWidth + 6
+    readonly property real naturalLength: left.implicitWidth + (wave.active ? wave.width + gapC * 2 : gapC) + (secondary ? 0 : right.implicitWidth) + 6
     // Título de la ventana activa: tope fijo (isla) o 30 % de la barra (máx. 300 px), y nunca hasta la onda
     // central (ni hasta el grupo derecho sin onda). Se calcula sin depender del propio título (sin bucles).
     readonly property real titleStart: left.x + (ws.visible ? ws.x + ws.width : apps.x + apps.width) + 16
@@ -27,7 +29,7 @@ Item {
     // Archipiélago: la onda va en su píldora entre la izquierda y los chips; si no cabe (pantalla estrecha o barra
     // grande), se oculta en lugar de montarse sobre la píldora de los chips
     readonly property bool waveFits: compact || (islands ? titleStart + 12 + wave.width <= right.x - 26 : waveX >= titleStart - 8)
-    readonly property real centerStart: !wave.active || !waveFits ? right.x
+    readonly property real centerStart: !wave.active || !waveFits ? (secondary ? width : right.x)
         : islands ? Math.min((width - wave.width) / 2, right.x - 26 - wave.width) - 22 - 10
         : waveX
     readonly property real titleMax: compact ? 240 : Math.max(0, Math.min(300, width * 0.3, centerStart - gapC - titleStart))
@@ -37,8 +39,8 @@ Item {
     // Píldora de los chips (si hay alguno) y la del grupo de estado
     readonly property real statusX: right.x + statusBox.x
     readonly property bool anyChip: statusBox.x > 4
-    BarPill { id: pillR; bar: root.barWindow; visible: root.islands && root.anyChip; x: right.x - 4; height: parent.height; width: root.statusX - root.gapS - x + 4 }
-    BarPill { id: pillS; bar: root.barWindow; visible: root.islands; x: root.anyChip ? root.statusX - 4 : right.x - 4; height: parent.height; width: parent.width - x }
+    BarPill { id: pillR; bar: root.barWindow; visible: root.islands && root.anyChip && !root.secondary; x: right.x - 4; height: parent.height; width: root.statusX - root.gapS - x + 4 }
+    BarPill { id: pillS; bar: root.barWindow; visible: root.islands && !root.secondary; x: root.anyChip ? root.statusX - 4 : right.x - 4; height: parent.height; width: parent.width - x }
     readonly property real gapS: 16          // hueco entre las islas de chips y de estado (8 px visibles)
 
     RowLayout {
@@ -46,16 +48,16 @@ Item {
         x: 3
         anchors.verticalCenter: parent.verticalCenter
         spacing: 6
-        AppsBtn { id: apps }   // Aplicaciones (Spotlight): logo de la distribución
-        Workspaces { id: ws; visible: Settings.barHas("espacios"); screen: root.barWindow.screen }
+        AppsBtn { id: apps; visible: !root.secondary }   // Aplicaciones (Spotlight): logo de la distribución
+        Workspaces { id: ws; visible: Settings.barHas("espacios") || root.secondary; screen: root.barWindow.screen }
         Divider { visible: Settings.barHas("espacios") && title.visible }
-        ActiveTitle { id: title; visible: Settings.get("barShowTitle", true) && Settings.barHas("titulo") && text !== "" && root.titleMax >= 48; Layout.leftMargin: 2; Layout.maximumWidth: root.titleMax }
-        OmarchySlot { barWindow: root.barWindow; place: "izquierda" }   // widgets de plugins de Omarchy (omarchyBarSlot)
+        ActiveTitle { id: title; visible: !root.secondary && Settings.get("barShowTitle", true) && Settings.barHas("titulo") && text !== "" && root.titleMax >= 48; Layout.leftMargin: 2; Layout.maximumWidth: root.titleMax }
+        OmarchySlot { barWindow: root.barWindow; place: "izquierda"; visible: any && !root.secondary }   // widgets de plugins de Omarchy (omarchyBarSlot)
     }
 
     Loader {
         id: wave
-        active: Settings.barHas("musica")
+        active: Settings.barHas("musica") && !root.secondary
         visible: root.waveFits
         anchors.verticalCenter: parent.verticalCenter
         // Archipiélago: centrada, pero sin pisar las píldoras de los lados (12 px de hueco como mínimo)
@@ -69,6 +71,7 @@ Item {
     readonly property bool hasUtil: pomo.visible || cafe.visible || bongo.visible || dictBtn.visible || clipBtn.visible || aiBtn.visible || gearBtn.visible || tray.visible
     RowLayout {
         id: right
+        visible: !root.secondary
         x: root.compact ? (wave.active ? wave.x + wave.width + root.gapC : left.x + left.implicitWidth + root.gapC) : parent.width - implicitWidth - 3
         anchors.verticalCenter: parent.verticalCenter
         spacing: 2
