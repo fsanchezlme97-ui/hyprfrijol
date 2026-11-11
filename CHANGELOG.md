@@ -3,6 +3,11 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.10] — 2026-11-11
+
+### Seguridad
+- Un tema creado por el asistente ya no puede sobrescribir uno tuyo con el mismo nombre (se guarda como «Nombre 2»), así que Deshacer solo borra el que creó el asistente.
+
 ## [0.9.9] — 2026-11-11
 
 ### Añadido

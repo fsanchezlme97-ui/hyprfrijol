@@ -944,10 +944,23 @@ def exec_action(a):
         made = json.loads(run([str(ROOT / "scripts/hf-theme"), "make", "--name", a["name"], "--hex", " ".join(a["colors"])], timeout=60) or "{}")
         if made.get("error") or not made.get("key"):
             return {"kind": "error", "msg": made.get("error") or "No se pudo crear el tema"}
-        subprocess.run([str(ROOT / "scripts/hf-theme"), "save", "-"], input=json.dumps(made), text=True, capture_output=True, timeout=30)
+        # Nunca pisar un tema propio que ya exista (Deshacer lo borraría): «Nombre 2», «Nombre 3»…
+        taken = {x.get("key") for x in json.loads(run([str(ROOT / "scripts/hf-theme"), "list"]) or "[]")}
+        base, n = made.get("name") or a["name"], 2
+        while made["key"] in taken and n < 100:
+            made["name"] = f"{base} {n}"
+            made["key"] = "propio-" + theme_slug(made["name"])
+            n += 1
+        out = subprocess.run([str(ROOT / "scripts/hf-theme"), "save", "-"], input=json.dumps(made), text=True, capture_output=True, timeout=30)
+        try:
+            key = json.loads(out.stdout).get("key")
+        except Exception:
+            key = None
+        if not key or key in taken:
+            return {"kind": "error", "msg": "No se pudo guardar el tema"}
         prev = {"colorMode": s.get("colorMode"), "palette": s.get("palette")}
-        set_settings({"colorMode": "elegir", "palette": made["key"]})
-        return {"kind": "theme", "key": made["key"], "prev": prev}
+        set_settings({"colorMode": "elegir", "palette": key})
+        return {"kind": "theme", "key": key, "prev": prev}
     elif t == "timer":
         if a.get("cancel"):
             timer_cancel(a["cancel"])
@@ -2530,6 +2543,12 @@ def do_chat_with(req, prov, s):
         return do_chat(dict(req, _fallback=True))
     finally:
         settings = orig
+
+def theme_slug(s):
+    """La misma clave que hf-theme (slug): sin acentos, minúsculas y guiones."""
+    import unicodedata
+    s = unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "-", s).strip("-")[:40] or "tema"
 
 def transform_text(instr, text):
     """Instrucción + texto → texto en plano (dictado, recetas de copiar o reemplazar). Modelo rápido, modo local y
