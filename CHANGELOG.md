@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.8.36] — 2026-11-10
+
+- La barra de las pantallas secundarias vuelve a estar siempre visible.
+- Barra de las pantallas secundarias, a la derecha: los programas de su espacio visible con lo que gastan. Icono,
+  CPU (% de todo el equipo) y memoria, sumando todos sus procesos (pestañas de Chrome, apps Electron, lo que corre
+  en una terminal). En rojo si pasan del 25 % de CPU o de 2 GB. Clic: ir a la ventana · clic central: cerrarla.
+
 ## [0.8.35] — 2026-11-10
 
 - Pantallas secundarias: su barra se esconde sola (vuelve al llevar el cursor al borde) y muestra el título de su

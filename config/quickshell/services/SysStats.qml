@@ -11,6 +11,8 @@ pragma Singleton
 //     gpu / gpuTemp = la gráfica principal (la primera que da % de uso); hasGpu = hay alguna con datos
 // Detalle (ventana «Sistema» de la barra): SysStats.detailUsers++ añade procesos (procs: top 6 por CPU
 //   [{ pid, name, cpu, mem }]) y discos (disks: [{ mount, used, size }]).
+// Por programa (barra de las pantallas secundarias): SysStats.procUsers++ mide cada proceso sin los discos y
+//   tree(pid) da lo que gasta con todos sus hijos: { cpu (% de todo el equipo), mem (bytes de RSS), n (procesos) }.
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -36,6 +38,24 @@ Singleton {
     property var gpuNames: ({})          // ranura PCI → nombre (lspci, una vez)
     property var prev: null
     property int detailUsers: 0
+    property int procUsers: 0
+    property var procTable: ({})         // pid → { ppid, cpu (% de un núcleo), rss (bytes), name }
+    property var procKids: ({})          // pid → [pids hijos]
+    // Lo que gasta un programa con todos sus procesos hijos (Chrome, apps Electron, la terminal y lo que corre en ella)
+    function tree(pid: int): var {
+        let cpu = 0, mem = 0, n = 0;
+        const st = [pid], seen = {};
+        while (st.length) {
+            const p = st.pop();
+            if (seen[p]) continue;
+            seen[p] = true;
+            const e = procTable[p];
+            if (!e) continue;
+            cpu += e.cpu; mem += e.rss; n++;
+            for (const k of procKids[p] || []) st.push(k);
+        }
+        return { cpu: cpu / Math.max(1, cores.length), mem: mem, n: n };
+    }
     property var cores: []
     property real swapUsed: 0
     property real swapTotal: 0
@@ -87,9 +107,10 @@ Singleton {
         }
     }
 
-    // Al abrir o cerrar el monitor del sistema (detalle por proceso) se relanza con el otro modo
-    readonly property bool detailOn: detailUsers > 0
-    onDetailOnChanged: if (proc.running) { proc.running = false; proc.running = Qt.binding(() => root.users > 0); }
+    // Al abrir o cerrar el monitor del sistema (detalle por proceso) o la lista por programa se relanza con el otro
+    // modo: 0 nada · 1 procesos · 2 procesos y discos
+    readonly property int procMode: detailUsers > 0 ? 2 : procUsers > 0 ? 1 : 0
+    onProcModeChanged: if (proc.running) { proc.running = false; proc.running = Qt.binding(() => root.users > 0); }
 
     Process {
         id: proc
@@ -140,16 +161,18 @@ Singleton {
               done < /proc/diskstats
               echo "dio $((r * 512)) $((w * 512))"
               [ $((i % 15)) = 0 ] && df -B1 --output=used,size / | { read -r _; read -r u s; echo "disk $u $s"; }
-              if [ "$detail" = 1 ]; then
-                # tiempo de CPU de cada proceso (el % se calcula entre dos medidas, como top)
-                awk 'match($0, /\\) [A-Za-z] /) { n = substr($0, index($0, "(") + 1, RSTART - index($0, "(") - 1); split(substr($0, RSTART + 2), a, " "); print "proc", FILENAME, a[12] + a[13], a[22], n }' /proc/[0-9]*/stat 2>/dev/null
+              if [ "$detail" != 0 ]; then
+                # tiempo de CPU de cada proceso (el % se calcula entre dos medidas, como top), memoria y padre
+                awk 'match($0, /\\) [A-Za-z] /) { n = substr($0, index($0, "(") + 1, RSTART - index($0, "(") - 1); split(substr($0, RSTART + 2), a, " "); print "proc", FILENAME, a[12] + a[13], a[22], a[2], n }' /proc/[0-9]*/stat 2>/dev/null
+              fi
+              if [ "$detail" = 2 ]; then
                 df -B1 --output=source,target,used,size -x tmpfs -x devtmpfs -x efivarfs -x overlay -x squashfs 2>/dev/null | tail -n +2 | awk '$4 > 1e9 && !seen[$1]++' | sed 's/^/mnt /'
               fi
               echo end
               i=$((i + 1))
               read -t 2 -u 3
             done
-        `, "bash", root.detailOn ? "1" : "0"])
+        `, "bash", String(root.procMode)])
         property string buf: ""
         stdout: SplitParser {
             onRead: line => {
@@ -166,7 +189,7 @@ Singleton {
                 const gpus = [], nv = {};
                 const cores = [], prevCores = [], procs = [], disks = [];
                 let swT = 0, swF = 0;
-                const detail = root.detailUsers > 0;
+                const detail = root.detailUsers > 0, anyProc = root.procMode > 0;
                 for (const l of text.split("\n")) {
                     const f = l.trim().split(/[\s,]+/);
                     if (f[0] === "cpu") {
@@ -193,8 +216,8 @@ Singleton {
                         }
                         root.prevNet = { rx: rx, tx: tx, t: t };
                     } else if (f[0] === "proc") {
-                        const m = l.trim().match(/^proc\s+\/proc\/(\d+)\/stat\s+(\d+)\s+(\d+)\s+(.*)$/);
-                        if (m) procs.push({ pid: +m[1], ticks: +m[2], rss: +m[3], name: m[4] });
+                        const m = l.trim().match(/^proc\s+\/proc\/(\d+)\/stat\s+(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/);
+                        if (m) procs.push({ pid: +m[1], ticks: +m[2], rss: +m[3], ppid: +m[4], name: m[5] });
                     } else if (f[0] === "mnt") {
                         const m = l.trim().match(/^mnt\s+\S+\s+(.+?)\s+(\d+)\s+(\d+)$/);
                         if (m) disks.push({ mount: m[1], used: +m[2], size: +m[3] });
@@ -245,18 +268,25 @@ Singleton {
                 root.gpuTemp = main ? main.temp : (gpus.find(g => g.temp > 0)?.temp ?? -1);
                 root.cores = cores; root.prevCores = prevCores;
                 root.swapTotal = swT; root.swapUsed = swT - swF;
-                if (detail) {
+                if (anyProc) {
                     // % de CPU (100 = un núcleo) entre esta medida y la anterior; ticks de 1/100 s
                     const t = Date.now(), pp = root.prevProcs, dt = pp ? (t - pp.t) / 1000 : 0, cur = {};
                     for (const p of procs) cur[p.pid] = p.ticks;
                     if (pp && dt > 0) {
-                        root.procs = procs.filter(p => pp.m[p.pid] !== undefined)
-                            .map(p => ({ pid: p.pid, name: p.name, cpu: (p.ticks - pp.m[p.pid]) / dt, mem: root.memTotal ? 100 * p.rss * 4096 / root.memTotal : 0 }))
-                            .sort((a, b) => b.cpu - a.cpu || b.mem - a.mem).slice(0, 6);
+                        const tbl = {}, kids = {};
+                        for (const p of procs) {
+                            tbl[p.pid] = { ppid: p.ppid, cpu: pp.m[p.pid] !== undefined ? Math.max(0, (p.ticks - pp.m[p.pid]) / dt) : 0, rss: p.rss * 4096, name: p.name };
+                            (kids[p.ppid] = kids[p.ppid] || []).push(p.pid);
+                        }
+                        root.procTable = tbl; root.procKids = kids;
+                        if (detail)
+                            root.procs = procs.filter(p => pp.m[p.pid] !== undefined)
+                                .map(p => ({ pid: p.pid, name: p.name, cpu: tbl[p.pid].cpu, mem: root.memTotal ? 100 * tbl[p.pid].rss / root.memTotal : 0 }))
+                                .sort((a, b) => b.cpu - a.cpu || b.mem - a.mem).slice(0, 6);
                     }
                     root.prevProcs = { t: t, m: cur };
-                    root.disks = disks.slice(0, 5);
-                } else root.prevProcs = null;
+                    if (detail) root.disks = disks.slice(0, 5);
+                } else { root.prevProcs = null; root.procTable = ({}); root.procKids = ({}); }
                 root.cpuHist = root.push(root.cpuHist, root.cpu);
                 root.memHist = root.push(root.memHist, root.memTotal ? 100 * root.memUsed / root.memTotal : 0);
                 root.gpuHist = root.push(root.gpuHist, Math.max(0, root.gpu));
