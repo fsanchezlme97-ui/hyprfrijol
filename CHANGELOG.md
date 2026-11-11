@@ -3,6 +3,11 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.11] — 2026-11-11
+
+### Corregido
+- Al abrir el centro de control, Spotlight u otro panel ya no se ven dos animaciones seguidas (un fundido de Hyprland y luego la entrada del panel): ahora solo se anima el panel. Los avisos que estaban en pantalla ya no salen deslizándose a la vez que se abre el centro de control.
+
 ## [0.9.10] — 2026-11-11
 
 ### Seguridad

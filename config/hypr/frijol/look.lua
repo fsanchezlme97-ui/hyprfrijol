@@ -80,12 +80,14 @@ hl.animation({ leaf = "zoomFactor",    enabled = true, speed = 2.6, bezier = "en
 
 -- Vidrio para las capas del shell (barra, paneles, Spotlight) que dibuja Quickshell.
 -- Todas usan el espacio de nombres "hf-…"; el fondo de pantalla no lleva blur.
-hl.layer_rule({ match = { namespace = "^hf-.*" }, blur = true, blur_popups = true, ignore_alpha = 0.2 })
+-- Sin la animación de capas de Hyprland: los paneles, emergentes y avisos del shell ya traen la suya en QML
+-- (components/Overlay.qml, ChipPopup, NotificationPopups…). Con las dos a la vez se veía un fundido de la capa
+-- entera y, con otra curva y otro arranque, la entrada del panel: «sale uno y luego otro».
+hl.layer_rule({ match = { namespace = "^hf-.*" }, blur = true, blur_popups = true, ignore_alpha = 0.2, no_anim = true })
 hl.layer_rule({ match = { namespace = "^hf-wallpaper$" }, blur = false, no_anim = true })
 -- Fondos en movimiento: sin fundido de capa. Con él, al cambiar de vídeo el nuevo entraba transparente sobre el viejo
 -- y el viejo salía con otro fundido: a medio camino se veía negro (o los dos mezclados)
 hl.layer_rule({ match = { namespace = "^(mpvpaper|linux-wallpaperengine)$" }, blur = false, no_anim = true })
-hl.layer_rule({ match = { namespace = "^hf-notifications$" }, animation = "slide right" })
 
 -- Pantallas en dos tarjetas gráficas (p. ej. AMD + una NVIDIA con nouveau): el cursor por hardware en la
 -- segunda sale como un cuadrado negro. Con salidas conectadas en más de una tarjeta, cursor por software.
