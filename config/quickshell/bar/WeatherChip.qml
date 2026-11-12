@@ -1,4 +1,4 @@
-// Clima en la barra (Ajustes › Barra › Widgets en la barra: «clima»): icono + temperatura; al pasar el cursor
+// Clima en la barra (Ajustes › Widgets de la barra: «clima»): icono + temperatura; al pasar el cursor
 // (o siempre, con barWeatherText) se despliega el estado del cielo. Clic: ventana del clima (previsión por
 // horas y de 3 días). En la barra vertical, icono y grados apilados.
 import QtQuick

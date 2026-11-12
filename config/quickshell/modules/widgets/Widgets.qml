@@ -1,7 +1,7 @@
 // Widgets (clima, sistema, impresora 3D…) como ventanas flotantes, no sobre el escritorio:
 // - Cada chip de la barra (bar/WeatherChip, StatsChip, PrinterChip) abre su ventana pegada a él:
 //   vistas "w-clima", "w-sistema", "w-impresora" (ChipPopup). Cuáles hay en la barra: Ajustes › Barra ›
-//   Widgets en la barra (módulos «clima», «recursos», «impresora» de barModules).
+//   Ajustes › Widgets de la barra (módulos «clima», «recursos», «impresora» de barModules).
 // - Vista "widgets" (Super + G): todos los widgets juntos en un panel flotante junto a la barra, con
 //   «Editar widgets» para elegir cuáles y en qué orden (ajuste "widgets").
 import QtQuick

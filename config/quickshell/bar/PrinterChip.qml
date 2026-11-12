@@ -1,4 +1,4 @@
-// Impresora 3D en la barra (Ajustes › Barra › Widgets en la barra: «impresora»; solo si está configurada).
+// Impresora 3D en la barra (Ajustes › Widgets de la barra: «impresora»; solo si está configurada).
 // Imprimiendo: icono + barrita de progreso + % (y lo que queda al pasar el cursor); si no, el estado.
 // Clic: ventana de la impresora (trabajo, temperaturas, cámara y pausa).
 import QtQuick

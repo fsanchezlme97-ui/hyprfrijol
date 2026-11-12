@@ -168,8 +168,7 @@ ColumnLayout {
             Layout.fillWidth: true
             spacing: 8
             Repeater {
-                model: [["espacios", "Espacios"], ["titulo", "Título de ventana"], ["reloj", "Reloj"], ["pomodoro", "Pomodoro"], ["musica", "Música"], ["ia", "Asistente IA"],
-                        ["ajustes", "Ajustes (tuerca)"], ["red", "Red"], ["bateria", "Batería"], ["portapapeles", "Portapapeles"], ["notificaciones", "Notificaciones"], ["cafeina", "Cafeína"], ["dictado", "Dictado"], ["bongo", "Gato bongo"]]
+                model: [["espacios", "Espacios"], ["titulo", "Título de ventana"], ["musica", "Música"], ["red", "Red"], ["bateria", "Batería"], ["notificaciones", "Notificaciones"], ["reloj", "Reloj"]]
                 Chip {
                     required property var modelData
                     readonly property var list: Settings.barModuleList
@@ -179,64 +178,7 @@ ColumnLayout {
                 }
             }
         }
-    }
-    // Widgets en la barra: chips que abren su ventana flotante (modules/widgets). Módulos «clima», «recursos»
-    // e «impresora» de barModules · barWeatherText · barStatsStyle
-    Section {
-        Layout.fillWidth: true
-        title: "Widgets en la barra"
-        headerRight: Button { text: "Ver todos · Super + G"; onClicked: Shell.open("widgets") }
-        SwRow {
-            separator: false
-            label: "Clima"; sub: "temperatura en la barra · clic: próximas horas y 3 días"
-            checked: Settings.barHas("clima")
-            onToggled: v => Settings.set("barModules", Settings.barModuleList.filter(m => m !== "clima").concat(v ? ["clima"] : []))
-        }
-        SwRow {
-            label: "Mostrar el estado del cielo"; sub: "«18° nublado» siempre, no solo al pasar el cursor"; key: "barWeatherText"
-            enabled: Settings.barHas("clima")
-        }
-        SwRow {
-            label: "Sistema"; sub: "CPU, GPU, RAM, disco, red y temperatura · clic: núcleos, cada GPU, procesos, discos y red"
-            checked: Settings.barHas("recursos")
-            onToggled: v => Settings.set("barModules", Settings.barModuleList.filter(m => m !== "recursos").concat(v ? ["recursos"] : []))
-        }
-        LabeledRow {
-            label: "Estilo del sistema"; labelWidth: 150
-            opacity: Settings.barHas("recursos") ? 1 : 0.45
-            Seg {
-                model: [["barras", "Barritas"], ["grafica", "Gráfica"], ["texto", "Solo números"]]
-                current: Settings.get("barStatsStyle", "barras")
-                onPicked: k => Settings.set("barStatsStyle", k)
-            }
-        }
-        // Medidas del chip «Sistema» (barStatsShow); la ventana enseña siempre todas
-        LabeledRow {
-            label: "Medidas en la barra"; labelWidth: 150
-            opacity: Settings.barHas("recursos") ? 1 : 0.45
-            Flow {
-                Layout.fillWidth: true
-                spacing: 6
-                Repeater {
-                    model: [["cpu", "CPU"], ["gpu", "GPU"], ["ram", "RAM"], ["disco", "Disco"], ["red", "Red ↓↑"], ["temp", "Temperatura"]]
-                    Chip {
-                        required property var modelData
-                        readonly property var list: { const v = Settings.get("barStatsShow", null); return Array.isArray(v) ? v : ["cpu", "ram", "gpu", "temp"]; }
-                        h: 26
-                        text: modelData[1]
-                        on: list.includes(modelData[0])
-                        // en el orden de la lista de arriba
-                        onClicked: Settings.set("barStatsShow", on ? list.filter(x => x !== modelData[0])
-                                                                   : ["cpu", "gpu", "ram", "disco", "red", "temp"].filter(x => x === modelData[0] || list.includes(x)))
-                    }
-                }
-            }
-        }
-        SwRow {
-            label: "Impresora 3D"; sub: Printer.configured ? "estado y progreso · clic: cámara, temperaturas y pausa" : "configura la dirección en Ajustes › Escritorio"
-            checked: Settings.barHas("impresora")
-            onToggled: v => Settings.set("barModules", Settings.barModuleList.filter(m => m !== "impresora").concat(v ? ["impresora"] : []))
-        }
+        LinkRow { label: "Clima, sistema, pomodoro, asistente y demás widgets"; section: "barwidgets"; sectionLabel: "Widgets de la barra"; target: "Distribución" }
     }
     // Bandeja del sistema (bar/Tray.qml): barTray · barTrayMax · barTrayHidden (ids que van al «›»)
     Section {

@@ -1,4 +1,4 @@
-// Sistema en la barra (Ajustes › Barra › Widgets en la barra: «recursos»).
+// Sistema en la barra (Ajustes › Widgets de la barra: «recursos»).
 // Qué medidas enseña (barStatsShow, lista): "cpu" · "ram" · "gpu" · "disco" · "red" · "temp"
 //   (por defecto cpu, ram, gpu y temp; la GPU se oculta sola si no hay datos).
 // Estilo (barStatsStyle):

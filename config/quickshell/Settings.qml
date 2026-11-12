@@ -98,6 +98,23 @@ Singleton {
         return Array.isArray(v) ? v : ["espacios", "titulo", "musica", "clima", "recursos", "pomodoro", "cafeina", "dictado", "ia", "red", "bateria", "notificaciones", "reloj"];
     }
     function barHas(m: string): bool { return barModuleList.includes(m); }
+    // Widgets que se pueden mover (Ajustes › Widgets de la barra), más los propios (barCustom → «propio:<id>»).
+    // barOrder = { izquierda: [ids], derecha: [ids] } guarda en qué isla va cada uno y su orden; los que no
+    // aparecen (nuevos o sin tocar) van a la derecha en este orden. Encendido o apagado sigue en barModules.
+    readonly property var barWidgetIds: ["clima", "recursos", "impresora", "bongo", "pomodoro", "cafeina", "portapapeles", "dictado", "ia", "ajustes"]
+    readonly property var barCustomList: { const v = get("barCustom", null); return Array.isArray(v) ? v.filter(c => c && c.id) : []; }
+    readonly property var barOrder: {
+        const o = get("barOrder", null) || {};
+        const all = barWidgetIds.concat(barCustomList.map(c => "propio:" + c.id));
+        const seen = {};
+        const take = l => (Array.isArray(l) ? l : []).filter(x => all.includes(x) && !seen[x] && (seen[x] = true));
+        const izq = take(o.izquierda), der = take(o.derecha);
+        return { izquierda: izq, derecha: der.concat(all.filter(x => !seen[x])) };
+    }
+    // Los encendidos de una isla, en su orden
+    function barZone(z: string): var { return (barOrder[z] ?? []).filter(m => barHas(m)); }
+    // Información (clima, sistema, impresora, propios) y utilidades: entre un grupo y otro, un separador
+    function barGroup(m: string): string { return ["clima", "recursos", "impresora"].includes(m) || m.startsWith("propio:") ? "info" : "util"; }
 
     // Si hf-apply está a medias no se corta (podía saltarse la recarga de Hyprland): se repite al acabar
     property bool _again: false

@@ -33,7 +33,7 @@ SKIP_LEVELS = {"base", "required"}           # esos los pone siempre install.sh
 PUBLIC = ROOT / "perfil" / "perfil.json"     # el que viaja en el repo (público): sin datos personales
 # Ajustes que no salen al repo: tuyos (IA, ciudad), de este equipo (pantallas, escritorio) o del acceso remoto
 PRIVATE_KEYS = re.compile(r"^(ai(Name|Persona|Endpoint|KeyEnv|McpServers)|weather(City|Lat|Lon)|monitors|primaryMonitor"
-                          r"|deskOrder|greeterWallpaper|privateApps|(rdp|vnc|remote|vpn|tailscale|unsplash|wallhaven)[A-Z].*"
+                          r"|deskOrder|greeterWallpaper|privateApps|barCustom|barActions|aiHandoffCmd|(rdp|vnc|remote|vpn|tailscale|unsplash|wallhaven)[A-Z].*"
                           r"|rdpServer)$|(Path|Dir|Folder|Url|User|Email)$")
 
 

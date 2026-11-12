@@ -153,7 +153,7 @@ MEDIA_OPS = {"play": "Reproducir", "pause": "Pausar", "play-pause": "Reproducir 
 DENY_KEYS = re.compile(r"^(ai[A-Z]|privateApps$|windowMode$|monitors$|kb|binds?$|keybinds|terminal$|browser$|fileManager$|codeEditor$|textEditor$"
                        r"|office$|taskManager$|volumeMixer$|welcomeDone$|primaryMonitor$|printer|remote|vnc|cockpit|sync"
                        r"|plugins|autostart|lock|idleLock|gpuMode|updatesSnapshot|weatherLat|weatherLon|wallhavenPurity"
-                       r"|voiceCommands|voiceAliases|voiceAiFallback)"
+                       r"|voiceCommands|voiceAliases|voiceAiFallback|barCustom|barActions)"
                        r"|(Cmd|Command|Exec|Script|Path|Paths|Url|Urls|Key|Keys|Token|Secret|Password|Env)$")
 # Etiquetas de claves frecuentes que no están en SET_KEYS
 KEY_LABELS = {"barHeight": "Alto de la barra", "fontScale": "Tamaño de letra", "uiScale": "Escala de la interfaz",

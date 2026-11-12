@@ -3,6 +3,22 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.62] — 2026-11-12
+
+### Nuevo
+- Ajustes › Widgets de la barra: una sección propia para los widgets. Se ven las dos islas y se arrastra cada widget
+  para cambiarlo de orden o pasarlo de la isla derecha a la izquierda (tras los espacios y el título). Con el teclado:
+  ← → lo mueven y ↑ ↓ lo cambian de isla; también hay botones. «Orden de fábrica» lo deja como estaba.
+- Cada widget con su interruptor y sus opciones (estilo y medidas del sistema, estado del cielo del clima).
+- Clic derecho y rueda propios para cualquier widget: una orden por botón (p. ej. «playerctl next»).
+- Widgets propios: una orden que se repite cada N segundos y enseña lo que escribe (texto, o JSON con texto, icono y
+  ayuda), con su orden para el clic y para el clic derecho. Sin salida no ocupa sitio y con la pantalla bloqueada no corre.
+
+### Cambiado
+- Ajustes › Barra deja los widgets a la nueva sección; en «Módulos visibles» quedan espacios, título, música, red,
+  batería, avisos y reloj.
+- Las órdenes de los widgets propios y de los clics no salen al perfil público ni las puede cambiar el asistente.
+
 ## [0.9.61] — 2026-11-12
 
 ### Nuevo

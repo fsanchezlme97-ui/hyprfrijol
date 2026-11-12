@@ -25,7 +25,9 @@ Item {
     readonly property real naturalLength: left.implicitWidth + (wave.active ? wave.width + gapC * 2 : gapC) + (secondary ? usage.width : right.implicitWidth) + 6
     // Título de la ventana activa: tope fijo (isla) o 30 % de la barra (máx. 300 px), y nunca hasta la onda
     // central (ni hasta el grupo derecho sin onda). Se calcula sin depender del propio título (sin bucles).
+    // (los widgets de la izquierda van tras el título y no encogen: cuentan como parte del arranque)
     readonly property real titleStart: left.x + (ws.visible ? ws.x + ws.width : apps.x + apps.width) + 16
+        + (leftZone.visible ? leftZone.implicitWidth + 12 : 0)
     // Barra entera (fija / flotante): onda centrada sin pisar el grupo derecho; si no cabe tras los espacios, se oculta
     readonly property real waveX: Math.min((width - wave.width) / 2, right.x - gapC - wave.width)
     // Archipiélago: la onda va en su píldora entre la izquierda y los chips; si no cabe (pantalla estrecha o barra
@@ -56,6 +58,14 @@ Item {
         Workspaces { id: ws; visible: Settings.barHas("espacios") || root.secondary; screen: root.barWindow.screen }
         Divider { visible: Settings.barHas("espacios") && title.visible }
         ActiveTitle { id: title; screenName: root.barWindow.screen?.name ?? ""; visible: Settings.barHas("titulo") && text !== "" && root.titleMax >= 48; Layout.leftMargin: 2; Layout.maximumWidth: root.titleMax }
+        // Widgets puestos en la isla izquierda (Ajustes › Widgets de la barra)
+        RowLayout {
+            id: leftZone
+            visible: !root.secondary && root.zoneL.length > 0
+            spacing: 2
+            Divider { visible: ws.visible || title.visible; Layout.leftMargin: 2; Layout.rightMargin: 4 }
+            Repeater { model: root.zoneL; delegate: zoneItem }
+        }
         OmarchySlot { barWindow: root.barWindow; place: "izquierda"; visible: any && !root.secondary }   // widgets de plugins de Omarchy (omarchyBarSlot)
     }
 
@@ -71,8 +81,22 @@ Item {
         sourceComponent: Waveform { barHeight: root.height }
     }
 
-    readonly property bool hasInfo: Settings.barHas("clima") || Settings.barHas("recursos") || Settings.barHas("impresora")
-    readonly property bool hasUtil: bongo.visible || pomo.visible || cafe.visible || dictBtn.visible || clipBtn.visible || aiBtn.visible || gearBtn.visible || tray.visible
+    readonly property var zoneL: Settings.barZone("izquierda")
+    readonly property var zoneR: Settings.barZone("derecha")
+    // Un widget de una isla, con un separador delante si cambia de grupo (información → utilidades)
+    Component {
+        id: zoneItem
+        RowLayout {
+            id: zi
+            required property string modelData
+            required property int index
+            visible: w.shown
+            spacing: 2
+            Divider { visible: zi.index > 0 && Settings.barGroup(zi.modelData) !== Settings.barGroup(root.zoneOf(zi.modelData)[zi.index - 1] ?? zi.modelData); Layout.leftMargin: 4; Layout.rightMargin: 4 }
+            BarWidget { id: w; wid: zi.modelData }
+        }
+    }
+    function zoneOf(m: string): var { return zoneL.includes(m) ? zoneL : zoneR; }
     // Pantalla secundaria: a la derecha, todos los programas abiertos con lo que gastan
     Loader {
         id: usage
@@ -98,26 +122,14 @@ Item {
         x: root.compact ? (wave.active ? wave.x + wave.width + root.gapC : left.x + left.implicitWidth + root.gapC) : parent.width - implicitWidth - 3
         anchors.verticalCenter: parent.verticalCenter
         spacing: 2
-        // Información
-        Loader { active: Settings.barHas("clima"); visible: active && (item?.want ?? false); sourceComponent: WeatherChip {} }
-        Loader { active: Settings.barHas("recursos"); visible: active; sourceComponent: StatsChip {} }
-        Loader { active: Settings.barHas("impresora"); visible: active && (item?.want ?? false); sourceComponent: PrinterChip {} }
+        Repeater { model: root.zoneR; delegate: zoneItem }
         // Memorias USB montadas y descargas en curso: solo aparecen cuando hay algo (devicesBarIcon, downloadsBarIcon)
         Loader { visible: item?.want ?? false; sourceComponent: DevicesChip {} }
         Loader { visible: item?.want ?? false; sourceComponent: DownloadsChip {} }
         Loader { visible: item?.want ?? false; sourceComponent: TestChip {} }   // solo con una prueba de dev/try.sh en marcha
-        // Utilidades
-        Divider { visible: root.hasInfo && root.hasUtil; Layout.leftMargin: 4; Layout.rightMargin: 4 }
-        BongoChip { id: bongo; visible: Settings.barHas("bongo") }
-        PomodoroChip { id: pomo; visible: Settings.barHas("pomodoro") }
-        CaffeineChip { id: cafe; visible: Settings.barHas("cafeina") }
-        IconBtn { id: clipBtn; visible: Settings.barHas("portapapeles"); icon: "clipboard"; tooltip: "Portapapeles"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // abre Spotlight en modo portapapeles
-        MicBtn { id: dictBtn; visible: Settings.barHas("dictado") }
-        IconBtn { id: aiBtn; visible: Settings.barHas("ia"); icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") }
-        IconBtn { id: gearBtn; visible: Settings.barHas("ajustes"); icon: "gear"; onClicked: Shell.open("ajustesapp") }   // Ajustes (tuerca; opcional, ya está en el panel)
         OmarchySlot { barWindow: root.barWindow; place: "derecha" }     // widgets de plugins de Omarchy (omarchyBarSlot)
         // Separa los botones propios (asistente, ajustes…) de los iconos de las apps (bandeja)
-        Divider { visible: tray.visible && (bongo.visible || pomo.visible || cafe.visible || clipBtn.visible || aiBtn.visible || gearBtn.visible); Layout.leftMargin: 4; Layout.rightMargin: 0 }
+        Divider { visible: tray.visible && root.zoneR.length > 0; Layout.leftMargin: 4; Layout.rightMargin: 0 }
         Tray { id: tray; barWindow: root.barWindow; visible: Settings.get("barTray", true) && any; Layout.leftMargin: 4 }
         // Estado: privacidad + red, sonido, batería, notificaciones y reloj (un solo botón: centro de control)
         Item {
@@ -128,7 +140,7 @@ Item {
             RowLayout {
                 id: statusRow
                 spacing: 4
-                Divider { visible: !root.islands && (root.hasInfo || root.hasUtil); Layout.leftMargin: 4; Layout.rightMargin: 2 }
+                Divider { visible: !root.islands && (root.zoneR.length > 0 || tray.visible); Layout.leftMargin: 4; Layout.rightMargin: 2 }
                 PrivacyPill {}
                 StatusGroup {}
             }

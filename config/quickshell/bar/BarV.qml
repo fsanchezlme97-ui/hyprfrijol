@@ -26,7 +26,24 @@ Item {
     readonly property real gapS: 20
     BarPill { id: pillB; bar: root.barWindow; visible: root.islands && root.anyChip && !root.secondary; y: root.chipsTop - 6; width: parent.width; height: root.statusTop - root.gapS + 6 - y }
     BarPill { id: pillS; bar: root.barWindow; visible: root.islands && !root.secondary; y: root.statusTop - 6; width: parent.width; height: parent.height - y }
-    readonly property Item topEnd: wsV.visible ? wsV : appsV
+    readonly property Item topEnd: leftZoneV.visible ? leftZoneV : wsV.visible ? wsV : appsV
+    readonly property var zoneL: Settings.barZone("izquierda")
+    readonly property var zoneR: Settings.barZone("derecha")
+    function zoneOf(m: string): var { return zoneL.includes(m) ? zoneL : zoneR; }
+    // Un widget de una isla, con un separador delante si cambia de grupo (información → utilidades)
+    Component {
+        id: zoneItem
+        ColumnLayout {
+            id: zi
+            required property string modelData
+            required property int index
+            visible: w.shown
+            spacing: 4
+            Layout.alignment: Qt.AlignHCenter
+            Divider { vertical: false; implicitWidth: 14; visible: zi.index > 0 && Settings.barGroup(zi.modelData) !== Settings.barGroup(root.zoneOf(zi.modelData)[zi.index - 1] ?? zi.modelData); Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 2; Layout.bottomMargin: 2 }
+            BarWidget { id: w; wid: zi.modelData; vertical: true }
+        }
+    }
     ColumnLayout {
         id: colMain
         anchors.fill: parent
@@ -35,22 +52,25 @@ Item {
         spacing: 4
         AppsBtn { id: appsV; side: 26; visible: !root.secondary; Layout.alignment: Qt.AlignHCenter }   // Aplicaciones: logo de la distribución
         Workspaces { id: wsV; visible: Settings.barHas("espacios") || root.secondary; Layout.alignment: Qt.AlignHCenter; screen: root.barWindow.screen; vertical: true }
+        // Widgets puestos arriba (la isla «izquierda» de Ajustes › Widgets de la barra)
+        ColumnLayout {
+            id: leftZoneV
+            visible: !root.secondary && root.zoneL.length > 0
+            spacing: 4
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: 4
+            Repeater { model: root.zoneL; delegate: zoneItem }
+        }
         Item { id: gap; Layout.fillHeight: true; Layout.minimumHeight: root.compact ? 8 : 0 }
-        // Información
-        Loader { Layout.alignment: Qt.AlignHCenter; active: Settings.barHas("clima"); visible: !root.secondary && (active && (item?.want ?? false)); sourceComponent: WeatherChip { vertical: true } }
-        Loader { Layout.alignment: Qt.AlignHCenter; active: Settings.barHas("recursos"); visible: !root.secondary && (active); sourceComponent: StatsChip { vertical: true } }
-        Loader { Layout.alignment: Qt.AlignHCenter; active: Settings.barHas("impresora"); visible: !root.secondary && (active && (item?.want ?? false)); sourceComponent: PrinterChip { vertical: true } }
+        ColumnLayout {
+            visible: !root.secondary && root.zoneR.length > 0
+            spacing: 4
+            Layout.alignment: Qt.AlignHCenter
+            Repeater { model: root.zoneR; delegate: zoneItem }
+        }
         Loader { Layout.alignment: Qt.AlignHCenter; visible: !root.secondary && (item?.want ?? false); sourceComponent: DevicesChip { vertical: true } }
         Loader { Layout.alignment: Qt.AlignHCenter; visible: !root.secondary && (item?.want ?? false); sourceComponent: DownloadsChip { vertical: true } }
         Loader { Layout.alignment: Qt.AlignHCenter; visible: !root.secondary && (item?.want ?? false); sourceComponent: TestChip { vertical: true } }
-        // Utilidades
-        BongoChip { visible: !root.secondary && (Settings.barHas("bongo")); Layout.alignment: Qt.AlignHCenter; vertical: true }
-        PomodoroChip { visible: !root.secondary && (Settings.barHas("pomodoro")); Layout.alignment: Qt.AlignHCenter; vertical: true }
-        CaffeineChip { visible: !root.secondary && (Settings.barHas("cafeina")); Layout.alignment: Qt.AlignHCenter; vertical: true }
-        IconBtn { visible: !root.secondary && (Settings.barHas("portapapeles")); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26; icon: "clipboard"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") }   // Spotlight en modo portapapeles
-        MicBtn { visible: !root.secondary && (Settings.barHas("dictado")); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26 }
-        IconBtn { visible: !root.secondary && (Settings.barHas("ia")); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26; icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") }
-        IconBtn { visible: !root.secondary && (Settings.barHas("ajustes")); Layout.alignment: Qt.AlignHCenter; implicitHeight: 26; icon: "gear"; onClicked: Shell.open("ajustesapp") }   // Ajustes (tuerca)
         OmarchySlot { barWindow: root.barWindow; visible: any && !root.secondary; vertical: true; place: Settings.get("omarchyBarSlot", "derecha"); Layout.alignment: Qt.AlignHCenter }   // plugins de Omarchy
         Divider { vertical: false; implicitWidth: 14; visible: !root.secondary && (vTray.visible); Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 3; Layout.bottomMargin: 3 }   // botones propios | bandeja
         Tray { id: vTray; barWindow: root.barWindow; vertical: true; visible: !root.secondary && (Settings.get("barTray", true) && any); Layout.alignment: Qt.AlignHCenter }
