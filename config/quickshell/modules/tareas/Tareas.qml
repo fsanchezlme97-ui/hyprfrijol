@@ -4,7 +4,7 @@
 // limpiar las hechas. Agrupadas: vencidas, hoy, mañana, más adelante, sin fecha y hechas.
 // Se abre con la vista "tareas" (Spotlight, la agenda, hf-tareas, hf-tareas.desktop) o por IPC:
 //   qs -p <repo>/config/quickshell ipc call tareas open | close | toggle
-// Atajos: Ctrl + N nueva · Ctrl + W o Esc cerrar · 1/2/3 cambian el filtro (fuera de un campo).
+// Atajos: Ctrl + N nueva · Ctrl + W o Esc cerrar · Alt + 1/2/3 cambian el filtro · Ctrl + Z deshace un borrado.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -109,6 +109,23 @@ Scope {
 
             Item {
                 anchors.fill: parent
+
+                // «Deshacer» unos segundos tras borrar una tarea o las hechas (services/Tasks.qml); también Ctrl + Z
+                Shortcut { sequence: "Ctrl+Z"; enabled: Tasks.removed.length > 0; onActivated: Tasks.undo() }
+                Rectangle {
+                    z: 10
+                    visible: Tasks.removed.length > 0
+                    anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 18 }
+                    implicitWidth: undoRow.implicitWidth + 24; implicitHeight: 42; radius: Theme.r(10)
+                    color: Theme.s3; border.width: 1; border.color: Theme.ov
+                    RowLayout {
+                        id: undoRow
+                        anchors.centerIn: parent
+                        spacing: 12
+                        Txt { text: Tasks.removedLabel }
+                        Btn { text: "Deshacer"; kind: "primary"; h: 28; hint: "Ctrl Z"; onClicked: Tasks.undo() }
+                    }
+                }
 
                 ColumnLayout {
                     anchors.fill: parent

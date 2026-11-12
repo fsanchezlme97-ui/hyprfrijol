@@ -3,6 +3,24 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.25] — 2026-11-11
+
+### Añadido
+- **Deshacer** unos segundos después de borrar:
+  - en **Tareas**, al borrar una tarea o «Borrar las hechas» (botón abajo y Ctrl + Z);
+  - en la **agenda**, al borrar una tarea («Deshacer» bajo la lista);
+  - en el **historial de avisos**, al pulsar «Vaciar historial» (el mismo botón pasa a «Deshacer»).
+- Historial de avisos: al copiar un aviso con un clic, pone «Copiado».
+- Spotlight: si no hay nada (con la IA y la web apagadas), una fila «Nada coincide» con los prefijos.
+- Alt + Tab: el pie recuerda que Q cierra la ventana elegida y Esc cancela.
+
+### Arreglado
+- Los botones que solo aparecen al pasar el cursor (papelera de tareas, quitar un aviso) ya no reciben clics ni el
+  foco del teclado mientras están invisibles.
+- Botones pequeños más fáciles de acertar: los de menos de 24 px aceptan el clic en un margen alrededor (quitar
+  adjuntos en el asistente, flechas del pomodoro, cerrar avisos), igual que cerrar en la vista de espacios y las
+  flechas del editor de widgets, que además enseñan la mano.
+
 ## [0.9.24] — 2026-11-11
 
 ### Cambiado

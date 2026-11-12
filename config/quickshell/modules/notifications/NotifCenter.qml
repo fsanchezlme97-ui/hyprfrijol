@@ -231,6 +231,7 @@ Glass {
 
         // =============================================================== Historial
         ColumnLayout {
+            id: histCol
             visible: win.tab === "historial"
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -308,7 +309,7 @@ Glass {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 // copia el texto del aviso
-                                onClicked: Shell.exec(["wl-copy", (hr.modelData.summary ?? "") + (hr.modelData.body ? "\n" + hr.modelData.body : "")])
+                                onClicked: { Shell.exec(["wl-copy", (hr.modelData.summary ?? "") + (hr.modelData.body ? "\n" + hr.modelData.body : "")]); copiedT.restart(); }
                             }
                             RowLayout {
                                 id: hcol
@@ -358,16 +359,36 @@ Glass {
                     }
                 }
             }
+            // «Copiado» un momento al copiar un aviso; «Deshacer» unos segundos tras vaciar el historial
+            Timer { id: copiedT; interval: 1400 }
+            property var undoHist: []
+            Timer { id: undoT; interval: 8000; onTriggered: histCol.undoHist = [] }
             RowLayout {
-                visible: Notifs.history.length > 0
+                id: histFoot
+                visible: Notifs.history.length > 0 || histCol.undoHist.length > 0
                 Layout.fillWidth: true
                 Layout.leftMargin: 4
-                Txt { Layout.fillWidth: true; size: 11; muted: true; text: Notifs.history.length + (Notifs.history.length === 1 ? " aviso guardado" : " avisos guardados") + " · clic para copiar" }
+                Txt {
+                    Layout.fillWidth: true; size: 11
+                    muted: !copiedT.running
+                    color: copiedT.running ? Theme.p : Theme.tv
+                    text: copiedT.running ? "Copiado"
+                        : histCol.undoHist.length && !Notifs.history.length ? "Historial vaciado"
+                        : Notifs.history.length + (Notifs.history.length === 1 ? " aviso guardado" : " avisos guardados") + " · clic para copiar"
+                }
                 Rectangle {
+                    readonly property bool undo: histCol.undoHist.length > 0 && !Notifs.history.length
                     implicitHeight: 26; implicitWidth: chT.implicitWidth + 18; radius: Theme.r(6)
                     color: ch.containsMouse ? Theme.fill2 : "transparent"
-                    Txt { id: chT; anchors.centerIn: parent; text: "Vaciar historial"; color: Theme.p }
-                    MouseArea { id: ch; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Notifs.clearHistory() }
+                    Txt { id: chT; anchors.centerIn: parent; text: parent.undo ? "Deshacer" : "Vaciar historial"; color: Theme.p }
+                    MouseArea {
+                        id: ch; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            const col = histCol;
+                            if (parent.undo) { Notifs.restoreHistory(col.undoHist); col.undoHist = []; undoT.stop(); }
+                            else { col.undoHist = Notifs.history.slice(); Notifs.clearHistory(); undoT.restart(); }
+                        }
+                    }
                 }
             }
         }

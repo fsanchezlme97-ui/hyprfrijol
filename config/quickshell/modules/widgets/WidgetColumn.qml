@@ -75,7 +75,9 @@ ColumnLayout {
                         MouseArea {
                             id: em
                             anchors.fill: parent
+                            anchors.margins: -2
                             hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
                             onClicked: parent.modelData.d === 0 ? col.setKeys(col.keys.filter(k => k !== slot.modelData)) : col.move(slot.modelData, parent.modelData.d)
                         }
                     }

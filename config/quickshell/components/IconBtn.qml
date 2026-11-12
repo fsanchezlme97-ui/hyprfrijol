@@ -17,7 +17,9 @@ Rectangle {
     signal clicked()
     signal rightClicked()
     // Teclado: se llega con Tab (anillo de foco) y se pulsa con Intro o Espacio
-    activeFocusOnTab: focusable
+    // Los que solo aparecen al pasar el cursor (opacity 0): invisibles no reciben clic ni foco
+    readonly property bool shown: opacity > 0.05
+    activeFocusOnTab: focusable && shown
     Keys.onPressed: e => { if (root.enabled && (e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space)) { root.clicked(); e.accepted = true; } }
     implicitWidth: 26
     implicitHeight: 22
@@ -33,6 +35,9 @@ Rectangle {
     MouseArea {
         id: mouse
         anchors.fill: parent
+        // los pequeños (menos de 24 px) reciben el clic en un margen alrededor: más fácil de acertar
+        anchors.margins: Math.min(0, (Math.min(root.width, root.height) - 24) / 2)
+        enabled: root.shown
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor

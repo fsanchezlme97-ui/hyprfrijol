@@ -4,7 +4,7 @@ pragma Singleton
 // Se ven en la agenda (bajo los eventos del día) y en su app, «Tareas» (modules/tareas), se crean con «+texto» en
 // Spotlight y el asistente las añade (hf-ai, acción task: escribe el mismo archivo, que aquí se recarga solo).
 //   add(text, due) · edit(id, text, due) · toggle(id) · remove(id) · clearDone() · forDay(fecha) · overdue · pending
-// IPC:  qs … ipc call tasks list | add <texto> <AAAA-MM-DD o ""> | done <id> | remove <id>
+// IPC:  qs … ipc call tasks list | add <texto> <AAAA-MM-DD o ""> | done <id> | remove <id> | undo
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -80,8 +80,23 @@ Singleton {
     function toggle(id: string): void {
         save(list.map(t => t.id !== id ? t : Object.assign({}, t, { done: !t.done, doneAt: t.done ? undefined : Date.now() })));
     }
-    function remove(id: string): void { save(list.filter(t => t.id !== id)); }
-    function clearDone(): void { save(list.filter(t => !t.done)); }
+    function remove(id: string): void { _forget(list.filter(t => t.id === id), "Tarea borrada"); save(list.filter(t => t.id !== id)); }
+    function clearDone(): void {
+        const d = list.filter(t => t.done);
+        _forget(d, d.length === 1 ? "1 tarea hecha borrada" : d.length + " tareas hechas borradas");
+        save(list.filter(t => !t.done));
+    }
+    // Deshacer lo último que se borró (unos segundos): la app Tareas y la agenda enseñan «Deshacer»
+    property var removed: []
+    property string removedLabel: ""
+    function _forget(items, label): void { if (!items.length) return; removed = items; removedLabel = label; undoTimer.restart(); }
+    function undo(): void {
+        if (!removed.length) return;
+        const have = list.map(t => t.id);
+        save(list.concat(removed.filter(t => !have.includes(t.id))));
+        removed = []; undoTimer.stop();
+    }
+    Timer { id: undoTimer; interval: 8000; onTriggered: root.removed = [] }
     function save(l): void { list = l; file.setText(JSON.stringify(l, null, 1)); }
 
     FileView {
@@ -101,5 +116,6 @@ Singleton {
         function add(text: string, due: string): string { return root.add(text, due); }
         function done(id: string): void { root.toggle(id); }
         function remove(id: string): void { root.remove(id); }
+        function undo(): void { root.undo(); }
     }
 }

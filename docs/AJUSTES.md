@@ -332,7 +332,7 @@ instalaciones y lo que necesita `sudo` se abren en una terminal (`Pkg.runInTermi
   filas `vpn-fortinet`, `vpn-fortinet-sso` y `vpn-globalprotect` de packages.tsv; gpclient: PPA/COPR de yuezk).
   **Sin servidor real** no se ha probado el túnel: sí el flujo con un `nmcli` y un FortiGate falsos
   (`HF_VPN_NMCLI`, `HF_VPN_BROWSER`, `HF_VPN_FAKE_HAVE`, `HF_VPN_FAKE_CERT`, `--dry-run`, `hf-vpn cmdline`).
-- **Escritorio remoto** (`sections/Remoto.qml`): conexiones guardadas en `remoteHosts`
+- **Escritorio remoto** (`sections/Remoto.qml`; con `app: true` es la app «Conexiones remotas», `modules/apps`): conexiones guardadas en `remoteHosts`
   (`[{name, proto: rdp|vnc|ssh|spice, host, port, user, domain, opts: {fullscreen, dynamicRes, sound, clipboard,
   drives, multimon, gateway}}]`), conexión rápida por URL y clientes. `remoteClient`: `auto|remmina|freerdp|connections`;
   «Automático» = Remmina (recomendado para Windows: RD Gateway, varias pantallas, carpetas, impresoras, sonido, NLA; se le
@@ -347,7 +347,7 @@ instalaciones y lo que necesita `sudo` se abren en una terminal (`Pkg.runInTermi
   ajustes rápidos dice «Solo este equipo» o «Red · con contraseña»). «Pedir usuario y contraseña» genera `~/.config/wayvnc/config` con TLS y RSA-AES. En Hyprland no hay
   servidor RDP que comparta la sesión (GNOME/KDE lo hacen desde su compositor; xrdp abre otra sesión X11): la
   sección lo explica y ofrece VNC o Sunshine.
-- **Máquinas virtuales** (`sections/Virtualizacion.qml`): requisitos (VT-x/AMD-V y `/dev/kvm`, QEMU + libvirt,
+- **Máquinas virtuales** (`sections/Virtualizacion.qml`; con `app: true` es la app «Máquinas virtuales», `modules/apps`, con tus máquinas y contenedores): requisitos (VT-x/AMD-V y `/dev/kvm`, QEMU + libvirt,
   socket de libvirt, grupo `libvirt`, Cockpit + cockpit-machines y `cockpit.socket`), «Instalar Cockpit + Máquinas»
   (paquetes por distro, activa los servicios, te añade al grupo y arranca la red `default`), «Abrir Cockpit»
   (`cockpitUrl`), GNOME Boxes, virt-manager, virt-viewer, lista de máquinas (`virsh`, `qemu:///system` solo si

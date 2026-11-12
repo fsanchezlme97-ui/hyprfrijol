@@ -402,6 +402,9 @@ Overlay {
         if (groupOn("IA") && Settings.get("aiSpotlight", true) !== false) out.push({ key: "ask", cat: "IA", kind: "ask", icon: "ai", g: "", name: "Preguntar a la IA: «" + q + "»", sub: "", ask: q, det: [["Modelo", "El de Ajustes › IA"]] });
         if (groupOn("Web")) out.push({ key: "web", cat: "Web", kind: "web", g: "!", icon: "globe", name: "Buscar en la web: " + q, sub: spot.engine.name,
                    url: spot.webUrl(q), det: [["Motor", spot.engine.name]] });
+        // Sin nada (IA y web apagadas en Ajustes › Productividad › Spotlight): una fila que lo dice, con los prefijos
+        if (!out.length) out.push({ key: "nomatch", cat: "Spotlight", kind: "none", g: "?", name: "Nada coincide con «" + q + "»",
+                                    sub: "prueba con  > comando · = cálculo · @ ventana · / archivo · : portapapeles · + tarea" });
         return out;
     }
 

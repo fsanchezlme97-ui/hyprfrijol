@@ -57,7 +57,9 @@ reducción automática) se descartó en las decisiones del plan.
       ningún proceso (antes `hyprctl` cada 600 ms con flotantes o PiP, `hf-caffeine` cada 30 s, `nmcli` también por
       cable, `nvidia-smi` cada 2 s); los lectores se paran con la barra escondida o la sesión bloqueada. Queda: el hilo
       principal sigue en ~1,5 % de un núcleo en reposo, casi todo la lectura de SysStats cada 2 s para la pastilla.
-- [ ] **Productividad**: revisar Spotlight, portapapeles, ventanas y atajos con uso real; quitar pasos.
+- [ ] **Productividad**: revisar Spotlight, portapapeles, ventanas y atajos con uso real; quitar pasos. Hecho
+      (0.9.25): deshacer al borrar tareas o vaciar el historial de avisos, «Copiado» al copiar un aviso, las teclas de
+      Alt + Tab a la vista, botones pequeños más fáciles de acertar. Queda lo que pide uso real.
 - [ ] **Ajustes es para ajustes**: Tareas ya es app, las alarmas van en su ventana y las instaladas en el Centro de
       aplicaciones (0.9.21); Conexiones remotas, Máquinas virtuales y Cola de impresión son apps (0.9.24). Quedan,
       dudosas: puntos de restauración (Sistema) y unidades extraíbles (Almacenamiento, repite el menú de la barra).
@@ -81,9 +83,6 @@ Lo que la revisión encontró y no se arregló en la 0.9.22, por orden de valor:
 - [ ] **Claves sin uso** en `defaults/settings.json`: `widgetsOnDesktop`, `dictation`, `floatWorkspace`, `estilo`,
       `syncMethod`. Y claves usadas sin valor por defecto: `dimInactive`, `workspaceAnim`, `dragSnap`,
       `floatRemember`, `lazyModules`, `startSplash`.
-- [ ] **Zonas pequeñas de clic** (menos de 24 px): quitar documento o imagen en el chat, puntos de página del
-      centro de control, cerrar en la vista de espacios, flechas del editor de widgets.
-- [ ] **Botones invisibles hasta pasar el cursor** (papelera de tareas y avisos) siguen recibiendo clic y foco.
 - [ ] `hf-apps`: comprobar la suma (sha256) de AppImage y paquetes Flatpak bajados de GitHub.
 - [ ] `hf-fileact`: PDF a PNG pisa archivos con el mismo nombre; el OCR de un PDF grande llena `/tmp`.
 - [ ] `hf-theme`: un tema llamado «Rosa claro» choca con la variante clara de «Rosa».
@@ -93,14 +92,12 @@ Lo que la revisión encontró y no se arregló en la 0.9.22, por orden de valor:
 
 Añadidos sugeridos (sin empezar):
 
-- [ ] **Deshacer** de 5 s para lo que borra con un clic (tareas hechas, historial de avisos, conversaciones).
+- [ ] **Deshacer** al borrar una conversación del asistente (tareas y avisos ya lo tienen, 0.9.25).
 - [ ] **Reanudar descargas** al iniciar sesión.
 - [ ] **Un solo motor de paquetes** (`hf-pkg`) para actualizaciones, VPN, máquinas virtuales y apps, en vez de
       cuatro detecciones de distro distintas.
 - [ ] `dev/lint.sh`: comprobar que cada programa que usa el código está en `install/packages.tsv` y que cada clave
       de ajustes tiene valor por defecto.
-- [ ] Spotlight: una fila «Nada coincide» con pistas de prefijos; Alt + Tab: pie con las teclas (Q cerrar).
-- [ ] Descargas: botón «Limpiar terminadas». Historial de avisos: «Copiado» al copiar.
 
 ## Ideas propuestas (sin empezar)
 

@@ -354,6 +354,14 @@ Glass {
             color: allMa.containsMouse ? Theme.t : Theme.p
             MouseArea { id: allMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Shell.open("tareas") }
         }
+        Txt {
+            visible: Tasks.removed.length > 0
+            Layout.leftMargin: 3
+            text: Tasks.removedLabel + " · Deshacer"
+            size: 11.5
+            color: undoMa.containsMouse ? Theme.t : Theme.p
+            MouseArea { id: undoMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Tasks.undo() }
+        }
         RowLayout {
             visible: win.dayEvents.length === 0 && win.dayTasks.length === 0 && !win.adding
             Layout.fillWidth: true

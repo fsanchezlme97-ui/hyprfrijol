@@ -237,7 +237,7 @@ Overlay {
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
                 elide: Text.ElideNone
-                text: "Alt + Tab siguiente · Alt + Shift + Tab anterior · Alt + ` otra ventana de la misma app"
+                text: "Alt + Tab siguiente · Alt + Shift + Tab anterior · Alt + ` otra ventana de la misma app · Q cerrar la elegida · Esc cancelar"
                 muted: true
                 size: 11.5
             }

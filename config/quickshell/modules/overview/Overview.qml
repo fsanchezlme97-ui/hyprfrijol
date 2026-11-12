@@ -303,7 +303,7 @@ Overlay {
                                             width: 18; height: 18; radius: 9
                                             color: closeMa.containsMouse ? Theme.danger : Qt.alpha("#000000", 0.55)
                                             Icon { anchors.centerIn: parent; name: "x"; size: 11; color: "white"; stroke: 2.2 }
-                                            MouseArea { id: closeMa; anchors.fill: parent; hoverEnabled: true; onClicked: win.closeWindow(wthumb.address) }
+                                            MouseArea { id: closeMa; anchors.fill: parent; anchors.margins: -4; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.closeWindow(wthumb.address) }
                                         }
                                         MouseArea {
                                             id: dragArea

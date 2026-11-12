@@ -210,6 +210,11 @@ Singleton {
         if (id in repeats) { const r = Object.assign({}, repeats); delete r[id]; repeats = r; }
         if (id in huid) { const h = Object.assign({}, huid); delete h[id]; huid = h; }
     }
+    function restoreHistory(h) {
+        const have = history.map(x => x.uid);
+        history = history.concat((h ?? []).filter(x => !have.includes(x.uid))).sort((a, b) => b.t - a.t).slice(0, 300);
+        histSave.restart();
+    }
     function clearHistory() { history = []; histSave.restart(); }
     function forget(uid: string) { history = history.filter(h => h.uid !== uid); histSave.restart(); }
     FileView {
