@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.13] — 2026-11-11
+
+### Añadido
+- **El asistente responde en directo**: en el panel lateral la respuesta se va escribiendo mientras llega, con Claude Code, Gemini, Ollama y los servidores compatibles con OpenAI. Las consultas que hace antes de responder («Miró las ventanas») salen en cuanto las hace.
+- **Detener**: mientras responde, el botón de enviar pasa a ser un cuadrado que corta la respuesta y deja lo que ya había llegado.
+- **Repetir con otro modelo**: bajo la última respuesta, junto a Copiar y Regenerar, un botón abre los modelos del proveedor y repite la pregunta con el que elijas. Debajo de cada respuesta se ve qué modelo respondió.
+
 ## [0.9.12] — 2026-11-11
 
 ### Corregido

@@ -10,10 +10,8 @@ Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar 
 Estado a 2026-11-11 (v0.9.12), comprobado contra el código y el shell en marcha en el equipo del autor. Lo hecho
 entre la 0.9.0 y la 0.9.12 está en el CHANGELOG. Queda, en este orden:
 
-1. [ ] [Asistente de IA](planes/asistente-ia.md), fase 6 (panel). Ya están los chips de contexto (ventana,
-       portapapeles, captura), la lista de conversaciones con búsqueda y «Regenerar». Falta:
-       - [ ] Respuesta en directo: `hf-ai chat` devuelve la respuesta entera al terminar, con todos los proveedores.
-       - [ ] Repetir con otro modelo: «Regenerar» repite con el mismo.
+1. [x] [Asistente de IA](planes/asistente-ia.md), fase 6 (panel): respuesta en directo con Detener y repetir con
+       otro modelo (0.9.13). Los chips de contexto y la lista de conversaciones con búsqueda ya estaban.
 2. [ ] [Asistente de IA](planes/asistente-ia.md), resto de la fase 1: la página de Inicio (el estado y «Probar
        conexión» siguen arriba de la pestaña Asistente).
 3. [ ] [Temas](planes/temas.md), resto de las fases 4–5: editar los colores de un tema propio uno a uno y la vista

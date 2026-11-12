@@ -2,7 +2,10 @@
 """hf-ai — asistente de hyprfrijol (lo usan el panel lateral, el Spotlight «?» y hf-mcp).
 
   hf-ai chat '<json>'        {"messages":[{"role":"user|ai","text":"…","images":["/ruta.png"]}], "context":{"window":true,"clipboard":true,"capture":false}}
-                             → {"text": "...", "actions": [...], "labels": [...], "code": "...", "error": null}
+                             → {"text": "...", "actions": [...], "labels": [...], "code": "...", "model": "…", "error": null}
+                             Con "stream": true (el panel) responde en directo: líneas {"partial": "texto hasta ahora"}
+                             y {"step": "consulta"} mientras llega, y al final {"final": {…lo de arriba…}}.
+                             "model": "<id>" repite con otro modelo del mismo proveedor («Repetir con otro modelo»).
   hf-ai ask "pregunta"       atajo de terminal: responde en texto plano
   hf-ai apply '<acciones>'   aplica acciones al shell y guarda cómo deshacerlas → {"undo": "<id>", "labels": [...]}
   hf-ai undo <id>            deshace un apply
@@ -22,7 +25,8 @@
   hf-ai capture [imagen]     captura de pantalla (o la imagen dada) + OCR (tesseract) → texto para el contexto
   hf-ai status               proveedor y disponibilidad
   hf-ai chat --print-request '<json>'   no llama al modelo: imprime la petición que enviaría (sin la clave)
-  hf-ai models [gemini]      modelos disponibles del proveedor → {"models": [[id, nombre]…], "error": …}
+  hf-ai models [proveedor]   modelos que se pueden elegir (por defecto, los del proveedor que responde)
+                             → {"models": [[id, nombre]…], "error": …}
   hf-ai test                 prueba la conexión con el proveedor → {"ok": bool, "text": "…"}
   hf-ai transform "instrucción" < texto   aplica la instrucción al texto y lo imprime en plano (hf-dictate)
   hf-ai recipes | recipe <id> | recipe-save '<json>' | recipe-remove <id>   recetas (Resumir, Traducir, Corregir…):
@@ -1744,6 +1748,61 @@ class AIError(Exception):
         super().__init__(msg)
         self.code = code     # código HTTP (400/415/422 con imágenes → se reintenta con OCR)
 
+# Respuesta en directo (`hf-ai chat` con "stream": true, lo pide el panel): cada proveedor llama a LIVE.add() con
+# los trozos que llegan y aquí se imprime, como mucho cada 80 ms, una línea {"partial": "<texto visible>"}. Lo que
+# no es para el usuario (bloques ```hf-query``` y ```hf-actions```) no se enseña ni a medias. La última línea es
+# {"final": {…la respuesta de siempre…}}. Sin "stream", LIVE es None y los proveedores responden de una vez.
+LIVE = None
+
+def live_text(raw):
+    t = re.sub(r"```(?:hf-query|hf-actions|hl-actions)\b.*?```", "", raw, flags=re.S)
+    m = re.search(r"```(?:hf-query|hf-actions|hl-actions)\b", t)
+    if m:
+        t = t[:m.start()]
+    m = re.search(r"`{1,3}(?:h(?:[fl](?:-[a-z]*)?)?)?$", t)   # quizá el principio de uno de esos bloques
+    if m:
+        t = t[:m.start()]
+    t = t.rstrip()
+    if t.count("```") % 2:                                      # bloque de código a medias: se cierra para dibujarlo
+        t += "\n```"
+    return t
+
+class Live:
+    def __init__(self, out=sys.stdout):
+        self.out, self.buf, self.sent, self.t = out, "", None, 0.0
+    def emit(self, obj):
+        try:
+            self.out.write(json.dumps(obj, ensure_ascii=False) + "\n"); self.out.flush()
+        except (BrokenPipeError, ValueError):
+            pass
+    def reset(self):
+        self.buf = ""
+        if self.sent:
+            self.sent = ""; self.emit({"partial": ""})
+    def add(self, chunk):
+        if not chunk:
+            return
+        self.buf += chunk
+        now = time.monotonic()
+        if now - self.t >= 0.08:
+            self.flush(now)
+    def flush(self, now=None):
+        v = live_text(self.buf)
+        if v != self.sent:
+            self.sent = v; self.emit({"partial": v})
+        self.t = now or time.monotonic()
+    def step(self, label):
+        self.emit({"step": label})
+
+def sse_lines(resp):
+    """Datos de un flujo Server-Sent Events (líneas «data: …»), sin el [DONE] final."""
+    for line in resp:
+        line = line.decode("utf-8", "replace").strip()
+        if line.startswith("data:"):
+            d = line[5:].strip()
+            if d and d != "[DONE]":
+                yield d
+
 def transcript(messages):
     out = []
     for m in messages[-12:]:
@@ -1773,6 +1832,8 @@ def call_claude_code(system, messages, ctx_text, s):
     cmd += ["--input-format", "stream-json", "--output-format", "stream-json", "--verbose"] if stream else ["--output-format", "json"]
     if s.get("aiModel"):
         cmd += ["--model", str(s["aiModel"])]
+    if LIVE:
+        return claude_code_live(cmd, prompt, stream)
     try:
         r = subprocess.run(cmd, input=stream + "\n" if stream else prompt, capture_output=True, text=True, timeout=180, cwd=str(HOME))
     except subprocess.TimeoutExpired:
@@ -1790,6 +1851,59 @@ def call_claude_code(system, messages, ctx_text, s):
     if data.get("is_error"):
         raise AIError(str(data.get("result") or "Error de Claude Code")[:300])
     return data.get("result", "")
+
+def claude_code_live(cmd, prompt, stream):
+    """Claude Code en directo: stream-json con --include-partial-messages (trozos text_delta) hasta el «result»."""
+    if "--output-format" in cmd:
+        i = cmd.index("--output-format"); del cmd[i:i + 2]
+    if "--verbose" in cmd:
+        cmd.remove("--verbose")
+    cmd += ["--output-format", "stream-json", "--verbose", "--include-partial-messages"]
+    try:
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=str(HOME))
+    except OSError as e:
+        raise AIError(f"No pude ejecutar claude: {e}")
+    try:
+        p.stdin.write(stream + "\n" if stream else prompt); p.stdin.close()
+    except BrokenPipeError:
+        pass
+    end = time.monotonic() + 180
+    data = None
+    for line in p.stdout:
+        if time.monotonic() > end:
+            p.kill(); raise AIError("El modelo tardó demasiado en responder.")
+        try:
+            j = json.loads(line)
+        except Exception:
+            continue
+        if j.get("type") == "stream_event":
+            ev = j.get("event") or {}
+            d = ev.get("delta") or {}
+            if ev.get("type") == "content_block_delta" and d.get("type") == "text_delta":
+                LIVE.add(d.get("text", ""))
+        elif j.get("type") == "result":
+            data = j
+    err = p.stderr.read()
+    p.wait()
+    if data is None:
+        raise AIError((err or "Respuesta vacía de claude").strip()[:300])
+    if data.get("is_error"):
+        raise AIError(str(data.get("result") or "Error de Claude Code")[:300])
+    return data.get("result", "")
+
+def http_stream(url, body, headers=None, timeout=120):
+    """Como http_json, pero devuelve la respuesta abierta para leerla a trozos (hay que cerrarla)."""
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json", **(headers or {})})
+    try:
+        return urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.HTTPError as e:
+        try:
+            detail = e.read().decode(errors="replace")[:240]
+        except Exception:
+            detail = ""
+        raise AIError(f"{url} respondió con un error {e.code}: {detail}", e.code)
+    except urllib.error.URLError as e:
+        raise AIError(f"No puedo conectar con {url}: {getattr(e, 'reason', e)}")
 
 def http_json(url, body, headers=None, timeout=120):
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json", **(headers or {})})
@@ -1835,6 +1949,19 @@ def ollama_ep(s):
 
 def call_ollama(system, messages, ctx_text, s):
     ep = ollama_ep(s)
+    if LIVE:   # NDJSON: una línea {"message": {"content": "…"}, "done": false} por trozo
+        out = []
+        with http_stream(ep + "/api/chat", dict(ollama_body(system, messages, ctx_text, s), stream=True)) as resp:
+            for line in resp:
+                try:
+                    j = json.loads(line)
+                except Exception:
+                    continue
+                if j.get("error"):
+                    raise AIError(f"Ollama: {str(j['error'])[:200]}", 400)
+                c = (j.get("message") or {}).get("content", "")
+                out.append(c); LIVE.add(c)
+        return "".join(out)
     data = http_json(ep + "/api/chat", ollama_body(system, messages, ctx_text, s))
     return data.get("message", {}).get("content", "")
 
@@ -1853,8 +1980,19 @@ def openai_body(system, messages, ctx_text, s):
 def call_openai(system, messages, ctx_text, s):
     ep = (s.get("aiEndpoint") or "https://api.openai.com/v1").rstrip("/")
     key = os.environ.get(s.get("aiKeyEnv") or "HF_AI_KEY", "")
-    data = http_json(ep + "/chat/completions", openai_body(system, messages, ctx_text, s),
-                     {"Authorization": f"Bearer {key}"} if key else {})
+    auth = {"Authorization": f"Bearer {key}"} if key else {}
+    if LIVE:   # SSE: data: {"choices": [{"delta": {"content": "…"}}]}
+        out = []
+        with http_stream(ep + "/chat/completions", dict(openai_body(system, messages, ctx_text, s), stream=True), auth) as resp:
+            for d in sse_lines(resp):
+                try:
+                    ch = (json.loads(d).get("choices") or [{}])[0]
+                except Exception:
+                    continue
+                c = (ch.get("delta") or {}).get("content") or ""
+                out.append(c); LIVE.add(c)
+        return "".join(out)
+    data = http_json(ep + "/chat/completions", openai_body(system, messages, ctx_text, s), auth)
     return data["choices"][0]["message"]["content"]
 
 def provider_vision(prov, s):
@@ -2196,12 +2334,19 @@ def gemini_model(s):
     return m if re.match(r"(gemini|gemma|learnlm)", m) else GEMINI_DEFAULT
 
 def gemini_http(method, path, key, body=None, timeout=120):
+    with gemini_open(method, path, key, body, timeout) as resp:
+        try:
+            return json.loads(resp.read() or b"{}")
+        except TimeoutError:
+            raise AIError("Gemini tardó demasiado en responder.")
+
+def gemini_open(method, path, key, body=None, timeout=120):
+    """La respuesta abierta de la API de Gemini (hay que cerrarla), con sus errores explicados en español."""
     req = urllib.request.Request(GEMINI_API + path, method=method,
                                  data=json.dumps(body).encode() if body is not None else None,
                                  headers={"Content-Type": "application/json", "x-goog-api-key": key})
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read() or b"{}")
+        return urllib.request.urlopen(req, timeout=timeout)
     except urllib.error.HTTPError as e:
         try:
             err = json.loads(e.read()).get("error", {})
@@ -2259,6 +2404,13 @@ def call_gemini(system, messages, ctx_text, s):
     if not key:
         raise AIError("Falta la clave de Gemini. Consíguela gratis en aistudio.google.com/apikey y pégala en Ajustes › Asistente de IA.")
     path, body = gemini_request(system, messages, ctx_text, s)
+    if LIVE:
+        try:
+            return gemini_live(path, key, body)
+        except AIError as e:
+            if "no responden" not in str(e) or GEMINI_LITE in path or LIVE.buf:
+                raise
+            return gemini_live(f"/models/{GEMINI_LITE}:generateContent", key, body)
     try:
         data = gemini_http("POST", path, key, body, timeout=120)
     except AIError as e:
@@ -2276,6 +2428,32 @@ def call_gemini(system, messages, ctx_text, s):
     text = "".join(p.get("text", "") for p in parts if not p.get("thought"))
     if not text.strip() and cands[0].get("finishReason") == "SAFETY":
         raise AIError("Gemini no ha respondido a esto (bloqueado por sus filtros de seguridad).")
+    return text
+
+def gemini_live(path, key, body):
+    """generateContent en directo (streamGenerateContent con SSE): cada evento trae un trozo de la respuesta."""
+    out, reason, blocked = [], "", False
+    with gemini_open("POST", path.replace(":generateContent", ":streamGenerateContent") + "?alt=sse", key, body) as resp:
+        try:
+            for d in sse_lines(resp):
+                try:
+                    j = json.loads(d)
+                except Exception:
+                    continue
+                if (j.get("promptFeedback") or {}).get("blockReason"):
+                    blocked = True
+                    break
+                c = (j.get("candidates") or [{}])[0]
+                reason = c.get("finishReason") or reason
+                t = "".join(p.get("text", "") for p in ((c.get("content") or {}).get("parts") or []) if not p.get("thought"))
+                out.append(t); LIVE.add(t)
+        except TimeoutError:
+            raise AIError("Gemini tardó demasiado en responder.")
+    text = "".join(out)
+    if blocked or (not text.strip() and reason == "SAFETY"):
+        raise AIError("Gemini no ha respondido a esto (bloqueado por sus filtros de seguridad).")
+    if not text.strip():
+        raise AIError("Gemini devolvió una respuesta vacía.")
     return text
 
 def gemini_models():
@@ -2341,7 +2519,12 @@ def call_mock(system, messages, ctx_text, s):
         pass
     if not resp:
         return "(mock) Sin respuestas de prueba."
-    return resp[min(rounds, len(resp) - 1)]
+    out = resp[min(rounds, len(resp) - 1)]
+    if LIVE:   # en directo, palabra a palabra (HF_AI_MOCK_DELAY segundos entre trozos, por defecto 0.03)
+        delay = float(os.environ.get("HF_AI_MOCK_DELAY") or 0.03)
+        for w in re.findall(r"\S+\s*|\s+", out):
+            LIVE.add(w); time.sleep(delay)
+    return out
 
 QUERY_RESULT_HEAD = "Resultados de tus consultas"
 MAX_ROUNDS = 3
@@ -2439,7 +2622,7 @@ def do_chat(req, print_request=False):
         return {"text": "", "actions": [], "labels": [], "code": "",
                 "error": "El asistente está desactivado. Actívalo en Ajustes › Asistente de IA."}
     prov, s = provider_for(s0, "quick" if req.get("task") == "quick" else "")
-    if req.get("model"):                     # «Repetir con otro modelo» del panel
+    if req.get("model") and not req.get("_fallback"):   # «Repetir con otro modelo» del panel
         s["aiModel"] = str(req["model"])[:80]
     fn = PROVIDERS.get(prov)
     if not fn:
@@ -2490,6 +2673,8 @@ def do_chat(req, print_request=False):
     try:
         # Bucle de consultas: el modelo pide datos (hf-query), se los damos y vuelve a responder (máx. MAX_ROUNDS)
         for rnd in range(MAX_ROUNDS + 1):
+            if LIVE:
+                LIVE.reset()
             try:
                 raw = fn(system_prompt(s), msgs, ctx_text, s) or ""
             except AIError as e:
@@ -2498,13 +2683,19 @@ def do_chat(req, print_request=False):
                     raise
                 ctx_text = redact(without_vision("el modelo rechazó las imágenes"), s)[0]
                 msgs = msgs0 + msgs[len(msgs0):]
+                if LIVE:
+                    LIVE.reset()
                 raw = fn(system_prompt(s), msgs, ctx_text, s) or ""
             queries, rest = parse_queries(raw)
             if queries is None or rnd == MAX_ROUNDS:
                 break
+            if LIVE:
+                LIVE.reset()
             results = []
             for q in queries:
                 lab, res = run_query(q, ctx, s)
+                if LIVE:
+                    LIVE.step(lab)
                 steps.append(lab)
                 results.append(f"[{json.dumps(q, ensure_ascii=False)}]\n{res}")
             if not results:
@@ -2527,12 +2718,53 @@ def do_chat(req, print_request=False):
     out = parse_reply(raw, s)
     out["steps"] = list(dict.fromkeys(steps))
     out["provider"] = prov
+    out["model"] = model_name(prov, s)
     if hidden:
         out["redacted"] = hidden
     return out
 
 PROVIDER_NAMES = {"claude-code": "Claude Code", "ollama": "Ollama", "openai-compatible": "el servidor compatible con OpenAI",
                   "gemini": "Gemini", "mock": "Prueba"}
+
+def model_name(prov, s):
+    """El modelo que respondió, como lo escribe el usuario (vacío: el predeterminado del proveedor)."""
+    m = str(s.get("aiModel") or "").strip()
+    if prov == "gemini":
+        return gemini_model(s)
+    return m or {"ollama": "llama3.2", "openai-compatible": "gpt-4o-mini"}.get(prov, "")
+
+CLAUDE_CODE_MODELS = [["", "Predeterminado de Claude Code"], ["haiku", "Haiku (rápido)"], ["sonnet", "Sonnet (equilibrado)"],
+                      ["opus", "Opus (el más capaz)"]]
+
+def models_for(prov):
+    """Modelos que se pueden elegir con ese proveedor → {"models": [[id, nombre]…], "error": …}
+    (Ajustes y «Repetir con otro modelo» del panel)."""
+    s = settings()
+    if prov == "gemini":
+        return gemini_models()
+    if prov == "claude-code":
+        return {"models": CLAUDE_CODE_MODELS, "error": None}
+    if prov == "ollama":
+        try:
+            ep = ollama_ep(dict(s, aiProvider="ollama"))
+            with urllib.request.urlopen(ep + "/api/tags", timeout=5) as r:
+                names = sorted(m.get("name", "") for m in json.loads(r.read()).get("models", []))
+            return {"models": [[n, n] for n in names if n], "error": None if names else "Ollama no tiene modelos descargados"}
+        except (AIError, OSError, ValueError) as e:
+            return {"models": [], "error": f"No puedo hablar con Ollama: {getattr(e, 'reason', e)}"}
+    if prov == "openai-compatible":
+        ep = (s.get("aiEndpoint") or "https://api.openai.com/v1").rstrip("/")
+        key = os.environ.get(s.get("aiKeyEnv") or "HF_AI_KEY", "")
+        try:
+            req = urllib.request.Request(ep + "/models", headers={"Authorization": f"Bearer {key}"} if key else {})
+            with urllib.request.urlopen(req, timeout=8) as r:
+                ids = sorted(m.get("id", "") for m in json.loads(r.read()).get("data", []))
+            return {"models": [[i, i] for i in ids if i][:200], "error": None}
+        except (OSError, ValueError) as e:
+            return {"models": [], "error": f"El servidor no da la lista de modelos: {getattr(e, 'reason', e)}"}
+    if prov == "mock":
+        return {"models": [["prueba-a", "Prueba A"], ["prueba-b", "Prueba B"]], "error": None}
+    return {"models": [], "error": "Este proveedor no tiene modelos que elegir"}
 
 def do_chat_with(req, prov, s):
     """Repite la petición con otro proveedor (el respaldo): mismos ajustes guardados con ese proveedor y modelo."""
@@ -2842,7 +3074,16 @@ def main(argv):
         arg = rest[0] if rest else ""
         if arg == "-":
             arg = sys.stdin.read()
-        out = do_chat(json.loads(arg or "{}"), print_request=pr)
+        req = json.loads(arg or "{}")
+        if req.get("stream") and not pr:
+            global LIVE
+            LIVE = Live()
+            try:
+                out = do_chat(req)
+            except Exception as e:   # que el panel reciba siempre su línea final
+                out = {"text": "", "actions": [], "labels": [], "code": "", "error": f"hf-ai falló: {e}"[:300]}
+            LIVE.emit({"final": out}); return
+        out = do_chat(req, print_request=pr)
         if pr:
             print(json.dumps(out, ensure_ascii=False, indent=2)); return
     elif cmd == "ask":
@@ -2915,8 +3156,8 @@ def main(argv):
     elif cmd == "status":
         out = status()
     elif cmd == "models":
-        prov = arg or settings().get("aiProvider") or "claude-code"
-        out = gemini_models() if prov == "gemini" else {"models": [], "error": "Solo para gemini"}
+        prov = arg or provider_for(settings())[0]      # el que responde de verdad (en modo local, Ollama)
+        out = models_for(prov)
     elif cmd == "test":
         out = test_provider()
     elif cmd == "transform":

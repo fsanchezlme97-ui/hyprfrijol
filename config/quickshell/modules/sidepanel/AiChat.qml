@@ -19,6 +19,10 @@
 // clip (selector de archivos). Salen en miniatura sobre la entrada (× para quitarlas) y en la burbuja del mensaje;
 // van en messages[i].images y hf-ai las manda al modelo (o su OCR si no ve imágenes). `hf-ai attach` consigue las que
 // no son archivos locales (portapapeles, URL, datos crudos del arrastre, selector).
+// En directo: `hf-ai chat` con "stream" escribe una línea {"partial": …} por trozo (se ve en una burbuja que crece,
+// liveText) y {"step": …} por consulta; la última línea es {"final": respuesta}. «Detener» corta y deja lo que llegó.
+// Bajo la última respuesta: Copiar, Regenerar y «Otro modelo» (repite con otro modelo del mismo proveedor:
+// `hf-ai models` da la lista y la petición lleva "model").
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -58,7 +62,7 @@ Item {
         : ["Resume mis notificaciones", "Temporizador de 10 min para el té", "Pon la barra arriba y el fondo lago", "Cierra las ventanas de Firefox"]
 
     function focusInput() { input.forceActiveFocus(); }
-    function clear() { messages = []; notice = null; busy = false; chatProc.running = false; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; focusInput(); }
+    function clear() { messages = []; notice = null; busy = false; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; focusInput(); }
     function setWindow(w) { if (w && w.address) { winInfo = w; useWindow = true; } Qt.callLater(focusInput); }
     function patch(i, p) { const m = messages.slice(); m[i] = Object.assign({}, m[i], p); messages = m; }
     function push(m) { messages = [...messages, m]; Qt.callLater(scrollEnd); }
@@ -71,14 +75,14 @@ Item {
     }
     // Tarea de la próxima petición: "quick" para lo que llega de Spotlight o de la voz (hf-ai usa aiModelQuick)
     property string nextTask: ""
-    function payload() {
+    function payload(extra) {
         const task = nextTask;
         nextTask = "";
-        return JSON.stringify({ task: task, messages: messages.filter(m => !m.error && !m.local)
+        return JSON.stringify(Object.assign({ task: task, messages: messages.filter(m => !m.error && !m.local)
                                     .map(m => Object.assign({ role: m.role, text: String(m.text).slice(0, 6000) },
                                                             m.images?.length ? { images: m.images } : {},
                                                             m.files?.length ? { files: m.files } : {})),
-                                context: context() });
+                                context: context() }, extra ?? {}));
     }
 
     function ask(text, task) {
@@ -199,21 +203,62 @@ Item {
         d.accept(Qt.CopyAction);
         focusInput();
     }
-    function send() {
+    // Respuesta en directo: lo que va llegando (sin los bloques internos) y las consultas hechas mientras tanto
+    property string liveText: ""
+    property var liveSteps: []
+    property bool gotFinal: false
+    function send(model) {
         busy = true;
         notice = null;
-        chatProc.command = [Paths.script("hf-ai"), "chat", payload()];
+        liveText = ""; liveSteps = []; gotFinal = false; modelMenu = -1;
+        chatProc.command = [Paths.script("hf-ai"), "chat", payload(Object.assign({ stream: true }, model !== undefined ? { model: model } : {}))];
         chatProc.running = true;
         Qt.callLater(scrollEnd);
     }
-    // Otra respuesta para la última pregunta (quita la respuesta y lo que vino con ella)
-    function regenerate() {
+    function onLine(line) {
+        let j = null;
+        try { j = JSON.parse(line); } catch (e) { return; }
+        if (j.final !== undefined) { gotFinal = true; reply(j.final); }
+        else if (j.partial !== undefined) { liveText = j.partial; Qt.callLater(scrollEnd); }
+        else if (j.step !== undefined) liveSteps = liveSteps.concat([j.step]);
+        else { gotFinal = true; reply(j); }            // salida de una sola vez (sin "stream")
+    }
+    // Cortar la respuesta: se queda lo que ya llegó (sin acciones: no estaban completas)
+    function stop() {
+        if (!busy) return;
+        busy = false;
+        gotFinal = true;
+        chatProc.running = false;
+        if (liveText.trim() !== "") push({ role: "ai", text: liveText, steps: liveSteps.concat(["Respuesta detenida"]), actions: [], labels: [], plan: [], code: "", state: "" });
+        liveText = ""; liveSteps = [];
+    }
+    // Otra respuesta para la última pregunta (quita la respuesta y lo que vino con ella); `model`: con otro modelo
+    function regenerate(model) {
         if (busy) return;
         let i = messages.length - 1;
         while (i >= 0 && messages[i].role !== "user") i--;
         if (i < 0) return;
         messages = messages.slice(0, i + 1);
-        send();
+        send(model);
+    }
+    // «Otro modelo»: lista de `hf-ai models` (se pide al abrir el menú; modelMenu = índice del mensaje, -1 cerrado)
+    property int modelMenu: -1
+    property var modelList: []
+    property string modelErr: ""
+    function openModels(i) {
+        if (modelMenu === i) { modelMenu = -1; return; }
+        modelMenu = i;
+        modelsProc.running = false; modelsProc.running = true;
+    }
+    Process {
+        id: modelsProc
+        command: [Paths.script("hf-ai"), "models"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { const j = JSON.parse(text); root.modelList = j.models ?? []; root.modelErr = j.error ?? ""; }
+                catch (e) { root.modelList = []; root.modelErr = "No pude leer la lista de modelos"; }
+            }
+        }
     }
     property string toastText: ""
     property int toastIdx: -1
@@ -224,33 +269,36 @@ Item {
         send();
     }
 
+    function reply(r) {
+        root.busy = false;
+        root.liveText = ""; root.liveSteps = [];
+        if (!r || typeof r !== "object") r = { error: "Respuesta no válida de hf-ai" };
+        if (r.error) {
+            root.push({ role: "ai", text: r.error, error: true });
+            if (!root.active) Quickshell.execDetached(["notify-send", "-a", Settings.get("aiName", "") || "Asistente", "-i", "dialog-error", r.error]);
+        } else {
+            root.push({ role: "ai", text: r.text || (r.actions?.length ? "Puedo hacerlo. Estos son los pasos:" : "…"),
+                        actions: r.actions ?? [], labels: r.labels ?? [], plan: r.plan ?? [],
+                        // filtro de secretos de hf-ai: se avisa cuántos datos sensibles no salieron del equipo
+                        steps: (r.steps ?? []).concat(r.redacted ? [(r.redacted === 1 ? "Se ocultó 1 dato sensible" : "Se ocultaron " + r.redacted + " datos sensibles") + " del contexto"] : []),
+                        code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto, model: r.model ?? "" });
+            if (Settings.get("aiVoice", false)) Quickshell.execDetached([Paths.script("hf-ai"), "speak", r.text || ""]);
+            // Sin confirmación (Ajustes › IA) o todo «aprobado siempre» (aiAlwaysApprove): se aplica ya y queda
+            // el botón Deshacer (salvo pasos sin vuelta atrás, que siempre preguntan)
+            const auto = ((!root.confirmChanges && !r.confirm) || r.auto) && (r.actions?.length ?? 0) > 0;
+            if (auto) root.apply(root.messages.length - 1);
+            // con el panel cerrado (conversación por voz) hay que verlo para aprobar los cambios
+            else if ((r.actions?.length ?? 0) > 0 && !root.active) Shell.open("ia");
+        }
+    }
     Process {
         id: chatProc
-        stdout: StdioCollector {
-            onStreamFinished: {
-                root.busy = false;
-                let r = null;
-                try { r = JSON.parse(text); } catch (e) { r = { error: "Respuesta no válida de hf-ai" }; }
-                if (r.error) {
-                    root.push({ role: "ai", text: r.error, error: true });
-                    if (!root.active) Quickshell.execDetached(["notify-send", "-a", Settings.get("aiName", "") || "Asistente", "-i", "dialog-error", r.error]);
-                } else {
-                    root.push({ role: "ai", text: r.text || (r.actions?.length ? "Puedo hacerlo. Estos son los pasos:" : "…"),
-                                actions: r.actions ?? [], labels: r.labels ?? [], plan: r.plan ?? [],
-                                // filtro de secretos de hf-ai: se avisa cuántos datos sensibles no salieron del equipo
-                                steps: (r.steps ?? []).concat(r.redacted ? [(r.redacted === 1 ? "Se ocultó 1 dato sensible" : "Se ocultaron " + r.redacted + " datos sensibles") + " del contexto"] : []),
-                                code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto });
-                    if (Settings.get("aiVoice", false)) Quickshell.execDetached([Paths.script("hf-ai"), "speak", r.text || ""]);
-                    // Sin confirmación (Ajustes › IA) o todo «aprobado siempre» (aiAlwaysApprove): se aplica ya y queda
-                    // el botón Deshacer (salvo pasos sin vuelta atrás, que siempre preguntan)
-                    const auto = ((!root.confirmChanges && !r.confirm) || r.auto) && (r.actions?.length ?? 0) > 0;
-                    if (auto) root.apply(root.messages.length - 1);
-                    // con el panel cerrado (conversación por voz) hay que verlo para aprobar los cambios
-                    else if ((r.actions?.length ?? 0) > 0 && !root.active) Shell.open("ia");
-                }
-            }
+        stdout: SplitParser { onRead: line => root.onLine(line) }
+        onExited: code => {
+            if (root.gotFinal || !root.busy) return;
+            root.busy = false; root.liveText = ""; root.liveSteps = [];
+            root.push({ role: "ai", text: code !== 0 ? "hf-ai falló (código " + code + ")." : "hf-ai terminó sin responder.", error: true });
         }
-        onExited: code => { if (code !== 0 && root.busy) { root.busy = false; root.push({ role: "ai", text: "hf-ai falló (código " + code + ").", error: true }); } }
     }
 
     // ---- aplicar / descartar / deshacer
@@ -730,9 +778,11 @@ print(json.dumps(out[:300]))
                         // respuestas: Copiar · Regenerar (la última) debajo de la burbuja, al pasar el cursor
                         readonly property bool hasActs: !msg.mine && !msg.modelData.local && !msg.modelData.error && (msg.modelData.text ?? "") !== ""
                         readonly property bool isLast: msg.index === root.messages.length - 1
-                        height: bubble.height + (hasActs ? 26 : 0)
+                        readonly property bool menuOpen: msg.isLast && root.modelMenu === msg.index && !root.busy
+                        height: bubble.height + (hasActs ? 26 : 0) + (menuOpen ? modelFlow.implicitHeight + 6 : 0)
                         HoverHandler { id: msgHover }
                         Row {
+                            id: actsRow
                             visible: msg.hasActs
                             anchors { left: parent.left; top: bubble.bottom; topMargin: 3; leftMargin: 2 }
                             spacing: 2
@@ -749,7 +799,45 @@ print(json.dumps(out[:300]))
                                 tooltip: "Otra respuesta"
                                 onClicked: root.regenerate()
                             }
+                            IconBtn {
+                                visible: msg.isLast && !root.busy
+                                icon: "sparkle"; iconSize: 12; fg: msg.menuOpen ? Theme.p : Theme.tv; implicitWidth: 24; implicitHeight: 22
+                                tooltip: "Repetir con otro modelo"
+                                onClicked: root.openModels(msg.index)
+                            }
+                            // Modelo que respondió
+                            Txt {
+                                visible: (msg.modelData.model ?? "") !== ""
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: msg.modelData.model ?? ""; size: 10.5; muted: true; leftPadding: 4
+                            }
                             Txt { id: copiedTxt; anchors.verticalCenter: parent.verticalCenter; visible: root.toastText !== "" && root.toastIdx === msg.index; text: root.toastText; size: 10.5; muted: true; leftPadding: 4 }
+                        }
+
+                        // «Otro modelo»: los del proveedor; clic → la última pregunta otra vez con ese modelo
+                        Flow {
+                            id: modelFlow
+                            visible: msg.menuOpen
+                            anchors { left: parent.left; right: parent.right; top: actsRow.bottom; topMargin: 4; leftMargin: 2 }
+                            spacing: 5
+                            Txt {
+                                height: 22
+                                verticalAlignment: Text.AlignVCenter
+                                text: root.modelErr !== "" && !root.modelList.length ? root.modelErr
+                                    : modelsProc.running && !root.modelList.length ? "Buscando modelos…" : "Repetir con"
+                                size: 11; muted: true; rightPadding: 2
+                            }
+                            Repeater {
+                                model: msg.menuOpen ? root.modelList : []
+                                Chip {
+                                    required property var modelData
+                                    readonly property string mid: String(modelData[0] ?? "")
+                                    text: String(modelData[1] ?? modelData[0] ?? "") || "Predeterminado"
+                                    on: mid !== "" && mid === (msg.modelData.model ?? "")
+                                    outline: true
+                                    onClicked: root.regenerate(mid)
+                                }
+                            }
                         }
 
                         Rectangle {
@@ -1020,9 +1108,45 @@ print(json.dumps(out[:300]))
                     }
                 }
 
+                // En directo: lo que va llegando (con las consultas que hizo encima)
+                Rectangle {
+                    id: liveBubble
+                    visible: root.busy && (root.liveText !== "" || root.liveSteps.length > 0)
+                    width: Math.min(msgs.width * 0.92, Math.max(liveRich.implicitWidth, liveStepsCol.implicitWidth, 40) + 24)
+                    height: liveCol.implicitHeight + 20
+                    color: Theme.fill2
+                    topLeftRadius: 7; topRightRadius: 14; bottomRightRadius: 14; bottomLeftRadius: 4
+                    ColumnLayout {
+                        id: liveCol
+                        x: 12; y: 10
+                        width: liveBubble.width - 24
+                        spacing: 10
+                        Column {
+                            id: liveStepsCol
+                            visible: root.liveSteps.length > 0
+                            Layout.fillWidth: true
+                            spacing: 3
+                            Repeater {
+                                model: root.liveSteps
+                                Row {
+                                    required property string modelData
+                                    spacing: 6
+                                    Icon { anchors.verticalCenter: parent.verticalCenter; name: "search"; size: 10; color: Theme.tv }
+                                    Txt { text: parent.modelData; size: 11; muted: true }
+                                }
+                            }
+                        }
+                        AiRich {
+                            id: liveRich
+                            visible: root.liveText !== ""
+                            Layout.fillWidth: true
+                            text: root.liveText
+                        }
+                    }
+                }
                 // Pensando…
                 Rectangle {
-                    visible: root.busy
+                    visible: root.busy && root.liveText === ""
                     width: 56; height: 32
                     color: Theme.fill2
                     topLeftRadius: 7; topRightRadius: 14; bottomRightRadius: 14; bottomLeftRadius: 4
@@ -1236,9 +1360,11 @@ print(json.dumps(out[:300]))
                 anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
                 width: 30; height: 30; radius: Theme.r(7)
                 color: Theme.p
-                opacity: (input.text.trim() !== "" || root.pending.length || root.pendingDocs.length) && !root.busy ? 1 : 0.55
-                Icon { anchors.centerIn: parent; name: "arrow_right"; color: Theme.pText; size: 14 }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.ask(input.text) }
+                opacity: root.busy || input.text.trim() !== "" || root.pending.length || root.pendingDocs.length ? 1 : 0.55
+                // respondiendo: «Detener» (un cuadrado) corta la respuesta y deja lo que llegó
+                Icon { anchors.centerIn: parent; visible: !root.busy; name: "arrow_right"; color: Theme.pText; size: 14 }
+                Rectangle { anchors.centerIn: parent; visible: root.busy; width: 10; height: 10; radius: 2; color: Theme.pText }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.busy ? root.stop() : root.ask(input.text) }
             }
         }
     }
