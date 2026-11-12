@@ -250,7 +250,7 @@ RowLayout {
         Section {
             Layout.fillWidth: true
             title: "Seguridad del equipo"
-            headerRight: Button { kind: "link"; text: "Actualizar"; onClicked: root.probe() }
+            headerRight: Button { kind: "outline"; h: 26; text: "Actualizar"; onClicked: root.probe() }
             SecRow { label: "Cortafuegos"; value: root.sec.fw ? root.sec.fw + " · activo" : root.sec.fwInst ? "desactivado" : "no instalado"; good: !!root.sec.fw }
             SecRow { label: "Cifrado del disco"; value: root.sec.crypt ? "LUKS · activo" : "sin cifrar"; good: !!root.sec.crypt }
             SecRow { label: "Arranque seguro"; value: !root.sec.efi ? "BIOS antigua (sin UEFI)" : root.sec.sb ? "activado" : "desactivado"; good: !!root.sec.sb }

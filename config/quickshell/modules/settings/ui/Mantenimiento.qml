@@ -73,7 +73,7 @@ ColumnLayout {
             spacing: 8
             Button { text: "Copiar informe"; onClicked: { Quickshell.execDetached(["sh", "-c", "\"$0\" --copy >/dev/null", root.sh("hf-doctor")]); root.docMsg = "Copiado al portapapeles ✓"; } }
             Button { text: "Guardar…"; onClicked: { docSave.command = [root.sh("hf-doctor"), "--save"]; docSave.running = true; } }
-            Button { kind: "link"; text: "Ver completo"; onClicked: Pkg.runInTerminal(root.sh("hf-doctor") + " | less -R", "Diagnóstico") }
+            Button { kind: "outline"; h: 26; text: "Ver completo"; onClicked: Pkg.runInTerminal(root.sh("hf-doctor") + " | less -R", "Diagnóstico") }
         }
         Txt { visible: root.docMsg !== ""; Layout.fillWidth: true; text: root.docMsg; muted: true; size: 11.5; wrapMode: Text.WordWrap }
     }

@@ -262,17 +262,22 @@ Scope {
                             Component.onCompleted: Qt.callLater(reveal)
                             // Degradado en el borde que tiene más lista detrás: no se ve un elemento cortado en seco.
                             // Solo con fondo opaco (con vidrio se notaría la franja de color)
-                            component NavFade: Rectangle {
+                            Rectangle {
                                 parent: navFlick
                                 width: navFlick.width; height: 18
+                                y: 0
                                 visible: !Theme.glassy && navFlick.contentHeight > navFlick.height
-                                gradient: Gradient {
-                                    GradientStop { position: 0; color: Theme.bg }
-                                    GradientStop { position: 1; color: Qt.alpha(Theme.bg, 0) }
-                                }
+                                opacity: Math.min(1, (navFlick.contentY) / 18)
+                                gradient: Gradient { GradientStop { position: 0; color: Theme.bg } GradientStop { position: 1; color: Qt.alpha(Theme.bg, 0) } }
                             }
-                            NavFade { opacity: Math.min(1, navFlick.contentY / 18) }
-                            NavFade { y: navFlick.height - height; rotation: 180; opacity: Math.min(1, (navFlick.contentHeight - navFlick.height - navFlick.contentY) / 18) }
+                            Rectangle {
+                                parent: navFlick
+                                width: navFlick.width; height: 18
+                                y: navFlick.height - height; rotation: 180
+                                visible: !Theme.glassy && navFlick.contentHeight > navFlick.height
+                                opacity: Math.min(1, (navFlick.contentHeight - navFlick.height - navFlick.contentY) / 18)
+                                gradient: Gradient { GradientStop { position: 0; color: Theme.bg } GradientStop { position: 1; color: Qt.alpha(Theme.bg, 0) } }
+                            }
                         ColumnLayout {
                             id: navCol
                             width: navFlick.width - (navFlick.contentHeight > navFlick.height ? 8 : 0)

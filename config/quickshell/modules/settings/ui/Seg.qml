@@ -13,6 +13,7 @@ Rectangle {
     property real h: 30
     property real textSize: 12
     property bool fill: true
+    property bool tabular: false          // cifras de ancho fijo (Pills: «4 px», «125 %»)
     signal picked(var key)
     // Teclado: Tab llega al grupo (anillo de foco) y las flechas cambian de opción
     property bool focusable: true
@@ -26,7 +27,9 @@ Rectangle {
         }
     }
     implicitHeight: h
-    implicitWidth: row.implicitWidth + 2
+    Layout.maximumWidth: fill ? Number.POSITIVE_INFINITY : implicitWidth   // fill: false = tan ancho como sus etiquetas
+    // ancho natural = suma de las etiquetas (no del reparto, que depende del ancho: sería un bucle)
+    implicitWidth: { let w = 0; for (let i = 0; i < rep.count; i++) w += rep.itemAt(i)?.implicitWidth ?? 0; return w + 2; }
     radius: pill || Theme.pill ? h / 2 : Theme.r(6)
     color: "transparent"
     border.width: 1
@@ -49,6 +52,7 @@ Rectangle {
         anchors.margins: 1
         spacing: 0
         Repeater {
+            id: rep
             model: root.items
             Rectangle {
                 id: seg
@@ -57,6 +61,9 @@ Rectangle {
                 readonly property bool on: root.current === modelData.key
                 Layout.fillWidth: root.fill
                 Layout.fillHeight: true
+                // Todos los segmentos igual de anchos; uno con la etiqueta más larga solo crece lo que necesita
+                Layout.preferredWidth: root.fill ? Math.max(implicitWidth, (root.width - 2) / root.items.length) : implicitWidth
+                Layout.minimumWidth: Math.min(implicitWidth, lbl.implicitWidth + 12)
                 implicitWidth: lbl.implicitWidth + 24
                 radius: root.pill || Theme.pill ? height / 2 : Theme.r(5)
                 color: on ? Theme.segThumb : "transparent"
@@ -73,6 +80,7 @@ Rectangle {
                     horizontalAlignment: Text.AlignHCenter
                     text: seg.modelData.label
                     size: root.textSize
+                    tabular: root.tabular
                     color: seg.on ? Theme.segText : Theme.t
                     weight: Font.DemiBold
                 }

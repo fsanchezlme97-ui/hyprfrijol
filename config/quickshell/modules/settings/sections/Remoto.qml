@@ -244,7 +244,7 @@ ColumnLayout {
                     sub: !root.cl.remmina ? "RD Gateway, varias pantallas, carpetas, impresoras, sonido y NLA"
                         : root.cl.remminaRdp ? "Instalado · RD Gateway, varias pantallas, carpetas y sonido"
                         : "Instalado sin el plugin RDP: no conecta con Windows"
-                    Button { visible: root.cl.remmina && root.cl.remminaRdp; kind: "link"; text: "Abrir"; anchors.verticalCenter: parent.verticalCenter; onClicked: Quickshell.execDetached(["sh", "-c", "command -v remmina >/dev/null && exec remmina || exec flatpak run org.remmina.Remmina"]) }
+                    Button { visible: root.cl.remmina && root.cl.remminaRdp; kind: "outline"; h: 26; text: "Abrir"; anchors.verticalCenter: parent.verticalCenter; onClicked: Quickshell.execDetached(["sh", "-c", "command -v remmina >/dev/null && exec remmina || exec flatpak run org.remmina.Remmina"]) }
                     Button {
                         visible: !root.cl.remmina || !root.cl.remminaRdp; text: root.cl.remmina ? "Instalar plugin" : "Instalar"
                         onClicked: root.install({ arch: "remmina freerdp libvncserver", debian: "remmina remmina-plugin-rdp remmina-plugin-vnc", fedora: "remmina remmina-plugins-rdp remmina-plugins-vnc", suse: "remmina remmina-plugin-rdp remmina-plugin-vnc", flatpak: "org.remmina.Remmina" }, "Remmina")
@@ -254,7 +254,7 @@ ColumnLayout {
                     label: "Conexiones"; glyph: "G"; lit: root.cl.connections
                     badge: "La más sencilla; sin puerta de enlace"
                     sub: root.cl.connections ? "Instalado · RDP y VNC básicos, la interfaz más limpia" : "El cliente de GNOME: RDP y VNC básicos, sin RD Gateway"
-                    Button { visible: root.cl.connections; kind: "link"; text: "Abrir"; anchors.verticalCenter: parent.verticalCenter; onClicked: Quickshell.execDetached(["gnome-connections"]) }
+                    Button { visible: root.cl.connections; kind: "outline"; h: 26; text: "Abrir"; anchors.verticalCenter: parent.verticalCenter; onClicked: Quickshell.execDetached(["gnome-connections"]) }
                     Button { visible: !root.cl.connections; text: "Instalar"; onClicked: root.install({ arch: "gnome-connections", debian: "gnome-connections", fedora: "gnome-connections", suse: "gnome-connections", flatpak: "org.gnome.Connections" }, "Conexiones") }
                 }
                 InfoRow {

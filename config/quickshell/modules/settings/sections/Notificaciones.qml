@@ -173,7 +173,7 @@ RowLayout {
                     onClicked: Quickshell.execDetached(["notify-send", "-a", "Ajustes", "-i", "preferences-system-notifications", "Aviso de prueba", "Así se verán tus notificaciones."])
                 }
                 Button { text: "Abrir el centro"; onClicked: Shell.open("notificaciones") }
-                Button { kind: "link"; visible: Notifs.history.length > 0; text: "Vaciar historial (" + Notifs.history.length + ")"; onClicked: Notifs.clearHistory() }
+                Button { kind: "outline"; h: 26; visible: Notifs.history.length > 0; text: "Vaciar historial (" + Notifs.history.length + ")"; onClicked: Notifs.clearHistory() }
             }
         }
     }
@@ -252,7 +252,7 @@ RowLayout {
                             Chip { h: 26; text: "Sonido"; on: ap.r.sound !== false; opacity: Settings.get("notifySound", false) ? 1 : 0.5; onClicked: root.setRule(ap.modelData.key, "sound", !on) }
                             Item { Layout.fillWidth: true }
                             Button { kind: "link"; text: "Historial"; onClicked: Shell.open("notificaciones", { app: String(ap.modelData.name || ap.modelData.key) }) }
-                            Button { kind: "link"; text: "Olvidar"; onClicked: root.forget(ap.modelData.key) }
+                            Button { kind: "outline"; h: 26; text: "Olvidar"; onClicked: root.forget(ap.modelData.key) }
                         }
                     }
                 }

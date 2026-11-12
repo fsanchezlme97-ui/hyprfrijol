@@ -154,7 +154,7 @@ RowLayout {
                 }
             }
             Button {
-                kind: "link"; text: "Detectar zona por mi ubicación (IP)"
+                kind: "outline"; h: 26; text: "Detectar zona por mi ubicación (IP)"
                 onClicked: Quickshell.execDetached(["sh", "-c", "z=$(curl -fsS --max-time 6 https://ipapi.co/timezone || curl -fsS --max-time 6 https://ipinfo.io/timezone) && [ -n \"$z\" ] && timedatectl set-timezone \"$z\" && notify-send -a Ajustes 'Zona horaria' \"$z\""])
             }
             SwRow {

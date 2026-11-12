@@ -201,13 +201,13 @@ RowLayout {
                 separator: false
                 label: "GNOME Boxes"; glyph: "B"; lit: !!root.st.boxes
                 sub: "La más sencilla: elige una ISO y listo"
-                Button { visible: !!root.st.boxes; kind: "link"; text: "Abrir"; onClicked: Quickshell.execDetached(["sh", "-c", "command -v gnome-boxes >/dev/null && exec gnome-boxes || exec flatpak run org.gnome.Boxes"]) }
+                Button { visible: !!root.st.boxes; kind: "outline"; h: 26; text: "Abrir"; onClicked: Quickshell.execDetached(["sh", "-c", "command -v gnome-boxes >/dev/null && exec gnome-boxes || exec flatpak run org.gnome.Boxes"]) }
                 Button { visible: root.loaded && !root.st.boxes; text: "Instalar"; onClicked: root.term("install boxes", "GNOME Boxes") }
             }
             InfoRow {
                 label: "virt-manager"; glyph: "VM"; lit: !!root.st.virtManager
                 sub: "Completo: redes, discos, USB y PCI"
-                Button { visible: !!root.st.virtManager; kind: "link"; text: "Abrir"; onClicked: Quickshell.execDetached(["virt-manager"]) }
+                Button { visible: !!root.st.virtManager; kind: "outline"; h: 26; text: "Abrir"; onClicked: Quickshell.execDetached(["virt-manager"]) }
                 Button { visible: root.loaded && !root.st.virtManager; text: "Instalar"; onClicked: root.term("install virtmanager", "virt-manager") }
             }
             InfoRow {
@@ -229,7 +229,7 @@ RowLayout {
             InfoRow {
                 label: "BoxBuddy"; glyph: "BB"; lit: !!root.st.boxbuddy
                 sub: "Gestiona Distrobox con interfaz"
-                Button { visible: !!root.st.boxbuddy; kind: "link"; text: "Abrir"; onClicked: Quickshell.execDetached(["sh", "-c", "command -v boxbuddy-rs >/dev/null && exec boxbuddy-rs || exec flatpak run io.github.dvlv.boxbuddyrs"]) }
+                Button { visible: !!root.st.boxbuddy; kind: "outline"; h: 26; text: "Abrir"; onClicked: Quickshell.execDetached(["sh", "-c", "command -v boxbuddy-rs >/dev/null && exec boxbuddy-rs || exec flatpak run io.github.dvlv.boxbuddyrs"]) }
                 Button { visible: root.loaded && !root.st.boxbuddy; text: "Instalar"; onClicked: root.term("install boxbuddy", "BoxBuddy") }
             }
             Repeater {

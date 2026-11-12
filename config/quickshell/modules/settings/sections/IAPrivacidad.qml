@@ -56,7 +56,7 @@ ColumnLayout {
         Layout.fillWidth: true
         title: "Historial"
         headerRight: Button {
-            text: "Abrir la carpeta"; kind: "link"
+            text: "Abrir la carpeta"; kind: "outline"; h: 26
             onClicked: Quickshell.execDetached(["sh", "-c", 'mkdir -p "$1" && xdg-open "$1"', "sh", Paths.home + "/.local/share/hyprfrijol/ai"])
         }
         SwRow { separator: false; label: "Guardar historial de conversaciones"; sub: "~/.local/share/hyprfrijol/ai · se busca desde el panel"; key: "aiHistory"; def: true }
@@ -103,7 +103,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Registro de acciones"
-        headerRight: Button { text: "Actualizar"; kind: "link"; onClicked: root.reload() }
+        headerRight: Button { text: "Actualizar"; kind: "outline"; h: 26; onClicked: root.reload() }
         Txt {
             Layout.fillWidth: true
             text: root.log.length

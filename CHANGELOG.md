@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.59] — 2026-11-12
+
+### Mejorado
+- Ajustes con un solo selector: las «pastillas» sueltas (Escala, Margen, Esquinas, Distancia…) son ahora el mismo
+  control segmentado que el resto, con los segmentos igual de anchos; antes convivían dos estilos, a veces en la misma
+  tarjeta.
+- Las acciones que parecían texto («Actualizar», «Probar», «Vaciar historial», «Olvidar», «Abrir»…) llevan borde de
+  botón; los enlaces que solo llevan a otra sección siguen como enlace, sin la flecha repetida.
+
+### Corregido
+- Panel del asistente: un aviso de QML al quitar mensajes (texto sin definir durante un instante).
+
 ## [0.9.58] — 2026-11-12
 
 ### Rendimiento (sin cambiar cómo se ve)

@@ -32,7 +32,7 @@ Item {
             Layout.fillWidth: true
             spacing: 1
             Txt { Layout.fillWidth: true; text: root.label; weight: Font.DemiBold }
-            Txt { Layout.fillWidth: true; text: "Se configura en " + root.sectionLabel + " ›"; size: 11.5; color: Theme.p; font.underline: ma.containsMouse }
+            Txt { Layout.fillWidth: true; text: "Se configura en " + root.sectionLabel; size: 11.5; color: Theme.p; font.underline: ma.containsMouse }
         }
         Txt { visible: root.value !== ""; text: root.value; muted: true }
         Txt { text: "›"; size: 18; color: Theme.tv }

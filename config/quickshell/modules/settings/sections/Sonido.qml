@@ -160,7 +160,7 @@ RowLayout {
     Section {
         Layout.fillWidth: true
         title: "Perfiles de los dispositivos"
-        headerRight: Button { kind: "link"; text: "Actualizar"; onClicked: root.loadCards() }
+        headerRight: Button { kind: "outline"; h: 26; text: "Actualizar"; onClicked: root.loadCards() }
         Txt { visible: root.cards.length === 0; Layout.fillWidth: true; muted: true; wrapMode: Text.WordWrap; text: "Ningún dispositivo tiene perfiles para elegir." }
         Repeater {
             model: root.cards
@@ -193,7 +193,7 @@ RowLayout {
         }
         RowLayout {
             spacing: 4
-            Button { kind: "link"; text: "Probar"; onClicked: Quickshell.execDetached(["sh", "-c", "canberra-gtk-play -i bell 2>/dev/null || pw-play /usr/share/sounds/freedesktop/stereo/bell.oga"]) }
+            Button { kind: "outline"; h: 26; text: "Probar"; onClicked: Quickshell.execDetached(["sh", "-c", "canberra-gtk-play -i bell 2>/dev/null || pw-play /usr/share/sounds/freedesktop/stereo/bell.oga"]) }
             Txt { text: "·"; color: Theme.p }
             Button { kind: "link"; text: "Sonido de las notificaciones"; onClicked: Shell.open("ajustesapp", "notificaciones") }
         }

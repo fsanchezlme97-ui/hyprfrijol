@@ -1007,13 +1007,13 @@ print(json.dumps(out[:300]))
                                     id: rich
                                     visible: !msg.mine && !msg.modelData.error && (msg.modelData.text ?? "") !== ""
                                     Layout.fillWidth: true
-                                    text: visible ? msg.modelData.text : ""
+                                    text: visible ? (msg.modelData.text ?? "") : ""
                                 }
                                 Text {
                                     id: body
                                     visible: text !== "" && (msg.mine || !!msg.modelData.error)
                                     Layout.fillWidth: true
-                                    text: msg.modelData.checkIn ? (Settings.get("aiName", "") || "Helpert") + " miró tu pantalla y pasó a saludar" : msg.modelData.text
+                                    text: msg.modelData.checkIn ? (Settings.get("aiName", "") || "Helpert") + " miró tu pantalla y pasó a saludar" : (msg.modelData.text ?? "")
                                     textFormat: msg.mine ? Text.PlainText : Text.MarkdownText
                                     wrapMode: Text.Wrap
                                     color: msg.mine ? Theme.pcText : msg.modelData.error ? Theme.danger : Theme.t
