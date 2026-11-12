@@ -116,9 +116,8 @@ Añadidos sugeridos (sin empezar):
 - [ ] VGA por la GT 710 (`nouveau`): ya da imagen, pero la copia entre GPUs puede hacer las animaciones menos
       fluidas en esa pantalla. El registro de Hyprland repite `eglCreateSyncKHR … EGL_BAD_ATTRIBUTE` (300 veces
       en este arranque); ver si viene de esa gráfica.
-- [ ] Lo que avisa `hf-doctor` (2026-11-11): el login de greetd es de otra versión (`hf-greeter-sync`, pide la
-      contraseña de administrador) y faltan 4 paquetes recomendados (fuente mono, pavucontrol, nm-connection-editor,
-      impresión: `hf-deps install --recommended`). Los enlaces `hf-clip` y `hf-theme` ya están.
-- [ ] `xdg-document-portal.service` salió a las 17:28 con el código 21 y quedó como fallido. Se vuelve a lanzar
-      solo cuando una app lo pide (D-Bus), así que no bloquea nada; si se repite, mirar si coincide con una prueba
-      anidada (`dev/try.sh`), que arranca sus propios portales.
+- [ ] Lo que avisa `hf-doctor` (2026-11-11): faltan 4 paquetes recomendados (fuente mono, pavucontrol,
+      nm-connection-editor, impresión: `hf-deps install --recommended`) y QtMultimedia para el fondo en vídeo del
+      login (`hf-deps install fondos`). El login ya está al día (0.9.42) y `primaryMonitor` es HDMI-A-2.
+- [ ] `xdg-document-portal.service` volvió a quedar fallido (código 21); se reinició el 2026-11-12. Si se repite,
+      mirar si coincide con una prueba anidada (`dev/try.sh`), que arranca sus propios portales.
