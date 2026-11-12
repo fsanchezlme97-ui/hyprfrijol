@@ -49,6 +49,17 @@ Scope {
     readonly property bool conv: Shell.aiConversation
     property string convState: ""           // escucha | piensa | habla
     property int convMisses: 0              // turnos seguidos sin oír nada (3 = se da por terminada)
+    property bool convProactive: false      // la empezó Helpert (modo compañero): si no contestas, se va sin despedirse
+    onConvChanged: if (!conv) { convState = ""; convProactive = false; convLater.stop(); thinkTimer.stop(); replyTimer.stop(); }
+    // Modo compañero: Helpert ya está pensando qué decir (AiChat.checkIn); al terminar de hablar, escucha una vez
+    function companionTalk(): void {
+        if (conv || proc.running) return;
+        Shell.aiConversation = true;
+        convProactive = true;
+        convMisses = 2;
+        convState = "piensa";
+    }
+    Companion { id: companion; busy: proc.running; onVisiting: root.companionTalk() }
     readonly property string talkMode: Settings.get("aiTalkMode", "conversacion")
     function convToggle(): void { if (conv) convEnd(false); else convStart(); }
     function convStart(): void {
@@ -57,6 +68,7 @@ Scope {
         if (proc.running) send("cancel");
         Shell.aiConversation = true;
         convMisses = 0;
+        convProactive = false;
         convLater.restart();
     }
     function convEnd(bye): void {
@@ -94,6 +106,8 @@ Scope {
             replyTimer.restart();
         }
     }
+    readonly property var yesRe: /^(s[ií]|vale|ok|okey|claro|adelante|hazlo|h[aá]galo|dale|de acuerdo|perfecto|venga|por favor)\b/i
+    readonly property var noRe: /^(no|cancela|cancelar|d[eé]jalo|mejor no|ni hablar|olv[ií]dalo)\b/i
     readonly property var byeRe: /^(adi[oó]s|hasta luego|chao|terminar|termina|para ya|eso es todo|ya est[aá]|gracias,? eso es todo|fin de la conversaci[oó]n)[\s.!¡]*$/i
 
     function start(k, extra, fromKey): void {
@@ -148,7 +162,14 @@ Scope {
                 phase = "idle";
                 if (!t) { convLater.restart(); break; }
                 if (byeRe.test(t)) { convEnd(true); break; }
-                convMisses = 0;
+                convMisses = 0; convProactive = false;
+                // Un plan esperando (las herramientas del asistente): «sí» lo aplica, «no» lo descarta
+                if (Shell.aiPlanPending && (yesRe.test(t) || noRe.test(t))) {
+                    Shell.aiPlanAnswer(yesRe.test(t));
+                    convState = "habla";
+                    replyTimer.restart();
+                    break;
+                }
                 convState = "piensa";
                 Shell.aiAskHidden(t);
                 thinkTimer.restart();
@@ -175,7 +196,7 @@ Scope {
             if (kind === "ia" && conv) {        // en conversación, no oír nada no es un error: se sigue escuchando
                 if (["silence", "empty"].includes(j.code ?? "")) {
                     phase = "idle";
-                    if (++convMisses >= 3) convEnd(true); else convLater.restart();   // ~1,5 min callado: se cierra sola
+                    if (++convMisses >= 3) convEnd(!convProactive); else convLater.restart();   // ~1,5 min callado: se cierra sola
                     break;
                 }
                 convEnd(false);
@@ -268,6 +289,8 @@ Scope {
         function toggle(): void { root.toggle("dictado"); }
         function talk(): void { root.talk(); }                // hablar con el asistente (hf-ai talk): según aiTalkMode
         function conversation(): void { root.convToggle(); }  // activar / desactivar la conversación por voz
+        function checkIn(): void { companion.visit(true); }   // modo compañero: que Helpert pase a saludar ya (pruebas)
+        function companionState(): string { return companion.state(); }
         function conversationState(): string { return root.conv ? root.convState || "activa" : "apagada"; }
         function command(): void { root.toggle("comando"); }
         function micro(): void { root.micAction(); }          // lo del modo del micrófono (micMode)

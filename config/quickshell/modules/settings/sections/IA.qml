@@ -372,6 +372,36 @@ ColumnLayout {
                 ? "Pulsa una vez y habla con naturalidad: al callarte se lo pasa al asistente, Helpert contesta en voz alta y vuelve a escucharte. Para terminar, pulsa otra vez o di «adiós» (también se cierra tras un rato en silencio)."
                 : "Cada pulsación es una pregunta; la respuesta sale en el panel (y en voz si «Hablar con voz» está activo)."
         }
+        // Modo compañero (modules/dictado/Companion.qml): Helpert empieza él la conversación de vez en cuando
+        SwRow {
+            label: "Modo compañero"; key: "aiCompanion"; def: false
+            sub: "de vez en cuando " + (Settings.get("aiName", "") || "Helpert") + " pasa a saludar: ofrece ayuda, pregunta cómo vas o comenta lo que ve. Nunca en pantalla completa, en llamadas, en «no molestar», con el pomodoro de foco ni si no estás"
+        }
+        LabeledRow {
+            visible: Settings.get("aiCompanion", false) === true
+            label: "Cada cuánto"
+            labelWidth: 120
+            Seg {
+                model: [["poco", "Poco (1,5 h)"], ["normal", "Normal (45 min)"], ["amenudo", "A menudo (20 min)"]]
+                current: Settings.get("aiCompanionFreq", "normal")
+                onPicked: k => Settings.set("aiCompanionFreq", k)
+            }
+        }
+        SwRow {
+            visible: Settings.get("aiCompanion", false) === true
+            label: "Mirar la pantalla"; key: "aiCompanionLook"; def: true
+            sub: "hace una captura de la pantalla activa para saber qué haces (en ~/.cache/hyprfrijol/capturas_tmp_ai, solo tuya: guarda las 20 últimas y las borra al día). Nunca con un gestor de contraseñas a la vista"
+        }
+        Txt {
+            visible: Settings.get("aiCompanion", false) === true
+            Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
+            text: "Avisa antes si el equipo va muy cargado y propone un descanso tras una hora seguida. Con muchas ventanas abiertas o el equipo trabajando a tope espera más. Si no contestas, se va sin insistir. Para pedirle cambios, contesta «sí» o «no» cuando te pregunte «¿Lo hago?»."
+        }
+        Button {
+            visible: Settings.get("aiCompanion", false) === true
+            text: "Probar ahora"
+            onClicked: Shell.aiCompanionNow()
+        }
         Timer { id: voiceLater; interval: 5000; repeat: true; property int n: 0; onTriggered: { stat.running = false; stat.running = true; if (++n > 24 || root.voiceLocal) stop(); } }
         // Avisos (hf-ai announce): también con la voz de Helpert. Nunca en «no molestar».
         SwRow { label: "Saludo al entrar"; sub: "al iniciar sesión Helpert dice la hora y el tiempo"; key: "aiAnnounceGreet"; def: false }

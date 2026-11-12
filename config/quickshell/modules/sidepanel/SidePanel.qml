@@ -168,6 +168,8 @@ PanelWindow {
         target: Shell
         function onOpened(v) { if (v === "ia") win.handleArg(Shell.arg); }
         function onAiAskHidden(t) { win.askHidden(t); }
+        function onAiCheckIn(reason, image) { win.chatHeld = true; if (!chatLoader.item) win.pendingArg = { checkIn: reason, image: image, hidden: true }; else win.chat.checkIn(reason, image); }
+        function onAiPlanAnswer(yes) { if (chatLoader.item) win.chat.answerPlan(yes); }
     }
     // Conversación por voz: el chat trabaja con el panel cerrado (y queda en el historial como siempre)
     function askHidden(text) {
@@ -261,7 +263,7 @@ PanelWindow {
                 source: Qt.resolvedUrl("AiChat.qml")
                 onLoaded: {
                     item.active = Qt.binding(() => win.shown);
-                    if (win.pendingArg !== null) { const a = win.pendingArg; win.pendingArg = null; a.hidden ? item.ask(String(a.ask), "quick") : win.handleArg(a); }
+                    if (win.pendingArg !== null) { const a = win.pendingArg; win.pendingArg = null; a.checkIn !== undefined ? item.checkIn(a.checkIn, a.image) : a.hidden ? item.ask(String(a.ask), "quick") : win.handleArg(a); }
                 }
             }
         }

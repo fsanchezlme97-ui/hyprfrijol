@@ -3,6 +3,22 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.44] — 2026-11-12
+
+### Añadido
+- **Modo compañero** (Ajustes › Asistente de IA, apagado por defecto): de vez en cuando Helpert mira la pantalla
+  activa y empieza él la conversación por voz: ofrece ayuda, pregunta cómo vas o comenta lo que ve. Si no ve nada
+  que decir, calla. Cuándo:
+  - cada 20, 45 o 90 minutos (a elegir, con algo de azar), o 1,5 veces más si tienes mucho abierto o el equipo
+    trabajando;
+  - antes, si el equipo va muy cargado 3 minutos seguidos, o tras una hora seguida sin descanso;
+  - nunca en pantalla completa, en llamadas, en «no molestar», con el pomodoro de foco, en modo sin distracciones,
+    si no estás o en los primeros 15 minutos.
+  Las capturas van a `~/.cache/hyprfrijol/capturas_tmp_ai` (solo tuya; las 20 últimas, un día como mucho) y nunca
+  se hacen con un gestor de contraseñas a la vista. Si no contestas, se va sin insistir.
+- **Aprobar por voz**: cuando en una conversación el asistente propone cambios (sus herramientas: ventanas, apps,
+  ajustes, música, temporizadores…), pregunta «¿Lo hago?» y basta con decir «sí» o «no».
+
 ## [0.9.42] — 2026-11-12
 
 ### Añadido

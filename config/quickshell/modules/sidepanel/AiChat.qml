@@ -63,7 +63,7 @@ Item {
         : ["Resume mis notificaciones", "Temporizador de 10 min para el té", "Pon la barra arriba y el fondo lago", "Cierra las ventanas de Firefox"]
 
     function focusInput() { input.forceActiveFocus(); }
-    function clear() { messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; focusInput(); }
+    function clear() { planIdx = -1; Shell.aiPlanPending = false; checkingIn = false; messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; focusInput(); }
     function setWindow(w) { if (w && w.address) { winInfo = w; useWindow = true; } Qt.callLater(focusInput); }
     function patch(i, p) { const m = messages.slice(); m[i] = Object.assign({}, m[i], p); messages = m; }
     function push(m) { messages = [...messages, m]; Qt.callLater(scrollEnd); }
@@ -275,10 +275,43 @@ Item {
         send();
     }
 
+    // Modo compañero (Shell.aiCheckIn ← Companion.qml): Helpert mira la captura y habla él primero; si no ve nada que
+    // valga la pena decir contesta SKIP y todo se borra sin ruido (ni mensaje ni voz)
+    property bool checkingIn: false
+    function checkIn(reason, image) {
+        if (busy) { Shell.aiConversation = false; return; }
+        const m = { role: "user", checkIn: true,
+                    text: "[Visita de " + (Settings.get("aiName", "") || "Helpert") + ", sin que yo lo pida] " + reason + "\n"
+                        + (image ? "Mira la captura de mi pantalla y" : "") + " Háblame como un amigo que pasa a saludar: según lo que veas, ofrece una ayuda concreta, "
+                        + "pregúntame cómo voy o si necesito algo, o comenta lo que ves con naturalidad. Una o dos frases, sin repetir lo de visitas "
+                        + "anteriores. Si no hay nada que valga la pena decir ahora, responde solo SKIP." };
+        if (image && allowCapture) m.images = [image];
+        push(m);
+        checkingIn = true;
+        nextTask = "quick";
+        send();
+    }
+    // Plan propuesto en la conversación por voz: se aprueba o se descarta diciendo «sí» o «no» (Dictado.qml)
+    property int planIdx: -1
+    function answerPlan(yes) {
+        const i = planIdx;
+        Shell.aiPlanPending = false; planIdx = -1;
+        if (i < 0 || i >= messages.length || messages[i].state !== "") return;
+        Quickshell.execDetached([Paths.script("hf-ai"), "speak", yes ? "Vale, lo hago." : "Vale, lo dejo así."]);
+        if (yes) apply(i); else discard(i);
+    }
+
     function reply(r) {
         root.busy = false;
         root.liveText = ""; root.liveSteps = [];
         if (!r || typeof r !== "object") r = { error: "Respuesta no válida de hf-ai" };
+        const wasCheckIn = checkingIn;
+        checkingIn = false;
+        if (wasCheckIn && (r.error || /^\W*SKIP\W*$/i.test(String(r.text ?? "").trim()) || !String(r.text ?? "").trim())) {
+            if (messages.length && messages[messages.length - 1].checkIn) messages = messages.slice(0, -1);   // nada que decir: ni rastro
+            Shell.aiConversation = false;
+            return;
+        }
         Shell.aiReplied(!r.error);         // la conversación por voz espera a la respuesta (Dictado.qml)
         if (r.error) {
             root.push({ role: "ai", text: r.error, error: true });
@@ -290,7 +323,9 @@ Item {
                         // filtro de secretos de hf-ai: se avisa cuántos datos sensibles no salieron del equipo
                         steps: (r.steps ?? []).concat(r.redacted ? [(r.redacted === 1 ? "Se ocultó 1 dato sensible" : "Se ocultaron " + r.redacted + " datos sensibles") + " del contexto"] : []),
                         code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto, model: r.model ?? "" });
-            if (Settings.get("aiVoice", false) || Shell.aiConversation) Quickshell.execDetached([Paths.script("hf-ai"), "speak", r.text || ""]);
+            const waits = Shell.aiConversation && (r.actions?.length ?? 0) > 0 && !(((!root.confirmChanges && !r.confirm) || r.auto));
+            if (waits) { root.planIdx = root.messages.length - 1; Shell.aiPlanPending = true; }
+            if (Settings.get("aiVoice", false) || Shell.aiConversation) Quickshell.execDetached([Paths.script("hf-ai"), "speak", (r.text || "") + (waits ? " ¿Lo hago?" : "")]);
             // Sin confirmación (Ajustes › IA) o todo «aprobado siempre» (aiAlwaysApprove): se aplica ya y queda
             // el botón Deshacer (salvo pasos sin vuelta atrás, que siempre preguntan)
             const auto = ((!root.confirmChanges && !r.confirm) || r.auto) && (r.actions?.length ?? 0) > 0;
@@ -318,6 +353,7 @@ Item {
     function selOf(m) { return (m.actions ?? []).map((a, k) => (m.sel ?? [])[k] !== false); }
     function toggleStep(i, k) { const s = selOf(messages[i]); s[k] = !s[k]; patch(i, { sel: s }); }
     function apply(i) {
+        if (i === planIdx) { Shell.aiPlanPending = false; planIdx = -1; }
         if (applyProc.running) return;             // un plan cada vez: el resultado se apunta en el que se lanzó
         const sel = selOf(messages[i]);
         const acts = messages[i].actions.filter((a, k) => sel[k]);
@@ -371,6 +407,7 @@ Item {
         }
     }
     function discard(i) {
+        if (i === planIdx) { Shell.aiPlanPending = false; planIdx = -1; }
         patch(i, { state: "discarded" });
         push({ role: "ai", text: "De acuerdo, no cambié nada.", local: true });
     }
@@ -429,7 +466,7 @@ Item {
             if (root.historyFile === "") root.historyFile = root.historyDir + "/" + Qt.formatDateTime(new Date(), "yyyy-MM-dd_HH-mm-ss") + ".json";
             histWriter.command = ["sh", "-c", 'mkdir -p "$(dirname "$1")" && cat > "$1.tmp" && mv -f "$1.tmp" "$1"', "sh", root.historyFile];
             histWriter.sendIn = (
-                                  JSON.stringify({ messages: msgs.map(m => ({ role: m.role, text: m.text, images: m.images ?? [], files: m.files ?? [], labels: m.labels ?? [], plan: m.plan ?? [],
+                                  JSON.stringify({ messages: msgs.map(m => ({ role: m.role, text: m.text, checkIn: m.checkIn ?? false, images: m.images ?? [], files: m.files ?? [], labels: m.labels ?? [], plan: m.plan ?? [],
                                                                               steps: m.steps ?? [], code: m.code ?? "",
                                                                               state: m.state ?? "", error: !!m.error })) }, null, 1));
             histWriter.stdinEnabled = true;
@@ -966,7 +1003,7 @@ print(json.dumps(out[:300]))
                                     id: body
                                     visible: text !== "" && (msg.mine || !!msg.modelData.error)
                                     Layout.fillWidth: true
-                                    text: msg.modelData.text
+                                    text: msg.modelData.checkIn ? (Settings.get("aiName", "") || "Helpert") + " miró tu pantalla y pasó a saludar" : msg.modelData.text
                                     textFormat: msg.mine ? Text.PlainText : Text.MarkdownText
                                     wrapMode: Text.Wrap
                                     color: msg.mine ? Theme.pcText : msg.modelData.error ? Theme.danger : Theme.t

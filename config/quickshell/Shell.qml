@@ -41,6 +41,10 @@ Singleton {
     signal aiAskHidden(string text)        // pregunta al asistente sin abrir el panel (hablar por voz: Super + Alt + H)
     property bool aiConversation: false    // conversación por voz en marcha (Dictado.qml): escucha, responde, escucha…
     signal aiReplied(bool ok)              // llegó la respuesta del asistente (AiChat.qml)
+    signal aiCompanionNow()                // «Probar ahora» (Ajustes › Asistente de IA): visita del compañero ya
+    signal aiCheckIn(string reason, string image)   // modo compañero: Helpert mira la pantalla y habla él primero (Companion.qml)
+    property bool aiPlanPending: false     // en la conversación por voz hay un plan esperando «sí» o «no» (AiChat.qml)
+    signal aiPlanAnswer(bool yes)          // la respuesta dicha a ese plan (Dictado.qml)
     // Pantalla donde se abren los paneles: la del monitor con foco
     readonly property var screen: {
         const name = Hyprland.focusedMonitor?.name;

@@ -23,6 +23,8 @@
   hf-ai attach <origen>…     adjunta imágenes al chat: clipboard | pick (selector de archivos) | - (base64 por stdin)
                              | ruta | file://… | https://…  → {"images": [rutas], "error": …}
   hf-ai capture [imagen]     captura de pantalla (o la imagen dada) + OCR (tesseract) → texto para el contexto
+  hf-ai peek                 captura interna para el modo compañero (Ajustes › IA): {"path"} en
+                             ~/.cache/hyprfrijol/capturas_tmp_ai (las 20 últimas, 24 h como mucho) o {"skip": motivo}
   hf-ai status               proveedor y disponibilidad
   hf-ai mcp list | check <id> | call <id> <herramienta> '<json>'   servidores MCP del usuario (aiMcpServers):
                              la lista con sus herramientas, comprobar uno (lee y guarda sus herramientas) o probar una
@@ -1715,6 +1717,31 @@ def _selftest_redact():
     assert is_private("org.keepassxc.KeePassXC", {}) and not is_private("kitty", {})
 
 # ---------------------------------------------------------------- contexto
+# Modo compañero (Dictado.qml › Companion.qml): Helpert mira la pantalla de vez en cuando. Solo la pantalla activa,
+# nunca con una app privada a la vista ni con las capturas desactivadas; se guardan en una carpeta solo tuya y se borran.
+CAP_TMP = HOME / ".cache/hyprfrijol/capturas_tmp_ai"
+
+def peek():
+    s = settings()
+    if s.get("aiContextCapture", True) is False:
+        return {"skip": "las capturas del asistente están desactivadas"}
+    if private_visible(s):
+        return {"skip": "hay una app privada a la vista"}
+    CAP_TMP.mkdir(parents=True, exist_ok=True)
+    os.chmod(CAP_TMP, 0o700)
+    old = sorted(CAP_TMP.glob("*.png"), key=lambda f: f.stat().st_mtime, reverse=True)
+    for i, f in enumerate(old):
+        if i >= 19 or time.time() - f.stat().st_mtime > 86400:
+            f.unlink(missing_ok=True)
+    mons = jrun(["hyprctl", "monitors", "-j"])
+    out = next((m.get("name") for m in (mons if isinstance(mons, list) else []) if m.get("focused")), None)
+    p = CAP_TMP / time.strftime("%Y%m%d-%H%M%S.png")
+    r = subprocess.run(["grim", *(["-o", out] if out else []), str(p)], capture_output=True)
+    if r.returncode != 0 or not p.is_file():
+        return {"skip": "no se pudo hacer la captura"}
+    os.chmod(p, 0o600)
+    return {"path": str(p)}
+
 def capture_text(image=None):
     STATE.mkdir(parents=True, exist_ok=True)
     if image:
@@ -3469,6 +3496,8 @@ def main(argv):
             out["error"] = None
     elif cmd == "capture":
         out = {"text": capture_text(arg or None)}
+    elif cmd == "peek":
+        out = peek()
     elif cmd == "status":
         out = status()
     elif cmd == "mcp":
