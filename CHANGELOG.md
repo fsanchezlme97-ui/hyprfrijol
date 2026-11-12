@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.39] — 2026-11-12
+
+### Seguridad
+- AnyDesk sin nadie delante: la aprobación de una vez por conexión se reclama de forma atómica (dos peticiones a la
+  vez ya no pasan las dos) y solo en la carpeta privada de la sesión (sin ella no se aprueba nada); los id de app
+  admitidos son exactos (`com.anydesk.Anydesk`, `com.rustdesk.RustDesk`), no prefijos.
+
 ## [0.9.38] — 2026-11-12
 
 ### Cambiado

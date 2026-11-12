@@ -389,15 +389,20 @@ anydesk_incoming() {   # ¿AnyDesk aceptó una conexión entrante hace menos de 
 }
 # auto_ok <consent|source>: una sola aprobación de cada tipo por conexión entrante (la hora de la conexión se apunta
 # en $XDG_RUNTIME_DIR). Así una app que pida control justo después no se cuela con el permiso de AnyDesk.
+# La marca se reclama con mkdir (atómico: dos peticiones a la vez no pasan las dos) y solo en $XDG_RUNTIME_DIR
+# (privado del usuario); sin él no se aprueba nada.
 auto_ok() {
-  local t used="${XDG_RUNTIME_DIR:-/tmp}/hf-remote-anydesk.$1"
+  local t run="${XDG_RUNTIME_DIR:-}"
   [ "$(setting remoteUnattended)" = true ] || return 1
+  [ -n "$run" ] && [ -d "$run" ] && [ -O "$run" ] && [ ! -L "$run" ] || return 1
   t="$(anydesk_incoming)" || return 1
-  [ "$(cat "$used" 2>/dev/null)" = "$t" ] && return 1
-  printf '%s\n' "$t" > "$used"
+  mkdir "$run/hf-remote-anydesk.$1.$t" 2>/dev/null || return 1
+  find "$run" -maxdepth 1 -name "hf-remote-anydesk.$1.*" ! -name "hf-remote-anydesk.$1.$t" -exec rmdir {} + 2>/dev/null
+  return 0
 }
-# Las apps aisladas (Flatpak, Snap) siempre llegan con su id; AnyDesk instalado en el sistema llega sin id
-host_or_remote_app() { [[ -z "${XDPH_REMOTE_DESKTOP_APP_ID:-}" || "${XDPH_REMOTE_DESKTOP_APP_ID,,}" =~ ^(com\.anydesk\.|com\.rustdesk\.|anydesk|rustdesk) ]]; }
+# Las apps aisladas (Flatpak, Snap) siempre llegan con su id (xdph lo pasa en XDPH_REMOTE_DESKTOP_APP_ID); AnyDesk
+# instalado en el sistema llega sin id. Se admiten además los id exactos de los Flatpak de AnyDesk y RustDesk.
+host_or_remote_app() { [[ -z "${XDPH_REMOTE_DESKTOP_APP_ID:-}" || "$XDPH_REMOTE_DESKTOP_APP_ID" =~ ^(com\.anydesk\.Anydesk|com\.rustdesk\.RustDesk)$ ]]; }
 picker() {
   local out
   if [ "${1:-}" = --remote-desktop ]; then
@@ -408,7 +413,9 @@ picker() {
     fi
     exec "$REALPICK" "$@"
   fi
-  # Sesión de control remoto: xdph no ofrece ventanas ni espacios, solo pantallas
+  # Sesión de control remoto: xdph no ofrece ventanas ni espacios, solo pantallas. El selector de pantalla llega
+  # antes que el permiso y sin id de app; elegir pantalla no da nada por sí solo: sin el permiso de abajo (que sí
+  # mira la app) la sesión no arranca y no hay imagen.
   if [ -z "${XDPH_WINDOW_SHARING_LIST:-}" ] && [ -z "${XDPH_WORKSPACE_SHARING_LIST_V3:-}" ] && auto_ok source; then
     out="$(rdp_output)"
     [ -n "$out" ] || out="$(hyprctl monitors -j 2>/dev/null | jq -r 'max_by(.width * .height) | .name // empty')"
