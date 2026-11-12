@@ -325,7 +325,8 @@ Item {
                         code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto, model: r.model ?? "" });
             const waits = Shell.aiConversation && (r.actions?.length ?? 0) > 0 && !(((!root.confirmChanges && !r.confirm) || r.auto));
             if (waits) { root.planIdx = root.messages.length - 1; Shell.aiPlanPending = true; }
-            if (Settings.get("aiVoice", false) || Shell.aiConversation) Quickshell.execDetached([Paths.script("hf-ai"), "speak", (r.text || "") + (waits ? " ¿Lo hago?" : "")]);
+            if (Settings.get("aiVoice", false) || Shell.aiConversation) Quickshell.execDetached([Paths.script("hf-ai"), "speak",
+                (r.text || (waits ? (r.labels ?? []).map(l => String(l).split(":")[0]).join(". ") + "." : "")) + (waits ? " ¿Lo hago?" : "")]);
             // Sin confirmación (Ajustes › IA) o todo «aprobado siempre» (aiAlwaysApprove): se aplica ya y queda
             // el botón Deshacer (salvo pasos sin vuelta atrás, que siempre preguntan)
             const auto = ((!root.confirmChanges && !r.confirm) || r.auto) && (r.actions?.length ?? 0) > 0;

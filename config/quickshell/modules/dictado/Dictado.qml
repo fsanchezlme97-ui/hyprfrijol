@@ -111,8 +111,10 @@ Scope {
             replyTimer.restart();
         }
     }
-    readonly property var yesRe: /^(s[ií]|vale|ok|okey|claro|adelante|hazlo|h[aá]galo|dale|de acuerdo|perfecto|venga|por favor)\b/i
-    readonly property var noRe: /^(no|cancela|cancelar|d[eé]jalo|mejor no|ni hablar|olv[ií]dalo)\b/i
+    // Sin \b: en JS (sin /u) «í» no es letra y «Sí, hazlo» no casaba
+    readonly property var yesRe: /^(s[ií]|vale|ok|okey|claro|adelante|hazlo|h[aá]galo|dale|de acuerdo|perfecto|venga|por favor)(?=[\s,.;:!?¡¿]|$)/i
+    readonly property var noRe: /^(no|cancela|cancelar|d[eé]jalo|mejor no|ni hablar|olv[ií]dalo)(?=[\s,.;:!?¡¿]|$)/i
+    readonly property var noiseRe: /^[\s.,…!?¡¿-]*(m+-?h?m+|mhm+|hmm+|e+h+|a+h+|u+m+|o+h+|gracias|subt[ií]tulos.*|amara\.org.*|\[.*\]|\(.*\)|m[uú]sica)?[\s.,…!?¡¿-]*$/i
     readonly property var byeRe: /^(adi[oó]s|hasta luego|chao|terminar|termina|para ya|eso es todo|ya est[aá]|gracias,? eso es todo|fin de la conversaci[oó]n)[\s.!¡]*$/i
 
     function start(k, extra, fromKey): void {
@@ -165,7 +167,11 @@ Scope {
             if (kind === "ia" && conv) {        // conversación: lo dicho va al asistente y se espera su voz
                 const t = committed.trim();
                 phase = "idle";
-                if (!t) { convLater.restart(); break; }
+                // Nada, o lo que Whisper «oye» en el ruido de fondo: cuenta como silencio, no se le pregunta nada al asistente
+                if (!t || noiseRe.test(t)) {
+                    if (++convMisses >= 3) convEnd(!convProactive); else convLater.restart();
+                    break;
+                }
                 if (byeRe.test(t)) { convEnd(true); break; }
                 convMisses = 0; convProactive = false;
                 // Un plan esperando (las herramientas del asistente): «sí» lo aplica, «no» lo descarta
@@ -217,7 +223,7 @@ Scope {
         command: root.args
         // «ia»: no escribir en la ventana (y dictationAiFix); en conversación, el turno acaba tras un silencio corto
         environment: root.kind !== "ia" ? ({}) : Object.assign({ HF_DICTATE_OUTPUT: "ninguna", HF_DICTATE_FOR: "ia" },
-            root.conv ? { HF_DICTATE_SILENCE: String(Settings.get("aiConvSilence", 1.2)), HF_DICTATE_WAIT: "30" } : {})
+            root.conv ? { HF_DICTATE_SILENCE: String(Settings.get("aiConvSilence", 1.2)), HF_DICTATE_WAIT: "20", HF_DICTATE_MAX: "40" } : {})
         stdinEnabled: true
         stdout: SplitParser { onRead: l => { try { root.onEvent(JSON.parse(l)); } catch (e) {} } }
         onExited: {

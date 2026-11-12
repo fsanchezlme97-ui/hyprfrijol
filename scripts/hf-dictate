@@ -992,6 +992,8 @@ class Session:
             self.maxsec = max(self.maxsec, 600.0)
         if kind == "comando":
             self.maxsec = 15.0
+        if os.environ.get("HF_DICTATE_MAX"):   # conversación: un turno no dura minutos (con ruido de fondo no llegaba el silencio)
+            self.maxsec = min(self.maxsec, max(10.0, float(os.environ["HF_DICTATE_MAX"])))
         self.vocab = (s.get("dictationPrompt") or "").strip()
         self.stop = threading.Event()
         self.cancel = threading.Event()

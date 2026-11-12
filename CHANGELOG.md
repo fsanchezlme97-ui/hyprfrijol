@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.48] — 2026-11-12
+
+### Corregido
+- Conversación por voz:
+  - «Sí, hazlo» no aprobaba el plan: la «í» no contaba como letra al buscar el «sí».
+  - Si el asistente proponía cambios sin texto, Helpert solo decía «¿Lo hago?»; ahora lee los pasos.
+  - Con ruido de fondo el turno no terminaba nunca: ahora dura 40 s como mucho.
+  - Lo que Whisper «oye» en el ruido («Mm-hmm», «Gracias.», «Subtítulos…») cuenta como silencio y no se le
+    pregunta al asistente.
+
 ## [0.9.47] — 2026-11-12
 
 ### Corregido
