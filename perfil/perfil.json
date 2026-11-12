@@ -114,7 +114,7 @@
   ]
  },
  "greeter": true,
- "hyprfrijol": "v0.9.61",
+ "hyprfrijol": "v0.9.62",
  "ollama": [
   "gemma4:e4b"
  ],
@@ -124,7 +124,7 @@
   "rustdesk": true,
   "rustdeskPortal": true
  },
- "saved": "2026-11-12 17:27",
+ "saved": "2026-11-12 18:53",
  "services": [
   "sshd",
   "ufw",
@@ -162,7 +162,6 @@
    "clima",
    "recursos",
    "pomodoro",
-   "cafeina",
    "ia",
    "red",
    "notificaciones",
@@ -172,6 +171,21 @@
    "bongo",
    "dictado"
   ],
+  "barOrder": {
+   "derecha": [
+    "clima",
+    "recursos",
+    "impresora",
+    "bongo",
+    "pomodoro",
+    "portapapeles",
+    "dictado",
+    "ia",
+    "ajustes",
+    "cafeina"
+   ],
+   "izquierda": []
+  },
   "barPos": "arriba",
   "barRoundExtra": 0,
   "barStatsShow": [

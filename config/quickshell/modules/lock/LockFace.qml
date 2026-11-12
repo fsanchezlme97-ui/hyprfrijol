@@ -19,6 +19,7 @@ Item {
     property var ctl
     property bool preview: false
     property string video: ""                       // vídeo de fondo (solo con lockBg = fondo)
+    property bool videoPaused: false
 
     readonly property var widgets: Settings.get("lockWidgets", ["fecha", "musica", "bateria", "nomolestar"])
     function has(k: string): bool { return Array.isArray(widgets) && widgets.includes(k); }
@@ -97,7 +98,7 @@ Item {
         anchors.fill: parent
         active: face.video !== "" && face.wallFile === "" && face.bg === "fondo" && wall.visible && !face.preview
         source: Qt.resolvedUrl("../../components/VideoLoop.qml")
-        onLoaded: item.source = Qt.binding(() => face.video)
+        onLoaded: { item.source = Qt.binding(() => face.video); item.paused = Qt.binding(() => face.videoPaused); }
     }
     // Velo suave para que el texto se lea sobre cualquier fondo, y el oscurecido que se elija
     Rectangle {

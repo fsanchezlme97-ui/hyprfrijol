@@ -87,6 +87,11 @@ Las vistas que solo hacen falta abiertas se crean al abrirlas y se destruyen un 
 - **Precarga**: `Shell.preload("<vista>")` lo crea en segundo plano (`LazyLoader.activeAsync`, sin bloquear). Lo usan
   el cursor sobre el botón de apps, el grupo de estado, los chips de la barra, la onda de música y el botón de la IA
   (`IconBtn { preload: "<vista>" }`).
+- **Sin recarga en caliente en la sesión real**: `shell.qml` solo vigila los archivos con `HF_NESTED=1` (dev/try.sh).
+  Cada recarga dejaba ~20 MB sin liberar y tras decenas el shell iba lento (1,2 GB, medio segundo en abrir un panel).
+  `hf-apply` llama a `hf-shell refresh`, que lo reinicia si algo de `config/quickshell` cambió desde que arrancó (con
+  la pantalla bloqueada o un panel abierto espera; el vigilante reintenta cada 2 min). Para ver un cambio en tu sesión:
+  `hf-apply`, o Ctrl + Super + R.
 - **Lo que no puede ir dentro**: IPC, atajos globales, vigilantes y avisos tienen que funcionar con la vista cerrada.
   Van en `Modules.qml` (IPC `spotlight`, `capture` y `color`, que crean el módulo con `lazyView.load()` si hace falta),
   en el módulo siempre cargado (`UpdatesCheck.qml`: comprobación en segundo plano; el temporizador de la

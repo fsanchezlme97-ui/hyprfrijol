@@ -123,12 +123,15 @@ PanelWindow {
     readonly property var shownClients: HyprClients.clients.filter(c => visibleWs.includes(c.workspace?.id))
     readonly property bool anyFullscreen: shownClients.some(c => ((c.fullscreen ?? 0) & 2) !== 0)
     readonly property bool anyMaximized: shownClients.some(c => ((c.fullscreen ?? 0) & 1) !== 0)
-    // Cubierto: en TODAS las pantallas (mpvpaper es uno para todas) las ventanas del espacio visible tapan al menos el
+    // Cubierto: en todas las pantallas con vídeo (mpvpaper es uno para todas) las ventanas del espacio visible tapan al menos el
     // 85 % de la zona útil, sean en mosaico o flotantes (el escritorio flotante también cuenta). Se mide con una rejilla
     // de 16×10 puntos: barato y no cuenta dos veces lo que se solapa. Antes bastaba una ventana en mosaico, y en el
     // modo flotante nunca se pausaba.
+    // Solo cuentan las pantallas donde se ve el vídeo: una con imagen fija propia (wallpaper.json «monitors», sin
+    // motionOn) no hace falta taparla, y antes, vacía, impedía la pausa para siempre.
     readonly property bool covered: {
-        const mons = HyprClients.monitors;
+        const own = wp.monitors ?? {}, mo = wp.motionOn ?? {};
+        const mons = HyprClients.monitors.filter(m => own[m.name] ? !!mo[m.name] : wp.video);
         if (!mons.length) return false;
         return mons.every(m => {
             const r = HyprClients.usableRect(m), ws = m.activeWorkspace?.id;
@@ -170,7 +173,8 @@ PanelWindow {
         // Solo los reproductores de esta sesión (hf-wallpaper guarda sus pids: el global y los propios de cada
         // pantalla): ni otras sesiones ni otros usuarios
         Quickshell.execDetached(["sh", "-c", 'for p in $(cat "$1"/motion*.pid 2>/dev/null); do kill "$2" "$p" 2>/dev/null; done',
-                                 "sh", Paths.state, paused ? "-STOP" : "-CONT"]);
+                                 "sh", Quickshell.env("XDG_RUNTIME_DIR") + "/hf-motion-" + Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE"),
+                                 paused ? "-STOP" : "-CONT"]);
     }
     // Un fondo nuevo arranca otro reproductor: volver a aplicar la pausa
     Timer { id: pauseRe; interval: 1500; onTriggered: if (win.paused) win.syncPause() }

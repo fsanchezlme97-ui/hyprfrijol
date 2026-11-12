@@ -22,7 +22,7 @@
 #                                 con wallpaperSource = "unsplash", next/random traen una foto nueva
 # Fondos animados: .mp4 .webm .mkv .mov .gif en bucle con mpvpaper (sin sonido, a wallpaperFps). El color sale del
 #   primer cuadro. Shell (Wallpaper.qml) los pausa según wallpaperPauseOn (batería, pantalla completa…) con
-#   SIGSTOP a los pids guardados en ~/.local/state/hyprfrijol/motion*.pid (solo los de esta sesión).
+#   SIGSTOP a los pids guardados en $XDG_RUNTIME_DIR/hf-motion-<sesión>/motion*.pid (solo los de esta sesión).
 #   Un reproductor por hueco: motion.pid/.watch el global (en las pantallas sin fondo propio) y
 #   motion-<pantalla>.pid/.watch el de una pantalla con vídeo propio (wallpaper.json: motions, motionOn).
 # Carpeta: $HF_WALL_DIR, o ~/Imágenes/Fondos, o ~/Imágenes/Wallpapers; si está vacía, los de assets/wallpapers.
@@ -35,6 +35,10 @@ set -euo pipefail
 for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
 STATE="$HOME/.local/state/hyprfrijol"
+# Pids de los reproductores, por sesión de Hyprland: una de prueba (dev/try.sh, mismo HOME) pisaba los de la tuya y la
+# pausa (Wallpaper.qml, wallpaperPauseOn) iba a un proceso que ya no existía: el vídeo no se paraba nunca
+MSTATE="${XDG_RUNTIME_DIR:-/tmp}/hf-motion-${HYPRLAND_INSTANCE_SIGNATURE:-sin-hyprland}"
+mkdir -p "$MSTATE"
 THUMBS="$HOME/.cache/hyprfrijol/thumbs"
 SCALED="$HOME/.cache/hyprfrijol/wallpapers-scaled"
 ASSETS="$ROOT/assets/wallpapers"
@@ -116,17 +120,17 @@ ours() { # ours <pid> <patrón de la línea de órdenes>
 stop_motion() {   # [MK=-DP-1] stop_motion [pid que se conserva …]  (el reproductor nuevo, al cambiar de vídeo a vídeo)
   local p w keep=" $* " mk="${MK:-}"
   # Primero el vigilante (si no, relanzaría el reproductor que se va a cerrar)
-  for p in ${OLD_WATCH-$(cat "$STATE/motion$mk.watch" 2>/dev/null)}; do
+  for p in ${OLD_WATCH-$(cat "$MSTATE/motion$mk.watch" 2>/dev/null)}; do
     [[ "$keep" == *" $p "* ]] || { ours "$p" 'hf-wallpaper _motion' && kill "$p" 2>/dev/null || true; }
   done
-  for p in ${OLD_PID-$(cat "$STATE/motion$mk.pid" 2>/dev/null)}; do
+  for p in ${OLD_PID-$(cat "$MSTATE/motion$mk.pid" 2>/dev/null)}; do
     [[ "$keep" == *" $p "* ]] || { ours "$p" '^(mpvpaper|linux-wallpaperengine)|/(mpvpaper|linux-wallpaperengine) ' && { kill "$p"; kill -CONT "$p"; } 2>/dev/null || true; }
   done
-  [ -n "${keep// /}" ] || rm -f "$STATE/motion$mk.watch" "$STATE/motion$mk.pid"
+  [ -n "${keep// /}" ] || rm -f "$MSTATE/motion$mk.watch" "$MSTATE/motion$mk.pid"
   [ -z "$mk" ] || return 0
   # Los lanzados por versiones anteriores (sin pid guardado): solo los de nuestra pantalla Wayland, y nunca los
   # vídeos propios de cada pantalla
-  keep+=" $(cat "$STATE"/motion-*.pid 2>/dev/null | tr '\n' ' ' || true) "
+  keep+=" $(cat "$MSTATE"/motion-*.pid 2>/dev/null | tr '\n' ' ' || true) "
   for p in $(pgrep -u "$(id -u)" -x mpvpaper 2>/dev/null; pgrep -u "$(id -u)" -f '^linux-wallpaperengine ' 2>/dev/null); do
     # Misma instancia de Hyprland (la firma es única; WAYLAND_DISPLAY se repite en sesiones anidadas/de prueba)
     [[ "$keep" == *" $p "* ]] && continue
@@ -260,7 +264,7 @@ targets() {
 wait_paint() {   # wait_paint <MK> <pid anterior> [socket]
   local new frames
   for _ in $(seq 80); do
-    new="$(cat "$STATE/motion$1.pid" 2>/dev/null || true)"; new="${new%% *}"
+    new="$(cat "$MSTATE/motion$1.pid" 2>/dev/null || true)"; new="${new%% *}"
     if [ -n "$new" ] && [ "$new" != "${2%% *}" ] \
        && hyprctl layers -j 2>/dev/null | jq -e --argjson p "$new" '[.[] | .levels[][] | select(.pid == $p)] | length > 0' >/dev/null 2>&1; then
       if [ -S "${3:-}" ]; then
@@ -279,14 +283,14 @@ print(int(json.loads(s.recv(4096).split(b"\n")[0]).get("data") or 0))' "$3" 2>/d
 # Vídeo en un hueco: lanza su vigilante (_motion), espera a que pinte y solo entonces cierra el anterior de ese hueco
 start_player() {   # start_player <MK> <vídeo> [pantalla]
   local mk="$1" old_w old_p sock play w
-  old_w="$(cat "$STATE/motion$mk.watch" 2>/dev/null || true)"; old_p="$(cat "$STATE/motion$mk.pid" 2>/dev/null || true)"
+  old_w="$(cat "$MSTATE/motion$mk.watch" 2>/dev/null || true)"; old_p="$(cat "$MSTATE/motion$mk.pid" 2>/dev/null || true)"
   sock="${XDG_RUNTIME_DIR:-/tmp}/hf-mpv-${HYPRLAND_INSTANCE_SIGNATURE:-x}$mk.sock"; rm -f "$sock"
   play="$(play_file "$2" "$FPS")"
   setsid "$0" _motion "$2" "$FPS" "$sock" "$play" "${3:-}" >/dev/null 2>&1 8>&- &
-  w=$!; echo "$w" > "$STATE/motion$mk.watch"
+  w=$!; echo "$w" > "$MSTATE/motion$mk.watch"
   [ -n "$mk" ] || [ -n "$(targets)" ] && wait_paint "$mk" "$old_p" "$sock"
   # shellcheck disable=SC2046  # los pids van separados a propósito
-  MK="$mk" OLD_WATCH="$old_w" OLD_PID="$old_p" stop_motion "$w" $(cat "$STATE/motion$mk.pid" 2>/dev/null || true)
+  MK="$mk" OLD_WATCH="$old_w" OLD_PID="$old_p" stop_motion "$w" $(cat "$MSTATE/motion$mk.pid" 2>/dev/null || true)
 }
 # Vídeos propios de cada pantalla (wallpaper.json: motions): pone en marcha los que no lo estén (al iniciar sesión)
 # o, sin movimiento, los para
@@ -295,10 +299,10 @@ own_players() {
   while IFS=$'\t' read -r o f; do
     [ -n "$o" ] || continue
     if [ "$NO_MOTION" = 1 ] || ! command -v mpvpaper >/dev/null; then
-      OLD_WATCH="$(cat "$STATE/motion-$o.watch" 2>/dev/null || true)" OLD_PID="$(cat "$STATE/motion-$o.pid" 2>/dev/null || true)" MK="-$o" stop_motion
+      OLD_WATCH="$(cat "$MSTATE/motion-$o.watch" 2>/dev/null || true)" OLD_PID="$(cat "$MSTATE/motion-$o.pid" 2>/dev/null || true)" MK="-$o" stop_motion
       write_json --arg o "$o" 'del(.motionOn[$o]) | .changed = now'; continue
     fi
-    w="$(cat "$STATE/motion-$o.watch" 2>/dev/null || true)"
+    w="$(cat "$MSTATE/motion-$o.watch" 2>/dev/null || true)"
     [ -n "$w" ] && ours "$w" 'hf-wallpaper _motion' && continue
     [ -f "$f" ] || continue
     start_player "-$o" "$f" "$o"
@@ -362,10 +366,10 @@ case "${1:-next}" in
                setsid mpvpaper -o "no-audio loop panscan=1.0 hwdec=auto-safe vf=fps=$FPS${s:+ input-ipc-server=$s}" "$o" "$PLAY" >/dev/null 2>&1 &
                PIDS+="$! "; s=""
              done
-             PIDS="${PIDS% }"; echo "$PIDS" > "$STATE/motion$MK.pid"; started=$SECONDS
+             PIDS="${PIDS% }"; echo "$PIDS" > "$MSTATE/motion$MK.pid"; started=$SECONDS
              gone=0
              while sleep 3; do
-               [ "$(cat "$STATE/motion$MK.pid" 2>/dev/null)" = "$PIDS" ] || exit 0   # lo cerró hf-wallpaper (otro fondo, sin movimiento)
+               [ "$(cat "$MSTATE/motion$MK.pid" 2>/dev/null)" = "$PIDS" ] || exit 0   # lo cerró hf-wallpaper (otro fondo, sin movimiento)
                for p in $PIDS; do kill -0 "$p" 2>/dev/null || { gone=1; break 2; }; done
                [ "$T" != '*' ] && [ "$(outs)" != "$SIG" ] && break   # cambiaron las pantallas: repartir de nuevo
              done
@@ -374,7 +378,7 @@ case "${1:-next}" in
              [ $((SECONDS - started)) -ge 30 ] && fails=0
              fails=$((fails + 1))
              if [ "$fails" -ge 5 ]; then
-               rm -f "$STATE/motion$MK.pid" "$STATE/motion$MK.watch"
+               rm -f "$MSTATE/motion$MK.pid" "$MSTATE/motion$MK.watch"
                if [ -n "$OUT" ]; then write_json --arg o "$OUT" 'del(.motionOn[$o]) | .changed = now'
                else write_json '.video = false | .changed = now'; fi
                echo "mpvpaper se cerró $fails veces seguidas: queda la imagen fija" >&2
@@ -437,7 +441,7 @@ fi
 # reproductor huérfano o el escritorio en la imagen fija. Lo que se lanza en segundo plano cierra el fd 8 (8>&-).
 exec 8>"${XDG_RUNTIME_DIR:-/tmp}/hf-wallpaper-$(id -u).lock"; flock -w 12 8 || true
 stop_scale "$FILE"
-OLD_WATCH="$(cat "$STATE/motion.watch" 2>/dev/null || true)"; OLD_PID="$(cat "$STATE/motion.pid" 2>/dev/null || true)"
+OLD_WATCH="$(cat "$MSTATE/motion.watch" 2>/dev/null || true)"; OLD_PID="$(cat "$MSTATE/motion.pid" 2>/dev/null || true)"
 IMG="$FILE"; VIDEO=false; MOTION=""
 if is_scene "$FILE"; then
   IMG="$(scene_preview "$FILE")"
@@ -480,7 +484,7 @@ else
     ARGS=(--silent --fps "$FPS")
     while read -r MON; do ARGS+=(--screen-root "$MON"); done < <(hyprctl monitors -j 2>/dev/null | jq -r '.[].name')
     setsid linux-wallpaperengine "${ARGS[@]}" --bg "$FILE" >/dev/null 2>&1 8>&- &
-    NEW=$!; echo "$NEW" > "$STATE/motion.pid"
+    NEW=$!; echo "$NEW" > "$MSTATE/motion.pid"
     wait_paint "" "$OLD_PID"
     # Fuera el anterior MIENTRAS el shell aún tapa con la imagen fija, y solo después se descubre el nuevo
     stop_motion "$NEW"

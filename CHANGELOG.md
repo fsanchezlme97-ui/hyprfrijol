@@ -3,6 +3,23 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.63] — 2026-11-12
+
+### Mejorado
+- El shell ya no se va volviendo lento: en tu sesión no se recarga en caliente al actualizar (cada recarga dejaba
+  ~20 MB sin liberar; tras muchas, 1,2 GB y medio segundo en abrir las notificaciones). Ahora `hf-apply` lo reinicia
+  limpio cuando cambia su código, pero no con la pantalla bloqueada ni con un panel abierto: espera a que lo cierres.
+  Medido: abrir las notificaciones pasa de ~500 ms a ~85 ms y la memoria de 1,2 GB a ~340 MB.
+- La pantalla de bloqueo deja quieto el fondo en vídeo tras 2 minutos sin tocar nada (vuelve al mover el ratón o
+  escribir). Con una gráfica `nouveau` en el equipo, el vídeo se decodifica por CPU: un 4K a 60 fps costaba ~1,4
+  núcleos por pantalla toda la noche, también con las pantallas apagadas.
+
+### Corregido
+- El fondo en movimiento no se paraba al taparlo con ventanas si había una segunda pantalla con imagen fija propia:
+  la regla «cubierto» pedía tapar también esa. Ahora solo cuentan las pantallas donde se ve el vídeo.
+- Una sesión de prueba (`dev/try.sh`) ya no deja tu fondo en vídeo sin pausa: los pids del reproductor van por sesión
+  (`$XDG_RUNTIME_DIR/hf-motion-<sesión>/`), y antes la de prueba sobrescribía los tuyos.
+
 ## [0.9.62] — 2026-11-12
 
 ### Nuevo

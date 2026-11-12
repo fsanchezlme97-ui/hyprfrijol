@@ -9,6 +9,8 @@ import ".."
 Item {
     id: vp
     property string source: ""
+    property bool paused: false          // quieto en el fotograma de ahora (la pantalla de bloqueo, tras 2 min sin tocarla)
+    onPausedChanged: paused ? player.pause() : player.play()
     readonly property bool ready: player.playing && player.position > 0
     opacity: ready ? 1 : 0
     Behavior on opacity { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
@@ -17,7 +19,7 @@ Item {
         source: vp.source ? "file://" + vp.source : ""
         loops: MediaPlayer.Infinite
         videoOutput: out
-        onSourceChanged: if (source.toString() !== "") play()
+        onSourceChanged: if (source.toString() !== "" && !vp.paused) play()
         onErrorOccurred: (error, msg) => console.warn("vista previa del fondo en vídeo:", msg)
     }
     VideoOutput {

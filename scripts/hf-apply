@@ -824,6 +824,10 @@ def main(argv):
     if theme_changed and real_home() and (ROOT / "scripts/hf-greeter-sync").exists():
         subprocess.Popen([str(ROOT / "scripts/hf-greeter-sync"), "--auto"], stdout=subprocess.DEVNULL,
                          stderr=subprocess.DEVNULL, start_new_session=True)
+    # Código del shell actualizado (git pull, hf-update): reinicio limpio en vez de recarga en caliente (hf-shell refresh)
+    if os.environ.get("HF_SESSION") and not os.environ.get("HF_NESTED"):
+        subprocess.Popen([str(ROOT / "scripts/hf-shell"), "refresh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
     if hypr_changed and os.environ.get("HF_SESSION"):
         subprocess.run(["hyprctl", "reload", "config-only"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     # kitty: solo con el HOME de verdad (con un HOME de prueba, p. ej. dev/try.sh, no tocar tus terminales)

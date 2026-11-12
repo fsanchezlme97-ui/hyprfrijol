@@ -8,6 +8,9 @@ import "bar"
 import "modules"
 
 ShellRoot {
+    // Recarga en caliente al cambiar un .qml solo en las sesiones anidadas (dev/try.sh): en la tuya cada recarga
+    // dejaba memoria atrás y tras muchas el shell iba lento; al actualizar, hf-apply lo reinicia (hf-shell refresh)
+    settings.watchFiles: Quickshell.env("HF_NESTED") === "1"
     // Fondo y barra en cada monitor
     Variants {
         model: Quickshell.screens

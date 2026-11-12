@@ -52,8 +52,16 @@ Scope {
     signal clearInput()
     function checkCaps(): void { capsProc.running = true; }
 
+    // El vídeo de fondo se queda quieto tras 2 min sin tocar nada: decodificarlo (por CPU con nouveau, 4K a 60 fps)
+    // costaba ~1,4 núcleos por pantalla toda la noche, también con las pantallas apagadas. Ratón o tecla: sigue.
+    property bool videoAwake: true
+    function wake(): void { videoAwake = true; videoNap.restart(); }
+    onPasswordChanged: wake()
+    Timer { id: videoNap; interval: 120000; running: sessionLock.locked && root.videoAwake; onTriggered: root.videoAwake = false }
+
     function lock(): void {
         if (sessionLock.locked) return;
+        videoAwake = true;
         password = ""; state = ""; message = ""; lockedAt = new Date();
         Shell.close();
         sessionLock.locked = true;
@@ -140,9 +148,21 @@ Scope {
                 anchors.fill: parent
                 ctl: root
                 video: root.wallVideo
+                videoPaused: !root.videoAwake
                 opacity: 0
                 Component.onCompleted: opacity = 1
                 Behavior on opacity { NumberAnimation { duration: Theme.still ? 0 : 320; easing.type: Easing.OutCubic } }
+            }
+            // Mover el ratón despierta el vídeo (pasivo: los botones del bloqueo siguen recibiendo el cursor)
+            // (Qt manda eventos de cursor sintéticos en cada fotograma del vídeo: solo cuenta si el cursor se movió)
+            HoverHandler {
+                property point last: Qt.point(-1, -1)
+                onPointChanged: {
+                    const q = point.position;
+                    if (Math.abs(q.x - last.x) + Math.abs(q.y - last.y) < 3) return;
+                    last = q;
+                    root.wake();
+                }
             }
         }
     }
