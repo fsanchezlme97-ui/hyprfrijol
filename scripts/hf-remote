@@ -319,6 +319,9 @@ rdp() {
         '{installed:$installed,running:$running,password:$password,listen:$listen,addr:$addr,port:$port,output:$output,user:$user,tailscale:$tailscale,firewall:$fw}';;
     run)   # lo que corre dentro de la unidad hf-rdp
       local addr out a=()
+      # Comprobado otra vez aquí: la unidad se reintenta sola y el archivo pudo borrarse o vaciarse entre medias
+      # (sin contraseña hypr-rdp deja entrar a cualquiera). Código 3: systemd no la reintenta (RestartPreventExitStatus)
+      [ -s "$RDPPW" ] || { echo "Sin contraseña de RDP ($RDPPW): no se arranca" >&2; exit 3; }
       addr="$(rdp_addr)"
       [ -n "$addr" ] || { echo "Tailscale no está conectado: sin dirección donde escuchar" >&2; exit 1; }
       out="$(rdp_output)"; [ -n "$out" ] && a+=(--output "$out")
@@ -328,7 +331,7 @@ rdp() {
       [ -s "$RDPPW" ] || { notify -u critical "RDP sin contraseña" "Ponla en Ajustes › Escritorio remoto: sin ella cualquiera podría entrar."; exit 1; }
       systemctl --user is-active -q hf-rdp && exit 0
       systemctl --user reset-failed hf-rdp 2>/dev/null
-      systemd-run --user --unit=hf-rdp --collect -q -p Restart=on-failure -p RestartSec=10 \
+      systemd-run --user --unit=hf-rdp --collect -q -p Restart=on-failure -p RestartSec=10 -p RestartPreventExitStatus=3 \
         -E WAYLAND_DISPLAY -E HYPRLAND_INSTANCE_SIGNATURE -E XDG_RUNTIME_DIR -E PATH \
         "$0" rdp run || { notify -u critical "No se pudo arrancar el escritorio remoto (RDP)" "journalctl --user -u hf-rdp"; exit 1; }
       sleep 1.5

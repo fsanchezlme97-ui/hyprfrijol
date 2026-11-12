@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.35] — 2026-11-12
+
+### Corregido
+- Escritorio remoto (RDP): el servicio vuelve a comprobar que hay contraseña justo antes de arrancar `hypr-rdp`
+  (se reintenta solo y el archivo pudo borrarse o vaciarse entre medias); sin ella se para y no se reintenta.
+
 ## [0.9.34] — 2026-11-12
 
 ### Añadido
