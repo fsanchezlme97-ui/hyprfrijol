@@ -24,6 +24,8 @@
                              | ruta | file://… | https://…  → {"images": [rutas], "error": …}
   hf-ai capture [imagen]     captura de pantalla (o la imagen dada) + OCR (tesseract) → texto para el contexto
   hf-ai status               proveedor y disponibilidad
+  hf-ai mcp list | check <id> | call <id> <herramienta> '<json>'   servidores MCP del usuario (aiMcpServers):
+                             la lista con sus herramientas, comprobar uno (lee y guarda sus herramientas) o probar una
   hf-ai chat --print-request '<json>'   no llama al modelo: imprime la petición que enviaría (sin la clave)
   hf-ai models [proveedor]   modelos que se pueden elegir (por defecto, los del proveedor que responde)
                              → {"models": [[id, nombre]…], "error": …}
@@ -284,7 +286,7 @@ def persona_doc(s=None):
 
 def system_prompt(s=None):
     s = s or settings()
-    return system_prompt_base(s) + persona_doc(s)
+    return system_prompt_base(s) + mcp_doc(s) + persona_doc(s)
 
 def system_prompt_base(s=None):
     s = s or settings()
@@ -317,6 +319,10 @@ def _app_name(a):
 def label(a):
     t = a.get("type")
     v = a.get("value")
+    if t == "mcp":
+        srv = mcp_server(str(a.get("server") or ""), enabled_only=False) or {}
+        tool = mcp_tool(str(a.get("server") or ""), str(a.get("tool") or "")) or {}
+        return f"{srv.get('name') or a.get('server')}: {tool.get('title') or a.get('tool')}"
     if t == "set":
         k = a.get("key")
         name, vals = SET_KEYS.get(k, (KEY_LABELS.get(k, k), None))
@@ -415,6 +421,8 @@ def preview(a, s=None):
     """Lo que cambia, en una línea, para la tarjeta de aprobación («abajo → arriba», carpeta de destino…)."""
     t = a.get("type")
     try:
+        if t == "mcp":                   # lo que se le manda al servidor, para que el usuario lo vea antes
+            return json.dumps(a.get("args") or {}, ensure_ascii=False)[:240]
         if t == "set":
             s = s or settings()
             return f"{_show(a['key'], s.get(a['key']))} → {_show(a['key'], a['value'])}"
@@ -483,7 +491,7 @@ def meta(a):
     t = a.get("type")
     irreversible = (t == "window" and a.get("op") == "close") or t in ("notifications", "url", "run") \
         or (t == "media" and a.get("value") == "stop") or (t == "device" and a.get("op") in ("eject", "eject-all")) \
-        or (t == "download_ctl" and a.get("op") == "cancel") or t in ("youtube", "browser")
+        or (t == "download_ctl" and a.get("op") == "cancel") or t in ("youtube", "browser", "mcp")
     # abrir webs, reproducir música y las teclas del navegador no piden confirmación (salvo cerrar la pestaña)
     quiet = t in ("url", "youtube") or (t == "browser" and a.get("op") != "close-tab")
     return {"label": label(a), "undo": not irreversible, "confirm": irreversible and not quiet,
@@ -627,6 +635,13 @@ def validate(actions):
             elif t == "youtube" and isinstance(a.get("query"), str) and a["query"].strip():
                 a["query"] = a["query"].strip()[:200]
                 a["service"] = a.get("service") if a.get("service") in ("youtube", "music", "spotify") else "youtube"
+                ok.append(a)
+            elif t == "mcp":
+                tool = mcp_tool(str(a.get("server") or ""), str(a.get("tool") or ""))
+                args = a.get("args") if isinstance(a.get("args"), dict) else {}
+                if not tool or tool["readOnly"] or len(json.dumps(args)) > 6000:
+                    continue
+                a = {"type": "mcp", "server": a["server"], "tool": a["tool"], "args": args}
                 ok.append(a)
             elif t == "browser" and a.get("op") in BROWSER_OPS:
                 a["value"] = str(a.get("value") or "")[:300]
@@ -853,6 +868,14 @@ def set_settings(changes):
 def exec_action(a):
     """Ejecuta una acción (ya validada) y devuelve cómo deshacerla (o None)."""
     t, v = a["type"], a.get("value")
+    if t == "mcp":
+        try:
+            r = mcp_call(a["server"], a["tool"], a.get("args") or {})
+        except McpError as e:
+            return {"kind": "error", "msg": f"{label(a)}: {e}"}
+        if r.get("isError"):
+            return {"kind": "error", "msg": f"{label(a)}: {mcp_result_text(r, 300)}"}
+        return None
     if t == "wallpaper":
         subprocess.Popen([str(ROOT / "scripts/hf-wallpaper"), v], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     elif t == "workspace":
@@ -1144,7 +1167,8 @@ QUERY_LABELS = {"windows": "Miró las ventanas abiertas", "active_window": "Ley�
                 "apps": "Buscó apps instaladas", "settings": "Consultó los ajustes", "system": "Miró el estado del sistema",
                 "timers": "Miró los temporizadores", "devices": "Miró las unidades conectadas",
                 "downloads": "Miró la cola de descargas", "wallhaven": "Buscó fondos en Wallhaven",
-                "doctor": "Hizo un diagnóstico del sistema", "deps": "Miró qué dependencias faltan"}
+                "doctor": "Hizo un diagnóstico del sistema", "deps": "Miró qué dependencias faltan",
+                "mcp": "Usó un servidor MCP"}
 WINDOW_CAP = HOME / ".cache/hyprfrijol/ai-window.png"
 WINDOW_INFO = HOME / ".cache/hyprfrijol/ai-window.json"
 
@@ -1173,6 +1197,8 @@ def run_query(q, ctx=None, s=None):
     t = q.get("type") if isinstance(q, dict) else str(q)
     if t not in QUERY_LABELS:
         return f"Consulta desconocida: {t}", "Consulta no disponible"
+    if t == "mcp":                       # servidor MCP aprobado: no es el escritorio, no depende de aiReadDesktop
+        return mcp_query(q, s)
     lab = QUERY_LABELS[t]
     no = query_allowed(t, s, ctx)
     if no:
@@ -1275,6 +1301,253 @@ def run_query(q, ctx=None, s=None):
         now = time.time()
         return lab, json.dumps([{"id": x["id"], "label": x["label"], "left_s": int(x["end"] - now)} for x in timers_list()], ensure_ascii=False)
     return lab, ""
+
+# ---------------------------------------------------------------- servidores MCP del usuario
+# Ajustes › Asistente de IA › Integraciones (aiMcpServers): [{"id", "name", "command": "npx -y …" | "url": "https://…",
+# "authEnv": "VARIABLE", "enabled": bool}]. «enabled» es la aprobación del usuario, servidor a servidor. Las herramientas
+# de cada uno se guardan en MCP_CACHE al comprobarlo (`hf-ai mcp check <id>`): el chat solo lee esa caché y no arranca
+# ningún servidor para preparar la petición. Las de solo lectura (readOnlyHint) son consultas {"type":"mcp", …}; las
+# demás, acciones {"type":"mcp", …} que piden confirmación siempre y no se deshacen. Nada de esto en el modo «solo en
+# este equipo». Las claves nunca van en settings.json: authEnv es el nombre de una variable de entorno (token Bearer
+# para los servidores por URL); los servidores por comando heredan el entorno.
+MCP_CACHE = HOME / ".cache/hyprfrijol/mcp-tools.json"
+MCP_PROTOCOL = "2025-06-18"
+MCP_TIMEOUT = 30
+
+class McpError(Exception):
+    pass
+
+def mcp_servers(s=None, enabled_only=True):
+    s = s or settings()
+    if local_only(s):
+        return []
+    out = []
+    for x in s.get("aiMcpServers") or []:
+        if isinstance(x, dict) and re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,39}", str(x.get("id") or "")) \
+                and (x.get("command") or x.get("url")) and (x.get("enabled") is True or not enabled_only):
+            out.append(x)
+    return out
+
+def mcp_server(sid, s=None, enabled_only=True):
+    return next((x for x in mcp_servers(s, enabled_only) if x["id"] == sid), None)
+
+class McpClient:
+    """Cliente MCP mínimo: stdio (un JSON por línea) o HTTP «streamable» (POST con respuesta JSON o SSE)."""
+    def __init__(self, srv, timeout=MCP_TIMEOUT):
+        self.srv, self.timeout, self.n, self.proc, self.session = srv, timeout, 0, None, ""
+
+    def __enter__(self):
+        if self.srv.get("command"):
+            import shlex
+            try:
+                argv = shlex.split(str(self.srv["command"]))
+                self.proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                             text=True, bufsize=1, cwd=str(HOME))
+            except (OSError, ValueError) as e:
+                raise McpError(f"No pude arrancar el servidor: {e}")
+        self.request("initialize", {"protocolVersion": MCP_PROTOCOL, "capabilities": {},
+                                    "clientInfo": {"name": "hyprfrijol", "version": "1"}})
+        self.notify("notifications/initialized")
+        return self
+
+    def __exit__(self, *a):
+        if self.proc:
+            try:
+                self.proc.stdin.close()
+                self.proc.wait(timeout=2)
+            except Exception:
+                self.proc.kill()
+
+    def _send(self, msg):
+        if self.proc:
+            try:
+                self.proc.stdin.write(json.dumps(msg) + "\n"); self.proc.stdin.flush()
+            except (BrokenPipeError, OSError):
+                raise McpError("El servidor se cerró")
+            return None
+        hdr = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream",
+               "MCP-Protocol-Version": MCP_PROTOCOL}
+        if self.session:
+            hdr["Mcp-Session-Id"] = self.session
+        tok = os.environ.get(str(self.srv.get("authEnv") or ""), "") if self.srv.get("authEnv") else ""
+        if tok:
+            hdr["Authorization"] = f"Bearer {tok}"
+        req = urllib.request.Request(str(self.srv["url"]), data=json.dumps(msg).encode(), headers=hdr, method="POST")
+        try:
+            resp = urllib.request.urlopen(req, timeout=self.timeout)
+        except urllib.error.HTTPError as e:
+            raise McpError(f"El servidor respondió con un error {e.code}" + (" (¿falta la clave?)" if e.code in (401, 403) else ""))
+        except (urllib.error.URLError, OSError) as e:
+            raise McpError(f"No puedo conectar con el servidor: {getattr(e, 'reason', e)}")
+        self.session = resp.headers.get("Mcp-Session-Id") or self.session
+        return resp
+
+    def notify(self, method, params=None):
+        r = self._send({"jsonrpc": "2.0", "method": method, **({"params": params} if params else {})})
+        if r:
+            r.close()
+
+    def request(self, method, params=None):
+        self.n += 1
+        mid = self.n
+        r = self._send({"jsonrpc": "2.0", "id": mid, "method": method, "params": params or {}})
+        msgs = self._read_stdio(mid) if self.proc else self._read_http(r)
+        for m in msgs:
+            if m.get("id") == mid and ("result" in m or "error" in m):
+                if "error" in m:
+                    raise McpError(str((m["error"] or {}).get("message") or m["error"])[:300])
+                return m["result"] or {}
+        raise McpError("El servidor no respondió")
+
+    def _read_stdio(self, mid):
+        import select
+        end = time.monotonic() + self.timeout
+        while time.monotonic() < end:
+            ready, _, _ = select.select([self.proc.stdout], [], [], max(0.05, end - time.monotonic()))
+            if not ready:
+                break
+            line = self.proc.stdout.readline()
+            if not line:
+                raise McpError("El servidor se cerró sin responder")
+            try:
+                m = json.loads(line)
+            except ValueError:
+                continue                      # registro del servidor por stdout: se ignora
+            if m.get("id") == mid and ("result" in m or "error" in m):
+                return [m]
+            if "method" in m and "id" in m:   # petición del servidor (ping, roots…): no la soportamos
+                self._send({"jsonrpc": "2.0", "id": m["id"],
+                            **({"result": {}} if m["method"] == "ping" else {"error": {"code": -32601, "message": "no soportado"}})})
+        raise McpError("El servidor tardó demasiado en responder")
+
+    def _read_http(self, resp):
+        with resp:
+            if "text/event-stream" in (resp.headers.get("Content-Type") or ""):
+                out, data = [], []
+                for raw in resp:
+                    line = raw.decode("utf-8", "replace").rstrip("\r\n")
+                    if line.startswith("data:"):
+                        data.append(line[5:].strip())
+                    elif not line and data:
+                        try:
+                            out.append(json.loads("\n".join(data)))
+                        except ValueError:
+                            pass
+                        data = []
+                        if any("result" in m or "error" in m for m in out):
+                            break
+                return out
+            body = resp.read()
+        try:
+            j = json.loads(body or b"{}")
+        except ValueError:
+            raise McpError("Respuesta no válida del servidor")
+        return j if isinstance(j, list) else [j]
+
+    def tools(self):
+        out, cursor = [], None
+        for _ in range(10):
+            r = self.request("tools/list", {"cursor": cursor} if cursor else {})
+            out += r.get("tools") or []
+            cursor = r.get("nextCursor")
+            if not cursor:
+                break
+        return out
+
+    def call(self, name, args):
+        return self.request("tools/call", {"name": name, "arguments": args or {}})
+
+def mcp_result_text(r, limit=8000):
+    parts = []
+    for c in (r or {}).get("content") or []:
+        if c.get("type") == "text":
+            parts.append(str(c.get("text") or ""))
+        elif c.get("type") == "resource":
+            parts.append(str((c.get("resource") or {}).get("text") or (c.get("resource") or {}).get("uri") or ""))
+        elif c.get("type") in ("image", "audio"):
+            parts.append(f"[{c['type']} {c.get('mimeType', '')}]")
+    if not parts and r.get("structuredContent") is not None:
+        parts.append(json.dumps(r["structuredContent"], ensure_ascii=False))
+    t = "\n".join(p for p in parts if p).strip() or "(sin contenido)"
+    return ("Error: " if r.get("isError") else "") + t[:limit]
+
+def mcp_cache():
+    return load(MCP_CACHE, {}) or {}
+
+def mcp_check(sid):
+    """Conecta con el servidor, lee sus herramientas y las guarda en la caché (lo hace Ajustes al comprobarlo)."""
+    srv = mcp_server(sid, enabled_only=False)
+    if not srv:
+        return {"ok": False, "error": "No hay ningún servidor con ese id (o el modo «solo en este equipo» está activo)"}
+    cache = mcp_cache()
+    try:
+        with McpClient(srv) as c:
+            tools = c.tools()
+    except McpError as e:
+        cache[sid] = {"tools": (cache.get(sid) or {}).get("tools", []), "checked": int(time.time()), "error": str(e)}
+        MCP_CACHE.parent.mkdir(parents=True, exist_ok=True); MCP_CACHE.write_text(json.dumps(cache, ensure_ascii=False))
+        return {"ok": False, "error": str(e)}
+    out = []
+    for t in tools:
+        if not isinstance(t, dict) or not re.fullmatch(r"[A-Za-z0-9_.\-/]{1,80}", str(t.get("name") or "")):
+            continue
+        ann = t.get("annotations") or {}
+        out.append({"name": t["name"], "title": str(t.get("title") or ann.get("title") or "")[:80],
+                    "description": re.sub(r"\s+", " ", str(t.get("description") or ""))[:300],
+                    "readOnly": ann.get("readOnlyHint") is True, "destructive": ann.get("destructiveHint") is not False,
+                    "schema": t.get("inputSchema") or {}})
+    cache[sid] = {"tools": out, "checked": int(time.time()), "error": None}
+    MCP_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    MCP_CACHE.write_text(json.dumps(cache, ensure_ascii=False))
+    return {"ok": True, "tools": [{k: t[k] for k in ("name", "title", "description", "readOnly")} for t in out]}
+
+def mcp_tool(sid, name, s=None):
+    if not mcp_server(sid, s):
+        return None
+    return next((t for t in (mcp_cache().get(sid) or {}).get("tools") or [] if t["name"] == name), None)
+
+def mcp_call(sid, name, args, s=None):
+    srv = mcp_server(sid, s)
+    if not srv:
+        raise McpError("Ese servidor no está aprobado en Ajustes › Asistente de IA › Integraciones")
+    with McpClient(srv) as c:
+        return c.call(name, args)
+
+def mcp_doc(s=None):
+    """Lo que el modelo sabe de los servidores aprobados (de la caché): nombre, herramientas y argumentos."""
+    s = s or settings()
+    cache, lines, shell = mcp_cache(), [], allowed(s)[0]
+    for srv in mcp_servers(s):
+        for t in (cache.get(srv["id"]) or {}).get("tools") or []:
+            if not t["readOnly"] and not shell:
+                continue
+            props = (t.get("schema") or {}).get("properties") or {}
+            req = set((t.get("schema") or {}).get("required") or [])
+            args = ", ".join(f"{k}{'' if k in req else '?'}: {(v or {}).get('type', 'valor')}" for k, v in list(props.items())[:8])
+            lines.append(f"- {srv['id']} · {t['name']}({args}) — {t['description'][:160]}"
+                         + (" [solo lectura]" if t["readOnly"] else " [cambia cosas]"))
+    if not lines:
+        return ""
+    doc = "\n".join(lines)[:4000]
+    return ("\n\nServidores MCP que el usuario ha conectado (herramientas externas):\n" + doc + "\n"
+            "Las de solo lectura se usan como consulta: ```hf-query\n[{\"type\":\"mcp\",\"server\":\"<id>\",\"tool\":\"<nombre>\","
+            "\"args\":{…}}]\n```. Las que cambian cosas, como acción en hf-actions con el mismo formato "
+            "({\"type\":\"mcp\",…}); el usuario siempre las confirma. Úsalas solo si hacen falta para lo que pide.")
+
+def mcp_query(q, s):
+    sid, name = str(q.get("server") or ""), str(q.get("tool") or "")
+    srv = mcp_server(sid, s)
+    lab = f"Consultó {srv.get('name') or sid}: {name}" if srv else "Consulta MCP"
+    t = mcp_tool(sid, name, s)
+    if not t:
+        return lab, "Esa herramienta no existe o el servidor no está aprobado."
+    if not t["readOnly"]:
+        return lab, "Esa herramienta cambia cosas: propónla como acción (hf-actions) para que el usuario la confirme."
+    args = q.get("args") if isinstance(q.get("args"), dict) else {}
+    try:
+        return lab, mcp_result_text(mcp_call(sid, name, args, s))
+    except McpError as e:
+        return lab, f"El servidor falló: {e}"
 
 def do_summon():
     """Atajo «Asistente con la ventana actual»: guarda la ventana activa (y su captura) y abre el panel."""
@@ -3155,6 +3428,24 @@ def main(argv):
         out = {"text": capture_text(arg or None)}
     elif cmd == "status":
         out = status()
+    elif cmd == "mcp":
+        # hf-ai mcp list | check <id> | call <id> <herramienta> '<json>'
+        if arg == "check" and len(rest) > 1:
+            out = mcp_check(rest[1])
+        elif arg == "call" and len(rest) > 2:
+            try:
+                r = mcp_call(rest[1], rest[2], json.loads(rest[3]) if len(rest) > 3 else {})
+                out = {"ok": not r.get("isError"), "text": mcp_result_text(r)}
+            except (McpError, ValueError) as e:
+                out = {"ok": False, "error": str(e)}
+        else:
+            s = settings()
+            cache = mcp_cache()
+            out = {"localOnly": local_only(s), "servers": [
+                {**{k: x.get(k) for k in ("id", "name", "command", "url", "authEnv", "enabled")},
+                 "tools": [{k: t[k] for k in ("name", "title", "description", "readOnly")} for t in (cache.get(x["id"]) or {}).get("tools") or []],
+                 "checked": (cache.get(x["id"]) or {}).get("checked"), "error": (cache.get(x["id"]) or {}).get("error")}
+                for x in mcp_servers(dict(s, aiLocalOnly=False), enabled_only=False)]}
     elif cmd == "models":
         prov = arg or provider_for(settings())[0]      # el que responde de verdad (en modo local, Ollama)
         out = models_for(prov)

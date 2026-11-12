@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.17] — 2026-11-11
+
+### Añadido
+- **Servidores MCP para el asistente** (Ajustes › Asistente de IA › Integraciones): conecta herramientas de fuera (calendario, GitHub, notas…) con un comando o una dirección. Cada servidor se aprueba con su interruptor después de ver qué herramientas trae; las de solo lectura las usa cuando le hacen falta y las que cambian algo te piden confirmación cada vez, con lo que va a enviar a la vista. Las claves se leen de una variable de entorno y nunca se guardan en los ajustes. Con «Solo en este equipo» no se usa ninguno.
+- La misma pestaña explica cómo **usar HyprFrijol desde Claude** (el comando para añadir su servidor MCP, con botón de copiar) y qué herramientas expone.
+- El Inicio del asistente dice cuántos servidores MCP tienes aprobados.
+- `hf-ai mcp list | check | call` para manejarlos desde la terminal.
+
 ## [0.9.16] — 2026-11-11
 
 ### Cambiado

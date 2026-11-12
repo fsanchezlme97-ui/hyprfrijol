@@ -147,6 +147,10 @@ ColumnLayout {
                 }
             }
             LinkRow {
+                label: "Servidores MCP"; section: "iaintegraciones"; sectionLabel: "Integraciones"; target: "Servidores MCP para el asistente"
+                value: { const l = (Settings.get("aiMcpServers", []) ?? []).filter(x => x.enabled === true).length; return l === 0 ? "Ninguno" : l === 1 ? "1 aprobado" : l + " aprobados"; }
+            }
+            LinkRow {
                 label: "Recetas"; section: "iarecetas"; sectionLabel: "Recetas"; target: "Recetas"
                 value: root.recipeCount < 0 ? "" : root.recipeCount === 1 ? "1 receta" : root.recipeCount + " recetas"
             }

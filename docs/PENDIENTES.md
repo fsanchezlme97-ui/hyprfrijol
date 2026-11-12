@@ -24,8 +24,8 @@ entre la 0.9.0 y la 0.9.12 está en el CHANGELOG. Queda, en este orden:
 5. [ ] [Productividad](planes/productividad.md), fase 5: revisión con uso real (la hace el autor usando el
        escritorio; lo que se mide está en la sección 4 del plan). Los relojes del mundo siguen en Fecha, con un
        enlace desde Agenda y alarmas.
-6. [ ] [Asistente de IA](planes/asistente-ia.md), fase 7: servidores MCP del usuario, con aprobación por servidor.
-       Aplazada por decisión del plan («después de esta versión»); sin empezar.
+6. [x] [Asistente de IA](planes/asistente-ia.md), fase 7: servidores MCP del usuario, con aprobación por servidor
+       y confirmación de todo lo que cambia (0.9.17). Por comando (stdio) o por dirección (HTTP).
 
 Cerrado: [Animaciones y efectos](planes/animaciones.md). Las fases 1–5 están hechas y la 6 (ajustes por zona,
 reducción automática) se descartó en las decisiones del plan.
