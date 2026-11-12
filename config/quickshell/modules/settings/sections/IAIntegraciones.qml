@@ -275,4 +275,69 @@ ColumnLayout {
             }
         }
     }
+
+    // ---------- «Seguir en…» del panel (aiHandoff · aiHandoffCmd · aiHandoffLabel; hf-ai handoff-targets) ----------
+    property var hoTargets: []
+    property var hoCurrent: null
+    readonly property string hoMode: Settings.get("aiHandoff", "auto")
+    readonly property string hoKey: hoMode + "|" + Settings.get("aiHandoffCmd", "") + "|" + Settings.get("aiHandoffLabel", "")
+    onHoKeyChanged: { hoProc.running = false; hoProc.running = true; }
+    Process {
+        id: hoProc
+        running: true
+        command: [Paths.script("hf-ai"), "handoff-targets"]
+        stdout: StdioCollector {
+            onStreamFinished: { try { const j = JSON.parse(text); root.hoTargets = j.targets; root.hoCurrent = j.current; } catch (e) {} }
+        }
+    }
+    Section {
+        Layout.fillWidth: true
+        title: "Seguir la conversación en…"
+        headerRight: Mono { text: root.hoCurrent ? "botón «Seguir en " + root.hoCurrent.label + "»" : "sin botón" }
+        Txt {
+            Layout.fillWidth: true
+            text: "El botón del panel lleva la conversación y el contexto que elegiste a otra herramienta de IA. Las de terminal "
+                + "(Claude Code, Codex, Gemini CLI…) la reciben como mensaje; las de ventana (T3 Code, Claude Desktop, Cursor, Zed) "
+                + "se abren con la conversación en el portapapeles. Para cualquier otra, escribe su orden."
+            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+        }
+        LabeledRow {
+            label: "Herramienta"; labelWidth: 120
+            Dropdown {
+                model: [["auto", "Automática"], ["off", "Ninguna (sin botón)"]]
+                    .concat(root.hoTargets.map(t => [t.id, t.label]))
+                    .concat([["custom", "Otra (escribe su orden)"]])
+                current: root.hoMode
+                onPicked: k => Settings.set("aiHandoff", k)
+            }
+        }
+        Txt {
+            visible: root.hoMode === "auto"
+            Layout.fillWidth: true
+            text: (root.hoCurrent ? "Ahora: " + root.hoCurrent.label + ". " : "No hay ninguna instalada. ")
+                + "Automática usa la de tu proveedor si la tienes; si no, la primera instalada."
+            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+        }
+        LabeledRow {
+            visible: root.hoMode === "custom"
+            label: "Orden"; labelWidth: 120
+            hint: "{prompt} = el texto · {file} = un .md"
+            Field {
+                Layout.fillWidth: true
+                placeholder: "kitty -e mi-agente --prompt {prompt}"
+                text: Settings.get("aiHandoffCmd", "")
+                onAccepted: Settings.set("aiHandoffCmd", text.trim())
+            }
+        }
+        LabeledRow {
+            visible: root.hoMode === "custom"
+            label: "Nombre"; labelWidth: 120
+            Field {
+                Layout.fillWidth: true
+                placeholder: "Mi agente"
+                text: Settings.get("aiHandoffLabel", "")
+                onAccepted: Settings.set("aiHandoffLabel", text.trim())
+            }
+        }
+    }
 }

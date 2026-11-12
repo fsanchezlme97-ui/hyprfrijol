@@ -62,7 +62,7 @@ Imágenes: con visión (claude-code por stream-json, Gemini inline_data, OpenAI 
   "vision") se mandan reducidas a 1568 px (ImageMagick); si no, su texto por OCR. aiVision true/false lo fuerza.
 Pruebas sin gastar: aiProvider "mock" responde con la lista JSON de $HF_AI_MOCK o ~/.cache/hyprfrijol/ai-mock.json.
 """
-import json, os, re, subprocess, sys, time, pathlib, shutil, urllib.request, urllib.error, urllib.parse
+import json, os, re, shlex, subprocess, sys, time, pathlib, shutil, urllib.request, urllib.error, urllib.parse
 for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
     if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
@@ -1732,6 +1732,14 @@ def redact(text, s=None):
             return "[tarjeta oculta]"
         return m.group(0)
     return CARD_RE.sub(card, text), n
+
+def _selftest_handoff():
+    found = handoff_targets()
+    assert handoff_target({"aiHandoff": "off"}) is None
+    assert handoff_target({"aiHandoff": "custom", "aiHandoffCmd": ""}) is None
+    assert handoff_target({"aiHandoff": "custom", "aiHandoffCmd": "x {prompt}", "aiHandoffLabel": "X"})["label"] == "X"
+    assert handoff_target({"aiHandoff": "no-existe"}) is None
+    assert (handoff_target({"aiHandoff": "auto"}) or {}).get("id") == (found[0]["id"] if found else None) or found
 
 def _selftest_redact():
     s = {"aiRedactSecrets": True}
@@ -3465,6 +3473,47 @@ def tool_call(name, args):
 
 PROVIDERS["mock"] = call_mock
 
+# «Seguir en…» del panel: lleva la conversación (y el contexto elegido) a otra herramienta de IA. Ajuste aiHandoff:
+#   "auto" (por defecto: la del proveedor si está instalada; si no, la primera que haya) · "off" · el id de una de
+#   HANDOFF_TARGETS · "custom" = aiHandoffCmd, una orden cualquiera con {prompt} (el texto) o {file} (un .md con él),
+#   p. ej. «kitty -e mi-agente --prompt {prompt}»; sin marcador se abre tal cual con el texto en el portapapeles.
+# cli = se abre en la terminal con el texto como argumento · app = se abre la app y el texto queda en el portapapeles.
+HANDOFF_TARGETS = [
+    {"id": "t3code", "label": "T3 Code", "bin": ["t3code"], "kind": "app"},
+    {"id": "claude-desktop", "label": "Claude Desktop", "bin": ["claude-desktop", "claude-desktop-bin"], "kind": "app"},
+    {"id": "claude-code", "label": "Claude Code", "bin": ["claude"], "kind": "cli", "args": ["{prompt}"]},
+    {"id": "codex", "label": "Codex", "bin": ["codex"], "kind": "cli", "args": ["{prompt}"]},
+    {"id": "gemini-cli", "label": "Gemini CLI", "bin": ["gemini"], "kind": "cli", "args": ["-i", "{prompt}"]},
+    {"id": "qwen-code", "label": "Qwen Code", "bin": ["qwen"], "kind": "cli", "args": ["-i", "{prompt}"]},
+    {"id": "opencode", "label": "opencode", "bin": ["opencode"], "kind": "cli", "args": ["--prompt", "{prompt}"]},
+    {"id": "cursor", "label": "Cursor", "bin": ["cursor"], "kind": "app"},
+    {"id": "zed", "label": "Zed", "bin": ["zed", "zeditor"], "kind": "app"},
+]
+PROVIDER_HARNESS = {"claude-code": "claude-code", "gemini": "gemini-cli", "openai": "codex"}
+
+def handoff_targets():
+    out = []
+    for t in HANDOFF_TARGETS:
+        b = next((shutil.which(x) for x in t["bin"] if shutil.which(x)), None)
+        if b:
+            out.append(dict(t, path=b))
+    return out
+
+def handoff_target(s=None):
+    """El destino elegido (dict con id, label, kind…) o None si está apagado o no hay ninguno."""
+    s = s or settings()
+    want = s.get("aiHandoff") or "auto"
+    if want == "off":
+        return None
+    if want == "custom":
+        cmd = (s.get("aiHandoffCmd") or "").strip()
+        return {"id": "custom", "label": (s.get("aiHandoffLabel") or "").strip() or "mi herramienta", "kind": "custom", "cmd": cmd} if cmd else None
+    found = handoff_targets()
+    if want != "auto":
+        return next((t for t in found if t["id"] == want), None)
+    pref = PROVIDER_HARNESS.get(s.get("aiProvider") or "")
+    return next((t for t in found if t["id"] == pref), None) or (found[0] if found else None)
+
 def do_handoff(req):
     msgs = req.get("messages") or []
     md = "Conversación desde el panel de hyprfrijol:\n\n" + transcript(msgs)
@@ -3472,15 +3521,34 @@ def do_handoff(req):
     if ctx:
         md += "\n\n---\n" + ctx
     subprocess.run(["wl-copy"], input=md, text=True)
-    desktop = shutil.which("claude-desktop") or shutil.which("claude-desktop-bin")
-    if desktop:
-        subprocess.Popen([desktop], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-        return {"target": "desktop", "text": "Abierta en Claude Desktop", "sub": "La conversación está en el portapapeles: pégala con Ctrl+V"}
-    if shutil.which("claude"):
-        term = settings().get("terminal") or "kitty"
-        subprocess.Popen([term, "-e", "claude", md], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-        return {"target": "code", "text": "Abierta en Claude Code", "sub": "Se envió la conversación y el contexto que elegiste"}
-    return {"target": "clipboard", "text": "Copiada al portapapeles", "sub": "No encontré Claude Desktop ni Claude Code"}
+    # la conversación es privada: en la carpeta del usuario en /run (XDG_RUNTIME_DIR), solo legible por él
+    f = pathlib.Path(os.environ.get("XDG_RUNTIME_DIR") or HOME / ".cache/hyprfrijol") / "hf-handoff.md"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(f, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as fh:
+        fh.write(md)
+    t = handoff_target()
+    if not t:
+        return {"target": "clipboard", "text": "Copiada al portapapeles", "sub": "No hay ninguna herramienta para seguir la conversación"}
+    # un argumento no puede pasar de 128 KB: con más, se le pasa el archivo
+    prompt = md if len(md.encode()) < 120000 else f"Lee {f} (la conversación y su contexto) y sigue desde ahí."
+    fill = lambda a: a.replace("{prompt}", prompt).replace("{file}", str(f))
+    run = lambda argv: subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    try:
+        if t["kind"] == "cli":
+            term = settings().get("terminal") or "kitty"
+            run([term, "-e", t["path"]] + [fill(a) for a in t["args"]])
+            return {"target": t["id"], "text": "Abierta en " + t["label"], "sub": "Se envió la conversación y el contexto que elegiste"}
+        if t["kind"] == "custom":
+            argv = shlex.split(t["cmd"])
+            sent = any("{prompt}" in a or "{file}" in a for a in argv)
+            run([fill(a) for a in argv])
+            return {"target": "custom", "text": "Abierta en " + t["label"],
+                    "sub": "Se envió la conversación" if sent else "La conversación está en el portapapeles: pégala con Ctrl+V"}
+        run([t["path"]])
+        return {"target": t["id"], "text": "Abierta en " + t["label"], "sub": "La conversación está en el portapapeles: pégala con Ctrl+V"}
+    except (OSError, ValueError) as e:
+        return {"target": "clipboard", "text": "Copiada al portapapeles", "sub": f"No se pudo abrir {t['label']} ({e.__class__.__name__})"}
 
 def status():
     s = settings()
@@ -3540,6 +3608,7 @@ def main(argv):
                         "labels": [label(a) for a in rec.get("actions") or []]})
     elif cmd == "selftest":
         _selftest_redact()
+        _selftest_handoff()
         out = {"ok": True}
     elif cmd == "undo":
         out = do_undo(arg)
@@ -3578,6 +3647,11 @@ def main(argv):
             raise SystemExit("uso: hf-ai timer start <min> [etiqueta] | hf-ai timer cancel <id|all>")
     elif cmd == "handoff":
         out = do_handoff(json.loads(arg or "{}"))
+    elif cmd == "handoff-targets":
+        # lo instalado y el destino elegido (el panel pone «Seguir en <label> ↗» si hay uno)
+        cur = handoff_target()
+        out = {"targets": [{"id": t["id"], "label": t["label"], "kind": t["kind"]} for t in handoff_targets()],
+               "current": {"id": cur["id"], "label": cur["label"]} if cur else None}
     elif cmd == "attach":
         # hf-ai attach clipboard | pick | - (base64 por stdin) | <ruta | file://… | https://…> [más…]
         out = {"images": [], "error": None}

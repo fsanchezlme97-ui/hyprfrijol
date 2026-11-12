@@ -19,7 +19,7 @@ la chincheta o el ajuste. El estado se guarda en settings.json: tras reiniciar e
 | Pieza | Qué hace |
 |---|---|
 | `config/quickshell/modules/sidepanel/SidePanel.qml` | Panel de 400 px a la derecha: pestañas, apps web acopladas, PiP de YouTube |
-| `config/quickshell/modules/sidepanel/AiChat.qml` | Conversación, contexto, tarjetas Aplicar / Descartar / Deshacer, «Continuar en Claude ↗» |
+| `config/quickshell/modules/sidepanel/AiChat.qml` | Conversación, contexto, tarjetas Aplicar / Descartar / Deshacer, «Seguir en … ↗» |
 | `config/quickshell/modules/pip/Pip.qml` | Coloca y controla las ventanas de imagen en imagen |
 | `scripts/hf-ai` | Habla con el modelo, valida acciones, las aplica y las deshace |
 | `scripts/hf-mcp` | Servidor MCP: la misma API del shell para Claude Code u otros clientes |
@@ -165,15 +165,22 @@ el asistente no puede crearse órdenes que ejecuten comandos.
 - La primera vez, el panel enseña qué puede hacer el asistente y 6 ejemplos (`aiOnboarded`; «Volver a verla» en Ajustes › IA).
 - Consultas de solo lectura nuevas: `devices` (unidades y espacio), `downloads` (la cola) y `wallhaven` (buscar fondos).
 
-## «Continuar en Claude ↗»
+## «Seguir en … ↗» (cualquier herramienta de IA)
 
-`hf-ai handoff` copia la conversación y el contexto elegido al portapapeles (Markdown) y:
+`hf-ai handoff` copia la conversación y el contexto elegido al portapapeles (Markdown, sin secretos), la deja también en
+`$XDG_RUNTIME_DIR/hf-handoff.md` (solo legible por ti) y la lleva a la herramienta de `aiHandoff`
+(Ajustes › Asistente de IA › Integraciones):
 
-1. abre **Claude Desktop** si está instalado (`claude-desktop`) → pega con `Ctrl+V`;
-2. si no, abre `kitty -e claude "<conversación>"` (Claude Code con la conversación como primer mensaje);
-3. si no hay ninguno, solo la copia.
+| Destino | Cómo se lleva |
+|---|---|
+| T3 Code, Claude Desktop, Cursor, Zed | se abre la app; la conversación queda en el portapapeles (`Ctrl+V`) |
+| Claude Code (`claude`), Codex (`codex`), Gemini CLI (`gemini -i`), Qwen Code (`qwen -i`), opencode (`--prompt`) | en la terminal, con la conversación como primer mensaje |
+| `custom` | `aiHandoffCmd`, cualquier orden: `{prompt}` = el texto, `{file}` = el .md; sin marcador, portapapeles. Nombre del botón: `aiHandoffLabel` |
 
-El panel muestra el aviso «Abierta en Claude Desktop / Se envió la conversación y el contexto que elegiste».
+`auto` (por defecto) usa la del proveedor si está instalada (Claude Code con `claude-code`, Gemini CLI con `gemini`,
+Codex con `openai`) y si no, la primera instalada en el orden de la tabla; `off` quita el botón. Sin ninguna, el botón
+no aparece. `hf-ai handoff-targets` lista lo instalado y el destino elegido. Con más de 120 KB se pasa el archivo en vez
+del texto (un argumento no puede pasar de 128 KB).
 
 ## PiP de los navegadores
 

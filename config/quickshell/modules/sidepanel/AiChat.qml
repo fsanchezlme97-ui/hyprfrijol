@@ -430,7 +430,16 @@ Item {
         Quickshell.execDetached([term, "-e", "sh", "-c", code + '; echo; printf "Pulsa Intro para cerrar…"; read _']);
     }
 
-    // ---- handoff «Continuar en Claude ↗»
+    // ---- handoff «Seguir en <herramienta> ↗» (Ajustes › Asistente de IA › Integraciones: aiHandoff; hf-ai handoff-targets)
+    property var handoffTo: null          // { id, label } o null: sin botón
+    readonly property string handoffKey: Settings.get("aiHandoff", "auto") + "|" + Settings.get("aiHandoffCmd", "") + "|" + Settings.get("aiHandoffLabel", "") + "|" + Settings.get("aiProvider", "")
+    onHandoffKeyChanged: { targetsProc.running = false; targetsProc.running = true; }
+    Process {
+        id: targetsProc
+        running: true
+        command: [Paths.script("hf-ai"), "handoff-targets"]
+        stdout: StdioCollector { onStreamFinished: { try { root.handoffTo = JSON.parse(text).current; } catch (e) { root.handoffTo = null; } } }
+    }
     function handoff() {
         handoffProc.command = [Paths.script("hf-ai"), "handoff", payload()];
         handoffProc.running = true;
@@ -438,7 +447,7 @@ Item {
     Process {
         id: handoffProc
         stdout: StdioCollector {
-            onStreamFinished: { try { root.notice = JSON.parse(text); } catch (e) { root.notice = { text: "No se pudo continuar en Claude", sub: "" }; } }
+            onStreamFinished: { try { root.notice = JSON.parse(text); } catch (e) { root.notice = { text: "No se pudo seguir en " + (root.handoffTo?.label ?? "otra herramienta"), sub: "" }; } }
         }
     }
 
@@ -715,12 +724,13 @@ print(json.dumps(out[:300]))
                 onClicked: root.toggleCapture()
             }
             Rectangle {
+                visible: !!root.handoffTo
                 implicitHeight: 24
                 implicitWidth: hoTxt.implicitWidth + 20
                 radius: Theme.r(6)
                 color: Theme.p
                 Rectangle { anchors.fill: parent; radius: parent.radius; color: "#FFF"; opacity: hoMouse.containsMouse ? 0.08 : 0 }
-                Txt { id: hoTxt; anchors.centerIn: parent; text: "Continuar en Claude ↗"; size: 11.5; weight: Font.DemiBold; color: Theme.pText }
+                Txt { id: hoTxt; anchors.centerIn: parent; text: "Seguir en " + (root.handoffTo?.label ?? "") + " ↗"; size: 11.5; weight: Font.DemiBold; color: Theme.pText }
                 MouseArea { id: hoMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.handoff() }
             }
         }

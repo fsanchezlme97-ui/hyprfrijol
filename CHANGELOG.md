@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.60] — 2026-11-12
+
+### Mejorado
+- El botón del panel del asistente ya no es solo «Continuar en Claude»: «Seguir en … ↗» lleva la conversación y el
+  contexto elegido a la herramienta de IA que uses. Reconoce T3 Code, Claude Desktop, Cursor y Zed (se abren con la
+  conversación en el portapapeles) y Claude Code, Codex, Gemini CLI, Qwen Code y opencode (la reciben como primer
+  mensaje en la terminal); para cualquier otra se escribe su orden con `{prompt}` o `{file}`. Se elige en Ajustes ›
+  Asistente de IA › Integraciones; en «Automática» usa la de tu proveedor o la primera instalada, y sin ninguna no hay
+  botón. La copia en archivo queda en `$XDG_RUNTIME_DIR`, solo legible por ti.
+
 ## [0.9.59] — 2026-11-12
 
 ### Mejorado
