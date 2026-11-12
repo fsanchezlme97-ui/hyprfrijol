@@ -16,8 +16,7 @@ BarChip {
     implicitWidth: vertical ? 26 : r.implicitWidth + 14
     Behavior on implicitWidth { enabled: !Theme.still && !chip.vertical; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
     clip: true
-    Component.onCompleted: Weather.users++
-    Component.onDestruction: Weather.users--
+    UseCounter { target: Weather; active: chip.visible }
     RowLayout {
         id: r
         visible: !chip.vertical

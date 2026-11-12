@@ -31,6 +31,8 @@ Singleton {
     property bool sideHidden: false
     // Barra escondida a mano en esta sesión (Super + J → hf:barra; IPC shell toggleBar): vuelve al llevar el cursor al borde
     property bool barHidden: false
+    // Sesión bloqueada (modules/lock): los lectores que solo sirven para la barra se paran (components/UseCounter.qml)
+    property bool locked: false
     // Dictado (modules/dictado): fase que pinta el botón de la barra (idle | rec | trans…) y la orden de empezar/terminar
     property string dictPhase: "idle"
     property bool aiSpeaking: false        // hf-ai speak mientras suena la voz del asistente (onda rellena en la barra)

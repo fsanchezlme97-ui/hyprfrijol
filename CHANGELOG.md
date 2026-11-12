@@ -3,6 +3,24 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.23] — 2026-11-11
+
+### Cambiado
+- **Menos trabajo en reposo**: el shell ya no lanza ningún programa mientras no haces nada (medido en una sesión de
+  prueba: de 0,13 % a 0 % de un núcleo en procesos lanzados).
+  - Con ventanas flotantes, el dock inteligente o un PiP, las posiciones se preguntan a Hyprland por su socket en vez
+    de lanzar `hyprctl` cada 600 ms.
+  - El modo cafeína ya no se comprueba cada 30 s: `hf-caffeine` avisa al shell cuando cambia.
+  - Con cable, la red ya no se sondea cada 30 s (los cambios llegan por `nmcli monitor`).
+  - `nvidia-smi` pasa de cada 2 s a cada 10 s, salvo con el monitor del sistema abierto (en portátiles dejaba la
+    gráfica despierta).
+  - La pastilla de recursos, el clima, la impresora y la onda de sonido dejan de leer datos con la barra escondida
+    (Super + J) o la sesión bloqueada.
+  - La cola de descargas sin nada activo ya no se relee cada 8 s.
+- **Consumo por programa** (barra de la pantalla secundaria y monitor del sistema): la memoria es la propia de cada
+  programa, sin las bibliotecas y la memoria compartida que antes contaban una vez por proceso (Chrome salía con
+  gigas de más). Un programa que tira de la CPU (10 % o más) se ve siempre, aunque gaste poca memoria y haya muchos.
+
 ## [0.9.22] — 2026-11-11
 
 Revisión completa del proyecto: unos 70 fallos corregidos. Lo que se nota:

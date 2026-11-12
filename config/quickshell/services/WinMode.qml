@@ -212,7 +212,7 @@ Singleton {
         const act = HyprClients.monitors.map(m => m.activeWorkspace?.id ?? 0);
         return HyprClients.clients.some(c => c.floating && act.includes(c.workspace?.id ?? 0));
     }
-    Timer { interval: 600; repeat: true; running: root.smartOn && root.floatingVisible; onTriggered: HyprClients.refreshNow() }
+    Timer { interval: 600; repeat: true; running: root.smartOn && root.floatingVisible; onTriggered: HyprClients.refreshGeometry() }
 
     // ---------- conversión y colocación ----------
     // Ventanas que no se tocan: las del shell, web apps, PiP, fijadas, a pantalla completa

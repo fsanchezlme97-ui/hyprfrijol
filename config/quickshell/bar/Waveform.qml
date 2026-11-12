@@ -36,8 +36,7 @@ Rectangle {
     readonly property var paintKey: [Theme.p, Theme.ter, kind, Shell.aiSpeaking]
     onPaintKeyChanged: { idlePainted = false; cv.requestPaint(); }
 
-    Component.onCompleted: Cava.users++
-    Component.onDestruction: Cava.users--
+    UseCounter { target: Cava; active: root.visible }
 
     readonly property bool gpuBars: kind === "barras"
     FrameAnimation {

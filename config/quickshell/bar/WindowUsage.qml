@@ -1,7 +1,7 @@
 // Todos los programas abiertos y lo que gastan, en cualquier espacio y pantalla (barra de las pantallas secundarias,
 // a la derecha: con una sola pantalla no se ve; ahí ya está el chip de sistema). Una entrada por programa (por su
 // clase: dos kitty abiertos por separado son dos procesos, pero un solo programa): icono, CPU (% de todo el equipo)
-// y memoria, sumando cada proceso con todos sus hijos (SysStats.tree: pestañas de Chrome, apps Electron, lo que
+// y memoria propia (sin bibliotecas ni memoria compartida, que con el RSS contaban una vez por proceso), sumando cada proceso con todos sus hijos (SysStats.tree: pestañas de Chrome, apps Electron, lo que
 // corre en una terminal). Orden fijo (los abiertos antes, primero); si hay más de `max`, los que más gastan y «+N».
 // En rojo la CPU si pasa del 25 % y la memoria si pasa de 2 GB: dice qué ventana está frenando el equipo.
 // Clic: ir a su ventana (con varias, una tras otra) · clic central: cerrarla · al pasar el cursor: nombre, ventanas
@@ -40,8 +40,8 @@ Row {
         const v = groups.map(g => score(usage(g))).sort((a, b) => b - a);
         return v[max - 1];
     }
-    Component.onCompleted: { SysStats.users++; SysStats.procUsers++; }
-    Component.onDestruction: { SysStats.users--; SysStats.procUsers--; }
+    UseCounter { target: SysStats; active: root.visible }
+    UseCounter { target: SysStats; prop: "procUsers"; active: root.visible }
 
     // 840M · 1,2G
     function mem(b: real): string {
@@ -56,7 +56,8 @@ Row {
             readonly property var win: modelData[0]
             readonly property var use: { SysStats.procTable; return root.usage(modelData); }
             readonly property string name: HyprClients.appName(win.class ?? "")
-            visible: root.cut < 0 || root.score(use) >= root.cut
+            // con más de `max`: los que más gastan, y siempre uno que esté tirando de la CPU aunque gaste poca memoria
+            visible: root.cut < 0 || root.score(use) >= root.cut || use.cpu >= 10
             implicitHeight: 22
             implicitWidth: row.implicitWidth + 12
             radius: Theme.r(7)
@@ -112,12 +113,16 @@ Row {
             BarTip {
                 target: ma
                 text: chip.name + (chip.modelData.length > 1 ? " · " + chip.modelData.length + " ventanas" : "")
-                      + " · " + chip.use.n + (chip.use.n === 1 ? " proceso" : " procesos") + " · clic central: cerrar"
+                      + " · " + chip.use.n + (chip.use.n === 1 ? " proceso" : " procesos") + " · memoria propia (sin la compartida) · clic central: cerrar"
             }
         }
     }
     Txt {
-        readonly property int hidden: root.cut < 0 ? 0 : root.groups.length - root.max
+        readonly property int hidden: {
+            SysStats.procTable;
+            if (root.cut < 0) return 0;
+            return root.groups.filter(g => { const u = root.usage(g); return !(root.score(u) >= root.cut || u.cpu >= 10); }).length;
+        }
         visible: hidden > 0
         anchors.verticalCenter: parent.verticalCenter
         leftPadding: 4; rightPadding: 4

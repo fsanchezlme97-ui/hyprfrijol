@@ -42,6 +42,24 @@ Singleton {
         refreshes++;
     }
 
+    // Solo posiciones y tamaños (el sondeo de WinMode con ventanas flotantes): se pregunta por el socket de Hyprland
+    // desde Quickshell, sin lanzar un hyprctl cada 600 ms; monitores y ventana activa siguen llegando por eventos
+    property string lastGeo: ""
+    function refreshGeometry(): void { Hyprland.refreshToplevels(); geoRead.restart(); }
+    Timer {
+        id: geoRead
+        interval: 120
+        onTriggered: {
+            const cl = Hyprland.toplevels.values.map(t => t.lastIpcObject).filter(c => c && c.address && c.mapped !== false && !c.hidden);
+            if (!cl.length) return;
+            const key = JSON.stringify(cl.map(c => [c.address, c.at, c.size, c.floating, c.workspace?.id, c.fullscreen]));
+            if (key === root.lastGeo) return;
+            root.lastGeo = key;
+            root.clients = cl;
+            root.refreshes++;
+        }
+    }
+
     function norm(a): string { a = String(a ?? ""); return a.startsWith("0x") ? a : "0x" + a; }
     function toplevelFor(address): var {
         const a = norm(address);

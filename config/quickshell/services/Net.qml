@@ -34,7 +34,8 @@ Singleton {
 
     // Cambios de conexión al momento por `nmcli monitor` (sin sondear); la intensidad de la señal no avisa, así que
     // se repasa cada 30 s. Antes eran tres nmcli cada 6 s.
-    Timer { interval: 30000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.refresh() }
+    // Con cable la señal no cambia: entonces basta con lo que avisa `nmcli monitor`
+    Timer { interval: 30000; running: root.type !== "ethernet"; repeat: true; triggeredOnStart: true; onTriggered: root.refresh() }
     Timer { id: later; interval: 1500; onTriggered: root.refresh() }
     Timer { id: soon; interval: 400; onTriggered: root.refresh() }
     Process {

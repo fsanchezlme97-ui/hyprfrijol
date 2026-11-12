@@ -53,7 +53,10 @@ reducción automática) se descartó en las decisiones del plan.
 
 ## Mejorar lo que ya hay
 
-- [ ] **Rendimiento**: arranque del shell, carga diferida de más módulos, menos procesos de `hyprctl` y `nmcli`.
+- [ ] **Rendimiento**: arranque del shell y carga diferida de más módulos. Hecho (0.9.23): en reposo ya no se lanza
+      ningún proceso (antes `hyprctl` cada 600 ms con flotantes o PiP, `hf-caffeine` cada 30 s, `nmcli` también por
+      cable, `nvidia-smi` cada 2 s); los lectores se paran con la barra escondida o la sesión bloqueada. Queda: el hilo
+      principal sigue en ~1,5 % de un núcleo en reposo, casi todo la lectura de SysStats cada 2 s para la pastilla.
 - [ ] **Productividad**: revisar Spotlight, portapapeles, ventanas y atajos con uso real; quitar pasos.
 - [ ] **Ajustes es para ajustes**: Tareas ya es app, las alarmas van en su ventana y las instaladas en el Centro de
       aplicaciones (0.9.21). Revisar si queda contenido de app en otras secciones (colas de impresión, usuarios…).
@@ -64,18 +67,11 @@ reducción automática) se descartó en las decisiones del plan.
 - [ ] **Comandos por voz**: más órdenes, entender frases naturales, confirmar antes de lo peligroso.
 - [ ] **Micrófono de tres modos** (v0.8.42): probar en uso real dictar y hablar con el asistente con Super + Alt + M
       (mantener); solo se probó por IPC el cambio de modo y el silencio.
-- [ ] **Consumo por programa** (barra secundaria): la memoria suma el RSS de cada proceso (lo compartido cuenta
-      varias veces); un programa pequeño que gasta mucha CPU puede quedar escondido tras «+N».
 
 ## De la revisión completa (2026-11-11, v0.9.22)
 
 Lo que la revisión encontró y no se arregló en la 0.9.22, por orden de valor:
 
-- [ ] **Sondeos que quedan**: `nvidia-smi` cada 2 s mientras exista la pastilla de recursos (hacerlo solo con el
-      panel abierto), `hyprctl` cada 600 ms con el dock inteligente y ventanas flotantes (usar el socket de Hyprland
-      sin proceso), `hf-caffeine status` cada 30 s (vigilar su archivo), `nmcli` cada 30 s también por cable.
-- [ ] **Contadores de uso reales**: SysStats, Weather, Printer y Cava cuentan la pastilla aunque la barra esté
-      oculta o la sesión bloqueada.
 - [ ] **Ajustes que aún son apps**: cola de impresión (Impresoras), conexiones guardadas (Escritorio remoto),
       máquinas y contenedores (Virtualización). Candidatas a ventana propia como Tareas.
 - [ ] **Buscador de Ajustes**: no indexa las tarjetas de `settings/ui/` (Wallhaven, Calendarios, Mis temas,

@@ -39,7 +39,7 @@ Singleton {
     property var prev: null
     property int detailUsers: 0
     property int procUsers: 0
-    property var procTable: ({})         // pid → { ppid, cpu (% de un núcleo), rss (bytes), name }
+    property var procTable: ({})         // pid → { ppid, cpu (% de un núcleo), rss (bytes: memoria propia, sin la compartida), name }
     property var procKids: ({})          // pid → [pids hijos]
     // Lo que gasta un programa con todos sus procesos hijos (Chrome, apps Electron, la terminal y lo que corre en ella)
     function tree(pid: int): var {
@@ -125,7 +125,7 @@ Singleton {
               [ -e "$d/device/driver" ] || continue
               drv=$(readlink "$d/device/driver"); cards+=("$d"); drvs+=("\${drv##*/}")
             done
-            nv=0; command -v nvidia-smi >/dev/null && nv=1
+            nv=0; nvl=; command -v nvidia-smi >/dev/null && nv=1
             while :; do
               while read -r l; do case "$l" in cpu*) echo "$l";; *) break;; esac; done < /proc/stat
               while read -r k v _; do case "$k" in MemTotal:|MemAvailable:|SwapTotal:|SwapFree:) echo "$k $v kB";; esac; done < /proc/meminfo
@@ -154,7 +154,12 @@ Singleton {
                 slot=; while IFS== read -r k v; do [ "$k" = PCI_SLOT_NAME ] && { slot=$v; break; }; done < "$dev/uevent"
                 echo "gpu \${d##*/} \${drvs[$j]} \${slot:--} $busy $t $mu $mt $fa $fm"
               done
-              [ "$nv" = 1 ] && nvidia-smi --query-gpu=pci.bus_id,utilization.gpu,temperature.gpu,memory.used,memory.total,name --format=csv,noheader,nounits 2>/dev/null | while read -r l; do echo "nvidia $l"; done
+              # nvidia-smi es un programa pesado (y en portátiles despierta la gráfica): cada 2 s solo con el monitor del
+              # sistema abierto; si no, cada 10 s, repitiendo la última lectura entre medias
+              if [ "$nv" = 1 ]; then
+                { [ "$detail" = 2 ] || [ $((i % 5)) = 0 ]; } && nvl=$(nvidia-smi --query-gpu=pci.bus_id,utilization.gpu,temperature.gpu,memory.used,memory.total,name --format=csv,noheader,nounits 2>/dev/null | sed 's/^/nvidia /')
+                [ -n "$nvl" ] && echo "$nvl"
+              fi
               r=0; w=0
               while read -r _ _ dn _ _ a _ _ _ b _; do
                 [[ "$dn" =~ ^(nvme[0-9]+n[0-9]+|sd[a-z]+|vd[a-z]+|xvd[a-z]+|mmcblk[0-9]+)$ ]] && { r=$((r + a)); w=$((w + b)); }
@@ -163,7 +168,10 @@ Singleton {
               [ $((i % 15)) = 0 ] && df -B1 --output=used,size / | { read -r _; read -r u s; echo "disk $u $s"; }
               if [ "$detail" != 0 ]; then
                 # tiempo de CPU de cada proceso (el % se calcula entre dos medidas, como top), memoria y padre
-                awk 'match($0, /\\) [A-Za-z] /) { n = substr($0, index($0, "(") + 1, RSTART - index($0, "(") - 1); split(substr($0, RSTART + 2), a, " "); print "proc", FILENAME, a[12] + a[13], a[22], a[2], n }' /proc/[0-9]*/stat 2>/dev/null
+                # Memoria: la propia de cada proceso (residente menos lo compartido, de statm), no el RSS: con el RSS las
+                # bibliotecas y la memoria compartida de Chrome o Electron contaban una vez por proceso y salían gigas de más
+                awk 'FILENAME ~ /statm$/ { split(FILENAME, q, "/"); own[q[3]] = $2 - $3; next }
+                     match($0, /\\) [A-Za-z] /) { n = substr($0, index($0, "(") + 1, RSTART - index($0, "(") - 1); split(substr($0, RSTART + 2), a, " "); split(FILENAME, q, "/"); m = (q[3] in own) ? own[q[3]] : a[22]; print "proc", FILENAME, a[12] + a[13], (m < 0 ? 0 : m), a[2], n }' /proc/[0-9]*/statm /proc/[0-9]*/stat 2>/dev/null
               fi
               if [ "$detail" = 2 ]; then
                 df -B1 --output=source,target,used,size -x tmpfs -x devtmpfs -x efivarfs -x overlay -x squashfs 2>/dev/null | tail -n +2 | awk '$4 > 1e9 && !seen[$1]++' | sed 's/^/mnt /'

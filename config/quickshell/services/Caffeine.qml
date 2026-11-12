@@ -47,8 +47,10 @@ Singleton {
         }
     }
     Process { id: run; onExited: root.refresh() }
-    // por si se activa o se acaba fuera del shell (terminal, IA, fin de los minutos)
-    Timer { interval: root.on && root.until > 0 ? 10000 : 30000; running: true; repeat: true; onTriggered: root.refresh() }
+    // Fuera del shell (terminal, asistente) hf-caffeine avisa por IPC («caffeine sync»): no hace falta sondear.
+    // Con minutos, se mira justo cuando se acaban; por si acaso, cada 5 min mientras esté puesta.
+    Timer { interval: Math.max(1000, root.until - Date.now() + 6000); running: root.on && root.until > 0; onTriggered: root.refresh() }
+    Timer { interval: 300000; running: root.on; repeat: true; onTriggered: root.refresh() }
 
     GlobalShortcut {
         appid: "hf"; name: "cafeina"; description: "HyprFrijol: modo cafeína (no apagar la pantalla)"
@@ -59,6 +61,7 @@ Singleton {
         function toggle(): void { root.toggle(); }
         function on(min: int): void { root.set(true, min); }
         function off(): void { root.set(false, 0); }
+        function sync(): void { root.refresh(); }
         function status(): string { return root.on ? "on" + (root.left ? " · " + root.left : "") : "off"; }
     }
 }

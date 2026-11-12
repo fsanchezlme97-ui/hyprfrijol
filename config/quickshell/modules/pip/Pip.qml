@@ -170,7 +170,7 @@ Scope {
     property string resized: ""
     property real lastMove: 0
     // Hyprland no avisa cuando una ventana solo cambia de sitio: mientras haya PiP se consulta cada poco
-    Timer { running: root.win !== null; interval: 600; repeat: true; onTriggered: HyprClients.refreshNow() }
+    Timer { running: root.win !== null; interval: 600; repeat: true; onTriggered: HyprClients.refreshGeometry() }   // por el socket, sin hyprctl
 
     function sel(c) { return 'window = "address:' + c.address + '"'; }
     function reconcile() {

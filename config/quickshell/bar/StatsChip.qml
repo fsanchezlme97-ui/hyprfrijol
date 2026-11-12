@@ -43,8 +43,7 @@ BarChip {
     }
     implicitHeight: vertical ? vcol.implicitHeight + 10 : 22
     implicitWidth: vertical ? 26 : r.implicitWidth + 14
-    Component.onCompleted: SysStats.users++
-    Component.onDestruction: SysStats.users--
+    UseCounter { target: SysStats; active: chip.visible }
     RowLayout {
         id: r
         visible: !chip.vertical

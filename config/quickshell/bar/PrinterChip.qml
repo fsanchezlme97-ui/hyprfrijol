@@ -16,8 +16,7 @@ BarChip {
     implicitHeight: vertical ? vcol.implicitHeight + 10 : 22
     implicitWidth: vertical ? 26 : r.implicitWidth + 14
     Behavior on implicitWidth { enabled: !Theme.still && !chip.vertical; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
-    Component.onCompleted: Printer.users++
-    Component.onDestruction: Printer.users--
+    UseCounter { target: Printer; active: chip.visible }
     RowLayout {
         id: r
         visible: !chip.vertical

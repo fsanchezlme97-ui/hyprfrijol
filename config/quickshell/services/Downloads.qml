@@ -71,7 +71,8 @@ Singleton {
     }
     // El archivo se reescribe entero (rename atómico): si inotify pierde la pista, se vuelve a leer mientras haya activas
     Timer { interval: 1500; repeat: true; running: root.active.length > 0; onTriggered: fv.reload() }
-    Timer { interval: 8000; repeat: true; running: root.active.length === 0; onTriggered: fv.reload() }
+    // Sin descargas activas basta con el aviso de cambios del archivo (antes se releía cada 8 s todo el día)
+    Timer { interval: 60000; repeat: true; running: root.active.length === 0; onTriggered: fv.reload() }
 
     IpcHandler {
         target: "downloads"

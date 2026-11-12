@@ -130,6 +130,7 @@ Scope {
     WlSessionLock {
         id: sessionLock
         locked: false
+        onLockedChanged: Shell.locked = locked
 
         WlSessionLockSurface {
             id: surface

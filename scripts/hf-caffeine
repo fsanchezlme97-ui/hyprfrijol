@@ -39,10 +39,13 @@ off() {
   kill "${c%% *}" 2>/dev/null; rm -f "$PIDF"
 }
 
+# El shell ya no pregunta cada 30 s: se le avisa al cambiar (en segundo plano; sin shell no pasa nada)
+ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
+tell() { command -v qs >/dev/null && { qs -p "$ROOT/config/quickshell" ipc call caffeine sync >/dev/null 2>&1 & } ; }
 case "${1:-status}" in
-  on) on "${2:-0}" ;;
-  off) off ;;
-  toggle) if cur >/dev/null; then off; else on "${2:-0}"; fi ;;
+  on) on "${2:-0}"; tell ;;
+  off) off; tell ;;
+  toggle) if cur >/dev/null; then off; else on "${2:-0}"; fi; tell ;;
   status) c=$(cur) && echo "on ${c#* }" || echo off ;;
   *) echo "uso: hf-caffeine on [min] | off | toggle [min] | status" >&2; exit 2 ;;
 esac
