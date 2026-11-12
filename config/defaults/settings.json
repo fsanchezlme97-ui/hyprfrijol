@@ -370,6 +370,7 @@
   "unsplashOrder": "popular",
   "unsplashCacheMB": 500,
   "rdpServer": false,
+  "remoteUnattended": true,
   "rdpListen": "tailscale",
   "rdpOutput": "",
   "rdpPort": 3389,

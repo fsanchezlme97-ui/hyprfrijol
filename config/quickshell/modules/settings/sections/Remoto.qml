@@ -36,11 +36,13 @@ ColumnLayout {
     readonly property var defPort: ({ rdp: 3389, vnc: 5900, ssh: 22, spice: 5900 })
 
     function refresh() { clProc.running = false; clProc.running = true; srvProc.running = false; srvProc.running = true; secProc.running = false; secProc.running = true; }
-    Timer { interval: 4000; running: true; repeat: true; onTriggered: { srvProc.running = false; srvProc.running = true; rdpProc.running = false; rdpProc.running = true; } }
+    Timer { interval: 4000; running: true; repeat: true; onTriggered: { srvProc.running = false; srvProc.running = true; rdpProc.running = false; rdpProc.running = true; adProc.running = false; adProc.running = true; } }
     Timer { id: later; interval: 5000; repeat: true; property int n: 0; onTriggered: { root.refresh(); if (++n > 10) { n = 0; stop(); } } }
     Process { id: clProc; running: true; command: [root.cmd, "clients"]; stdout: StdioCollector { onStreamFinished: { try { root.cl = JSON.parse(text); } catch (e) {} } } }
     Process { id: srvProc; running: true; command: [root.cmd, "server", "status"]; stdout: StdioCollector { onStreamFinished: { try { root.srv = JSON.parse(text); } catch (e) {} } } }
     Process { id: rdpProc; running: !root.app; command: [root.cmd, "rdp", "status"]; stdout: StdioCollector { onStreamFinished: { try { root.rdp = JSON.parse(text); } catch (e) {} } } }
+    property var ad: ({})
+    Process { id: adProc; running: !root.app; command: [root.cmd, "anydesk", "status"]; stdout: StdioCollector { onStreamFinished: { try { root.ad = JSON.parse(text); } catch (e) {} } } }
     function rdpRestart() { if (root.rdp.running) Quickshell.execDetached([root.cmd, "rdp", "restart"]); later.restart(); }
     Process {
         id: secProc
@@ -493,6 +495,37 @@ ColumnLayout {
                     text: "En Windows: «Conexión a Escritorio remoto» (mstsc), escribe la dirección de arriba y entra con tu usuario y la contraseña de RDP. La primera vez acepta el aviso del certificado. Ves y manejas esta misma sesión, no otra aparte."
                 }
             }
+        }
+    }
+
+    // ================= entrar con AnyDesk / RustDesk =================
+    Section {
+        visible: !root.app
+        Layout.fillWidth: true
+        title: "Entrar con AnyDesk o RustDesk"
+        headerRight: Mono { text: "portal RemoteDesktop" }
+        SwRow {
+            separator: false
+            label: "Portal de control remoto"
+            sub: root.ad.portal ? (root.ad.setup ? "Activo: AnyDesk ve y maneja esta sesión" : "Activo · falta preparar la aprobación automática")
+                : "Hyprland no lo trae aún: se instala el portal de Hyprland con la parte de control remoto (PR #448)"
+            enabled: false
+            checked: !!root.ad.portal
+            trailing: Button {
+                visible: !root.ad.portal || !root.ad.setup
+                text: root.ad.portal ? "Preparar" : "Instalar"
+                onClicked: { if (root.ad.portal) Quickshell.execDetached([root.cmd, "anydesk", "setup"]); else Pkg.runInTerminal(root.cmd + " anydesk portal", "Portal de control remoto"); later.restart(); }
+            }
+        }
+        SwRow {
+            label: "Permitir sin que nadie acepte en pantalla"
+            sub: "cuando AnyDesk acaba de aceptar una conexión entrante (con su contraseña de acceso desatendido); comparte la pantalla elegida para RDP"
+            key: "remoteUnattended"; def: true
+        }
+        Txt {
+            Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5
+            text: (root.ad.installed ? "" : "AnyDesk no está instalado (AUR: anydesk-bin). ")
+                + "Después de instalar el portal, cierra y vuelve a abrir AnyDesk. Para entrar sin nadie delante, pon en AnyDesk › Ajustes › Seguridad una contraseña de acceso desatendido. Cualquier otra app que pida controlar el equipo o compartir pantalla sigue preguntando."
         }
     }
 }

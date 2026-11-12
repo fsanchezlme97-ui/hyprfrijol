@@ -30,7 +30,7 @@ hl.on("hyprland.start", function()
         -- Ajustes › Apps predeterminadas e inicio (autostartApps); hf-defaults evita las que chocan con el shell.
         hl.exec_cmd("sh -c 'sleep 3; [ \"$(jq -r .autostartApps " .. HF.user .. "/settings.json 2>/dev/null)\" = false ] || exec " .. HF.scripts .. "/hf-defaults autostart-run'")
         -- Escritorio remoto por RDP (Ajustes › Escritorio remoto, rdpServer): hypr-rdp para entrar desde Windows
-        hl.exec_cmd("sh -c 'sleep 6; exec " .. HF.scripts .. "/hf-remote rdp boot'")
+        hl.exec_cmd("sh -c 'sleep 6; " .. HF.scripts .. "/hf-remote rdp boot; exec " .. HF.scripts .. "/hf-remote anydesk boot'")
         -- Descargas que quedaron a medias al cerrar la sesión (downloadsResume): se reanudan
         hl.exec_cmd("sh -c 'sleep 8; exec " .. HF.scripts .. "/hf-download boot'")
         -- Efectos de audio si los usas

@@ -351,7 +351,10 @@ instalaciones y lo que necesita `sudo` se abren en una terminal (`Pkg.runInTermi
   nueva para la conexión), `rdpPort` (3389). Usuario: el tuyo; contraseña propia de RDP en
   `~/.config/hypr-rdp/password` (600, `hf-remote rdp password`): sin ella nunca se arranca, porque hypr-rdp sin
   credenciales deja entrar a cualquiera. Corre como unidad de usuario `hf-rdp` (se reintenta cada 10 s si Tailscale
-  aún no está conectado). AnyDesk y RustDesk no aceptan conexiones entrantes en Hyprland (ver docs/PENDIENTES.md).
+  aún no está conectado). **AnyDesk / RustDesk**: necesitan el portal RemoteDesktop (`hf-remote anydesk portal`
+  instala xdph con la PR #448). `remoteUnattended` (true): el portal no pregunta en pantalla cuando AnyDesk acaba de
+  aceptar una conexión entrante (`hf-remote picker`, puesto delante de hyprland-share-picker por `hf-remote anydesk
+  setup`, que corre al iniciar sesión); comparte la pantalla de `rdpOutput`.
 - **Máquinas virtuales** (`sections/Virtualizacion.qml`; con `app: true` es la app «Máquinas virtuales», `modules/apps`, con tus máquinas y contenedores): requisitos (VT-x/AMD-V y `/dev/kvm`, QEMU + libvirt,
   socket de libvirt, grupo `libvirt`, Cockpit + cockpit-machines y `cockpit.socket`), «Instalar Cockpit + Máquinas»
   (paquetes por distro, activa los servicios, te añade al grupo y arranca la red `default`), «Abrir Cockpit»

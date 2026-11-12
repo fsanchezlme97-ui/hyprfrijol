@@ -1,0 +1,44 @@
+# hyprfrijol: xdg-desktop-portal-hyprland 1.5.0 + la PR hyprwm/xdg-desktop-portal-hyprland#448 (portal RemoteDesktop),
+# para entrar a la sesión con AnyDesk o RustDesk. Sustituye al paquete oficial (vuelve a él: pacman -S xdg-desktop-portal-hyprland).
+# Fijado a un commit revisado de la PR; lo instala «hf-remote anydesk portal». Basado en el PKGBUILD de Arch (alerque).
+pkgname=xdg-desktop-portal-hyprland-rd
+pkgver=1.5.0.r32.g6a32fa8
+pkgrel=1
+_commit=6a32fa8807f89fec28510bd5e93f40d402e660e6
+_protocols=d260a60f90668bf55dbddb6fa60fba9a3e2e34e9
+pkgdesc='xdg-desktop-portal backend for Hyprland, with the RemoteDesktop portal (xdph PR #448)'
+url='https://github.com/hyprwm/xdg-desktop-portal-hyprland/pull/448'
+arch=(x86_64)
+license=(MIT)
+provides=(xdg-desktop-portal-impl "xdg-desktop-portal-hyprland=1.5.0")
+conflicts=(xdg-desktop-portal-hyprland)
+depends=(libgcc libstdc++ glibc hyprlang hyprutils hyprtoolkit libinih pipewire qt6-base sdbus-cpp
+         util-linux-libs xdg-desktop-portal libei libxkbcommon)
+makedepends=(cmake git hyprwayland-scanner wayland wayland-protocols)
+optdepends=('grim: screenshot portal' 'slurp: interactive screenshots')
+source=("xdph::git+https://github.com/keitheis/xdg-desktop-portal-hyprland.git#commit=$_commit"
+        "protocols::git+https://github.com/hyprwm/hyprland-protocols.git#commit=$_protocols")
+sha256sums=('SKIP' 'SKIP')
+
+prepare() {
+	cd xdph/subprojects
+	rm -rf hyprland-protocols sdbus-cpp
+	ln -sfT "$srcdir/protocols" hyprland-protocols
+}
+
+build() {
+	cd xdph
+	cmake -B build -D CMAKE_INSTALL_PREFIX=/usr -D CMAKE_INSTALL_LIBEXECDIR=/usr/lib -D CMAKE_BUILD_TYPE=Release
+	cmake --build build
+}
+
+check() {
+	cd xdph/build
+	ctest --output-on-failure
+}
+
+package() {
+	cd xdph
+	DESTDIR="$pkgdir" cmake --install build
+	install -Dm0644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE
+}

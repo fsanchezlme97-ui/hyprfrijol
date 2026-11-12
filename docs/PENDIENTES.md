@@ -39,10 +39,11 @@ reducción automática) se descartó en las decisiones del plan.
 
 - [x] **Fondos de Wallhaven y Unsplash**: Wallhaven ya estaba (Ajustes › Fondos); Unsplash en 0.9.36 (`hf-unsplash`,
       necesita su clave gratuita). Falta: probarlo con una clave de verdad y darle a la IA `unsplash_search` como a Wallhaven.
-- [ ] **AnyDesk y RustDesk entrantes**: AnyDesk solo acepta conexiones entrantes en Xorg (en Wayland, solo salientes)
-      y RustDesk necesita el portal RemoteDesktop, que xdg-desktop-portal-hyprland aún no trae (PR #448 abierta;
-      xdg-desktop-portal-luminous lo da, pero con Hyprland 0.57 hay un fallo abierto que cierra RustDesk al
-      aceptar). Mientras: RDP con hypr-rdp (0.9.34) y SSH. Revisar cuando xdph incluya RemoteDesktop.
+- [~] **AnyDesk y RustDesk entrantes** (0.9.37): AnyDesk 8 usa el portal RemoteDesktop en Wayland; xdph 1.5.0 no lo
+      trae, así que `hf-remote anydesk portal` instala xdph + la PR #448 (`install/pkgbuilds/xdg-desktop-portal-hyprland-rd`,
+      solo Arch) y `hf-remote picker` aprueba solo las conexiones que AnyDesk acaba de aceptar (`remoteUnattended`).
+      Falta: probar una conexión real de AnyDesk y de RustDesk; volver al paquete oficial cuando xdph publique
+      RemoteDesktop; Fedora/openSUSE/Debian (sin paquete).
 
 ## Donde vamos por detrás
 

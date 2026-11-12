@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.37] — 2026-11-12
+
+### Añadido
+- **Entrar a esta sesión con AnyDesk** (Ajustes › Escritorio remoto › Entrar con AnyDesk o RustDesk). AnyDesk 8
+  necesita en Wayland el portal RemoteDesktop, que el portal de Hyprland (xdph 1.5.0) aún no trae: sin él caía a
+  X11 y no veía nada. `hf-remote anydesk portal` instala xdph con la parte de control remoto (PR #448, fijada a un
+  commit revisado; `install/pkgbuilds/xdg-desktop-portal-hyprland-rd`, Arch). Como nadie puede aceptar en pantalla
+  cuando entras desde otro equipo, `remoteUnattended` (activado) aprueba solo las peticiones que llegan justo
+  después de que AnyDesk acepte una conexión entrante, y comparte la pantalla elegida para RDP; el resto (Meet,
+  otras apps) sigue preguntando. Se prepara solo al iniciar sesión (`hf-remote anydesk boot`).
+
+### Corregido
+- `hf-remote`: un ajuste puesto a `false` en tus ajustes se ignoraba y ganaba el valor por defecto.
+
 ## [0.9.36] — 2026-11-12
 
 ### Añadido
