@@ -5,8 +5,10 @@ tus ajustes) y lo vuelve a dejar igual en otro equipo, o en este tras reinstalar
   hf-perfil guardar [archivo]            ~/.config/hyprfrijol/perfil.json por defecto (solo tuyo: 600). hf-update lo
                                          guarda solo antes de cada actualización.
   hf-perfil ver [archivo]                qué hay en el perfil y qué le falta a este equipo
-  hf-perfil aplicar [archivo] [--dry-run]   lo instala y activa todo (pide la contraseña de administrador; mejor en
-                                         una terminal). --dry-run solo enseña las órdenes.
+  hf-perfil aplicar [archivo] [--dry-run] [--acceso-remoto]   lo instala y activa todo (pide la contraseña de
+                                         administrador; mejor en una terminal). --dry-run solo enseña las órdenes.
+                                         El acceso remoto (SSH, Tailscale, RustDesk) se pregunta antes de abrirlo; sin
+                                         terminal solo se activa con --acceso-remoto.
   hf-perfil publicar                     la versión SIN datos personales en perfil/perfil.json del repo, para que viaje
                                          con el proyecto: paquetes, apps, servicios, modelos y ajustes de aspecto (sin
                                          tu foto, el nombre del equipo, el tiempo de tu ciudad, rutas ni la IA personal).
@@ -160,6 +162,20 @@ def load(path):
     return d
 
 
+REMOTE_STEPS = ("Acceso remoto (SSH, cortafuegos, Tailscale)", "RustDesk", "Portal RemoteDesktop (RustDesk en Wayland)")
+
+
+def remote_ok(flags):
+    """Abrir el equipo a la red nunca va solo por venir en un perfil (el del repo es público): se pregunta."""
+    if "--acceso-remoto" in flags:
+        return True
+    if not sys.stdin.isatty():
+        print("\nAcceso remoto: no se activa sin terminal; repite con --acceso-remoto si lo quieres.")
+        return False
+    a = input("\nEl perfil activa el acceso remoto (SSH por Tailscale y tu red local, RustDesk). ¿Lo activo? [s/N] ")
+    return a.strip().lower() in ("s", "si", "sí", "y", "yes")
+
+
 def plan(p):
     """Las órdenes que dejan este equipo como el perfil (cada una hace solo lo que falta)."""
     sh = lambda *a: [str(x) for x in a]
@@ -258,7 +274,10 @@ def main():
         restore_files(p, dry)
         merge_settings(p, dry)
         failed = []
-        for label, c in plan(p):
+        steps = plan(p)
+        if any(l in REMOTE_STEPS for l, _ in steps) and not dry and not remote_ok(flags):
+            steps = [(l, c) for l, c in steps if l not in REMOTE_STEPS]
+        for label, c in steps:
             print(f"\n▸ {label}\n  {shlex.join(c)}")
             if dry:
                 continue

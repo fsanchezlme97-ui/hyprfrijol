@@ -38,8 +38,14 @@ export HF_TRY=1
 # En TU sesión: la ventana anidada (clase aquamarine) va a un espacio especial oculto y sin robar el foco,
 # para no interrumpir lo que estés haciendo. Verla:  hyprctl dispatch 'hl.dsp.workspace.toggle_special("hftry")'
 hyprctl eval 'hl.window_rule({ name = "hf-try-hidden", match = { class = "^aquamarine$" }, workspace = "special:hftry silent", no_initial_focus = true })' >/dev/null 2>&1 || true
-# Bus de sesión propio: notificaciones, polkit y bandeja van a la sesión de prueba, no a la tuya
-dbus-run-session -- "$ROOT/scripts/hf-session" --nested $SAFE >"$LOG" 2>&1 &
+# Bus de sesión propio: notificaciones, polkit y bandeja van a la sesión de prueba, no a la tuya.
+# Sin portal de documentos propio: su punto de montaje ($XDG_RUNTIME_DIR/doc) es el de tu sesión y, al cerrarse la
+# prueba, lo desmontaba y tumbaba el tuyo (xdg-document-portal.service fallido con código 21). El primer servicedir gana.
+BUSDIR=$(mktemp -d /tmp/hf-try/bus.XXXX)
+mkdir -p "$BUSDIR/services"
+printf '[D-BUS Service]\nName=org.freedesktop.portal.Documents\nExec=/bin/false\n' > "$BUSDIR/services/org.freedesktop.portal.Documents.service"
+printf '<busconfig>\n  <servicedir>%s/services</servicedir>\n  <include>/usr/share/dbus-1/session.conf</include>\n</busconfig>\n' "$BUSDIR" > "$BUSDIR/session.conf"
+dbus-run-session --config-file="$BUSDIR/session.conf" -- "$ROOT/scripts/hf-session" --nested $SAFE >"$LOG" 2>&1 &
 PID=$!
 cleanup() {
   if [ "$KEEP" = 0 ]; then
@@ -62,6 +68,7 @@ cleanup() {
       done
     fi
   fi
+  rm -rf "$BUSDIR"
   if [ -n "$SETS" ]; then cp "$BAK" "$SETTINGS"; rm -f "$BAK"; "$ROOT/scripts/hf-apply" --no-reload >/dev/null; fi
 }
 trap cleanup EXIT

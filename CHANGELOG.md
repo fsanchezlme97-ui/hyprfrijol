@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.53] — 2026-11-12
+
+### Seguridad
+- `hf-perfil aplicar` (y `./install.sh --perfil`) pregunta antes de abrir el acceso remoto (SSH, Tailscale,
+  RustDesk); sin terminal solo lo hace con `--acceso-remoto`. El perfil del repo es público: abrir el equipo a la red
+  no puede ir solo por venir en él. Los paquetes sí se instalan (instalarlos no abre nada).
+
+### Corregido
+- Las pruebas en un Hyprland anidado (`dev/try.sh`, `dev/check.sh`, `dev/perf.sh`) tumbaban el portal de documentos
+  de tu sesión al cerrarse (`xdg-document-portal.service` fallido, código 21): desmontaban `/run/user/…/doc`, que
+  es compartido. Ahora la prueba no arranca un portal de documentos propio.
+
 ## [0.9.52] — 2026-11-12
 
 ### Añadido

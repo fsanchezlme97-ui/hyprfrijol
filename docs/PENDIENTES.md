@@ -123,6 +123,5 @@ Añadidos sugeridos (sin empezar):
 - [x] Lo que avisaba `hf-doctor` (2026-11-11): recomendados instalados el 2026-11-12 (fuente mono, pavucontrol,
       nm-connection-editor, impresión con cups.socket activo, pymupdf). QtMultimedia ya estaba (el aviso de
       `hf-greeter-sync` era falso: 0.9.46). Login al día (0.9.42) y `primaryMonitor` = HDMI-A-2.
-- [ ] `xdg-document-portal.service` volvió a quedar fallido (código 21); se reinició el 2026-11-12. Si se repite,
-      mirar si coincide con una prueba anidada (`dev/try.sh`), que arranca sus propios portales. Se repitió el
-      2026-11-12 a las 07:56 y 08:55, las dos con pruebas anidadas en marcha; reiniciado a mano otra vez.
+- [x] `xdg-document-portal.service` fallido (código 21): lo tumbaban las pruebas anidadas al desmontar `/run/user/…/doc`;
+      arreglado en `dev/try.sh` (0.9.53).
