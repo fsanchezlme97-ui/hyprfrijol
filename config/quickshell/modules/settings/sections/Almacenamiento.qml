@@ -115,27 +115,19 @@ RowLayout {
         Section {
             Layout.fillWidth: true
             title: "Unidades extraíbles"
+            // La lista con Abrir y Expulsar es la del icono de la barra (w-dispositivos): aquí solo cuántas hay
             headerRight: Button {
-                visible: Devices.list.length > 1
-                text: "Expulsar todas"; h: 26
-                onClicked: Devices.ejectAll()
+                visible: Devices.list.length > 0
+                text: "Ver las unidades"; h: 26
+                onClicked: Shell.open("w-dispositivos")
             }
             Txt {
-                visible: Devices.list.length === 0
                 Layout.fillWidth: true
-                text: "Conecta una memoria USB o una tarjeta SD: aparecerá aquí, en un aviso con «Abrir» y «Expulsar», y como icono en la barra."
-                muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
-            }
-            Repeater {
-                model: Devices.list
-                DiskRow { required property var modelData; d: modelData; removable: true }
-            }
-            Txt {
-                visible: Devices.error !== "" || Devices.done !== ""
-                Layout.fillWidth: true
-                text: Devices.error || "✓ " + Devices.done
-                color: Devices.error ? Theme.danger : Theme.p
-                size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                text: Devices.list.length === 0
+                    ? "Conecta una memoria USB o una tarjeta SD: saldrá un aviso con «Abrir» y «Expulsar», y un icono en la barra."
+                    : Devices.list.length === 1 ? "Hay una unidad conectada: «" + (Devices.list[0].label || Devices.list[0].name || "sin nombre") + "»."
+                    : "Hay " + Devices.list.length + " unidades conectadas."
+                muted: Devices.list.length === 0; wrapMode: Text.WordWrap; elide: Text.ElideNone
             }
         }
         Section {

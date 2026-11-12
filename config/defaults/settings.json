@@ -254,6 +254,8 @@
   "keybinds": {},
   "idleSuspend": 0,
   "gpuMode": "auto",
+  "powerProfileAC": "",
+  "powerProfileBattery": "",
   "lowBatterySaver": true,
   "autoBrightness": false,
   "updatesMode": "avisar",

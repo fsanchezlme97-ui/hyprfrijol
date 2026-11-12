@@ -62,7 +62,7 @@ def _tareas_desktop():
 
 def _view_desktops():
     """Lanzadores de las apps sueltas que abren una vista del shell (modules/apps): menú de apps y Spotlight."""
-    qs = f"qs -p {ROOT}/config/quickshell ipc call"
+    qs = f'qs -p "{ROOT}/config/quickshell" ipc call'      # entre comillas: la carpeta puede llevar espacios
     apps = [
         ("hf-remoto", "Conexiones remotas", "Escritorios de otros equipos (RDP, VNC, SSH)", "remoto", "preferences-desktop-remote-desktop",
          "Network;RemoteAccess;", "remoto;rdp;vnc;ssh;remmina;escritorio remoto;conexión;windows;"),
@@ -70,6 +70,8 @@ def _view_desktops():
          "System;Emulator;", "máquinas virtuales;vm;qemu;kvm;libvirt;virsh;distrobox;contenedor;podman;"),
         ("hf-impresion", "Cola de impresión", "Trabajos esperando para imprimirse", "impresion", "printer",
          "System;Printing;", "imprimir;cola;impresora;trabajos;cups;cancelar;"),
+        ("hf-restauracion", "Puntos de restauración", "Instantáneas del sistema con snapper", "restauracion", "document-revert",
+         "System;", "restaurar;snapper;snapshot;instantánea;btrfs;punto de restauración;volver atrás;"),
     ]
     for fid, name, comment, view, icon, cats, kw in apps:
         text = (f"[Desktop Entry]\nType=Application\nName={name}\nComment={comment} (hyprfrijol)\n"

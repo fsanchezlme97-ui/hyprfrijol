@@ -76,8 +76,22 @@ Scope {
     // ---------- batería ----------
     property bool saverDone: false
     property bool blurOff: false
+    // Perfil de energía al enchufar y al desenchufar (powerProfileAC / powerProfileBattery; "" = no tocarlo).
+    // Solo al cambiar de estado: si lo cambias a mano después, se respeta hasta el siguiente cambio.
+    property int lastOnBattery: -1
+    function profileOnPlug(): void {
+        const now = Battery.onBattery ? 1 : 0;
+        if (now === lastOnBattery) return;
+        const first = lastOnBattery === -1;
+        lastOnBattery = now;
+        if (first) return;                       // al arrancar el shell no se cambia nada
+        const k = Settings.get(now ? "powerProfileBattery" : "powerProfileAC", "");
+        if ((k === "ahorro" || k === "equilibrado" || (k === "rendimiento" && Battery.hasPerformance)) && Battery.profile !== k)
+            Battery.setProfile(k);
+    }
     function batteryTick(): void {
         if (!Battery.present) return;
+        profileOnPlug();
         if (Battery.onBattery && Battery.percent < 0.2 && Settings.get("lowBatterySaver", true) && !saverDone) {
             saverDone = true;
             if (Battery.profile !== "ahorro") Battery.setProfile("ahorro");

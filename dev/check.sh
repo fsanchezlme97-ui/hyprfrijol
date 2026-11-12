@@ -21,7 +21,7 @@ cp -rL "$HOME/.config/hyprfrijol" "$FH/.config/" 2>/dev/null || mkdir -p "$FH/.c
 cp -rL "$HOME/.local/state/hyprfrijol" "$FH/.local/state/" 2>/dev/null || true
 [ -d "$HOME/.config/hypr" ] && cp -rL "$HOME/.config/hypr" "$FH/.config/" 2>/dev/null
 
-VIEWS="spotlight ajustes energia fondos actualizaciones vista widgets w-clima w-sistema w-impresora w-pomodoro bienvenida atajos musica w-dispositivos w-descargas captura color tareas remoto maquinas impresion"
+VIEWS="spotlight ajustes energia fondos actualizaciones vista widgets w-clima w-sistema w-impresora w-pomodoro bienvenida atajos musica w-dispositivos w-descargas captura color tareas remoto maquinas impresion restauracion"
 # Las secciones de Ajustes, de la lista de SettingsApp.qml (así una nueva entra sola)
 SECTIONS="$(grep -oE '\{ key: "[a-z]+"' "$ROOT/config/quickshell/modules/settings/SettingsApp.qml" | sed -E 's/.*"([a-z]+)"/\1/' | tr '\n' ' ')"
 

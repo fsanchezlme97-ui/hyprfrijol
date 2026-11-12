@@ -4,6 +4,7 @@
 //   remoto     «Conexiones remotas»   — conexiones guardadas (RDP, VNC, SSH, SPICE): conectar, añadir, editar
 //   maquinas   «Máquinas virtuales»   — tus máquinas (virsh) y contenedores (Distrobox): encender, apagar, crear
 //   impresion  «Cola de impresión»    — trabajos pendientes: cancelar uno o todos
+//   restauracion «Puntos de restauración» — los de snapper: crear uno, ver qué cambió, restaurar archivos
 import QtQuick
 import Quickshell
 import "../.."
@@ -27,5 +28,11 @@ Scope {
         subtitle: "Lo que está esperando para imprimirse · las impresoras, en Ajustes › Impresoras y escáneres"
         prefW: 640; prefH: 520
         content: Component { Impresoras { app: true } }
+    }
+    AppWindow {
+        view: "restauracion"; title: "Puntos de restauración"
+        subtitle: "Snapper guarda el sistema antes y después de cada actualización · las actualizaciones y los kernels, en Ajustes › Sistema"
+        prefW: 720; prefH: 560
+        content: Component { Sistema { app: true } }
     }
 }

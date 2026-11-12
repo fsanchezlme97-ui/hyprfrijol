@@ -49,8 +49,8 @@ reducción automática) se descartó en las decisiones del plan.
       se transforme en otro al saltar de uno a otro.
 - [ ] **Plugins propios**: formato, permisos y un registro con versiones fijadas (como DMS); hoy solo los de Omarchy.
 - [ ] **Más compositores** (niri, Sway): evaluar qué partes dependen de Hyprland. Grande; después de lo demás.
-- [ ] Detalles de otros shells: desbloqueo facial (Howdy), letras de canciones, perfiles de energía según
-      cargador o batería. (Cerrar procesos desde el monitor del sistema: 0.9.29.)
+- [ ] Detalles de otros shells: desbloqueo facial (Howdy), letras de canciones. (Cerrar procesos desde el monitor
+      del sistema: 0.9.29; perfil de energía según cargador o batería: 0.9.30, sin probar en un portátil.)
 
 ## Mejorar lo que ya hay
 
@@ -62,9 +62,9 @@ reducción automática) se descartó en las decisiones del plan.
 - [ ] **Productividad**: revisar Spotlight, portapapeles, ventanas y atajos con uso real; quitar pasos. Hecho
       (0.9.25): deshacer al borrar tareas o vaciar el historial de avisos, «Copiado» al copiar un aviso, las teclas de
       Alt + Tab a la vista, botones pequeños más fáciles de acertar. Queda lo que pide uso real.
-- [ ] **Ajustes es para ajustes**: Tareas ya es app, las alarmas van en su ventana y las instaladas en el Centro de
-      aplicaciones (0.9.21); Conexiones remotas, Máquinas virtuales y Cola de impresión son apps (0.9.24). Quedan,
-      dudosas: puntos de restauración (Sistema) y unidades extraíbles (Almacenamiento, repite el menú de la barra).
+- [x] **Ajustes es para ajustes**: Tareas ya es app, las alarmas van en su ventana y las instaladas en el Centro de
+      aplicaciones (0.9.21); Conexiones remotas, Máquinas virtuales y Cola de impresión son apps (0.9.24); Puntos de
+      restauración es app y las unidades extraíbles se ven en el icono de la barra (0.9.30).
 - [ ] **Dictado por voz**: precisión, latencia, puntuación, idioma y que funcione en todas las apps. Nombres propios
       e internet: vocabulario con todos los motores y corrección con la IA (0.9.20); falta probarlo con voz real.
 - [ ] **Chat en vivo con el asistente** (hablar y que responda en voz): conversación fluida, interrumpirlo,

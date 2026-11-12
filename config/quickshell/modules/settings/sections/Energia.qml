@@ -198,6 +198,21 @@ RowLayout {
             }
             SwRow { label: "Brillo automático"; sub: root.lightSensor ? "Usa el sensor de luz" : "Este equipo no tiene sensor de luz"; key: "autoBrightness"; enabled: root.lightSensor }
             SwRow { label: "Ahorro automático con poca batería"; sub: "Por debajo del 20 %"; key: "lowBatterySaver"; def: true }
+            // Perfil al enchufar y al desenchufar el cargador (Daemons.profileOnPlug)
+            Repeater {
+                model: [["powerProfileAC", "Con el cargador"], ["powerProfileBattery", "Con batería"]]
+                LabeledRow {
+                    required property var modelData
+                    visible: Battery.present
+                    label: modelData[1]; labelWidth: 130
+                    Seg {
+                        model: [["", "No cambiar"], ["ahorro", "Ahorro"], ["equilibrado", "Equilibrado"]].concat(Battery.hasPerformance ? [["rendimiento", "Rendimiento"]] : [])
+                        current: Settings.get(modelData[0], "")
+                        // (claves literales: así las encuentra «Restaurar valores por defecto»)
+                        onPicked: k => modelData[0] === "powerProfileAC" ? Settings.set("powerProfileAC", k) : Settings.set("powerProfileBattery", k)
+                    }
+                }
+            }
         }
     }
     ColumnLayout {

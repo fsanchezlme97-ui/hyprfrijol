@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.30] — 2026-11-11
+
+### Añadido
+- **Puntos de restauración es una app** (lanzador propio): la lista de snapper con «Crear ahora», «Ver cambios» y
+  «Restaurar archivos». En Ajustes › Sistema queda un resumen con el botón para abrirla.
+- **Perfil de energía al enchufar y al desenchufar** (Ajustes › Energía, solo con batería): ahorro, equilibrado o
+  rendimiento para cada caso (`powerProfileAC`, `powerProfileBattery`); si lo cambias a mano, se respeta hasta el
+  siguiente cambio.
+
+### Cambiado
+- Ajustes › Almacenamiento ya no repite la lista de unidades extraíbles del icono de la barra: dice cuántas hay y
+  «Ver las unidades» abre ese menú.
+- Los lanzadores de las apps del shell llevan la ruta entre comillas (carpetas con espacios).
+
 ## [0.9.29] — 2026-11-11
 
 ### Añadido

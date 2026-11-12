@@ -483,7 +483,7 @@
   "Aplicaciones": ["appsAutoDefaults", "appsInstallMode", "appsPreferFlatpak"],
   "Barra": ["barAllScreens", "barBehavior", "barHeight", "barMode", "barModules", "barPos", "barRoundExtra", "barScreens", "barSecondaryClock", "barStatsShow", "barStatsStyle", "barTransparentEmpty", "barTray", "barTrayHidden", "barTrayMax", "barWeatherText", "osdOffset", "osdPos", "waveStyle"],
   "Dictado": ["dictationAiFix", "dictationEngine", "dictationLang", "dictationLive", "dictationMode", "dictationModel", "dictationOutput", "dictationPrompt", "dictationPunct", "dictationVoskModel", "dictationWake", "dictationWakeWord", "micMode", "voiceAiFallback", "voiceAliases", "voiceCommands", "voiceMusicService"],
-  "Energia": ["autoBrightness", "chargeLimit", "gpuMode", "idleDim", "idleScreenOff", "idleSuspend", "lazyModules", "lowBatterySaver", "powerKey", "startSplash"],
+  "Energia": ["autoBrightness", "chargeLimit", "gpuMode", "idleDim", "idleScreenOff", "idleSuspend", "lazyModules", "lowBatterySaver", "powerKey", "powerProfileAC", "powerProfileBattery", "startSplash"],
   "Enfoque": ["focusAutoBreak", "focusBlock", "focusHideBar", "focusMuteNotifs", "focusNoGaps", "focusSound", "pomodoroBreak", "pomodoroCycles", "pomodoroFocus", "pomodoroLong"],
   "Escritorio": ["barsOwnFrame", "deskIconSize", "deskIcons", "deskSort", "dockBehavior", "dockInTiling", "dockPos", "dragSnap", "floatApps", "floatAppsSize", "floatRemember", "focusOnHover", "gesture3Down", "gesture3Up", "gesture4Down", "gesture4Up", "hotCornerDelay", "hotCorners", "layout", "printerUrl", "scrollColumnWidth", "scrollFocusFit", "scrollOneFull", "snapEdges", "titleBars", "windowMode", "wsBarNames", "wsIcons", "wsNames", "wsNumerals", "wsPerMonitor", "wsShowAll"],
   "Fecha": ["clock24", "weekStart"],

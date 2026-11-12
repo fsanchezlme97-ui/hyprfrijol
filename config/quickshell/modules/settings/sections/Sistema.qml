@@ -20,6 +20,7 @@ RowLayout {
     property var kernels: []
     property string running: ""
     property var has: ({})
+    property bool app: false        // ventana «Puntos de restauración» (modules/apps): solo la lista de puntos
 
     function loadSnaps() { snapProc.running = false; snapProc.running = true; }
     Process {
@@ -57,7 +58,22 @@ RowLayout {
         Layout.preferredWidth: 1.25
         Layout.alignment: Qt.AlignTop
         spacing: 12
+        // En Ajustes, solo el resumen; la lista con crear y ver cambios es la app «Puntos de restauración»
         Section {
+            visible: !root.app
+            Layout.fillWidth: true
+            title: "Puntos de restauración"
+            headerRight: Button { text: "Abrir Puntos de restauración"; h: 26; onClicked: Shell.open("restauracion") }
+            Txt {
+                Layout.fillWidth: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                text: root.snapErr !== "" ? (root.snapErr === "Sin permisos." ? "Tu usuario no puede leer los puntos de restauración de snapper." : root.snapErr)
+                    : root.snaps.length ? root.snaps.length + (root.snaps.length === 1 ? " punto" : " puntos") + " · el último: #" + root.snaps[0].number + (root.snaps[0].description ? " (" + root.snaps[0].description + ")" : "")
+                    : "Aún no hay puntos de restauración"
+                muted: root.snapErr !== ""
+            }
+        }
+        Section {
+            visible: root.app
             Layout.fillWidth: true
             title: "Puntos de restauración"
             headerRight: Button { kind: "primary"; text: "Crear ahora"; enabled: root.snapErr !== "Snapper no está instalado."; onClicked: { Pkg.runInTerminal("sudo snapper -c root create -c number -d 'Manual desde Ajustes'", "Punto de restauración"); refreshT.restart(); } }
@@ -128,6 +144,7 @@ RowLayout {
             }
         }
         Section {
+            visible: !root.app
             Layout.fillWidth: true
             RowLayout {
                 Layout.fillWidth: true
@@ -143,10 +160,11 @@ RowLayout {
             }
         }
         // Diagnóstico (hf-doctor), Actualizaciones de HyprFrijol (hf-update) y Modo seguro (hf-safe) → ui/Mantenimiento.qml
-        Mantenimiento { Layout.fillWidth: true }
+        Mantenimiento { Layout.fillWidth: true; visible: !root.app }
     }
     ColumnLayout {
         id: right
+        visible: !root.app
         Layout.fillWidth: true
         Layout.preferredWidth: 1
         Layout.alignment: Qt.AlignTop
@@ -207,6 +225,7 @@ RowLayout {
             }
         }
         Section {
+            visible: !root.app
             Layout.fillWidth: true
             RowLayout {
                 Layout.fillWidth: true
