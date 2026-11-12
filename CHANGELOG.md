@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.45] — 2026-11-12
+
+### Seguridad
+- Las capturas del asistente (modo compañero, «+ Captura», leer la ventana) ya no se hacen si Hyprland no responde:
+  antes, sin poder comprobar si había un gestor de contraseñas a la vista, se daba por bueno. El modo compañero
+  captura solo la pantalla activa (si no se sabe cuál, no captura), crea el archivo ya privado y lo borra si
+  aparece una app privada mientras tanto.
+
 ## [0.9.44] — 2026-11-12
 
 ### Añadido

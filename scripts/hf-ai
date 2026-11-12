@@ -1651,12 +1651,15 @@ def is_private(cls, s=None):
     return bool(c) and any(p in c for p in private_apps(s))
 
 def private_visible(s=None):
-    """¿Se ve una app privada en alguna pantalla (espacio activo o especial abierto)? Una captura la incluiría."""
+    """¿Se ve una app privada en alguna pantalla (espacio activo o especial abierto)? Una captura la incluiría.
+    Si Hyprland no responde no se puede saber: cuenta como que sí (mejor no capturar)."""
     mons = jrun(["hyprctl", "monitors", "-j"])
-    vis = {(m.get(k) or {}).get("id") for m in (mons if isinstance(mons, list) else []) for k in ("activeWorkspace", "specialWorkspace")}
     cl = jrun(["hyprctl", "clients", "-j"])
+    if not isinstance(mons, list) or not isinstance(cl, list):
+        return True
+    vis = {(m.get(k) or {}).get("id") for m in mons for k in ("activeWorkspace", "specialWorkspace")}
     return any(c.get("mapped", True) and not c.get("hidden") and (c.get("workspace") or {}).get("id") in vis
-               and is_private(c.get("class"), s) for c in (cl if isinstance(cl, list) else []))
+               and is_private(c.get("class"), s) for c in cl)
 
 # Lo copiado desde una app privada (lo marca `hf-clip store`) o marcado como contraseña por el gestor
 # (x-kde-passwordManagerHint) no se lee mientras siga en el portapapeles.
@@ -1735,10 +1738,20 @@ def peek():
             f.unlink(missing_ok=True)
     mons = jrun(["hyprctl", "monitors", "-j"])
     out = next((m.get("name") for m in (mons if isinstance(mons, list) else []) if m.get("focused")), None)
+    if not out:
+        return {"skip": "no sé qué pantalla está activa"}
     p = CAP_TMP / time.strftime("%Y%m%d-%H%M%S.png")
-    r = subprocess.run(["grim", *(["-o", out] if out else []), str(p)], capture_output=True)
+    old_umask = os.umask(0o077)               # la captura nace ya solo tuya
+    try:
+        r = subprocess.run(["grim", "-o", out, str(p)], capture_output=True)
+    finally:
+        os.umask(old_umask)
     if r.returncode != 0 or not p.is_file():
+        p.unlink(missing_ok=True)
         return {"skip": "no se pudo hacer la captura"}
+    if private_visible(s):                    # apareció una app privada mientras se capturaba
+        p.unlink(missing_ok=True)
+        return {"skip": "hay una app privada a la vista"}
     os.chmod(p, 0o600)
     return {"path": str(p)}
 
