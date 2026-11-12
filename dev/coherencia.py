@@ -3,7 +3,9 @@
   · cada clave de ajustes que usa el shell tiene valor por defecto en config/defaults/settings.json (si no, cada
     sitio inventa el suyo);
   · cada programa que el código busca (command -v X, shutil.which("X")) está en la columna «órdenes» de
-    install/packages.tsv, salvo los del sistema y las alternativas que no instalamos nosotros (SISTEMA)."""
+    install/packages.tsv, salvo los del sistema y las alternativas que no instalamos nosotros (SISTEMA);
+  · cada .qml que usa un singleton (Time., Settings., Battery.…) importa su carpeta: si no, falla solo al usarse
+    («ReferenceError: Time is not defined») y dev/check.sh no lo ve."""
 import json, pathlib, re, sys
 root = pathlib.Path(__file__).resolve().parent.parent
 fail = 0
@@ -49,4 +51,22 @@ if miss:
     print("Programas que usa el código y no están en install/packages.tsv (o en SISTEMA de dev/coherencia.py):")
     for k in miss:
         print(f"  {k}  ({progs[k]})")
+Q = root / "config/quickshell"
+singles = {d: {p.stem for p in d.glob("*.qml") if "pragma Singleton" in p.read_text()[:400]} for d in (Q / "services", Q)}
+bad = set()
+for p in Q.rglob("*.qml"):
+    t = p.read_text()
+    code = re.sub(r'"(?:[^"\\\n]|\\.)*"', '""', re.sub(r"//[^\n]*", "", t))
+    dirs = {(p.parent / m).resolve() for m in re.findall(r'^import\s+"([^"]+)"', t, re.M)} | {p.parent.resolve()}
+    for d, names in singles.items():
+        if d.resolve() in dirs:
+            continue
+        for n in names:
+            if re.search(r"(?<![\w.])" + n + r"\.\w", code) and not re.search(r"\bid:\s*" + n + r"\b", code):
+                bad.add((str(p.relative_to(root)), n, str(d.relative_to(root))))
+if bad:
+    fail = 1
+    print("Usan un singleton sin importar su carpeta:")
+    for f, n, d in sorted(bad):
+        print(f"  {f}: {n} (import de {d})")
 sys.exit(fail)

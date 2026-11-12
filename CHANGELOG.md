@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.32] — 2026-11-11
+
+### Corregido
+- La lista de conversaciones del asistente vuelve a enseñar la fecha de cada una («Hoy · 22:15», «Ayer»…): le
+  faltaba un import y daba «Time is not defined».
+- `dev/lint.sh` (`dev/coherencia.py`) avisa de cualquier .qml que use un singleton sin importar su carpeta.
+
 ## [0.9.31] — 2026-11-11
 
 ### Añadido

@@ -30,6 +30,7 @@ import Quickshell.Io
 import Quickshell.Widgets
 import "../.."
 import "../../components"
+import "../../services"
 
 Item {
     id: root
