@@ -201,5 +201,7 @@ Recetas reutilizables: una instrucción + de dónde sale el texto + qué se hace
 - Sin menú contextual sobre el texto seleccionado: Spotlight y atajos.
 - «Lo que sabe de ti» se guarda en un archivo aparte que el usuario puede leer y editar.
 - El cliente MCP externo queda para después de esta versión. Se hizo en la 0.9.17 (pestaña Integraciones): cada
-  servidor se aprueba con un interruptor tras ver sus herramientas; las claves, en variables de entorno.
+  servidor se aprueba con un interruptor tras ver sus herramientas; las claves, en variables de entorno. En la
+  0.9.18, readOnlyHint deja de bastar: sin «Consultar sin preguntar» (autoRead) todo se confirma, y nunca sin
+  preguntar después de que entren datos de fuera en la misma respuesta.
 - Fuera de esta versión también: el contador de uso y tokens (cada proveedor lo informa distinto).

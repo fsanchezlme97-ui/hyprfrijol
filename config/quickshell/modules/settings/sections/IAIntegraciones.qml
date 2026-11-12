@@ -1,8 +1,9 @@
 // Ajustes › Asistente de IA › Integraciones: el servidor MCP de HyprFrijol (scripts/hf-mcp, para usar el escritorio
 // desde Claude u otro cliente: comando para añadirlo y sus herramientas, de `hf-ai tools`) y los servidores MCP del
-// usuario que puede usar el asistente (aiMcpServers: [{id, name, command | url, authEnv, enabled}]). Cada servidor se
-// aprueba aparte (enabled); al añadirlo o con «Comprobar», `hf-ai mcp check <id>` lee sus herramientas. Las que
-// cambian cosas siempre piden confirmación en el panel. Las claves van en variables de entorno (authEnv), no aquí.
+// usuario que puede usar el asistente (aiMcpServers: [{id, name, command | url, authEnv, enabled, autoRead}]). Cada
+// servidor se aprueba aparte (enabled); al añadirlo o con «Comprobar», `hf-ai mcp check <id>` lee sus herramientas.
+// Todo se confirma en el panel viendo los argumentos, salvo las de solo lectura de un servidor con «Consultar sin
+// preguntar» (autoRead). Las claves van en variables de entorno (authEnv), no aquí; por URL, solo https.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -80,6 +81,7 @@ ColumnLayout {
         Qt.callLater(() => root.check(id));
     }
     function setEnabled(id, on) { Settings.set("aiMcpServers", servers.map(s => s.id === id ? Object.assign({}, s, { enabled: on }) : s)); }
+    function setAutoRead(id, on) { Settings.set("aiMcpServers", servers.map(s => s.id === id ? Object.assign({}, s, { autoRead: on }) : s)); }
     function remove(id) { Settings.set("aiMcpServers", servers.filter(s => s.id !== id)); }
 
     Section {
@@ -89,8 +91,8 @@ ColumnLayout {
         Txt {
             Layout.fillWidth: true
             text: "Conecta herramientas de fuera (calendario, GitHub, notas, archivos…) con servidores MCP. Cada uno se aprueba aparte: "
-                + "hasta que lo actives, el asistente no lo ve. Sus herramientas de solo lectura las usa cuando le hacen falta; "
-                + "las que cambian algo te piden confirmación cada vez y no se pueden deshacer desde aquí."
+                + "hasta que lo actives, el asistente no lo ve. Cada vez que quiera usar una herramienta te enseña lo que va a mandar "
+                + "y te pide confirmación; lo que cambia algo no se puede deshacer desde aquí."
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }
         Txt {
@@ -127,13 +129,14 @@ ColumnLayout {
                         Txt {
                             Layout.fillWidth: true
                             text: root.checking === sv.modelData.id ? "Comprobando…"
+                                : sv.st.urlProblem ? sv.st.urlProblem
                                 : sv.st.error ? "No responde: " + sv.st.error
                                 : !sv.st.checked ? "Sin comprobar"
                                 : (sv.tools.length === 1 ? "1 herramienta" : sv.tools.length + " herramientas")
                                   + (sv.tools.length ? " · " + sv.nRead + " de solo lectura" : "")
                                   + (sv.modelData.authEnv ? " · clave en $" + sv.modelData.authEnv : "")
                             size: 11.5
-                            color: sv.st.error ? Theme.ter : sv.modelData.enabled ? Theme.p : Theme.tv
+                            color: sv.st.error || sv.st.urlProblem ? Theme.ter : sv.modelData.enabled ? Theme.p : Theme.tv
                             wrapMode: Text.WordWrap; elide: Text.ElideNone
                         }
                     }
@@ -143,6 +146,29 @@ ColumnLayout {
                         checked: sv.modelData.enabled === true
                         enabled: !root.localOnly
                         onToggled: v => root.setEnabled(sv.modelData.id, v)
+                    }
+                }
+                // Consultas de solo lectura sin confirmar: opción del usuario (readOnlyHint lo declara el servidor)
+                RowLayout {
+                    visible: sv.modelData.enabled === true && sv.nRead > 0
+                    Layout.fillWidth: true
+                    spacing: 10
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 1
+                        Txt { Layout.fillWidth: true; text: "Consultar sin preguntar"; size: 12 }
+                        Txt {
+                            Layout.fillWidth: true
+                            text: (sv.nRead === 1 ? "Usa su herramienta de solo lectura" : "Usa sus " + sv.nRead + " herramientas de solo lectura")
+                                + " sin confirmar, salvo cuando ya ha leído datos "
+                                + "en esa respuesta. Que sean de solo lectura lo dice el propio servidor: actívalo solo si te fías de él."
+                            muted: true; size: 11; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                        }
+                    }
+                    Sw {
+                        checked: sv.modelData.autoRead === true
+                        enabled: !root.localOnly
+                        onToggled: v => root.setAutoRead(sv.modelData.id, v)
                     }
                 }
                 // Sus herramientas: las que cambian algo, marcadas

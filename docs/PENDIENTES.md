@@ -7,7 +7,7 @@ illogical-impulse (end-4) y Omarchy 4.5 (noviembre de 2026). Al terminar algo, s
 
 Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar una fase se marca aquí.
 
-Estado a 2026-11-11 (v0.9.17). Lo hecho está en el CHANGELOG. Lo que queda de los planes: el espaciado de Math
+Estado a 2026-11-11 (v0.9.18). Lo hecho está en el CHANGELOG. Lo que queda de los planes: el espaciado de Math
 (punto 4), la revisión con uso real (punto 5) y, opcional, que la IA asigne los papeles de un tema.
 
 1. [x] [Asistente de IA](planes/asistente-ia.md), fase 6 (panel): respuesta en directo con Detener y repetir con
@@ -25,7 +25,8 @@ Estado a 2026-11-11 (v0.9.17). Lo hecho está en el CHANGELOG. Lo que queda de l
        escritorio; lo que se mide está en la sección 4 del plan). Los relojes del mundo siguen en Fecha, con un
        enlace desde Agenda y alarmas.
 6. [x] [Asistente de IA](planes/asistente-ia.md), fase 7: servidores MCP del usuario, con aprobación por servidor
-       y confirmación de todo lo que cambia (0.9.17). Por comando (stdio) o por dirección (HTTP).
+       y confirmación de todo lo que cambia (0.9.17). Por comando (stdio) o por dirección (HTTP). Endurecido en la
+       0.9.18: también se confirma lo de solo lectura salvo con «Consultar sin preguntar», https y sin redirecciones.
 
 Cerrado: [Animaciones y efectos](planes/animaciones.md). Las fases 1–5 están hechas y la 6 (ajustes por zona,
 reducción automática) se descartó en las decisiones del plan.

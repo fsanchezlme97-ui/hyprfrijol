@@ -345,6 +345,7 @@ Item {
                 if (r.error) root.push({ role: "ai", text: r.error, error: true, local: true });
                 else {
                     root.patch(root.applyingIdx, { state: "applied", undo: r.undo ?? "" });
+                    for (const t of r.results ?? []) root.push({ role: "ai", text: t, local: true });   // herramientas MCP de solo lectura
                     if (r.errors?.length) root.push({ role: "ai", text: "Algunos pasos no se pudieron hacer: " + r.errors.join(" · "), local: true });
                 }
             }

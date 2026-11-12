@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.18] — 2026-11-11
+
+### Seguridad
+- **Servidores MCP: todo se confirma por defecto**. Que una herramienta sea «de solo lectura» lo dice el propio servidor, así que ya no basta para usarla sin preguntar: el asistente te enseña lo que va a mandar y esperas a confirmarlo, y lo que responda aparece en el chat. Para que consulte sin preguntar hay una opción nueva por servidor, «Consultar sin preguntar», y aun con ella no lo hace después de haber leído datos en la misma respuesta (resultados de consultas, capturas o imágenes) ni si no le dejas consultar el escritorio.
+- **Las claves no salen de su servidor**: con dirección, el servidor tiene que ser https (http solo para uno en este equipo) y no se siguen redirecciones, así la clave nunca va a otra dirección.
+- **Herramientas al día**: si cambias el comando, la dirección o la variable de la clave de un servidor, sus herramientas guardadas dejan de valer hasta que lo compruebes otra vez.
+- **Descripciones como datos**: lo que cuenta cada servidor de sus herramientas se limpia (sin bloques ni marcas) y va en un apartado marcado como datos, no como instrucciones.
+
 ## [0.9.17] — 2026-11-11
 
 ### Añadido
