@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.14] — 2026-11-11
+
+### Añadido
+- **Inicio del asistente** (Ajustes › Asistente de IA): la primera pestaña dice en una línea qué proveedor y modelo responden y si están listos, con «Probar conexión»; un resumen de lo que más importa (respaldo, solo en este equipo, confirmación, datos sensibles, apps privadas, historial y recetas) que lleva a donde se cambia, y los atajos del asistente.
+
+### Cambiado
+- Lo que antes era la pestaña «Asistente» se llama **Proveedor y permisos**.
+
 ## [0.9.13] — 2026-11-11
 
 ### Añadido

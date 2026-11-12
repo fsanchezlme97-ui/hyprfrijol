@@ -1,4 +1,4 @@
-// Ajustes › Asistente de IA — proveedor/modelo/servidor (los usa scripts/hf-ai: aiProvider, aiModel, aiEndpoint,
+// Ajustes › Asistente de IA › Proveedor y permisos («iaproveedor»; la entrada «ia» es Inicio) — proveedor/modelo/servidor (los usa scripts/hf-ai: aiProvider, aiModel, aiEndpoint,
 // aiKeyEnv), personalidad (aiName, aiPersona) y permisos del asistente (aiContextWindow, aiContextClipboard…).
 // Gemini: la clave se guarda con `hf-ai key set gemini` (llavero con secret-tool o ~/.config/hyprfrijol/secrets,
 // nunca en settings.json); la lista de modelos sale de `hf-ai models gemini` y «Probar conexión» de `hf-ai test`.
@@ -14,7 +14,7 @@ import "../ui"
 ColumnLayout {
     id: root
     spacing: 12
-    AiTabs { current: "ia" }   // Asistente | Privacidad | Dictado | Panel (una sola entrada en la lista)
+    AiTabs { current: "iaproveedor" }   // Inicio | Proveedor y permisos | Privacidad | Recetas | Dictado | Panel
     readonly property string prov: Settings.get("aiProvider", "claude-code")
     property var ollamaModels: []
     property var geminiModels: []
@@ -211,9 +211,6 @@ ColumnLayout {
                     text: root.testMsg
                 }
             }
-            Item { implicitHeight: 2 }
-            Kv { k: "Atajo para abrir"; v: "Super + A" }
-            Kv { k: "Preguntar desde Spotlight"; v: "Empieza con ?" }
         }
         Section {
             Layout.fillWidth: true

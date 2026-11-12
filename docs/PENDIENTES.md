@@ -12,8 +12,8 @@ entre la 0.9.0 y la 0.9.12 está en el CHANGELOG. Queda, en este orden:
 
 1. [x] [Asistente de IA](planes/asistente-ia.md), fase 6 (panel): respuesta en directo con Detener y repetir con
        otro modelo (0.9.13). Los chips de contexto y la lista de conversaciones con búsqueda ya estaban.
-2. [ ] [Asistente de IA](planes/asistente-ia.md), resto de la fase 1: la página de Inicio (el estado y «Probar
-       conexión» siguen arriba de la pestaña Asistente).
+2. [x] [Asistente de IA](planes/asistente-ia.md), resto de la fase 1: la página de Inicio (0.9.14). Sin contador de
+       uso: el plan lo deja fuera de esta versión.
 3. [ ] [Temas](planes/temas.md), resto de las fases 4–5: editar los colores de un tema propio uno a uno y la vista
        previa sobre la barra y el centro de control (hoy, dos tarjetas). Opcional en el plan: que la IA asigne los
        papeles de cada color.
