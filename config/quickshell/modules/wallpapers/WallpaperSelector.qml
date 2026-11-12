@@ -42,7 +42,17 @@ Overlay {
         const e = gallery.get(sel);
         return { path: e.path, thumb: e.thumb, name: e.name, video: e.video, origin: e.origin, res: e.res, colors: e.colors, rev: e.rev };
     }
-    readonly property bool whOn: Settings.get("wallpaperSource", "carpeta") === "wallhaven"
+    // Origen en línea del cambio automático: "wallhaven" · "unsplash" · "" (la carpeta)
+    readonly property string online: ["wallhaven", "unsplash"].includes(Settings.get("wallpaperSource", "carpeta")) ? Settings.get("wallpaperSource", "carpeta") : ""
+    readonly property bool whOn: online !== ""
+    readonly property bool webOrigin: !!cur && (cur.origin === "wallhaven" || cur.origin === "unsplash")
+    // Autor de la foto de Unsplash elegida (sus normas piden nombrarlo)
+    property var credit: ({})
+    onCurChanged: { credit = ({}); if (cur && cur.origin === "unsplash") { creditProc.command = [Paths.script("hf-unsplash"), "credit", cur.path]; creditProc.running = true; } }
+    Process {
+        id: creditProc
+        stdout: StdioCollector { onStreamFinished: { try { win.credit = JSON.parse(text); } catch (e) {} } }
+    }
 
     // Tamaños (a 1080 p de alto: miniaturas de 224×140, la elegida a ×1,38)
     readonly property real k: Math.max(0.75, Math.min(1.3, height / 1080))
@@ -62,7 +72,7 @@ Overlay {
     }
     function isVideo(p: string): bool { return /\.(mp4|webm|mkv|mov|gif)$/i.test(p); }
     function fold(s: string): string { return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
-    function originLabel(o: string): string { return o === "incluido" ? "Incluido" : o === "wallhaven" ? "Wallhaven" : "Mis fondos"; }
+    function originLabel(o: string): string { return o === "incluido" ? "Incluido" : o === "wallhaven" ? "Wallhaven" : o === "unsplash" ? "Unsplash" : "Mis fondos"; }
 
     function reload(): void { galleryProc.running = false; galleryProc.running = true; }
     function go(i: int): void { if (count) { userMoved = true; sel = Math.max(0, Math.min(count - 1, i)); } }
@@ -161,7 +171,7 @@ Overlay {
     }
     Process {
         id: whProc
-        command: [Paths.script("hf-wallhaven"), "next"]
+        command: [Paths.script("hf-" + (win.online || "wallhaven")), "next"]
         stdout: StdioCollector { onStreamFinished: { const l = text.trim(); if (l) win.pendingSelect = l; } }
         onExited: win.reload()
     }
@@ -253,7 +263,7 @@ Overlay {
                     Layout.preferredHeight: 26
                     spacing: 6
                     opacity: win.cur ? 1 : 0
-                    Chip { text: win.cur ? win.originLabel(win.cur.origin) : ""; icon: win.cur && win.cur.origin === "wallhaven" ? "globe" : win.cur && win.cur.origin === "mio" ? "folder" : "image" }
+                    Chip { text: win.cur ? win.originLabel(win.cur.origin) : ""; icon: win.webOrigin ? "globe" : win.cur && win.cur.origin === "mio" ? "folder" : "image" }
                     Chip { visible: !!win.cur && win.cur.video; text: "Vídeo"; icon: "play" }
                     Chip { visible: !!win.cur && win.cur.res !== "" && win.cur.res !== "?"; text: win.cur ? win.cur.res.replace("x", " × ") : ""; tabular: true }
                     Chip { visible: !!win.cur && win.cur.path === win.current; text: "Puesto ahora"; icon: "check"; accent: true }
@@ -273,8 +283,9 @@ Overlay {
                             }
                         }
                     }
+                    Chip { visible: !!win.credit.author; text: "Foto de " + (win.credit.author ?? "") + " en Unsplash" }
                     Btn {
-                        visible: !!win.cur && win.cur.origin === "wallhaven"
+                        visible: win.webOrigin
                         Layout.leftMargin: 6
                         kind: "ghost"; h: 26; icon: "download"; text: "Guardar en mis fondos"
                         onClicked: { addProc.command = [Paths.script("hf-wallpaper"), "add", win.cur.path]; addProc.running = true; }
@@ -402,7 +413,7 @@ Overlay {
                 Btn { kind: win.showAdd ? "tonal" : "ghost"; icon: "plus"; text: "Mis fondos"; onClicked: { win.showAdd = !win.showAdd; win.showHoras = false; } }
                 Btn {
                     visible: win.whOn
-                    kind: "ghost"; icon: "download"; text: whProc.running ? "Buscando…" : "Traer de Wallhaven"
+                    kind: "ghost"; icon: "download"; text: whProc.running ? "Buscando…" : win.online === "unsplash" ? "Traer de Unsplash" : "Traer de Wallhaven"
                     enabled: !whProc.running
                     onClicked: whProc.running = true
                 }

@@ -1,0 +1,377 @@
+#!/usr/bin/env python3
+"""hf-unsplash — fondos de unsplash.com para hyprfrijol (como hf-wallhaven: búsqueda, caché con límite y «añadir a mis fondos»).
+
+  hf-unsplash search [--q TEXTO] [--order popular|latest|relevant] [--page N]
+                     → {"results":[…], "page", "last_page", "total", "error"}   (lo que no se pase sale de los ajustes)
+  hf-unsplash fetch <id>      descarga la foto a la caché, a la medida de tu pantalla → {"ok", "path"}
+  hf-unsplash next            para el cambio automático: una foto nueva al azar según los ajustes; imprime solo la ruta
+  hf-unsplash add <id|ruta>   la copia a tus fondos (hf-wallpaper add) → {"ok", "path"}
+  hf-unsplash set <id>        la descarga y la pone de fondo (hf-wallpaper <ruta>)
+  hf-unsplash credit <ruta>   autor de una foto ya bajada → {"author", "url"} (Unsplash pide nombrarlo)
+  hf-unsplash cache           {"files", "bytes", "limit_mb", "dir"} · cache clear · cache prune
+  hf-unsplash key status|set|clear   «Access Key» de la API (obligatoria; set la lee de stdin o HF_UNSPLASH_KEY_IN, nunca de argv)
+
+Unsplash no tiene API sin clave: créala gratis en unsplash.com/developers (New Application → Access Key; la de
+prueba da 50 peticiones por hora, de sobra para esto). Normas de la API que se cumplen aquí: se enlaza la foto y
+su autor con utm_source, y cada descarga avisa a su «download_location».
+Ajustes (settings.json): wallpaperSource ("unsplash": hf-wallpaper next/random traen una foto nueva), unsplashQuery
+("" = el tema «Wallpapers» de Unsplash), unsplashOrder ("popular" | "latest"; con texto, «relevant»), unsplashCacheMB (500).
+Clave: $UNSPLASH_ACCESS_KEY → llavero (secret-tool service=hyprfrijol provider=unsplash) → ~/.config/hyprfrijol/secrets/
+unsplash.key (600). Nunca va en settings.json ni en la línea de órdenes. Caché: ~/.cache/hyprfrijol/unsplash.
+"""
+import json, os, re, shutil, subprocess, sys, pathlib, random, urllib.request, urllib.parse, urllib.error
+
+HOME = pathlib.Path.home()
+ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
+SETTINGS = HOME / ".config/hyprfrijol/settings.json"
+STATE = HOME / ".local/state/hyprfrijol"
+CACHE = HOME / ".cache/hyprfrijol/unsplash"
+SEEN = CACHE / ".seen.json"
+CREDITS = CACHE / ".credits.json"
+API = os.environ.get("HF_UNSPLASH_API") or "https://api.unsplash.com"
+IMG = os.environ.get("HF_UNSPLASH_IMG") or "https://images.unsplash.com/"     # (las dos variables, solo para pruebas)
+SECRETS = HOME / ".config/hyprfrijol/secrets"
+SECRET_ATTRS = ["service", "hyprfrijol", "provider", "unsplash"]
+UTM = "utm_source=hyprfrijol&utm_medium=referral"
+ID_RE = r"[A-Za-z0-9_-]{6,20}"
+
+
+def load(p, d=None):
+    try:
+        return json.loads(pathlib.Path(p).read_text())
+    except Exception:
+        return d
+
+
+def settings():
+    s = dict(load(ROOT / "config/defaults/settings.json", {}) or {})
+    s.update(load(SETTINGS, {}) or {})
+    return s
+
+
+def run(cmd, timeout=10, input=None):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, input=input).stdout.strip()
+    except Exception:
+        return ""
+
+
+# ---------------------------------------------------------------- clave (como la de Wallhaven)
+def _keyring_ok():
+    return bool(shutil.which("secret-tool")) and not os.environ.get("HF_UNSPLASH_NO_KEYRING")
+
+
+def api_key():
+    if os.environ.get("UNSPLASH_ACCESS_KEY", "").strip():
+        return os.environ["UNSPLASH_ACCESS_KEY"].strip(), "env:UNSPLASH_ACCESS_KEY"
+    if _keyring_ok():
+        k = run(["secret-tool", "lookup", *SECRET_ATTRS], timeout=5)
+        if k:
+            return k, "llavero"
+    try:
+        k = (SECRETS / "unsplash.key").read_text().strip()
+        if k:
+            return k, "archivo"
+    except Exception:
+        pass
+    return "", ""
+
+
+def key_clear():
+    if _keyring_ok():
+        run(["secret-tool", "clear", *SECRET_ATTRS], timeout=5)
+    (SECRETS / "unsplash.key").unlink(missing_ok=True)
+    return {"ok": True}
+
+
+def key_set(key):
+    key = (key or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{20,80}", key):
+        return {"ok": False, "error": "Eso no parece una Access Key de Unsplash (unsplash.com/developers › tu aplicación › Keys)"}
+    key_clear()
+    if _keyring_ok():
+        try:
+            r = subprocess.run(["secret-tool", "store", "--label=hyprfrijol · clave de Unsplash", *SECRET_ATTRS],
+                               input=key, capture_output=True, text=True, timeout=60)
+            if r.returncode == 0 and run(["secret-tool", "lookup", *SECRET_ATTRS], timeout=5) == key:
+                return {"ok": True, "where": "llavero"}
+        except Exception:
+            pass
+    SECRETS.mkdir(parents=True, exist_ok=True)
+    os.chmod(SECRETS, 0o700)
+    f = SECRETS / "unsplash.key"
+    fd = os.open(f, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as h:
+        h.write(key + "\n")
+    os.chmod(f, 0o600)
+    return {"ok": True, "where": "archivo"}
+
+
+def key_status():
+    k, where = api_key()
+    return {"stored": bool(k), "where": where, "hint": (k[:3] + "…" + k[-3:]) if len(k) > 10 else ""}
+
+
+# ---------------------------------------------------------------- API
+class USError(Exception):
+    pass
+
+
+def http(url, auth=True, timeout=20):
+    h = {"User-Agent": "hyprfrijol", "Accept-Version": "v1"}
+    if auth:
+        key, _ = api_key()
+        if not key:
+            raise USError("Falta la clave de Unsplash (Ajustes › Fondos › Unsplash)")
+        h["Authorization"] = "Client-ID " + key
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=timeout) as r:
+            return r.read()
+    except urllib.error.HTTPError as e:
+        raise USError({401: "La clave de Unsplash no es válida", 403: "Has llegado al límite de Unsplash por esta hora: espera un poco",
+                       404: "No existe en Unsplash"}.get(e.code, f"Unsplash respondió {e.code}"))
+    except OSError:
+        raise USError("Sin conexión con unsplash.com")
+
+
+def screen_width():
+    try:
+        mons = json.loads(run(["hyprctl", "monitors", "-j"]) or "[]")
+        b = max(mons, key=lambda m: m.get("width", 0) * m.get("height", 0))
+        return int(b["height"] if b.get("transform", 0) in (1, 3, 5, 7) else b["width"])
+    except Exception:
+        return 2560
+
+
+def full_url(raw):   # a la medida de la pantalla (imgix): menos peso que el original de 6000 px
+    w = max(1280, min(7680, screen_width()))
+    return raw + ("&" if "?" in raw else "?") + urllib.parse.urlencode({"w": w, "fm": "jpg", "q": 85, "fit": "max"})
+
+
+def item(x):
+    u, user = x.get("urls") or {}, x.get("user") or {}
+    return {"id": x.get("id"), "url": (x.get("links") or {}).get("html", "") + "?" + UTM, "full": u.get("raw"),
+            "thumb": u.get("small"), "thumbLarge": u.get("regular"), "resolution": f'{x.get("width")}x{x.get("height")}',
+            "author": user.get("name") or user.get("username") or "", "authorUrl": (user.get("links") or {}).get("html", "") + "?" + UTM,
+            "download": (x.get("links") or {}).get("download_location", ""), "cached": str(cached(x.get("id")) or "")}
+
+
+def search(over=None):
+    s, o = settings(), over or {}
+    q = (o.get("q", s.get("unsplashQuery", "")) or "").strip()
+    order = o.get("order") or s.get("unsplashOrder") or "popular"
+    page = int(o.get("page") or 1)
+    try:
+        if q:
+            p = {"query": q, "page": page, "per_page": 24, "orientation": "landscape", "content_filter": "high",
+                 "order_by": "latest" if order == "latest" else "relevant"}
+            d = json.loads(http(API + "/search/photos?" + urllib.parse.urlencode(p)))
+            rows, total, last = d.get("results") or [], d.get("total", 0), d.get("total_pages", 1)
+        else:   # sin texto: el tema «Wallpapers» de Unsplash
+            p = {"page": page, "per_page": 24, "orientation": "landscape", "order_by": "latest" if order == "latest" else "popular"}
+            rows = json.loads(http(API + "/topics/wallpapers/photos?" + urllib.parse.urlencode(p)))
+            total, last = len(rows), page + (1 if len(rows) == 24 else 0)
+    except USError as e:
+        return {"results": [], "error": str(e)}
+    except Exception:
+        return {"results": [], "error": "Respuesta no válida de Unsplash"}
+    return {"results": [item(x) for x in rows if isinstance(x, dict)], "page": page, "last_page": last, "total": total, "error": None}
+
+
+def cached(pid):
+    if not pid or not re.fullmatch(ID_RE, str(pid)) or not CACHE.is_dir():
+        return None
+    f = CACHE / f"unsplash-{pid}.jpg"
+    return f if f.is_file() and f.stat().st_size > 0 else None
+
+
+def fetch(pid, x=None):
+    pid = str(pid or "").strip()
+    m = re.search(r"unsplash-(" + ID_RE + r")\.jpg$", pid) or re.search(r"unsplash\.com/photos/(?:[a-z0-9-]*-)?(" + ID_RE + r")(?:[/?#]|$)", pid)
+    if m:
+        pid = m.group(1)
+    if not re.fullmatch(ID_RE, pid):
+        return {"ok": False, "error": "Id de Unsplash no válido"}
+    f = cached(pid)
+    if f:
+        os.utime(f)
+        return {"ok": True, "path": str(f), "id": pid}
+    try:
+        if not x or not x.get("full"):
+            x = item(json.loads(http(f"{API}/photos/{pid}")))
+        if not (x.get("full") or "").startswith(IMG):
+            return {"ok": False, "error": "Unsplash no dio la imagen"}
+        CACHE.mkdir(parents=True, exist_ok=True)
+        dst = CACHE / f"unsplash-{pid}.jpg"
+        tmp = dst.with_name(dst.name + ".part")
+        tmp.write_bytes(http(full_url(x["full"]), auth=False, timeout=90))
+        os.replace(tmp, dst)
+        cr = load(CREDITS, {}) or {}
+        cr[dst.name] = {"author": x.get("author", ""), "url": x.get("authorUrl", ""), "photo": x.get("url", "")}
+        CREDITS.write_text(json.dumps(cr, ensure_ascii=False))
+        if (x.get("download") or "").startswith(API + "/"):     # norma de la API: avisar de cada descarga
+            try:
+                http(x["download"], timeout=10)
+            except USError:
+                pass
+    except USError as e:
+        return {"ok": False, "error": str(e)}
+    except Exception:
+        return {"ok": False, "error": "Unsplash respondió algo que no se entiende; prueba más tarde"}
+    prune()
+    return {"ok": True, "path": str(dst), "id": pid}
+
+
+def credit(path):
+    c = (load(CREDITS, {}) or {}).get(os.path.basename(path or ""), {})
+    return {"author": c.get("author", ""), "url": c.get("url", ""), "photo": c.get("photo", "")}
+
+
+# ---------------------------------------------------------------- caché
+def cache_files():
+    return sorted([f for f in CACHE.glob("unsplash-*.jpg") if f.is_file()], key=lambda f: f.stat().st_mtime) if CACHE.is_dir() else []
+
+
+def current_wallpaper():
+    try:
+        return (STATE / "wallpaper-path").read_text().strip()
+    except Exception:
+        return ""
+
+
+def limit_mb():
+    v = settings().get("unsplashCacheMB", 500)
+    return int(v) if isinstance(v, (int, float)) else 500
+
+
+def prune():
+    limit = max(0, limit_mb()) * 1024 * 1024
+    files, cur = cache_files(), current_wallpaper()
+    total, removed = sum(f.stat().st_size for f in files), 0
+    for f in files:           # los más antiguos primero; nunca el fondo puesto ahora
+        if total <= limit:
+            break
+        if str(f) == cur:
+            continue
+        total -= f.stat().st_size
+        f.unlink(missing_ok=True)
+        removed += 1
+    return {"removed": removed, "bytes": total}
+
+
+def cache_info():
+    files = cache_files()
+    return {"files": len(files), "bytes": sum(f.stat().st_size for f in files), "limit_mb": limit_mb(), "dir": str(CACHE)}
+
+
+def cache_clear():
+    cur, n = current_wallpaper(), 0
+    for f in cache_files():
+        if str(f) != cur:
+            f.unlink(missing_ok=True); n += 1
+    SEEN.unlink(missing_ok=True)
+    return {"ok": True, "removed": n}
+
+
+# ---------------------------------------------------------------- rotación y «añadir a mis fondos»
+def topic_id():
+    """Id del tema «Wallpapers» (/photos/random no admite el nombre): se pide una vez y se guarda."""
+    f = CACHE / ".topic"
+    try:
+        return f.read_text().strip()
+    except Exception:
+        pass
+    try:
+        t = json.loads(http(API + "/topics/wallpapers")).get("id") or ""
+    except Exception:
+        return ""
+    if re.fullmatch(ID_RE, t):
+        CACHE.mkdir(parents=True, exist_ok=True)
+        f.write_text(t)
+        return t
+    return ""
+
+
+def next_wallpaper():
+    """Una foto al azar que no se haya puesto aún (recuerda las últimas 200); sin red o sin clave, una de la caché."""
+    seen, cur, s = load(SEEN, []) or [], current_wallpaper(), settings()
+    p = {"count": 10, "orientation": "landscape", "content_filter": "high"}
+    q = (s.get("unsplashQuery") or "").strip()
+    if q:
+        p["query"] = q
+    else:
+        t = topic_id()
+        if t:
+            p["topics"] = t
+    try:
+        rows = [item(x) for x in json.loads(http(API + "/photos/random?" + urllib.parse.urlencode(p))) if isinstance(x, dict)]
+    except Exception:
+        rows = []
+    for x in [r for r in rows if r["id"] not in seen]:
+        res = fetch(x["id"], x)
+        if res.get("ok"):
+            CACHE.mkdir(parents=True, exist_ok=True)
+            SEEN.write_text(json.dumps((seen + [x["id"]])[-200:]))
+            return res["path"]
+    pool = [str(f) for f in cache_files() if str(f) != cur]
+    return random.choice(pool) if pool else ""
+
+
+def add_to_mine(src):
+    p = pathlib.Path(os.path.expanduser(src))
+    if not p.is_file():
+        r = fetch(src)
+        if not r.get("ok"):
+            return r
+        p = pathlib.Path(r["path"])
+    out = run([str(ROOT / "scripts/hf-wallpaper"), "add", str(p)], timeout=30).splitlines()
+    return {"ok": bool(out), "path": out[-1] if out else "", **({} if out else {"error": "No se pudo copiar"})}
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__); return 0
+    cmd, rest = argv[0], argv[1:]
+    if cmd == "search":
+        over, i = {}, 0
+        while i < len(rest):
+            a = rest[i]
+            if a.startswith("--") and i + 1 < len(rest):
+                over[a[2:]] = rest[i + 1]; i += 2
+            else:
+                over["q"] = (over.get("q", "") + " " + a).strip(); i += 1
+        out = search(over)
+    elif cmd == "fetch":
+        out = fetch(rest[0] if rest else "")
+    elif cmd == "next":
+        p = next_wallpaper()
+        if p:
+            print(p); return 0
+        return 1
+    elif cmd == "add":
+        out = add_to_mine(rest[0] if rest else "")
+    elif cmd == "set":
+        out = fetch(rest[0] if rest else "")
+        if out.get("ok"):
+            os.execv(str(ROOT / "scripts/hf-wallpaper"), [str(ROOT / "scripts/hf-wallpaper"), out["path"]])
+    elif cmd == "credit":
+        out = credit(rest[0] if rest else "")
+    elif cmd == "cache":
+        sub = rest[0] if rest else ""
+        out = cache_clear() if sub == "clear" else prune() if sub == "prune" else cache_info()
+    elif cmd == "key":
+        sub = rest[0] if rest else "status"
+        if sub == "set":
+            out = key_set(os.environ.get("HF_UNSPLASH_KEY_IN") or ("" if sys.stdin.isatty() else sys.stdin.read()))
+        elif sub == "clear":
+            out = key_clear()
+        else:
+            out = key_status()
+    else:
+        print(f"Orden desconocida: {cmd}", file=sys.stderr); return 2
+    print(json.dumps(out, ensure_ascii=False))
+    return 0 if out.get("ok", not out.get("error")) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

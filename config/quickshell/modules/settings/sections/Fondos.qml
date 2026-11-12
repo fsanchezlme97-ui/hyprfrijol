@@ -1,6 +1,6 @@
 // Ajustes › Fondos de pantalla — colección (hf-wallpaper list; filtro Todos / Imágenes / Animados), cambio automático
 // y fondos en movimiento (vídeos y GIF con mpvpaper: «Añadir fondo animado…» = hf-wallpaper pick-animated) y Wallhaven
-// (ui/WallhavenCard: wallpaperSource, wallhaven*).
+// (ui/WallhavenCard: wallpaperSource, wallhaven*) y Unsplash (ui/UnsplashCard: wallpaperSource, unsplash*).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -214,4 +214,6 @@ ColumnLayout {
     }
     // Wallhaven: buscar, añadir a mis fondos y usarlo como origen del cambio automático (ui/WallhavenCard, hf-wallhaven)
     WallhavenCard { Layout.fillWidth: true }
+    // Unsplash: lo mismo con fotos de unsplash.com (necesita su clave gratuita; ui/UnsplashCard, hf-unsplash)
+    UnsplashCard { Layout.fillWidth: true }
 }

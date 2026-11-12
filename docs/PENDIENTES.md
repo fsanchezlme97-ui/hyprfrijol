@@ -37,7 +37,8 @@ reducción automática) se descartó en las decisiones del plan.
       genera con `dev/gen-pkgbuild.py` y se construye bien con `makepkg`). Falta subirlo con la cuenta del autor
       (instrucciones en la cabecera de `dev/gen-pkgbuild.py`) y añadir «Arch: `paru -S hyprfrijol-git`» al README.
 
-- [ ] **Fondos de Wallhaven y Unsplash** en el selector de fondos (pedido el 2026-11-12).
+- [x] **Fondos de Wallhaven y Unsplash**: Wallhaven ya estaba (Ajustes › Fondos); Unsplash en 0.9.36 (`hf-unsplash`,
+      necesita su clave gratuita). Falta: probarlo con una clave de verdad y darle a la IA `unsplash_search` como a Wallhaven.
 - [ ] **AnyDesk y RustDesk entrantes**: AnyDesk solo acepta conexiones entrantes en Xorg (en Wayland, solo salientes)
       y RustDesk necesita el portal RemoteDesktop, que xdg-desktop-portal-hyprland aún no trae (PR #448 abierta;
       xdg-desktop-portal-luminous lo da, pero con Hyprland 0.57 hay un fallo abierto que cierra RustDesk al

@@ -10,7 +10,7 @@
 #   hf-wallpaper list             lista los fondos disponibles (tuyos + los de hyprfrijol)
 #   hf-wallpaper thumbs           genera las miniaturas (~/.cache/hyprfrijol/thumbs) y las lista "fondo<TAB>miniatura"
 #   hf-wallpaper gallery          para el selector: la lista al momento y luego las miniaturas que falten (en paralelo),
-#                                 con resolución, colores dominantes y origen (incluido · mio · wallhaven)
+#                                 con resolución, colores dominantes y origen (incluido · mio · wallhaven · unsplash)
 #   hf-wallpaper vthumbs          lo mismo, solo de los fondos animados (vídeos y GIF): primer cuadro con
 #                                 ffmpegthumbnailer o ffmpeg
 #   hf-wallpaper add <archivo…>   copia imágenes/vídeos a tu carpeta de fondos (imprime la ruta de cada copia)
@@ -18,6 +18,8 @@
 #   hf-wallpaper deps             qué hay instalado para los fondos animados: "mpvpaper 1", "ffmpeg 0"…
 #   hf-wallpaper wallhaven …      lo mismo que scripts/hf-wallhaven (buscar, caché, añadir a mis fondos); con
 #                                 wallpaperSource = "wallhaven", next/random traen uno nuevo de wallhaven.cc
+#   hf-wallpaper unsplash …       lo mismo con scripts/hf-unsplash (unsplash.com, necesita su clave gratuita);
+#                                 con wallpaperSource = "unsplash", next/random traen una foto nueva
 # Fondos animados: .mp4 .webm .mkv .mov .gif en bucle con mpvpaper (sin sonido, a wallpaperFps). El color sale del
 #   primer cuadro. Shell (Wallpaper.qml) los pausa según wallpaperPauseOn (batería, pantalla completa…) con
 #   SIGSTOP a los pids guardados en ~/.local/state/hyprfrijol/motion*.pid (solo los de esta sesión).
@@ -162,11 +164,12 @@ step() {   # $1 = +1 / -1
   if [ "$i" -lt 0 ]; then i=0; else i=$(( (i + $1 + ${#L[@]}) % ${#L[@]} )); fi
   printf '%s' "${L[$i]}"
 }
-# Origen «Wallhaven» (Ajustes › Fondos, wallpaperSource): next/random piden uno nuevo a scripts/hf-wallhaven (caché con
-# límite); sin red o sin resultados se sigue con la carpeta de siempre.
+# Origen «Wallhaven» o «Unsplash» (Ajustes › Fondos, wallpaperSource): next/random piden uno nuevo a
+# scripts/hf-wallhaven o scripts/hf-unsplash (caché con límite); sin red o sin resultados se sigue con la carpeta.
 wh_next() {
-  [ "$(setting wallpaperSource carpeta)" = wallhaven ] || return 1
-  local f; f="$("$ROOT/scripts/hf-wallhaven" next 2>/dev/null)" || return 1
+  local src; src="$(setting wallpaperSource carpeta)"
+  case "$src" in wallhaven|unsplash) ;; *) return 1 ;; esac
+  local f; f="$("$ROOT/scripts/hf-$src" next 2>/dev/null)" || return 1
   [ -f "$f" ] || return 1
   printf '%s' "$f"
 }
@@ -207,18 +210,22 @@ info_of() {   # info_of <fondo> <miniatura>
   fi
   tr -d '\n' < "$i"
 }
-# Origen de un fondo para la galería: incluido (assets) · wallhaven (su caché) · mio (tu carpeta)
-origin_of() { case "$1" in "$ASSETS"/*) echo incluido ;; "$HOME/.cache/hyprfrijol/wallhaven"/*) echo wallhaven ;; *) echo mio ;; esac; }
+# Origen de un fondo para la galería: incluido (assets) · wallhaven / unsplash (su caché) · mio (tu carpeta)
+origin_of() { case "$1" in "$ASSETS"/*) echo incluido ;; "$HOME/.cache/hyprfrijol/wallhaven"/*) echo wallhaven ;;
+  "$HOME/.cache/hyprfrijol/unsplash"/*) echo unsplash ;; *) echo mio ;; esac; }
 gallery_line() {   # fondo<TAB>miniatura<TAB>ANCHOxALTO<TAB>colores<TAB>origen
   local f="$1" t inf; t="$(thumb_path "$f")"; inf=""
   thumb_fresh "$f" "$t" && inf="$(info_of "$f" "$t")"
   printf '%s\t%s\t%s\t%s\t%s\n' "$f" "$t" "${inf%% *}" "$( [ -n "$inf" ] && printf '%s' "${inf#* }" )" "$(origin_of "$f")"
 }
-# Lista de la galería: tus fondos + los incluidos (+ la caché de Wallhaven si es el origen elegido)
+# Lista de la galería: tus fondos + los incluidos (+ la caché de Wallhaven o Unsplash si es el origen elegido)
 gallery_list() {
   list all
-  [ "$(setting wallpaperSource carpeta)" = wallhaven ] && [ -d "$HOME/.cache/hyprfrijol/wallhaven" ] \
-    && find "$HOME/.cache/hyprfrijol/wallhaven" -maxdepth 1 -type f -name 'wallhaven-*' ! -name '*.part' 2>/dev/null | sort
+  local src; src="$(setting wallpaperSource carpeta)"
+  case "$src" in wallhaven|unsplash)
+    [ -d "$HOME/.cache/hyprfrijol/$src" ] \
+      && find "$HOME/.cache/hyprfrijol/$src" -maxdepth 1 -type f -name "$src-*" ! -name '*.part' 2>/dev/null | sort ;;
+  esac
   return 0
 }
 write_json() {   # actualiza wallpaper.json con un filtro de jq (atómico)
@@ -314,6 +321,7 @@ case "${1:-next}" in
   random)  FILE="$(wh_next || true)"
            [ -n "$FILE" ] || FILE="$(list | grep -vxF "$(current)" | shuf -n1 || true)"; [ -n "$FILE" ] || FILE="$(list | head -n1)" ;;
   wallhaven) shift; exec "$ROOT/scripts/hf-wallhaven" "$@" ;;
+  unsplash) shift; exec "$ROOT/scripts/hf-unsplash" "$@" ;;
   hora)    FILE="$(by_hour)"; [ -z "$OUTPUT" ] && [ "$FILE" = "$(current)" ] && exit 0 ;;
   restore) FILE="$(current)"; [ -f "$FILE" ] || is_scene "$FILE" || FILE="$(list | head -n1)" ;;
   list)    list all; exit 0 ;;

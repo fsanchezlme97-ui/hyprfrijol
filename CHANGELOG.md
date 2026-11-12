@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.36] — 2026-11-12
+
+### Añadido
+- **Fondos de Unsplash** (Ajustes › Fondos › Unsplash), como los de Wallhaven: buscar fotos (sin texto, el tema
+  «Wallpapers»; populares o recientes), «Añadir a mis fondos» o «Poner», y usarlo como origen del cambio automático
+  y de «Al azar» (`wallpaperSource = "unsplash"`). El selector de fondos (Super + W) trae una foto nueva con «Traer de
+  Unsplash» y nombra a su autor. Unsplash no tiene API sin clave: pide una «Access Key» gratuita
+  (unsplash.com/developers), que va al llavero, nunca a settings.json. Las fotos se bajan a la medida de tu pantalla,
+  con caché limitada (`unsplashCacheMB`). `hf-unsplash` / `hf-wallpaper unsplash …`.
+
 ## [0.9.35] — 2026-11-12
 
 ### Corregido
