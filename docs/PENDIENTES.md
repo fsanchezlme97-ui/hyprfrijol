@@ -7,26 +7,28 @@ illogical-impulse (end-4) y Omarchy 4.5 (noviembre de 2026). Al terminar algo, s
 
 Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar una fase se marca aquí.
 
-1. [x] [Temas](planes/temas.md), fase 1: estilo único Math, interruptor de transparencia, fuera Chroma y SkySoul (0.9.0).
-2. [x] [Animaciones y efectos](planes/animaciones.md), fases 1–3: tokens de movimiento, duraciones fijas, sección
-       unificada y atajo de modo juego (0.9.1).
-3. [x] [Temas](planes/temas.md), fase 2: 12 temas en pares oscuro y claro, más Monocromo (0.9.2).
-4. [x] [Asistente de IA](planes/asistente-ia.md), fases 1–2: una entrada con pestañas, filtro de secretos, apps privadas,
-       registro de acciones e historial (0.9.3). Falta de esas fases: la página de Inicio (el estado y «Probar
+Estado a 2026-11-11 (v0.9.12), comprobado contra el código y el shell en marcha en el equipo del autor. Lo hecho
+entre la 0.9.0 y la 0.9.12 está en el CHANGELOG. Queda, en este orden:
+
+1. [ ] [Asistente de IA](planes/asistente-ia.md), fase 6 (panel). Ya están los chips de contexto (ventana,
+       portapapeles, captura), la lista de conversaciones con búsqueda y «Regenerar». Falta:
+       - [ ] Respuesta en directo: `hf-ai chat` devuelve la respuesta entera al terminar, con todos los proveedores.
+       - [ ] Repetir con otro modelo: «Regenerar» repite con el mismo.
+2. [ ] [Asistente de IA](planes/asistente-ia.md), resto de la fase 1: la página de Inicio (el estado y «Probar
        conexión» siguen arriba de la pestaña Asistente).
-5. [x] [Productividad](planes/productividad.md), fases 1–3: una entrada con pestañas, portapapeles (tamaño, caducidad,
-       apps privadas), alarmas en Ajustes y tareas (0.9.4). Los relojes del mundo siguen en Fecha.
-6. [ ] Lo que queda de los cuatro planes, en este orden:
-       - [x] Productividad F4: Spotlight (grupos, orden, buscador web) (0.9.5).
-       - [x] Animaciones F4–5: opacidad sin foco con apps excluidas y onda al pulsar (0.9.6); la vista previa, el
-             borde con degradado y el atenuado ya estaban. Sin entradas escalonadas: no hay ninguna que apagar.
-       - [x] Temas F4–5: temas propios y creador desde colores o una imagen, exportar e importar (0.9.7). Falta:
-             editar los colores uno a uno, la vista previa sobre la barra y el centro de control (hoy, dos
-             tarjetas), y que la IA asigne los papeles de cada color (opcional en el plan).
-       - [x] IA F3: modelo por tarea, respaldo y modo local (0.9.8).
-       - [x] IA F4–5: recetas (Ajustes y Spotlight) y acciones de evento y tema (0.9.9).
-       - [ ] IA F6: mejoras del panel (contexto antes de enviar, respuesta en directo, repetir con otro modelo).
-       - [ ] Productividad F5: revisión con uso real (la hace el autor usando el escritorio).
+3. [ ] [Temas](planes/temas.md), resto de las fases 4–5: editar los colores de un tema propio uno a uno y la vista
+       previa sobre la barra y el centro de control (hoy, dos tarjetas). Opcional en el plan: que la IA asigne los
+       papeles de cada color.
+4. [ ] [Temas](planes/temas.md), fase 3 (pulido de Math): sombras, bordes, espaciado y estados en `Ui/` y
+       `components/`, y decidir la fuente. El movimiento ya se hizo con Animaciones (0.9.1); lo demás, sin empezar.
+5. [ ] [Productividad](planes/productividad.md), fase 5: revisión con uso real (la hace el autor usando el
+       escritorio; lo que se mide está en la sección 4 del plan). Los relojes del mundo siguen en Fecha, con un
+       enlace desde Agenda y alarmas.
+6. [ ] [Asistente de IA](planes/asistente-ia.md), fase 7: servidores MCP del usuario, con aprobación por servidor.
+       Aplazada por decisión del plan («después de esta versión»); sin empezar.
+
+Cerrado: [Animaciones y efectos](planes/animaciones.md). Las fases 1–5 están hechas y la 6 (ajustes por zona,
+reducción automática) se descartó en las decisiones del plan.
 
 ## Baratos de añadir (primero)
 
@@ -40,9 +42,9 @@ Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar 
       Noctalia; quitar sondeos (p. ej. la pastilla de ventana pregunta a Hyprland cada 100 ms) y reaccionar a
       eventos. Hecho (v0.8.48): `dev/perf.sh` y reposo de 4,7 % a ~1 % de un núcleo. Falta: los 450 MB de RSS y
       la comparación con los otros shells.
-- [ ] **Pulido de animaciones**: paneles que salen de la barra y se transforman entre sí (como Caelestia). Hecho
-      (v0.8.49): los paneles abiertos con el ratón desde la barra nacen del punto pulsado. Falta: que un panel se
-      transforme en otro al saltar de uno a otro, y probar la apertura desde la barra en uso real.
+- [ ] **Pulido de animaciones**: paneles que se transforman entre sí (como Caelestia). Desde la v0.9.12 todos se
+      abren igual, con una sola animación (se quitó el nacer del punto pulsado de la v0.8.49). Falta: que un panel
+      se transforme en otro al saltar de uno a otro.
 - [ ] **Plugins propios**: formato, permisos y un registro con versiones fijadas (como DMS); hoy solo los de Omarchy.
 - [ ] **Más compositores** (niri, Sway): evaluar qué partes dependen de Hyprland. Grande; después de lo demás.
 - [ ] Detalles de otros shells: desbloqueo facial (Howdy), letras de canciones, perfiles de energía según
@@ -78,4 +80,10 @@ Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar 
 - [ ] Conectar y quitar una pantalla de verdad para comprobar que los espacios se renumeran sin mover ventanas
       (v0.8.40; solo se probó en sesión anidada).
 - [ ] VGA por la GT 710 (`nouveau`): ya da imagen, pero la copia entre GPUs puede hacer las animaciones menos
-      fluidas en esa pantalla.
+      fluidas en esa pantalla. El registro de Hyprland repite `eglCreateSyncKHR … EGL_BAD_ATTRIBUTE` (300 veces
+      en este arranque); ver si viene de esa gráfica.
+- [ ] Lo que avisa `hf-doctor` (2026-11-11): faltan los enlaces `hf-clip` y `hf-theme` en `~/.local/bin`
+      (`./install.sh --no-deps`), el login de greetd es de otra versión (`hf-greeter-sync`) y faltan 4 paquetes
+      recomendados (fuente mono, pavucontrol, nm-connection-editor, impresión).
+- [ ] `xdg-document-portal.service` está en fallo en la sesión: ver por qué y si afecta a abrir archivos desde
+      apps Flatpak.
