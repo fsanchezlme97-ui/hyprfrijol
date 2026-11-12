@@ -37,6 +37,12 @@ reducción automática) se descartó en las decisiones del plan.
       genera con `dev/gen-pkgbuild.py` y se construye bien con `makepkg`). Falta subirlo con la cuenta del autor
       (instrucciones en la cabecera de `dev/gen-pkgbuild.py`) y añadir «Arch: `paru -S hyprfrijol-git`» al README.
 
+- [ ] **Fondos de Wallhaven y Unsplash** en el selector de fondos (pedido el 2026-11-12).
+- [ ] **AnyDesk y RustDesk entrantes**: AnyDesk solo acepta conexiones entrantes en Xorg (en Wayland, solo salientes)
+      y RustDesk necesita el portal RemoteDesktop, que xdg-desktop-portal-hyprland aún no trae (PR #448 abierta;
+      xdg-desktop-portal-luminous lo da, pero con Hyprland 0.57 hay un fallo abierto que cierra RustDesk al
+      aceptar). Mientras: RDP con hypr-rdp (0.9.34) y SSH. Revisar cuando xdph incluya RemoteDesktop.
+
 ## Donde vamos por detrás
 
 - [ ] **Idiomas**: textos de la interfaz traducibles; inglés primero (Omarchy tiene 50 y los cambia en vivo).

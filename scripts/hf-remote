@@ -9,6 +9,14 @@
 #   hf-remote server status|start|stop|restart   compartir este escritorio por VNC (wayvnc)
 #   hf-remote server auth <usuario>      pide contraseña y activa cifrado (TLS + RSA-AES) en ~/.config/wayvnc
 #   hf-remote server noauth              quita la contraseña (y con ella vuelve a escuchar solo en este equipo)
+#   hf-remote rdp status|start|stop|restart   compartir ESTA sesión por RDP (hypr-rdp): desde Windows con mstsc
+#   hf-remote rdp password               pide la contraseña de RDP (usuario = el tuyo) y la guarda en ~/.config/hypr-rdp
+#   hf-remote rdp boot                   al iniciar sesión: lo arranca si rdpServer está activo
+#
+# RDP (hypr-rdp, AUR): sin contraseña NUNCA se arranca (hypr-rdp aceptaría a cualquiera). rdpListen: «tailscale»
+# (por defecto: solo la IP de Tailscale), «red» (0.0.0.0) o «local». rdpOutput: la pantalla que se ve ("" = la
+# principal o, si no está conectada, la más grande; «virtual» = una pantalla nueva solo para la conexión). Corre
+# como unidad de usuario hf-rdp (systemd-run, se reintenta si Tailscale aún no está conectado al arrancar).
 #
 # Seguridad: sin contraseña wayvnc NUNCA escucha en la red; aunque vncListen pida 0.0.0.0, «server start»
 # se queda en 127.0.0.1 y avisa. «status» da listen (lo pedido) y effective (lo que se usa de verdad).
@@ -277,11 +285,81 @@ server() {
   esac
 }
 
+# ---------- compartir este escritorio por RDP (hypr-rdp) ----------
+RDPDIR="$HOME/.config/hypr-rdp"
+RDPPW="$RDPDIR/password"
+rdp_addr() {   # dirección donde escuchar según rdpListen (vacía si Tailscale no está conectado)
+  case "$(setting rdpListen | jq -r '. // "tailscale"')" in
+    red) echo 0.0.0.0;;
+    local) echo 127.0.0.1;;
+    *) have tailscale && tailscale ip -4 2>/dev/null | head -1;;
+  esac
+}
+rdp_output() {   # pantalla que se comparte ("" = una nueva, virtual)
+  local o mons
+  o="$(setting rdpOutput | jq -r '. // ""')"
+  [ "$o" = virtual ] && return 0
+  mons="$(hyprctl monitors -j 2>/dev/null)" || mons='[]'
+  [ -z "$o" ] && o="$(setting primaryMonitor | jq -r '. // ""')"
+  if [ -n "$o" ] && jq -e --arg o "$o" 'any(.[]; .name == $o)' <<<"$mons" >/dev/null; then echo "$o"; return 0; fi
+  jq -r 'max_by(.width * .height) | .name // empty' <<<"$mons"
+}
+rdp() {
+  local op="${1:-status}" port
+  port="$(setting rdpPort | jq -r '. // 3389')"
+  case "$op" in
+    status)
+      local run=false fw=""
+      systemctl --user is-active -q hf-rdp 2>/dev/null && run=true
+      systemctl is-active -q ufw 2>/dev/null && fw=ufw; systemctl is-active -q firewalld 2>/dev/null && fw=firewalld
+      jq -cn --argjson installed "$(have hypr-rdp && echo true || echo false)" --argjson running $run \
+        --argjson password "$([ -s "$RDPPW" ] && echo true || echo false)" --arg listen "$(setting rdpListen | jq -r '. // "tailscale"')" \
+        --arg addr "$(rdp_addr)" --argjson port "$port" --arg output "$(rdp_output)" --arg user "$USER" \
+        --argjson tailscale "$(have tailscale && echo true || echo false)" --arg fw "$fw" \
+        '{installed:$installed,running:$running,password:$password,listen:$listen,addr:$addr,port:$port,output:$output,user:$user,tailscale:$tailscale,firewall:$fw}';;
+    run)   # lo que corre dentro de la unidad hf-rdp
+      local addr out a=()
+      addr="$(rdp_addr)"
+      [ -n "$addr" ] || { echo "Tailscale no está conectado: sin dirección donde escuchar" >&2; exit 1; }
+      out="$(rdp_output)"; [ -n "$out" ] && a+=(--output "$out")
+      exec hypr-rdp -u "$USER" --password-file "$RDPPW" --bind "$addr:$port" "${a[@]}";;
+    start)
+      have hypr-rdp || { notify -u critical "Falta hypr-rdp" "Instálalo desde Ajustes › Escritorio remoto (AUR: hypr-rdp)"; exit 1; }
+      [ -s "$RDPPW" ] || { notify -u critical "RDP sin contraseña" "Ponla en Ajustes › Escritorio remoto: sin ella cualquiera podría entrar."; exit 1; }
+      systemctl --user is-active -q hf-rdp && exit 0
+      systemctl --user reset-failed hf-rdp 2>/dev/null
+      systemd-run --user --unit=hf-rdp --collect -q -p Restart=on-failure -p RestartSec=10 \
+        -E WAYLAND_DISPLAY -E HYPRLAND_INSTANCE_SIGNATURE -E XDG_RUNTIME_DIR -E PATH \
+        "$0" rdp run || { notify -u critical "No se pudo arrancar el escritorio remoto (RDP)" "journalctl --user -u hf-rdp"; exit 1; }
+      sleep 1.5
+      if systemctl --user is-active -q hf-rdp; then
+        local addr; addr="$(rdp_addr)"
+        notify "Escritorio remoto (RDP) activo" "Conéctate a ${addr:-…}:$port con el usuario $USER"
+      else
+        notify -u critical "El escritorio remoto (RDP) no arrancó" "$(journalctl --user -u hf-rdp -n 3 -o cat 2>/dev/null | tail -1)"
+      fi;;
+    stop) systemctl --user stop hf-rdp 2>/dev/null; true;;
+    restart) systemctl --user is-active -q hf-rdp || exit 0; systemctl --user stop hf-rdp; sleep 0.5; "$0" rdp start;;
+    password)
+      local pw pw2
+      read -rsp "Contraseña para entrar por RDP (usuario $USER): " pw; echo; read -rsp "Repítela: " pw2; echo
+      [ -n "$pw" ] && [ "$pw" = "$pw2" ] || { echo "No coinciden" >&2; exit 1; }
+      [ "${#pw}" -ge 8 ] || { echo "Usa al menos 8 caracteres" >&2; exit 1; }
+      mkdir -p "$RDPDIR"; chmod 700 "$RDPDIR"
+      ( umask 077; printf '%s' "$pw" > "$RDPPW" ); chmod 600 "$RDPPW"
+      echo "Listo: mstsc pedirá el usuario $USER y esta contraseña."
+      "$0" rdp restart;;
+    boot) [ "$(setting rdpServer)" = true ] && exec "$0" rdp start; true;;
+    *) echo "rdp status|start|stop|restart|password|boot" >&2; exit 1;;
+  esac
+}
+
 case "${1:-}" in
   list) list;;
   clients) clients;;
   connect) connect "${2:-}";;
   secret) secret "${2:-}" "${3:-}";;
   server) shift; server "$@";;
-  *) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 1;;
+  rdp) shift; rdp "$@";;
+  *) sed -n '2,/^# Seguridad/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 1;;
 esac

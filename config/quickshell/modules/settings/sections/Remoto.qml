@@ -1,5 +1,5 @@
 // Ajustes › Escritorio remoto — conexiones guardadas (remoteHosts: RDP, VNC, SSH, SPICE) y compartir este escritorio
-// por VNC (wayvnc). Lógica en scripts/hf-remote. RDP «Automático»: Remmina (el más compatible con Windows) › FreeRDP 3
+// por VNC (wayvnc) o por RDP (hypr-rdp: entrar desde Windows con mstsc). Lógica en scripts/hf-remote. RDP «Automático»: Remmina (el más compatible con Windows) › FreeRDP 3
 // (el más rápido, sin interfaz) › GNOME Conexiones (sencillo, sin puerta de enlace).
 // Las contraseñas nunca van a settings.json: el cliente las pide o se guardan en el llavero (secret-tool).
 import QtQuick
@@ -21,6 +21,7 @@ ColumnLayout {
     property var cl: ({ freerdp: "", remmina: false, remminaRdp: false, rdpAuto: "", connections: false, vncviewer: false, remoteviewer: false, secret: false, wayvnc: false })
     readonly property var clientName: ({ remmina: "Remmina", freerdp: "FreeRDP", connections: "Conexiones" })
     property var srv: ({ installed: false, running: false, auth: false, ips: [], port: 5900, clients: 0, firewall: "" })
+    property var rdp: ({ installed: false, running: false, password: false, listen: "tailscale", addr: "", port: 3389, output: "", user: "", tailscale: false, firewall: "" })
     // Escuchar en la red exige contraseña: sin ella hf-remote se queda en 127.0.0.1 (ver scripts/hf-remote)
     readonly property bool wantsNet: Settings.get("vncListen", "127.0.0.1") !== "127.0.0.1"
     readonly property bool onNet: wantsNet && srv.auth
@@ -35,10 +36,12 @@ ColumnLayout {
     readonly property var defPort: ({ rdp: 3389, vnc: 5900, ssh: 22, spice: 5900 })
 
     function refresh() { clProc.running = false; clProc.running = true; srvProc.running = false; srvProc.running = true; secProc.running = false; secProc.running = true; }
-    Timer { interval: 4000; running: true; repeat: true; onTriggered: { srvProc.running = false; srvProc.running = true; } }
+    Timer { interval: 4000; running: true; repeat: true; onTriggered: { srvProc.running = false; srvProc.running = true; rdpProc.running = false; rdpProc.running = true; } }
     Timer { id: later; interval: 5000; repeat: true; property int n: 0; onTriggered: { root.refresh(); if (++n > 10) { n = 0; stop(); } } }
     Process { id: clProc; running: true; command: [root.cmd, "clients"]; stdout: StdioCollector { onStreamFinished: { try { root.cl = JSON.parse(text); } catch (e) {} } } }
     Process { id: srvProc; running: true; command: [root.cmd, "server", "status"]; stdout: StdioCollector { onStreamFinished: { try { root.srv = JSON.parse(text); } catch (e) {} } } }
+    Process { id: rdpProc; running: !root.app; command: [root.cmd, "rdp", "status"]; stdout: StdioCollector { onStreamFinished: { try { root.rdp = JSON.parse(text); } catch (e) {} } } }
+    function rdpRestart() { if (root.rdp.running) Quickshell.execDetached([root.cmd, "rdp", "restart"]); later.restart(); }
     Process {
         id: secProc
         running: true
@@ -405,11 +408,90 @@ ColumnLayout {
             spacing: 12
             Txt {
                 Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5
-                text: "¿Y RDP? En Hyprland no existe un servidor RDP que comparta tu sesión: GNOME y KDE lo hacen desde su propio compositor, y xrdp abre otra sesión X11 aparte. Usa VNC (Remmina, TigerVNC o Conexiones se conectan sin problema) o, para vídeo y juegos con poca latencia, Sunshine + Moonlight."
+                text: "Para vídeo y juegos con poca latencia: Sunshine + Moonlight."
             }
             Button {
                 text: "Instalar Sunshine"
                 onClicked: root.install({ arch: "sunshine", flatpak: "dev.lizardbyte.app.Sunshine" }, "Sunshine")
+            }
+        }
+    }
+
+    // ================= entrar desde Windows (RDP) =================
+    Section {
+        visible: !root.app
+        Layout.fillWidth: true
+        title: "Entrar desde Windows (RDP)"
+        headerRight: Mono { text: "hypr-rdp" }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 24
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.preferredWidth: 1
+                Layout.alignment: Qt.AlignTop
+                spacing: 10
+                SwRow {
+                    separator: false
+                    label: "Compartir por RDP"
+                    sub: !root.rdp.installed ? "Instala hypr-rdp para entrar desde «Conexión a Escritorio remoto» de Windows"
+                        : !root.rdp.password ? "Pon antes una contraseña"
+                        : root.rdp.running ? "Esperando conexiones · se activa al iniciar sesión"
+                        : root.rdp.listen === "tailscale" && !root.rdp.addr ? "Tailscale no está conectado" : "Desactivado"
+                    enabled: root.rdp.installed && root.rdp.password
+                    checked: root.rdp.running
+                    onToggled: v => { Settings.set("rdpServer", v); Quickshell.execDetached([root.cmd, "rdp", v ? "start" : "stop"]); later.restart(); }
+                    trailing: Button { visible: !root.rdp.installed; text: "Instalar"; onClicked: root.install({ arch: "hypr-rdp" }, "hypr-rdp") }
+                }
+                LabeledRow {
+                    label: "Contraseña"
+                    Button {
+                        text: root.rdp.password ? "Cambiar" : "Poner contraseña"
+                        kind: root.rdp.password ? "outline" : "primary"
+                        onClicked: { Pkg.runInTerminal(root.cmd + " rdp password", "Contraseña de RDP"); later.restart(); }
+                    }
+                }
+                LabeledRow {
+                    label: "Escuchar en"
+                    Seg {
+                        model: [["tailscale", "Solo Tailscale"], ["red", "Toda la red"], ["local", "Solo este equipo"]]
+                        current: root.rdp.listen
+                        onPicked: k => { Settings.set("rdpListen", k); root.rdpRestart(); }
+                    }
+                }
+                LabeledRow {
+                    label: "Pantalla"
+                    Dropdown {
+                        model: [["", "La principal"]].concat(Quickshell.screens.map(s => [s.name, s.name + " · " + s.width + "×" + s.height]))
+                            .concat([["virtual", "Una pantalla nueva para la conexión"]])
+                        current: Settings.get("rdpOutput", "")
+                        onPicked: k => { Settings.set("rdpOutput", k); root.rdpRestart(); }
+                    }
+                }
+            }
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.preferredWidth: 1
+                Layout.alignment: Qt.AlignTop
+                spacing: 8
+                Kv { k: "Conéctate a"; v: root.rdp.addr ? root.rdp.addr + ":" + root.rdp.port : "—"; mono: true }
+                Kv { k: "Usuario"; v: root.rdp.user; mono: true }
+                Kv { visible: !!root.rdp.output; k: "Se ve"; v: root.rdp.output; mono: true }
+                RowLayout {
+                    visible: root.rdp.firewall === "ufw" && root.rdp.listen !== "local"
+                    Layout.fillWidth: true
+                    spacing: 10
+                    Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; size: 11.5; muted: true; text: "Si no conecta, el cortafuegos (ufw) puede estar cerrando el puerto " + root.rdp.port + "." }
+                    Button {
+                        text: "Abrir el puerto"
+                        onClicked: Pkg.runInTerminal("sudo ufw allow " + (root.rdp.listen === "tailscale" ? "in on tailscale0 to any port " + root.rdp.port + " proto tcp" : root.rdp.port + "/tcp")
+                                                     + " comment 'RDP HyprFrijol'", "Cortafuegos")
+                    }
+                }
+                Txt {
+                    Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5
+                    text: "En Windows: «Conexión a Escritorio remoto» (mstsc), escribe la dirección de arriba y entra con tu usuario y la contraseña de RDP. La primera vez acepta el aviso del certificado. Ves y manejas esta misma sesión, no otra aparte."
+                }
             }
         }
     }

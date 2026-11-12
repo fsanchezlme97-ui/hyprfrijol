@@ -3,6 +3,17 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.34] — 2026-11-12
+
+### Añadido
+- **Entrar desde Windows con «Conexión a Escritorio remoto» (mstsc)** a esta misma sesión: Ajustes › Escritorio
+  remoto › «Entrar desde Windows (RDP)», con hypr-rdp (AUR). Por defecto solo escucha en la IP de Tailscale; pide tu
+  usuario y una contraseña propia de RDP (sin ella no arranca), se activa al iniciar sesión y deja elegir la
+  pantalla que se ve (o una pantalla nueva solo para la conexión). `hf-remote rdp status|start|stop|password`.
+
+### Cambiado
+- Ajustes › Escritorio remoto ya no dice que en Hyprland no hay servidor RDP.
+
 ## [0.9.33] — 2026-11-11
 
 ### Cambiado

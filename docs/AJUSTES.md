@@ -344,9 +344,14 @@ instalaciones y lo que necesita `sudo` se abren en una terminal (`Pkg.runInTermi
   se pasan a FreeRDP por stdin (`/args-from:stdin`). **Compartir**: VNC con wayvnc (`vncListen`, `vncPort`,
   `vncOutput`; `vncListen` = `"127.0.0.1"` por defecto). Sin contraseña wayvnc nunca escucha en la red: `hf-remote
   server start` se queda en 127.0.0.1 y avisa, y «Toda la red» pide antes poner la contraseña (el mosaico de los
-  ajustes rápidos dice «Solo este equipo» o «Red · con contraseña»). «Pedir usuario y contraseña» genera `~/.config/wayvnc/config` con TLS y RSA-AES. En Hyprland no hay
-  servidor RDP que comparta la sesión (GNOME/KDE lo hacen desde su compositor; xrdp abre otra sesión X11): la
-  sección lo explica y ofrece VNC o Sunshine.
+  ajustes rápidos dice «Solo este equipo» o «Red · con contraseña»). «Pedir usuario y contraseña» genera `~/.config/wayvnc/config` con TLS y RSA-AES. **Entrar desde Windows
+  (RDP)**: hypr-rdp (AUR) comparte esta misma sesión por RDP (mstsc). `rdpServer` (se arranca al iniciar sesión,
+  `hf-remote rdp boot`), `rdpListen` (`"tailscale"` por defecto: solo la IP de Tailscale · `"red"` · `"local"`),
+  `rdpOutput` (`""` = la principal o, si no está conectada, la más grande · nombre · `"virtual"` = una pantalla
+  nueva para la conexión), `rdpPort` (3389). Usuario: el tuyo; contraseña propia de RDP en
+  `~/.config/hypr-rdp/password` (600, `hf-remote rdp password`): sin ella nunca se arranca, porque hypr-rdp sin
+  credenciales deja entrar a cualquiera. Corre como unidad de usuario `hf-rdp` (se reintenta cada 10 s si Tailscale
+  aún no está conectado). AnyDesk y RustDesk no aceptan conexiones entrantes en Hyprland (ver docs/PENDIENTES.md).
 - **Máquinas virtuales** (`sections/Virtualizacion.qml`; con `app: true` es la app «Máquinas virtuales», `modules/apps`, con tus máquinas y contenedores): requisitos (VT-x/AMD-V y `/dev/kvm`, QEMU + libvirt,
   socket de libvirt, grupo `libvirt`, Cockpit + cockpit-machines y `cockpit.socket`), «Instalar Cockpit + Máquinas»
   (paquetes por distro, activa los servicios, te añade al grupo y arranca la red `default`), «Abrir Cockpit»
