@@ -29,6 +29,7 @@ import "../../components/catppuccin.js" as Ctp
 Overlay {
     id: spot
     view: "spotlight"
+    morphs: true                // se transforma desde/hacia el panel que estaba abierto (components/Morph)
     // Centrado en la pantalla (sea cual sea la barra), algo por encima del centro como en macOS. Se centra con la
     // altura de «Todas las apps» para que el campo de búsqueda no salte al cambiar de modo.
     place: "screen"

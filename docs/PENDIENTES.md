@@ -58,10 +58,10 @@ reducción automática) se descartó en las decisiones del plan.
       Noctalia; quitar sondeos (p. ej. la pastilla de ventana pregunta a Hyprland cada 100 ms) y reaccionar a
       eventos. Hecho (v0.8.48): `dev/perf.sh` y reposo de 4,7 % a ~1 % de un núcleo. Falta: los 450 MB de RSS y
       la comparación con los otros shells.
-- [ ] **Pulido de animaciones**: paneles que se transforman entre sí (como Caelestia). Desde la v0.9.12 todos se
-      abren igual, con una sola animación. Prueba (0.9.33, `components/Morph.qml`): los paneles de los chips de la
-      barra y el centro de control se transforman uno en otro al saltar con un clic en la barra. Falta: verlo en uso
-      real (y en la GT 710) y decidir si se extiende a Spotlight, energía y los demás.
+- [x] **Pulido de animaciones** (0.9.55): los paneles se transforman entre sí (como Caelestia). Desde la 0.9.33 lo
+      hacían los chips de la barra y el centro de control; ahora también Spotlight, energía, actualizaciones, fondos,
+      widgets, música y atajos (`morphs: true` en su Overlay). Probado en sesión anidada con capturas a mitad del
+      paso. Falta solo verlo en la GT 710 (VGA-1).
 - [ ] **Plugins propios**: formato, permisos y un registro con versiones fijadas (como DMS); hoy solo los de Omarchy.
 - [ ] **Más compositores** (niri, Sway): evaluar qué partes dependen de Hyprland. Grande; después de lo demás.
 - [ ] Detalles de otros shells: desbloqueo facial (Howdy). (Cerrar procesos desde el monitor del sistema: 0.9.29;

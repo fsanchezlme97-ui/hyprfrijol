@@ -19,6 +19,7 @@ import "../../services"
 Overlay {
     id: win
     view: "fondos"
+    morphs: true                // se transforma desde/hacia el panel que estaba abierto (components/Morph)
     place: "fill"
     margin: 0
     closeOnOutside: false

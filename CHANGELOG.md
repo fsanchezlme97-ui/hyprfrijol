@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.55] — 2026-11-12
+
+### Mejorado
+- Paneles que se transforman unos en otros: al saltar de uno a otro sin cerrar (de Spotlight a energía, del centro
+  de control a actualizaciones, de la música al centro de control…) se ve una sola tarjeta que cambia de forma. Antes
+  solo lo hacían los paneles de la barra y el centro de control; ahora también Spotlight, energía, actualizaciones,
+  fondos, widgets, música y atajos. Con «Reducir movimiento» no se anima.
+
 ## [0.9.54] — 2026-11-12
 
 ### Mejorado

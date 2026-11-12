@@ -20,6 +20,7 @@ import "../../services"
 Overlay {
     id: win
     view: "musica"
+    morphs: true                // se transforma desde/hacia el panel que estaba abierto (components/Morph)
     place: "bottom"            // junto a la onda de la barra (arriba si la barra está arriba)
     panelWidth: 400
     panelHeight: card.implicitHeight

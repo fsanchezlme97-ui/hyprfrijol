@@ -11,6 +11,7 @@ import "../../components"
 Overlay {
     id: win
     view: "energia"
+    morphs: true                // se transforma desde/hacia el panel que estaba abierto (components/Morph)
     place: "center"
     dim: true
     panelWidth: card.implicitWidth

@@ -12,6 +12,7 @@ import "../../components"
 Overlay {
     id: win
     view: "atajos"
+    morphs: true                // se transforma desde/hacia el panel que estaba abierto (components/Morph)
     place: "center"
     panelWidth: 1000
     panelHeight: 640

@@ -19,6 +19,7 @@ import "../../services"
 Overlay {
     id: win
     view: "actualizaciones"
+    morphs: true                // se transforma desde/hacia el panel que estaba abierto (components/Morph)
     place: "center"
     panelWidth: 640
     panelHeight: card.implicitHeight

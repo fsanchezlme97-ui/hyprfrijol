@@ -19,6 +19,7 @@ Scope {
     Overlay {
         id: all
         view: "widgets"
+        morphs: true                // se transforma desde/hacia el panel que estaba abierto (components/Morph)
         place: "bottom-right"
         panelWidth: 336
         panelHeight: Math.min(colLoader.implicitHeight, 9999)
