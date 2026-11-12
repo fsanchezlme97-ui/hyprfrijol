@@ -983,6 +983,10 @@ class Session:
         self.wake = s.get("dictationWake", True) is not False
         self.pause = max(250, int(s.get("dictationPauseMs") or 700)) / 1000
         self.silence = max(1.5, float(s.get("dictationSilenceSec") or 5))
+        # Conversación por voz (Dictado.qml): el turno termina tras un silencio corto, y se espera más a que empieces
+        if os.environ.get("HF_DICTATE_SILENCE"):
+            self.silence = min(5.0, max(0.6, float(os.environ["HF_DICTATE_SILENCE"])))
+        self.wait0 = float(os.environ.get("HF_DICTATE_WAIT") or 0)
         self.maxsec = float(s.get("dictationMaxSec") or 120)
         if self.mode == "continuo":
             self.maxsec = max(self.maxsec, 600.0)
@@ -1431,7 +1435,7 @@ class Session:
                         emit("partial", text=pt)
                 backlog.clear()
                 if (self.mode == "continuo" or self.kind == "comando") and self.src is None:
-                    limit = self.silence if (self.phrases_heard or self.cmd_done) else max(self.silence, 8.0 if self.kind == "dictado" else 6.0)
+                    limit = self.silence if (self.phrases_heard or self.cmd_done) else (self.wait0 or max(self.silence, 8.0 if self.kind == "dictado" else 6.0))
                     if time.time() - last_voice_t > limit and self.jobs.empty() and not self.busy and not last_pt:
                         break
                 continue
@@ -1449,7 +1453,7 @@ class Session:
                     if self.vosk:
                         self.vosk_text = self.vosk.feed(phrase) if self.ready.is_set() and not self.errors else ""
                 elif self.mode == "continuo" or self.kind == "comando":
-                    limit = self.silence if (self.phrases or self.cmd_done) else max(self.silence, 8.0 if self.kind == "dictado" else 6.0)
+                    limit = self.silence if (self.phrases or self.cmd_done) else (self.wait0 or max(self.silence, 8.0 if self.kind == "dictado" else 6.0))
                     if self.src is None and time.time() - last_voice_t > limit and self.jobs.empty() and not self.busy:
                         break
                 continue

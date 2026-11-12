@@ -35,9 +35,8 @@
   hf-ai recipes | recipe <id> | recipe-save '<json>' | recipe-remove <id>   recetas (Resumir, Traducir, Corregir…):
                              la lista, ejecutar una, guardar o borrar una propia (~/.local/share/hyprfrijol/ai-recetas.json)
   hf-ai talk                 hablar con el asistente por voz (como Super + Alt + H): empieza o termina de escuchar
-  hf-ai speak "texto" | - | --stop   Helpert lo lee en voz alta (corta lo anterior): voz local Piper (sharvard);
-                             sin Piper, Gemini TTS
-  hf-ai announce "texto" | - | --greet   Sophia lo anuncia (Gemini TTS, voz aiVoiceName; sin clave o si falla, Helpert).
+  hf-ai speak "texto" | - | --stop   Helpert lo lee en voz alta (corta lo anterior): voz local Piper (sharvard), la única voz
+  hf-ai announce "texto" | - | --greet   Helpert lo anuncia.
                              Calla en «no molestar». --greet: saludo con la hora y el tiempo, una vez por sesión
                              (aiAnnounceGreet)
   hf-ai voice-install [--tty]  instala la voz local: venv con piper-tts y la voz es_ES-sharvard-medium (~77 MB)
@@ -2420,14 +2419,12 @@ def key_status(provider):
     k, where = gemini_key()
     return {"stored": bool(k), "where": where, "hint": (k[:4] + "…" + k[-4:]) if len(k) > 12 else ""}
 
-# ---------------------------------------------------------------- voz (Gemini TTS, misma clave gratuita)
-TTS_MODELS = ["gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts", "gemini-2.5-flash-preview-tts"]   # si uno falla (cuota…), el siguiente
+# ---------------------------------------------------------------- voz (Helpert, local)
 TTS_DIR = pathlib.Path(os.environ.get("XDG_RUNTIME_DIR") or HOME / ".cache/hyprfrijol")   # privado: nunca /tmp
 TTS_PID = TTS_DIR / "hf-ai-voice.pid"
-TTS_MAX = 900                                                            # caracteres: cuida la cuota gratuita
 # Voz local (conversación, Helpert): Piper con «sharvard» (es_ES, hablante 0 = M). ~150 MB de RAM y empieza a sonar en ~1 s
 # (arrancar Python y cargar el modelo); luego genera ×30 más rápido de lo que habla. Lo instala `hf-ai voice-install`.
-# Es la voz de Helpert (conversación); Sophia (avisos, `hf-ai announce`) usa Gemini y, sin clave, esta.
+# Es la única voz: Helpert dice las respuestas, los avisos (`hf-ai announce`) y el saludo.
 PIPER_DIR = HOME / ".local/share/hyprfrijol/tts"
 PIPER_VENV = PIPER_DIR / "piper-venv"
 PIPER_VOICE, PIPER_SPEAKER = "es_ES-sharvard-medium", 0
@@ -2459,7 +2456,7 @@ def voice_install(tty=False):
     say("Voz local lista: Helpert ya habla sin depender de Google.")
     return 0
 
-def speakable(text, limit=TTS_MAX):
+def speakable(text, limit=PIPER_MAX):
     """Lo que se lee de una respuesta: sin bloques de código, enlaces ni marcas de Markdown."""
     t = re.sub(r"```.*?(```|$)", " ", str(text or ""), flags=re.S)
     t = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", t)
@@ -2482,40 +2479,6 @@ def speak_stop():
     except (OSError, ValueError):
         pass
     TTS_PID.unlink(missing_ok=True)
-
-def speech_chunks(t, first=40):
-    """[primera frase (≥ «first» caracteres si hay más), resto]: suena la primera mientras se genera lo demás.
-    Dos trozos y no uno por frase: cada trozo es una petición y la cuota gratuita de Gemini va por peticiones."""
-    parts = re.split(r"(?<=[.!?…])\s+", t)
-    head = ""
-    while parts and len(head) < first:
-        head = (head + " " + parts.pop(0)).strip()
-    return [c for c in (head, " ".join(parts)) if c]
-
-def gemini_tts(t, key, voice, models):
-    """Audio WAV (bytes) de «t». Prueba los modelos en orden y deja delante el que respondió."""
-    import base64, io, wave
-    # Solo el texto: los modelos TTS nuevos leían en voz alta cualquier instrucción de estilo puesta delante
-    body = {"contents": [{"parts": [{"text": t}]}],
-            "generationConfig": {"responseModalities": ["AUDIO"],
-                                 "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}}}}
-    err = ""
-    for m in list(models):
-        try:
-            r = gemini_http("POST", f"/models/{m}:generateContent", key, body, timeout=60)
-            audio = base64.b64decode(r["candidates"][0]["content"]["parts"][0]["inlineData"]["data"])
-        except AIError as e:
-            err = str(e); continue
-        except Exception:
-            err = "Gemini no devolvió audio"; continue
-        models.remove(m); models.insert(0, m)
-        if audio[:4] == b"RIFF":               # los modelos nuevos ya mandan un WAV entero (con bloques tras el audio)
-            return audio
-        buf = io.BytesIO()                     # los de antes: PCM 16 bits, 24 kHz, mono, sin cabecera
-        with wave.open(buf, "wb") as w:
-            w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(audio)
-        return buf.getvalue()
-    raise AIError(err or "Gemini no devolvió audio")
 
 def tts_claim():
     TTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -2556,76 +2519,20 @@ def speak_piper(t, player):
     ok = stopped or gen.returncode == 0
     return {"ok": ok, "error": "" if ok else "La voz local (Piper) falló. Reinstálala: hf-ai voice-install"}
 
-def speak(text, s=None, sophia=False):
-    """Lee «text» en voz alta y corta lo que estuviera diciendo. → {"ok", "error"}
-    Dos voces que se cubren una a otra:
-      Helpert (conversación): voz local Piper.
-      Sophia (avisos: saludo, recordatorios, urgentes; sophia=True): Gemini TTS, voz aiVoiceName.
-    Sin clave de Gemini, o si Gemini falla antes de sonar (cuota…), lo dice Helpert; sin Piper, habla Gemini."""
-    s = s or settings()
-    key = gemini_key()[0] if (sophia or not piper_ready()) and not local_only(s) else ""
-    local = piper_ready() and not (sophia and key)
-    t = speakable(text, PIPER_MAX if local else TTS_MAX)
+def speak(text, s=None):
+    """Helpert lee «text» en voz alta y corta lo que estuviera diciendo. → {"ok", "error"}
+    Una sola voz, local (Piper): conversación, avisos y saludo. Sin depender de Google, no hay esperas ni cuotas."""
+    t = speakable(text, PIPER_MAX)
     speak_stop()
     if not t:
         return {"ok": False, "error": "Nada que leer"}
+    if not piper_ready():
+        return {"ok": False, "error": "Falta la voz de Helpert: instálala en Ajustes › Asistente de IA (hf-ai voice-install)"}
     player = shutil.which("pw-play") or shutil.which("paplay")
     if not player:
         return {"ok": False, "error": "Falta pw-play o paplay"}
     tts_claim()
-    if local:
-        return speak_piper(t, player)
-    if not key:
-        tts_done(False)
-        return {"ok": False, "error": "Falta la clave de Gemini (Ajustes › Asistente de IA) o la voz local (hf-ai voice-install)"}
-    r = speak_gemini(t, key, s, player)
-    if not r["ok"] and r["error"] and piper_ready() and not TTS_OWNER.exists():   # nadie nos relevó: habla Helpert
-        tts_claim()
-        return speak_piper(speakable(text, PIPER_MAX), player)
-    return r
-
-def speak_gemini(t, key, s, player):
-    """Gemini trozo a trozo: un hilo genera el siguiente mientras suena el actual."""
-    import queue, tempfile, threading
-    voice, models = str(s.get("aiVoiceName") or "Aoede"), list(TTS_MODELS)
-    mine = tts_mine
-    q = queue.Queue()
-
-    def produce():
-        for c in speech_chunks(t):
-            if not mine():
-                break
-            try:
-                audio = gemini_tts(c, key, voice, models)
-            except AIError as e:
-                q.put(e); return
-            fd, name = tempfile.mkstemp(prefix="hf-ai-voice-", suffix=".wav", dir=TTS_DIR)
-            with os.fdopen(fd, "wb") as fo:
-                fo.write(audio)
-            q.put(pathlib.Path(name))
-        q.put(None)
-
-    threading.Thread(target=produce, daemon=True).start()
-    played, err = False, ""
-    while (item := q.get()) is not None:
-        if isinstance(item, AIError):
-            err = str(item); break
-        if not mine():                                  # otra respuesta empezó mientras se generaba esta
-            item.unlink(missing_ok=True); break
-        p = subprocess.Popen([player, str(item)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        TTS_PID.write_text(str(p.pid))
-        if not played:
-            run(QS + ["ipc", "call", "shell", "setAiSpeaking", "true"])     # la barra pinta la onda rellena
-            played = True
-        p.wait()
-        item.unlink(missing_ok=True)
-        if not (TTS_PID.exists() and TTS_PID.read_text() == str(p.pid)):   # speak --stop o una respuesta nueva
-            break
-    while not q.empty():                                # trozos ya generados que no llegaron a sonar
-        if isinstance(item := q.get(), pathlib.Path):
-            item.unlink(missing_ok=True)
-    tts_done(played)
-    return {"ok": played, "error": err}
+    return speak_piper(t, player)
 
 def dnd_on():
     """«No molestar» de los avisos (Notifs.qml): ~/.local/state/hyprfrijol/dnd con la hora de fin en ms (o vacío)."""
@@ -2636,12 +2543,12 @@ def dnd_on():
     return not until.isdigit() or int(until) > time.time() * 1000
 
 def announce(text, s=None):
-    """Sophia lee un aviso (sin emojis ni marcas HTML del cuerpo de las notificaciones). Calla en «no molestar»."""
+    """Helpert lee un aviso (sin emojis ni marcas HTML del cuerpo de las notificaciones). Calla en «no molestar»."""
     if dnd_on():
         return {"ok": False, "error": "No molestar"}
     t = re.sub(r"<[^>]+>", " ", str(text or ""))
     t = re.sub(r"[\U0001F000-\U0001FAFF⌀-⏿☀-➿️]", "", t)
-    return speak(t, s, sophia=True)
+    return speak(t, s)
 
 WEATHER_DESC = ((0, "despejado"), (2, "poco nuboso"), (3, "nublado"), (48, "niebla"), (57, "llovizna"), (67, "lluvia"),
                 (77, "nieve"), (82, "chubascos"), (86, "chubascos de nieve"), (99, "tormenta"))   # como Weather.qml
@@ -2664,7 +2571,7 @@ def greeting():
     return " ".join(parts)
 
 def greet():
-    """Saludo de Sophia al entrar (aiAnnounceGreet): una vez por sesión de Hyprland, aunque el shell se reinicie."""
+    """Saludo de Helpert al entrar (aiAnnounceGreet): una vez por sesión de Hyprland, aunque el shell se reinicie."""
     s = settings()
     if not s.get("aiAnnounceGreet"):
         return {"ok": False, "error": "Saludo desactivado"}
@@ -2994,6 +2901,9 @@ def do_chat(req, print_request=False):
         ctx_text = base_ctx + "\n\nEl usuario adjunta imágenes (las ves en la conversación; «[Adjunta …]» marca en qué mensaje)."
     else:
         ctx_text = without_vision("este modelo no ve imágenes" if not vision else "no se pudieron preparar las imágenes") if nimg else base_ctx
+    if ctx.get("spoken"):   # conversación por voz (Dictado.qml): la respuesta la lee Helpert
+        ctx_text += ("\n\nConversación por voz: tu respuesta se leerá en voz alta. Contesta como al hablar: una a tres frases "
+                     "cortas, sin listas, sin markdown, sin código ni enlaces. Si hace falta más, ofrece contarlo.")
     ctx_text, hidden = redact(ctx_text, s)
     if print_request:
         sp = system_prompt(s)

@@ -39,6 +39,8 @@ Singleton {
     signal dictToggle()                    // botón del micrófono: lo de su modo (micMode, modules/dictado)
     signal micCycle()                      // siguiente modo del micrófono
     signal aiAskHidden(string text)        // pregunta al asistente sin abrir el panel (hablar por voz: Super + Alt + H)
+    property bool aiConversation: false    // conversación por voz en marcha (Dictado.qml): escucha, responde, escucha…
+    signal aiReplied(bool ok)              // llegó la respuesta del asistente (AiChat.qml)
     // Pantalla donde se abren los paneles: la del monitor con foco
     readonly property var screen: {
         const name = Hyprland.focusedMonitor?.name;

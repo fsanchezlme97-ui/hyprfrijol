@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.41] — 2026-11-12
+
+### Añadido
+- **Conversación por voz con el asistente**: Super + Alt + H (o el micrófono en modo «asistente») la activa y
+  la desactiva. Escucha, al callarte (≈1,2 s, ajustable) le pasa lo dicho al asistente, Helpert contesta en voz
+  alta con frases cortas y vuelve a escuchar. Mientras Helpert habla no escucha (no se oye a sí mismo); si tarda,
+  dice «Un momento.». Termina pulsando otra vez, con el botón de la píldora, diciendo «adiós» / «eso es todo» o
+  tras un rato en silencio. «Una pregunta» en Ajustes › Asistente de IA vuelve al modo de antes.
+
+### Cambiado
+- **Solo Helpert para la voz**: se quita la voz de Gemini; respuestas, avisos y saludos los lee siempre Helpert
+  (Piper, local, sin internet y sin esperas). Sin la voz instalada, `hf-ai speak` lo dice y ofrece instalarla.
+
 ## [0.9.40] — 2026-11-12
 
 ### Cambiado

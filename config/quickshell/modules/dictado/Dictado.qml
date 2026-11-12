@@ -1,5 +1,8 @@
 // Dictado y comandos de voz (local, como SuperWhisper): atajos globales hf:dictado (Super + Alt + D), hf:comando
-// (Super + Alt + V) y hf:hablar (Super + Alt + H: lo dicho va al asistente, que contesta con voz si aiVoice). Modo «ptt»: hablar mientras se mantiene (un toque corto deja el micrófono abierto hasta volver a
+// (Super + Alt + V) y hf:hablar (Super + Alt + H). Hablar con el asistente (aiTalkMode): «conversacion» (por defecto)
+// la activa y la desactiva: escucha, al callarte (aiConvSilence s) se lo pasa al asistente, Helpert contesta en voz
+// alta y vuelve a escuchar, hasta que la desactivas (o dices «adiós» / «eso es todo»); mientras Helpert habla no
+// escucha, para no oírse a sí mismo. «pulsar»: una sola pregunta por pulsación (contesta con voz si aiVoice). Modo «ptt»: hablar mientras se mantiene (un toque corto deja el micrófono abierto hasta volver a
 // pulsar); «toggle»: cada pulsación empieza/termina; «continuo»: empieza al pulsar y para solo tras unos segundos
 // callado. Mientras hablas el texto se va escribiendo en la ventana y lo provisional se corrige al terminar cada frase
 // (scripts/hf-dictate: VAD + whisper-server residente). Al dictar, «Distro, …» al principio de una frase es una orden (dictationWake);
@@ -42,6 +45,57 @@ Scope {
     readonly property string mode: Settings.get("dictationMode", "ptt")
     readonly property bool busy: proc.running
 
+    // ---------- conversación por voz ----------
+    readonly property bool conv: Shell.aiConversation
+    property string convState: ""           // escucha | piensa | habla
+    property int convMisses: 0              // turnos seguidos sin oír nada (3 = se da por terminada)
+    readonly property string talkMode: Settings.get("aiTalkMode", "conversacion")
+    function convToggle(): void { if (conv) convEnd(false); else convStart(); }
+    function convStart(): void {
+        if (conv) return;
+        if (Audio.micMuted) { phase = "done"; msg = "Micrófono silenciado"; hider.interval = 1800; hider.restart(); return; }
+        if (proc.running) send("cancel");
+        Shell.aiConversation = true;
+        convMisses = 0;
+        convLater.restart();
+    }
+    function convEnd(bye): void {
+        if (!conv) return;
+        Shell.aiConversation = false;
+        convState = ""; convLater.stop(); thinkTimer.stop(); replyTimer.stop();
+        if (proc.running) send("cancel");
+        Quickshell.execDetached([Paths.script("hf-ai"), "speak", bye ? "Hasta luego." : "--stop"]);
+        phase = "done"; msg = "Conversación terminada"; hider.interval = 1400; hider.restart();
+    }
+    function convListen(): void {
+        if (!conv || Shell.aiSpeaking) return;
+        if (proc.running) { convLater.restart(); return; }
+        convState = "escucha";
+        start("ia");
+    }
+    // Entre turnos, un respiro: que no se oiga el final de la voz de Helpert
+    Timer { id: convLater; interval: 600; onTriggered: root.convListen() }
+    // Si tarda, Helpert avisa de que sigue en ello (y la respuesta lo corta al llegar)
+    Timer { id: thinkTimer; interval: 4000; onTriggered: if (root.conv && root.convState === "piensa") Quickshell.execDetached([Paths.script("hf-ai"), "speak", "Un momento."]) }
+    // La respuesta llegó pero no sonó (sin voz instalada, texto vacío…): se vuelve a escuchar igual
+    Timer { id: replyTimer; interval: 8000; onTriggered: if (root.conv && root.convState === "habla" && !Shell.aiSpeaking) root.convListen() }
+    Connections {
+        target: Shell
+        function onAiSpeakingChanged() {
+            if (!root.conv) return;
+            if (Shell.aiSpeaking) {
+                if (root.convState === "escucha") { if (proc.running) root.send("cancel"); root.convState = "habla"; }
+            } else if (root.convState === "habla") convLater.restart();
+        }
+        function onAiReplied(ok) {
+            if (!root.conv || root.convState !== "piensa") return;
+            thinkTimer.stop();
+            root.convState = "habla";
+            replyTimer.restart();
+        }
+    }
+    readonly property var byeRe: /^(adi[oó]s|hasta luego|chao|terminar|termina|para ya|eso es todo|ya est[aá]|gracias,? eso es todo|fin de la conversaci[oó]n)[\s.!¡]*$/i
+
     function start(k, extra, fromKey): void {
         if (proc.running) return;
         kind = k || "dictado";
@@ -49,7 +103,7 @@ Scope {
         partial = ""; committed = ""; cmdText = ""; cmdMsg = ""; cmdOk = true; ready = false; speaking = false;
         phase = "rec";
         hider.stop(); cmdHider.stop();
-        const a = [Paths.script("hf-dictate"), "record", "--mode", fromKey || mode !== "ptt" ? mode : "toggle"];
+        const a = [Paths.script("hf-dictate"), "record", "--mode", conv && kind === "ia" ? "continuo" : fromKey || mode !== "ptt" ? mode : "toggle"];
         if (kind === "comando") a.push("--command");
         if (fromKey) a.push("--hold");     // no escribir con las teclas del atajo aún pulsadas (released() lo suelta)
         args = a.concat(extra ?? []);
@@ -89,6 +143,17 @@ Scope {
         case "transcribing": phase = "trans"; break;
         case "text": committed = j.text; break;
         case "done":
+            if (kind === "ia" && conv) {        // conversación: lo dicho va al asistente y se espera su voz
+                const t = committed.trim();
+                phase = "idle";
+                if (!t) { convLater.restart(); break; }
+                if (byeRe.test(t)) { convEnd(true); break; }
+                convMisses = 0;
+                convState = "piensa";
+                Shell.aiAskHidden(t);
+                thinkTimer.restart();
+                break;
+            }
             if (kind === "ia") {                // hablar con el asistente: la pregunta va al panel lateral
                 phase = "done"; msg = committed.trim() ? "Se lo dije a " + (Settings.get("aiName", "") || "el asistente") : "No te oí";
                 // Con voz, la conversación sigue con el panel cerrado (se oye la respuesta); sin voz, hay que verla
@@ -107,6 +172,14 @@ Scope {
         case "cancelled": phase = "idle"; break;
         case "error":
             if (j.fatal === false) break;
+            if (kind === "ia" && conv) {        // en conversación, no oír nada no es un error: se sigue escuchando
+                if (["silence", "empty"].includes(j.code ?? "")) {
+                    phase = "idle";
+                    if (++convMisses >= 3) convEnd(true); else convLater.restart();   // ~1,5 min callado: se cierra sola
+                    break;
+                }
+                convEnd(false);
+            }
             phase = "error"; msg = j.msg ?? "Error"; code = j.code ?? "";
             hider.interval = 4500; hider.restart();
             break;
@@ -116,10 +189,15 @@ Scope {
     Process {
         id: proc
         command: root.args
-        environment: root.kind === "ia" ? { HF_DICTATE_OUTPUT: "ninguna", HF_DICTATE_FOR: "ia" } : ({})   // «ia»: no escribir en la ventana (y dictationAiFix)
+        // «ia»: no escribir en la ventana (y dictationAiFix); en conversación, el turno acaba tras un silencio corto
+        environment: root.kind !== "ia" ? ({}) : Object.assign({ HF_DICTATE_OUTPUT: "ninguna", HF_DICTATE_FOR: "ia" },
+            root.conv ? { HF_DICTATE_SILENCE: String(Settings.get("aiConvSilence", 1.2)), HF_DICTATE_WAIT: "30" } : {})
         stdinEnabled: true
         stdout: SplitParser { onRead: l => { try { root.onEvent(JSON.parse(l)); } catch (e) {} } }
-        onExited: if (["rec", "trans", "cmd"].includes(root.phase)) { root.phase = "idle"; }
+        onExited: {
+            if (["rec", "trans", "cmd"].includes(root.phase)) root.phase = "idle";
+            if (root.conv && root.convState === "escucha") convLater.restart();   // terminó sin decir nada (o falló)
+        }
     }
     Binding { target: Shell; property: "dictPhase"; value: root.phase }
     // Micrófono de la barra y hf:micro (Super + Alt + M): según micMode, dictar, hablar con el asistente o silenciar.
@@ -127,7 +205,12 @@ Scope {
     // Silenciado, ningún modo funcionaría: no se cambia de modo y el botón (o el atajo) solo lo vuelve a activar.
     readonly property string micMode: Settings.get("micMode", "dictado")
     readonly property var micModes: ({ dictado: "dictado", ia: "hablar con el asistente", silencio: "silenciar" })
-    function micAction(): void { if (micMode === "silencio" || Audio.micMuted) Audio.toggleMic(); else toggle(micMode === "ia" ? "ia" : "dictado"); }
+    function micAction(): void {
+        if (micMode === "silencio" || Audio.micMuted) { if (conv) convEnd(false); Audio.toggleMic(); }
+        else if (micMode === "ia") talk();
+        else toggle("dictado");
+    }
+    function talk(): void { if (talkMode === "conversacion") convToggle(); else toggle("ia"); }
     function micCycle(): void {
         if (Audio.micMuted) { if (!proc.running) { phase = "done"; msg = "Micrófono silenciado: actívalo para cambiar de modo"; hider.interval = 1800; hider.restart(); } return; }
         const m = Object.keys(micModes), next = m[(m.indexOf(micMode) + 1) % m.length];
@@ -168,19 +251,24 @@ Scope {
     }
     GlobalShortcut {
         appid: "hf"; name: "hablar"; description: "HyprFrijol: hablar con el asistente"
-        onPressed: root.pressed("ia")
-        onReleased: root.released()
+        onPressed: root.talkMode === "conversacion" ? root.convToggle() : root.pressed("ia")
+        onReleased: if (root.talkMode !== "conversacion") root.released()
     }
     GlobalShortcut {
         appid: "hf"; name: "micro"; description: "HyprFrijol: micrófono (lo de su modo)"
-        onPressed: { root.micHeld = root.micMode !== "silencio" && !Audio.micMuted; if (root.micHeld) root.pressed(root.micMode === "ia" ? "ia" : "dictado"); else Audio.toggleMic(); }
+        onPressed: {
+            if (root.micMode === "ia" && root.talkMode === "conversacion" && !Audio.micMuted) { root.micHeld = false; root.convToggle(); return; }
+            root.micHeld = root.micMode !== "silencio" && !Audio.micMuted; if (root.micHeld) root.pressed(root.micMode === "ia" ? "ia" : "dictado"); else Audio.toggleMic();
+        }
         onReleased: if (root.micHeld) root.released()
     }
     GlobalShortcut { appid: "hf"; name: "micro-modo"; description: "HyprFrijol: siguiente modo del micrófono"; onPressed: root.micCycle() }
     IpcHandler {
         target: "dictado"
         function toggle(): void { root.toggle("dictado"); }
-        function talk(): void { root.toggle("ia"); }          // hablar con el asistente (hf-ai talk)
+        function talk(): void { root.talk(); }                // hablar con el asistente (hf-ai talk): según aiTalkMode
+        function conversation(): void { root.convToggle(); }  // activar / desactivar la conversación por voz
+        function conversationState(): string { return root.conv ? root.convState || "activa" : "apagada"; }
         function command(): void { root.toggle("comando"); }
         function micro(): void { root.micAction(); }          // lo del modo del micrófono (micMode)
         function microModo(): void { root.micCycle(); }
@@ -197,7 +285,7 @@ Scope {
     // ---------- píldora (sitio y estilo del OSD) ----------
     PanelWindow {
         id: win
-        readonly property bool shown: root.phase !== "idle"
+        readonly property bool shown: root.phase !== "idle" || root.conv
         screen: Shell.screen
         visible: shown || fade.running
         color: "transparent"
@@ -218,12 +306,15 @@ Scope {
         readonly property bool isCmd: root.kind === "comando" || root.cmdText !== ""
         readonly property color accent: root.phase === "error" || (root.cmdText && root.cmdMsg && !root.cmdOk) ? Theme.danger
                                       : root.phase === "rec" && !isCmd ? Theme.danger : Theme.p
-        readonly property string iconName: root.cmdMsg ? (root.cmdOk ? "check" : "alert")
+        readonly property string iconName: win.convIdle ? (root.convState === "habla" ? "volume" : "ai")
+                                         : root.cmdMsg ? (root.cmdOk ? "check" : "alert")
                                          : root.phase === "done" ? "check" : root.phase === "error" ? "alert"
                                          : isCmd ? "command" : "mic"
         readonly property string mmss: Math.floor(root.secs / 60) + ":" + String(Math.floor(root.secs % 60)).padStart(2, "0")
         // texto principal y secundario de la píldora
-        readonly property string mainText: root.cmdText !== "" && root.phase !== "error" ? root.cmdText
+        readonly property bool convIdle: root.conv && root.phase === "idle"
+        readonly property string mainText: convIdle ? (root.convState === "piensa" ? "Pensando…" : root.convState === "habla" ? (Settings.get("aiName", "") || "Helpert") + " te responde…" : "")
+            : root.cmdText !== "" && root.phase !== "error" ? root.cmdText
             : root.phase === "rec" ? (root.partial || (root.committed ? root.committed.trim().slice(-120) : ""))
             : root.phase === "trans" ? (root.partial || "Transcribiendo…")
             : root.phase === "cmd" ? root.cmdText
@@ -231,9 +322,11 @@ Scope {
         readonly property string hint: root.phase !== "rec" ? ""
             : !root.ready ? "Preparando el micrófono…"
             : root.kind === "comando" ? "Di una orden: «pon Walk de Foo Fighters en YouTube»"
+            : root.conv ? "Te escucho…"
             : Settings.get("dictationWake", true) ? "Habla… · «" + (String(Settings.get("dictationWakeWord", "Distro")).trim() || "Distro") + ", …» para una orden"
             : "Habla…"
-        readonly property string sub: root.cmdMsg !== "" ? root.cmdMsg
+        readonly property string sub: root.conv && root.cmdMsg === "" ? "Conversación · Super + Alt + H para terminar"
+            : root.cmdMsg !== "" ? root.cmdMsg
             : root.phase === "cmd" ? "Haciéndolo…"
             : root.phase === "rec" && !root.partial && !root.committed && (root.latched || root.mode !== "ptt") ? (root.mode === "continuo" ? "para solo al callarte" : "pulsa otra vez para terminar")
             : ""
@@ -292,7 +385,7 @@ Scope {
                 }
                 // puntos mientras transcribe o ejecuta
                 Row {
-                    visible: root.phase === "trans" || root.phase === "cmd" || (root.cmdText !== "" && root.cmdMsg === "")
+                    visible: root.phase === "trans" || root.phase === "cmd" || (root.cmdText !== "" && root.cmdMsg === "") || (win.convIdle && root.convState === "piensa")
                     spacing: 4
                     Repeater {
                         model: 3
@@ -341,9 +434,17 @@ Scope {
                     Txt { id: cfg; anchors.centerIn: parent; text: "Configurar"; size: 12; weight: Font.DemiBold; color: Theme.pText }
                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.phase = "idle"; Shell.open("ajustesapp", "dictado"); } }
                 }
+                // terminar la conversación
+                Rectangle {
+                    visible: root.conv
+                    implicitWidth: 24; implicitHeight: 24; radius: 12
+                    color: Qt.alpha(Theme.danger, cma.containsMouse ? 0.3 : 0.18)
+                    Rectangle { anchors.centerIn: parent; width: 8; height: 8; radius: 2; color: Theme.danger }
+                    MouseArea { id: cma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.convEnd(false) }
+                }
                 // terminar (manos libres)
                 Rectangle {
-                    visible: root.phase === "rec" && (root.latched || root.mode !== "ptt")
+                    visible: root.phase === "rec" && !root.conv && (root.latched || root.mode !== "ptt")
                     implicitWidth: 24; implicitHeight: 24; radius: 12
                     color: Qt.alpha(Theme.danger, sma.containsMouse ? 0.3 : 0.18)
                     Rectangle { anchors.centerIn: parent; width: 8; height: 8; radius: 2; color: Theme.danger }
@@ -351,7 +452,7 @@ Scope {
                 }
                 // cancelar
                 Rectangle {
-                    visible: root.phase === "rec" || root.phase === "trans"
+                    visible: (root.phase === "rec" || root.phase === "trans") && !root.conv
                     implicitWidth: 24; implicitHeight: 24; radius: 12
                     color: xma.containsMouse ? Theme.fill2 : "transparent"
                     Icon { anchors.centerIn: parent; name: "x"; size: 12; color: Theme.tv }

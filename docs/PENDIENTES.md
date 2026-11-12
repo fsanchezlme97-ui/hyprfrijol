@@ -76,8 +76,9 @@ reducción automática) se descartó en las decisiones del plan.
       restauración es app y las unidades extraíbles se ven en el icono de la barra (0.9.30).
 - [ ] **Dictado por voz**: precisión, latencia, puntuación, idioma y que funcione en todas las apps. Nombres propios
       e internet: vocabulario con todos los motores y corrección con la IA (0.9.20); falta probarlo con voz real.
-- [ ] **Chat en vivo con el asistente** (hablar y que responda en voz): conversación fluida, interrumpirlo,
-      latencia baja.
+- [x] **Chat en vivo con el asistente** (v0.9.41): Super + Alt + H activa la conversación (escucha, Helpert responde,
+      vuelve a escuchar) y la desactiva. Falta: interrumpir a Helpert hablando encima (necesita cancelar el eco del
+      altavoz) y probarlo con voz real.
 - [x] **Comandos por voz** (v0.9.26): energía (se confirma en el menú), micrófono, hora y fecha, tareas y recordatorios,
       cortesías («¿puedes…?»). Falta probarlo hablando de verdad y, si hace falta, cerrar apps por su nombre.
 - [ ] **Micrófono de tres modos** (v0.8.42): probar en uso real dictar y hablar con el asistente con Super + Alt + M

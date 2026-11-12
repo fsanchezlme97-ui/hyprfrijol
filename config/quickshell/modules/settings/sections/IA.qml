@@ -335,21 +335,47 @@ ColumnLayout {
             }
             Timer { id: personaSave; interval: 800; onTriggered: persona.save() }
         }
-        // Voz (aiVoice): hf-ai speak lee cada respuesta con la voz local (Piper); sin ella, con Gemini TTS (aiVoiceName)
+        // Voz (aiVoice): hf-ai speak lee cada respuesta con Helpert, la única voz (local, Piper)
         SwRow {
             label: "Hablar con voz"; key: "aiVoice"; def: false
-            sub: root.voiceLocal === false ? "lee las respuestas en voz alta con Gemini (clave gratuita de Google; Google recibe el texto)"
-                                           : "lee las respuestas en voz alta con una voz local (Piper): rápida y sin internet"
+            sub: root.voiceLocal === false ? "falta la voz de Helpert: instálala abajo"
+                                           : "Helpert lee las respuestas en voz alta (voz local: rápida y sin internet)"
         }
         Button {
             visible: root.voiceLocal === false
-            text: "Instalar la voz local (Piper, ~250 MB: más rápida y sin depender de Google)"
+            text: "Instalar la voz de Helpert (Piper, ~250 MB, sin internet)"
             onClicked: { Pkg.runInTerminal(Paths.script("hf-ai") + " voice-install --tty", "Voz del asistente"); voiceLater.n = 0; voiceLater.restart(); }
         }
+        // Super + Alt + H (y el micro en modo «asistente»): conversación de ida y vuelta o una sola pregunta (Dictado.qml)
+        LabeledRow {
+            label: "Super + Alt + H"
+            labelWidth: 120
+            Seg {
+                model: [["conversacion", "Conversación"], ["pulsar", "Una pregunta"]]
+                current: Settings.get("aiTalkMode", "conversacion")
+                onPicked: k => Settings.set("aiTalkMode", k)
+            }
+        }
+        LabeledRow {
+            visible: Settings.get("aiTalkMode", "conversacion") === "conversacion"
+            label: "Tu turno acaba"
+            labelWidth: 120
+            Seg {
+                model: [["0.8", "Rápido"], ["1.2", "Normal"], ["2", "Con pausas"]]
+                current: String(Settings.get("aiConvSilence", 1.2))
+                onPicked: k => Settings.set("aiConvSilence", parseFloat(k))
+            }
+        }
+        Txt {
+            Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
+            text: Settings.get("aiTalkMode", "conversacion") === "conversacion"
+                ? "Pulsa una vez y habla con naturalidad: al callarte se lo pasa al asistente, Helpert contesta en voz alta y vuelve a escucharte. Para terminar, pulsa otra vez o di «adiós» (también se cierra tras un rato en silencio)."
+                : "Cada pulsación es una pregunta; la respuesta sale en el panel (y en voz si «Hablar con voz» está activo)."
+        }
         Timer { id: voiceLater; interval: 5000; repeat: true; property int n: 0; onTriggered: { stat.running = false; stat.running = true; if (++n > 24 || root.voiceLocal) stop(); } }
-        // Sophia (hf-ai announce): avisos con la voz de Gemini; sin clave, los dice la voz local. Nunca en «no molestar».
-        SwRow { label: "Sophia: saludo al entrar"; sub: "al iniciar sesión dice la hora y el tiempo (voz de Google; sin clave, la voz local)"; key: "aiAnnounceGreet"; def: false }
-        SwRow { label: "Sophia: avisos importantes"; sub: "lee los recordatorios y las notificaciones urgentes; calla en «no molestar»"; key: "aiAnnounceUrgent"; def: false }
+        // Avisos (hf-ai announce): también con la voz de Helpert. Nunca en «no molestar».
+        SwRow { label: "Saludo al entrar"; sub: "al iniciar sesión Helpert dice la hora y el tiempo"; key: "aiAnnounceGreet"; def: false }
+        SwRow { label: "Avisos importantes en voz alta"; sub: "lee los recordatorios y las notificaciones urgentes; calla en «no molestar»"; key: "aiAnnounceUrgent"; def: false }
         Txt {
             Layout.alignment: Qt.AlignRight
             visible: persona.text.length > 1500

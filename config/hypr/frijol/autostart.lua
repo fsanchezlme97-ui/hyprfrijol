@@ -11,7 +11,7 @@ hl.on("hyprland.start", function()
 
     -- Servicios de sesión: solo en una sesión real, para no pisar los de la sesión anfitriona
     if not nested then
-        -- Saludo de Sophia (aiAnnounceGreet): hf-ai lo mira y saluda una sola vez por sesión; espera a que suene el audio
+        -- Saludo de Helpert (aiAnnounceGreet): hf-ai lo mira y saluda una sola vez por sesión; espera a que suene el audio
         hl.exec_cmd("sh -c 'sleep 6; exec " .. HF.scripts .. "/hf-ai announce --greet'")
         hl.exec_cmd("dbus-update-activation-environment --all")
         hl.exec_cmd("sleep 1 && dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HF_ROOT HF_SESSION PATH")

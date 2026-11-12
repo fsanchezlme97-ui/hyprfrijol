@@ -84,7 +84,7 @@ Item {
                                                             m.images?.length ? { images: m.images } : {},
                                                             m.files?.length ? { files: m.files } : {},
                                                             m.steps?.length ? { queried: true } : {})),   // ver mcp_auto en hf-ai
-                                context: context() }, extra ?? {}));
+                                context: Object.assign(context(), Shell.aiConversation ? { spoken: true } : {}) }, extra ?? {}));
     }
 
     function ask(text, task) {
@@ -279,8 +279,10 @@ Item {
         root.busy = false;
         root.liveText = ""; root.liveSteps = [];
         if (!r || typeof r !== "object") r = { error: "Respuesta no válida de hf-ai" };
+        Shell.aiReplied(!r.error);         // la conversación por voz espera a la respuesta (Dictado.qml)
         if (r.error) {
             root.push({ role: "ai", text: r.error, error: true });
+            if (Shell.aiConversation) Quickshell.execDetached([Paths.script("hf-ai"), "speak", r.error]);
             if (!root.active) Quickshell.execDetached(["notify-send", "-a", Settings.get("aiName", "") || "Asistente", "-i", "dialog-error", r.error]);
         } else {
             root.push({ role: "ai", text: r.text || (r.actions?.length ? "Puedo hacerlo. Estos son los pasos:" : "…"),
@@ -288,7 +290,7 @@ Item {
                         // filtro de secretos de hf-ai: se avisa cuántos datos sensibles no salieron del equipo
                         steps: (r.steps ?? []).concat(r.redacted ? [(r.redacted === 1 ? "Se ocultó 1 dato sensible" : "Se ocultaron " + r.redacted + " datos sensibles") + " del contexto"] : []),
                         code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto, model: r.model ?? "" });
-            if (Settings.get("aiVoice", false)) Quickshell.execDetached([Paths.script("hf-ai"), "speak", r.text || ""]);
+            if (Settings.get("aiVoice", false) || Shell.aiConversation) Quickshell.execDetached([Paths.script("hf-ai"), "speak", r.text || ""]);
             // Sin confirmación (Ajustes › IA) o todo «aprobado siempre» (aiAlwaysApprove): se aplica ya y queda
             // el botón Deshacer (salvo pasos sin vuelta atrás, que siempre preguntan)
             const auto = ((!root.confirmChanges && !r.confirm) || r.auto) && (r.actions?.length ?? 0) > 0;
