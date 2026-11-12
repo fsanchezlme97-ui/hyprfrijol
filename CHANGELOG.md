@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.31] — 2026-11-11
+
+### Añadido
+- **Letras de canciones** en el panel de música (Super + M): la línea que suena, grande, y la siguiente; si la
+  letra no está sincronizada, el texto entero. Las da lrclib.net (gratis y sin cuenta); como eso es mandar a un
+  servicio de fuera el artista y el título de lo que escuchas, se activa a mano con «Ver la letra» en el propio
+  panel y se quita con «Ocultar letras» (`musicLyrics`, apagado por defecto).
+
 ## [0.9.30] — 2026-11-11
 
 ### Añadido

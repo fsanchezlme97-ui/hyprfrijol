@@ -49,8 +49,8 @@ reducción automática) se descartó en las decisiones del plan.
       se transforme en otro al saltar de uno a otro.
 - [ ] **Plugins propios**: formato, permisos y un registro con versiones fijadas (como DMS); hoy solo los de Omarchy.
 - [ ] **Más compositores** (niri, Sway): evaluar qué partes dependen de Hyprland. Grande; después de lo demás.
-- [ ] Detalles de otros shells: desbloqueo facial (Howdy), letras de canciones. (Cerrar procesos desde el monitor
-      del sistema: 0.9.29; perfil de energía según cargador o batería: 0.9.30, sin probar en un portátil.)
+- [ ] Detalles de otros shells: desbloqueo facial (Howdy). (Cerrar procesos desde el monitor del sistema: 0.9.29;
+      perfil de energía según cargador o batería: 0.9.30, sin probar en un portátil; letras de canciones: 0.9.31.)
 
 ## Mejorar lo que ya hay
 

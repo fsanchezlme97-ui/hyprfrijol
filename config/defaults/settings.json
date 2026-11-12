@@ -188,6 +188,7 @@
   "barBehavior": "siempre",
   "barAllScreens": true,
   "barScreens": {},
+  "musicLyrics": false,
   "barSecondaryClock": true,
   "barWeatherText": false,
   "barStatsStyle": "texto",

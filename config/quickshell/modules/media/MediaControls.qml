@@ -3,6 +3,7 @@
 //   y «Abrir» (trae la app al frente).
 //   Tarjeta: carátula, título, artista y álbum · barra de progreso con tiempos (clic o arrastrar = buscar) ·
 //   aleatorio, anterior, reproducir/pausar, siguiente, repetir.
+//   Letra (services/Lyrics.qml, lrclib.net): la línea que suena y la siguiente; se activa a mano (musicLyrics).
 //   Volumen de la salida + salida de audio (desplegable con los dispositivos).
 //   Reproductores: lista solo si hay más de uno, ya sin duplicados (services/Media.qml: fuera playerctld, el puente de
 //   plasma-browser-integration, instancias vacías del navegador y copias de la misma pista).
@@ -68,6 +69,11 @@ Overlay {
         function onTrackChanged() { win.pos = 0; }
     }
     onPlayerChanged: pos = player?.position ?? 0
+
+    // Letra de lo que suena: se pide al abrir el panel o al cambiar de canción (solo con musicLyrics)
+    readonly property string lyricKey: shown && Lyrics.enabled ? (player?.trackArtist ?? "") + "\n" + (player?.trackTitle ?? "") + "\n" + Math.round(len) : ""
+    onLyricKeyChanged: if (lyricKey) Lyrics.want(player?.trackArtist ?? "", player?.trackTitle ?? "", len)
+    readonly property int lyricIdx: Lyrics.indexAt(pos)
 
     // Icono de una app: el del tema (Papirus) o, si no hay, la inicial
     component AppIcon: Item {
@@ -310,6 +316,64 @@ Overlay {
                         anchors { right: parent.right; top: parent.top; rightMargin: 4; topMargin: 2 }
                         text: "1"; size: 8.5; weight: Font.Bold; color: Theme.pcText
                     }
+                }
+            }
+
+            // ---------------------------------------------------------------- letra
+            ColumnLayout {
+                visible: !!win.player && (win.player?.trackTitle ?? "") !== ""
+                Layout.fillWidth: true
+                spacing: 3
+                // sin activar: un enlace que explica qué se manda y a quién
+                Txt {
+                    visible: !Lyrics.enabled
+                    Layout.fillWidth: true
+                    text: "<a href='#'>Ver la letra</a> · se la pide a lrclib.net con el artista y el título"
+                    textFormat: Text.StyledText; linkColor: Theme.p
+                    size: 11.5; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                    onLinkActivated: Settings.set("musicLyrics", true)
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                }
+                Txt {
+                    visible: Lyrics.enabled && Lyrics.state !== "ok"
+                    Layout.fillWidth: true
+                    text: Lyrics.state === "buscando" ? "Buscando la letra…" : Lyrics.state === "nada" ? "lrclib.net no tiene la letra de esta canción"
+                        : Lyrics.state === "error" ? "No se pudo buscar la letra (¿sin conexión?)" : ""
+                    size: 11.5; muted: true
+                }
+                // sincronizada: la que suena, grande, y la siguiente
+                Txt {
+                    visible: Lyrics.enabled && Lyrics.lines.length > 0
+                    Layout.fillWidth: true
+                    text: win.lyricIdx >= 0 ? (Lyrics.lines[win.lyricIdx].text || "♪") : "♪"
+                    size: 14; weight: Font.DemiBold; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                Txt {
+                    visible: Lyrics.enabled && Lyrics.lines.length > 0 && win.lyricIdx + 1 < Lyrics.lines.length
+                    Layout.fillWidth: true
+                    text: Lyrics.lines[win.lyricIdx + 1]?.text ?? ""
+                    size: 12; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                // sin sincronizar: el texto entero en una caja con desplazamiento
+                Flickable {
+                    visible: Lyrics.enabled && Lyrics.plain !== ""
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Math.min(140, plainTxt.implicitHeight)
+                    contentHeight: plainTxt.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    Txt { id: plainTxt; width: parent.width; text: Lyrics.plain; size: 12; wrapMode: Text.WordWrap; elide: Text.ElideNone }
+                }
+                Txt {
+                    visible: Lyrics.enabled
+                    Layout.alignment: Qt.AlignRight
+                    text: "<a href='#'>Ocultar letras</a>"
+                    textFormat: Text.StyledText; linkColor: Theme.tv
+                    size: 10.5
+                    onLinkActivated: Settings.set("musicLyrics", false)
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
                 }
             }
 
