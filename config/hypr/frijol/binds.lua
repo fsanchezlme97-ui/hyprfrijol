@@ -42,6 +42,7 @@ b(mod .. " + SPACE",     hl.dsp.global("hf:spotlight"),      { description = "Sp
 b(mod .. " + SUPER_L",   hl.dsp.global("hf:spotlight"),      { release = true })   -- pulsar y soltar Super
 b(mod .. " + SUPER_R",   hl.dsp.global("hf:spotlight"),      { release = true })
 b(mod .. " + TAB",       hl.dsp.global("hf:vista"),          { description = "Vista general" })
+b(mod .. " + CTRL + TAB", hl.dsp.focus({ monitor = "+1" }),   { description = "Saltar a la otra pantalla" })
 b(mod .. " + A",         hl.dsp.global("hf:ia"),             { description = "Asistente / panel lateral" })
 b(mod .. " + B",         hl.dsp.global("hf:ia"))
 b(mod .. " + O",         hl.dsp.global("hf:ia"))

@@ -50,7 +50,7 @@ reducción automática) se descartó en las decisiones del plan.
 - [ ] **Plugins propios**: formato, permisos y un registro con versiones fijadas (como DMS); hoy solo los de Omarchy.
 - [ ] **Más compositores** (niri, Sway): evaluar qué partes dependen de Hyprland. Grande; después de lo demás.
 - [ ] Detalles de otros shells: desbloqueo facial (Howdy), letras de canciones, perfiles de energía según
-      cargador o batería, lista de procesos con gestión.
+      cargador o batería. (Cerrar procesos desde el monitor del sistema: 0.9.29.)
 
 ## Mejorar lo que ya hay
 
@@ -89,9 +89,9 @@ Añadidos sugeridos (sin empezar):
 
 ## Ideas propuestas (sin empezar)
 
-- [ ] **Dos pantallas**: abrir ciertas apps en la secundaria, Super + Tab para saltar de pantalla, modo concentración
-      que atenúa la secundaria, elegir en qué pantalla salen los avisos, imagen en imagen a la secundaria, reloj en la
-      barra secundaria.
+- [ ] **Dos pantallas**: abrir ciertas apps en la secundaria, modo concentración que atenúa la secundaria, imagen en
+      imagen a la secundaria. Hecho (0.9.28–0.9.29): barra por pantalla, Super + Ctrl + Tab salta de pantalla (Super +
+      Tab ya es la vista general), elegir la pantalla de los avisos y reloj en la barra sencilla.
 - [ ] **Transiciones**: minimizar al dock, inercia al cambiar de espacio con gestos, avisos apilados, un preset de
       animaciones «Cinemático» (los paneles que salen de su botón ya están en «Pulido de animaciones»).
 

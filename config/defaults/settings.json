@@ -188,6 +188,7 @@
   "barBehavior": "siempre",
   "barAllScreens": true,
   "barScreens": {},
+  "barSecondaryClock": true,
   "barWeatherText": false,
   "barStatsStyle": "texto",
   "barStatsShow": [
@@ -317,6 +318,7 @@
   "notifyDndTo": "07:00",
   "notifyLock": true,
   "notifyPosition": "auto",
+  "notifyScreen": "activa",
   "notifyTimeout": 6,
   "notifySound": false,
   "notifySoundName": "message-new-instant",

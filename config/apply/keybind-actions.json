@@ -18,6 +18,7 @@
   "Spotlight": "hl.dsp.global(\"hf:spotlight\")",
   "Abrir Spotlight": "hl.dsp.global(\"hf:spotlight\")",
   "Vista general": "hl.dsp.global(\"hf:vista\")",
+  "Saltar a la otra pantalla": "hl.dsp.focus({ monitor = \"+1\" })",
   "Panel lateral": "hl.dsp.global(\"hf:ia\")",
   "Asistente de IA": "hl.dsp.global(\"hf:ia\")",
   "Ajustes rápidos": "hl.dsp.global(\"hf:ajustes\")",

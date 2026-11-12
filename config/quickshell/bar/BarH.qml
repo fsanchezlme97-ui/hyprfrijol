@@ -79,7 +79,17 @@ Item {
         active: root.secondary
         anchors.verticalCenter: parent.verticalCenter
         x: root.compact ? left.x + left.implicitWidth + root.gapC : parent.width - width - 3
-        sourceComponent: WindowUsage {}
+        sourceComponent: RowLayout {
+            spacing: 8
+            WindowUsage {}
+            // reloj en la barra sencilla (barSecondaryClock): la hora sin girar la cabeza a la principal
+            Txt {
+                visible: Settings.get("barSecondaryClock", true) !== false
+                Layout.rightMargin: 6
+                text: Time.hhmm + (Time.ampm ? " " + Time.ampm : "")
+                size: 12.5; weight: Font.Medium
+            }
+        }
     }
 
     RowLayout {

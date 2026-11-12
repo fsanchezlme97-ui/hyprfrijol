@@ -11,6 +11,8 @@ import "../../bar"
 
 ChipPopup {
     id: pop
+    property int killPid: -1
+    Timer { id: killDisarm; interval: 3000; onTriggered: pop.killPid = -1 }
     view: "w-sistema"
     panelWidth: 420
     panelHeight: card.implicitHeight
@@ -202,16 +204,32 @@ ChipPopup {
                     SectionLabel { text: "Procesos"; Layout.fillWidth: true }
                     SectionLabel { text: "CPU"; Layout.preferredWidth: 60; horizontalAlignment: Text.AlignRight }
                     SectionLabel { text: "RAM"; Layout.preferredWidth: 52; horizontalAlignment: Text.AlignRight }
+                    Item { Layout.preferredWidth: 22 }
                 }
                 Repeater {
                     model: SysStats.procs
                     RowLayout {
+                        id: prow
                         required property var modelData
+                        readonly property bool armed: pop.killPid === modelData.pid
                         Layout.fillWidth: true
                         Layout.preferredHeight: 22
-                        Txt { Layout.fillWidth: true; text: parent.modelData.name }
-                        Txt { Layout.preferredWidth: 60; horizontalAlignment: Text.AlignRight; text: parent.modelData.cpu.toFixed(1).replace(".", ",") + " %"; tabular: true }
-                        Txt { Layout.preferredWidth: 52; horizontalAlignment: Text.AlignRight; text: parent.modelData.mem.toFixed(1).replace(".", ",") + " %"; muted: true; tabular: true }
+                        HoverHandler { id: prowHover }
+                        Txt { Layout.fillWidth: true; text: prow.armed ? "¿Cerrar «" + prow.modelData.name + "»? Pulsa otra vez" : prow.modelData.name; color: prow.armed ? Theme.danger : Theme.t }
+                        Txt { Layout.preferredWidth: 60; horizontalAlignment: Text.AlignRight; text: prow.modelData.cpu.toFixed(1).replace(".", ",") + " %"; tabular: true }
+                        Txt { Layout.preferredWidth: 52; horizontalAlignment: Text.AlignRight; text: prow.modelData.mem.toFixed(1).replace(".", ",") + " %"; muted: true; tabular: true }
+                        // Cerrar el proceso: dos clics (el primero lo marca 3 s). SIGTERM: el programa puede guardar antes de salir
+                        IconBtn {
+                            Layout.preferredWidth: 22; Layout.preferredHeight: 22
+                            opacity: prowHover.hovered || prow.armed ? 1 : 0
+                            icon: "x"; iconSize: 11; fg: prow.armed ? Theme.danger : Theme.tv
+                            tooltip: "Cerrar este proceso"
+                            onClicked: {
+                                if (!prow.armed) { pop.killPid = prow.modelData.pid; killDisarm.restart(); return; }
+                                Quickshell.execDetached(["kill", "-TERM", String(prow.modelData.pid)]);
+                                pop.killPid = -1;
+                            }
+                        }
                     }
                 }
             }

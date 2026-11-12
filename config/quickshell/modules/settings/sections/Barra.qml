@@ -320,6 +320,7 @@ ColumnLayout {
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
             text: "Sencilla: los espacios de esa pantalla y lo que gasta cada programa abierto en ella."
         }
+        SwRow { visible: Quickshell.screens.length > 1; label: "Reloj en la barra sencilla"; sub: "la hora también en las otras pantallas"; key: "barSecondaryClock"; def: true }
         SwRow { label: "Barra en las pantallas nuevas"; sub: "sencilla al conectar otra pantalla; si no, sin barra hasta que la elijas"; key: "barAllScreens"; def: true }
         SwRow { label: "Transparente en espacios vacíos"; sub: "la barra se funde con el fondo si no hay ventanas"; key: "barTransparentEmpty" }
     }

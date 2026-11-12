@@ -24,7 +24,12 @@ PanelWindow {
     readonly property int hiddenCount: groups.slice(maxGroups).reduce((a, g) => a + g.items.length, 0)
     property var expanded: ({})           // clave de app → desplegado
     function toggle(k) { const e = Object.assign({}, expanded); e[k] = !e[k]; expanded = e; }
-    screen: Shell.screen
+    // notifyScreen: "activa" (la del foco) · "principal" · el nombre de una pantalla (si no está conectada, la activa)
+    screen: {
+        const w = Settings.get("notifyScreen", "activa");
+        if (w === "principal") return Shell.primaryScreen ?? Shell.screen;
+        return w !== "activa" ? (Quickshell.screens.find(s => s.name === w) ?? Shell.screen) : Shell.screen;
+    }
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "hf-notifications"
     // Necesita teclado solo cuando se escribe una respuesta

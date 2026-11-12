@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.29] — 2026-11-11
+
+### Añadido
+- **Super + Ctrl + Tab salta a la otra pantalla** (Super + Tab sigue siendo la vista general).
+- **Elegir en qué pantalla salen los avisos** (Ajustes › Notificaciones › Avisos emergentes › Pantalla: la que tiene
+  el foco, la principal o una concreta; `notifyScreen`). Solo aparece con más de una pantalla.
+- **Reloj en la barra sencilla** de las otras pantallas (Ajustes › Barra, `barSecondaryClock`).
+- **Cerrar un proceso desde el monitor del sistema**: la «x» de cada fila (dos clics; se le pide que se cierre,
+  así puede guardar antes).
+
+### Nota
+- En la 0.9.28, el ahorro de CPU con dos pantallas no se pudo medir en una sesión real: con música sonando, la onda
+  de audio de la barra es lo que más gasta.
+
 ## [0.9.28] — 2026-11-11
 
 ### Añadido

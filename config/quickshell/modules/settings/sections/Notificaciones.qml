@@ -133,6 +133,16 @@ RowLayout {
                 }
             }
             LabeledRow {
+                visible: Quickshell.screens.length > 1
+                label: "Pantalla"; labelWidth: 110
+                Dropdown {
+                    h: 32
+                    model: [["activa", "La que tiene el foco"], ["principal", "La principal"]].concat(Quickshell.screens.map(s => [s.name, s.name]))
+                    current: Settings.get("notifyScreen", "activa")
+                    onPicked: k => Settings.set("notifyScreen", k)
+                }
+            }
+            LabeledRow {
                 label: "Duración"; labelWidth: 110
                 Pills {
                     model: [[3, "3 s"], [6, "6 s"], [10, "10 s"], [15, "15 s"], [30, "30 s"]]
