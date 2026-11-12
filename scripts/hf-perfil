@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+"""hf-perfil — guarda lo que tiene tu equipo (paquetes, servicios, acceso remoto, voz, dictado, modelos locales, login y
+tus ajustes) y lo vuelve a dejar igual en otro equipo, o en este tras reinstalar.
+
+  hf-perfil guardar [archivo]            ~/.config/hyprfrijol/perfil.json por defecto (solo tuyo: 600). hf-update lo
+                                         guarda solo antes de cada actualización.
+  hf-perfil ver [archivo]                qué hay en el perfil y qué le falta a este equipo
+  hf-perfil aplicar [archivo] [--dry-run]   lo instala y activa todo (pide la contraseña de administrador; mejor en
+                                         una terminal). --dry-run solo enseña las órdenes.
+
+En el perfil NO van claves ni contraseñas (las de la IA y RDP siguen en el llavero o en sus archivos): tras aplicarlo,
+vuelve a ponerlas en Ajustes (IA, RDP, RustDesk) y entra en Tailscale con el enlace que da «tailscale up».
+Tampoco van tus fondos (solo la ruta de la carpeta): cópialos aparte. El repo de GitHub es público: el perfil
+guárdalo tú (un USB, tu nube), nunca en el repo.
+"""
+import base64, json, os, pathlib, shlex, shutil, subprocess, sys, time
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+HOME = pathlib.Path.home()
+CFG = HOME / ".config/hyprfrijol"
+DEFAULT = CFG / "perfil.json"
+SCRIPTS = ROOT / "scripts"
+FILES = ["settings.json", "local.lua", "palettes-user.json", "omarchy-plugins.json"]   # de ~/.config/hyprfrijol
+SERVICES = ["sshd", "ssh", "ufw", "firewalld", "tailscaled", "rustdesk", "cups.socket", "ollama", "bluetooth",
+            "libvirtd", "greetd", "power-profiles-daemon"]
+SKIP_LEVELS = {"base", "required"}           # esos los pone siempre install.sh
+
+
+def out(cmd, timeout=60):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def jout(cmd, default=None, timeout=60):
+    try:
+        return json.loads(out(cmd, timeout) or "null") or default
+    except ValueError:
+        return default
+
+
+def enabled(unit):
+    return out(["systemctl", "is-enabled", unit]).strip() == "enabled"
+
+
+def snapshot():
+    deps = jout([str(SCRIPTS / "hf-deps"), "status", "--json"], {}) or {}
+    ids = sorted({i["id"] for f in deps.get("features", []) for i in f.get("items", [])
+                  if i.get("status") == "ok" and i.get("level") not in SKIP_LEVELS})
+    dic = jout([str(SCRIPTS / "hf-dictate"), "status"], {}) or {}
+    acc = jout([str(SCRIPTS / "hf-remote"), "acceso", "status"], {}) or {}
+    rd = jout([str(SCRIPTS / "hf-remote"), "rustdesk", "status"], {}) or {}
+    ai = jout([str(SCRIPTS / "hf-ai"), "status"], {}) or {}
+    apps = sorted(k for k, v in (jout([str(SCRIPTS / "hf-apps"), "status", "--json"], {}) or {}).items()
+                  if isinstance(v, dict) and v.get("installed"))
+    ollama = [l.split()[0] for l in out(["ollama", "list"]).splitlines()[1:] if l.strip()] if shutil.which("ollama") else []
+    files = {}
+    for n in FILES:
+        p = CFG / n
+        if p.is_file():
+            files[n] = p.read_text()
+    face = HOME / ".face"
+    greeter = "hyprland-greeter" in (pathlib.Path("/etc/greetd/config.toml").read_text(errors="ignore")
+                                     if pathlib.Path("/etc/greetd/config.toml").is_file() else "")
+    return {
+        "version": 1, "saved": time.strftime("%Y-%m-%d %H:%M"), "host": os.uname().nodename,
+        "hyprfrijol": out(["git", "-C", str(ROOT), "describe", "--tags", "--always"]).strip(),
+        "deps": ids,
+        "apps": apps,
+        "services": [u for u in SERVICES if enabled(u)],
+        "remote": {"acceso": bool(acc.get("ssh")) and bool(acc.get("firewall")), "lan": bool(acc.get("lan")),
+                   "rustdesk": bool(rd.get("service")), "rustdeskPortal": bool(rd.get("package"))},
+        "voice": {"helpert": bool(ai.get("voiceLocal", ai.get("piper", (HOME / ".local/share/hyprfrijol/tts/piper-venv").is_dir())))},
+        "dictation": {"parakeet": bool(dic.get("parakeet")),
+                      "whisper": [m["name"] for m in dic.get("models", []) if m.get("installed")],
+                      "vosk": [m["name"] for m in dic.get("voskModels", []) if m.get("installed")]},
+        "ollama": ollama,
+        "greeter": greeter,
+        "wallpapers": str(pathlib.Path(out(["xdg-user-dir", "PICTURES"]).strip() or HOME / "Imágenes") / "Wallpapers"),
+        "face": base64.b64encode(face.read_bytes()).decode() if face.is_file() and face.stat().st_size < 2_000_000 else "",
+        "files": files,
+    }
+
+
+def save(path):
+    data = snapshot()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)   # tus ajustes: solo tuyo desde el principio
+    with os.fdopen(fd, "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+    return data
+
+
+def load(path):
+    try:
+        d = json.loads(path.read_text())
+    except (OSError, ValueError) as e:
+        sys.exit(f"No puedo leer el perfil {path}: {e}")
+    if not isinstance(d, dict) or d.get("version") != 1:
+        sys.exit(f"{path} no es un perfil de hf-perfil")
+    return d
+
+
+def plan(p):
+    """Las órdenes que dejan este equipo como el perfil (cada una hace solo lo que falta)."""
+    sh = lambda *a: [str(x) for x in a]
+    steps = []
+    if p.get("deps"):
+        steps.append(("Paquetes", sh(SCRIPTS / "hf-deps", "install", *p["deps"], "--yes")))
+    if p.get("apps"):
+        steps.append(("Apps del centro de aplicaciones", sh(SCRIPTS / "hf-apps", "install", *p["apps"])))
+    for u in p.get("services", []):
+        if u not in ("sshd", "ssh", "ufw", "firewalld", "tailscaled", "rustdesk", "greetd"):   # esos, con su paso
+            steps.append((f"Servicio {u}", sh("sudo", "systemctl", "enable", "--now", u)))
+    r = p.get("remote", {})
+    if r.get("acceso"):
+        steps.append(("Acceso remoto (SSH, cortafuegos, Tailscale)", sh(SCRIPTS / "hf-remote", "acceso", "on", *([] if r.get("lan") else ["--sin-lan"]))))
+    if r.get("rustdesk"):
+        steps.append(("RustDesk", sh(SCRIPTS / "hf-remote", "rustdesk", "instalar")))
+    if r.get("rustdeskPortal"):
+        steps.append(("Portal RemoteDesktop (RustDesk en Wayland)", sh(SCRIPTS / "hf-remote", "rustdesk", "portal")))
+    if p.get("voice", {}).get("helpert"):
+        steps.append(("Voz de Helpert", sh(SCRIPTS / "hf-ai", "voice-install", "--tty")))
+    d = p.get("dictation", {})
+    if d.get("parakeet"):
+        steps.append(("Dictado: Parakeet", sh(SCRIPTS / "hf-dictate", "install-parakeet", "--tty")))
+    for m in d.get("whisper", []) + d.get("vosk", []):
+        steps.append((f"Dictado: modelo {m}", sh(SCRIPTS / "hf-dictate", "download", m, "--tty")))
+    for m in p.get("ollama", []):
+        steps.append((f"Modelo local {m}", sh("ollama", "pull", m)))
+    if p.get("greeter"):
+        steps.append(("Login de HyprFrijol", sh(ROOT / "install.sh", "--greeter")))
+        steps.append(("Tu tema en el login", sh(SCRIPTS / "hf-greeter-sync")))
+    steps.append(("Aplicar los ajustes", sh(SCRIPTS / "hf-apply")))
+    return steps
+
+
+def restore_files(p, dry):
+    CFG.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M")
+    for n, text in (p.get("files") or {}).items():
+        if n not in FILES:                    # solo los archivos conocidos, nunca rutas que vengan en el perfil
+            continue
+        dst = CFG / n
+        if dst.is_file() and dst.read_text() == text:
+            continue
+        print(f"  {'[dry-run] ' if dry else ''}{dst}" + (f" (el actual queda en {n}.antes-perfil-{stamp})" if dst.is_file() else ""))
+        if not dry:
+            if dst.is_file():
+                shutil.copy2(dst, CFG / f"{n}.antes-perfil-{stamp}")
+            dst.write_text(text)
+    if p.get("face") and not (HOME / ".face").is_file():
+        print(f"  {'[dry-run] ' if dry else ''}~/.face (tu foto)")
+        if not dry:
+            (HOME / ".face").write_bytes(base64.b64decode(p["face"]))
+
+
+def main():
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    flags = {a for a in sys.argv[1:] if a.startswith("--")}
+    if not args or args[0] in ("-h", "help") or "--help" in flags:
+        print(__doc__.strip()); return 0
+    cmd = args[0]
+    path = pathlib.Path(args[1]).expanduser() if len(args) > 1 else DEFAULT
+    if cmd == "guardar":
+        d = save(path)
+        if "--quiet" not in flags:
+            print(f"Perfil guardado en {path}: {len(d['deps'])} paquetes opcionales, {len(d['services'])} servicios, "
+                  f"{len(d['files'])} archivos de ajustes. Guárdalo también fuera de este equipo.")
+        return 0
+    if cmd == "ver":
+        p = load(path)
+        here = snapshot()
+        print(f"Perfil de {p.get('host')} ({p.get('saved')}, hyprfrijol {p.get('hyprfrijol')})")
+        miss = [i for i in p.get("deps", []) if i not in here["deps"]]
+        print("  Paquetes que faltan aquí:", " ".join(miss) or "ninguno")
+        miss = [a for a in p.get("apps", []) if a not in here["apps"]]
+        print("  Apps que faltan aquí:", " ".join(miss) or "ninguna")
+        miss = [u for u in p.get("services", []) if u not in here["services"]]
+        print("  Servicios sin activar aquí:", " ".join(miss) or "ninguno")
+        for k, label in (("remote", "Acceso remoto"), ("voice", "Voz"), ("dictation", "Dictado")):
+            print(f"  {label}: {json.dumps(p.get(k), ensure_ascii=False)}")
+        print("  Modelos locales:", " ".join(p.get("ollama", [])) or "ninguno", "· Login de HyprFrijol:", "sí" if p.get("greeter") else "no")
+        print("  Ajustes:", ", ".join(p.get("files", {})) or "ninguno", "· Fondos en", p.get("wallpapers"))
+        return 0
+    if cmd == "aplicar":
+        p = load(path)
+        dry = "--dry-run" in flags
+        print("Tus ajustes:")
+        restore_files(p, dry)
+        failed = []
+        for label, c in plan(p):
+            print(f"\n▸ {label}\n  {shlex.join(c)}")
+            if dry:
+                continue
+            if subprocess.run(c).returncode != 0:
+                failed.append(label)
+        if not dry:
+            print("\nListo." if not failed else "\nTerminado con fallos en: " + ", ".join(failed) + " (puedes repetir: solo hace lo que falta)")
+            print("Falta lo que no va en el perfil: claves de la IA (Ajustes › Asistente de IA), contraseña de RDP "
+                  "(hf-remote rdp password), contraseña permanente de RustDesk y tus fondos (" + str(p.get("wallpapers")) + ").")
+        return 1 if failed else 0
+    print(__doc__.strip(), file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

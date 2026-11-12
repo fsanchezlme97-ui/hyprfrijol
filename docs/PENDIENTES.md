@@ -44,6 +44,11 @@ reducción automática) se descartó en las decisiones del plan.
       (hypr-rdp, 0.9.34) y RustDesk (0.9.40) con el portal RemoteDesktop de xdph + PR #448
       (`install/pkgbuilds/xdg-desktop-portal-hyprland-rd`, solo Arch). Falta: probar una conexión real de RustDesk;
       volver al paquete oficial cuando xdph publique RemoteDesktop; Fedora/openSUSE/Debian.
+- [~] **Reinstalar y quedar igual** (`hf-perfil`, 0.9.49): guarda paquetes, servicios, acceso remoto, voz, dictado,
+      modelos de Ollama, login y ajustes; `install.sh --perfil=` lo aplica. Falta: probarlo en un equipo limpio.
+- [~] **IA local** (0.9.49): gemma4:e4b en la gráfica (0,5 s; tabla en `docs/IA.md`) como respaldo y, con
+      `aiVoiceLocal`, primero en la voz. Falta: probarlo con tu voz unos días; ROCm sin probar (gfx1032 no está
+      soportado oficialmente y son varios GB).
 
 ## Donde vamos por detrás
 

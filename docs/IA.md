@@ -31,7 +31,7 @@ En `~/.config/hyprfrijol/settings.json` (o Ajustes › IA):
 | Clave | Valores | Por defecto |
 |---|---|---|
 | `aiProvider` | `claude-code` · `gemini` · `ollama` · `openai-compatible` · `off` | `claude-code` |
-| `aiModel` | p. ej. `haiku`, `sonnet` · `gemini-2.5-flash` · `llama3.2` · `gpt-4o-mini` | (el del proveedor) |
+| `aiModel` | p. ej. `haiku`, `sonnet` · `gemini-2.5-flash` · `gemma4:e4b` · `gpt-4o-mini` | (el del proveedor) |
 | `aiEndpoint` | `http://localhost:11434` · `https://…/v1` | (el del proveedor) |
 | `aiKeyEnv` | variable de entorno con la clave (openai-compatible) | `HF_AI_KEY` |
 | `aiContextWindow` | enviar el título de la ventana activa | `true` |
@@ -84,6 +84,29 @@ scripts/hf-ai status
 scripts/hf-ai ask "¿qué hace hyprctl reload?"
 scripts/hf-ai chat '{"messages":[{"role":"user","text":"Pon la barra arriba"}],"context":{"window":false,"clipboard":false}}'
 ```
+
+### IA local con Ollama (respaldo y voz)
+
+Ollama con `ollama-vulkan` usa la gráfica (AMD, Intel o NVIDIA). Con respaldo Ollama (`aiFallbackProvider`), si la
+nube falla o tarda contesta el modelo local; en la voz la espera a Gemini es de 10 s. Con **Voz con el modelo local
+primero** (`aiVoiceLocal`) es al revés: la voz pregunta a Ollama y la nube queda de respaldo.
+
+Pruebas del 2026-11-12 en una RX 6600 XT (8 GB) con 18 órdenes de voz reales (el prompt de verdad de `hf-ai`,
+temperatura 0). La mediana es el tiempo hasta tener el plan, con el modelo ya cargado; la primera carga son 4-6 s.
+
+| Modelo | Órdenes bien | Mediana | Tokens/s | Imágenes |
+|---|---|---|---|---|
+| **gemma4:e4b** (recomendado) | 18/18 | 0,44-0,67 s | 78 | sí (1,4 s) |
+| qwen3:4b-instruct-2507 | 16/18 | 0,7 s | 75 | no |
+| qwen3.5:4b | 16/18 | 1,7 s | 61 | sí (0,8 s) |
+| qwen2.5:7b | 14/18 | 0,9 s | 48 | no |
+| gemma3:4b | 10/18 | 0,8 s | 71 | sí (0,9 s) |
+| granite4.1:8b | 12/12 | 3,2 s | 19 | no (no cabe en 8 GB) |
+| Gemini Flash-Lite (nube) | 11/18 (7 fallos 503) | 10-12 s | — | sí |
+
+LM Studio (llama.cpp Vulkan) va igual de rápido que Ollama (47 frente a 48 tokens/s con el mismo archivo) pero
+ocupa 1,2 GB de RAM frente a 0,2 GB y no está en los repositorios; el llama.cpp de Arch va a la mitad (23 tokens/s).
+Con modelos que piensan (qwen3.5…) `hf-ai` manda `"think": false`: pensar tardaba más de 30 s.
 
 ## Contexto
 

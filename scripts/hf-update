@@ -7,6 +7,7 @@
 #   hf-update list [--json]       versiones disponibles (la actual marcada)
 #   hf-update notes [DESDE] [A]   notas de versión entre dos versiones (anotación del tag o CHANGELOG.md)
 #   hf-update apply <tag>|latest  cambia a esa versión, ejecuta las migraciones (hf-migrate, hf-apply) y reinicia el shell
+#   (antes de cambiar de versión guarda tu perfil: hf-perfil guardar → ~/.config/hyprfrijol/perfil.json)
 #   hf-update rollback            vuelve a la versión anterior a la última actualización (o al tag anterior)
 #   hf-update auto                comprobación periódica (hfUpdateCheck: weekly|daily|never) con aviso
 #
@@ -193,6 +194,8 @@ apply() {
   else echo; echo "${B}── $to$Z"; notes_for "$to"; echo; fi
   [ -n "$cur" ] && newer "$cur" "$to" && warn "$to es anterior a la versión actual ($cur)"
   ask "¿Actualizar HyprFrijol a $to?" || { [ -t 0 ] && die "Cancelado" 0; die "Sin terminal: usa --yes" 2; }
+  # Foto de cómo está el equipo antes de cambiar nada (hf-perfil aplicar la recrea en otro equipo o tras reinstalar)
+  [ -x "$REPO/scripts/hf-perfil" ] && "$REPO/scripts/hf-perfil" guardar --quiet >/dev/null 2>&1
   switch_to "$to"
 }
 

@@ -97,7 +97,7 @@ ColumnLayout {
     }
 
     readonly property var models: prov === "claude-code" ? [["", "Predeterminado de Claude Code"], ["haiku", "Haiku (rápido)"], ["sonnet", "Sonnet (equilibrado)"], ["opus", "Opus (el más capaz)"]]
-        : prov === "ollama" ? (ollamaModels.length ? ollamaModels.map(m => [m, m]) : [["llama3.2", "llama3.2"]])
+        : prov === "ollama" ? (ollamaModels.length ? ollamaModels.map(m => [m, m]) : [["gemma4:e4b", "gemma4:e4b"]])
         : prov === "gemini" ? (geminiModels.length ? geminiModels : [["gemini-flash-latest", "Gemini Flash (recomendado)"]])
         : [["gpt-4o-mini", "gpt-4o-mini"], ["claude-sonnet-5-5", "claude-sonnet-5-5"]]
     readonly property string curModel: {
@@ -126,7 +126,7 @@ ColumnLayout {
                 Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
                 text: root.prov === "claude-code" ? "Usa la CLI de Claude Code (`claude -p`) con tu cuenta. Nada se envía si no escribes al asistente."
                     : root.prov === "gemini" ? "Google Gemini con una clave gratuita de Google AI Studio. Ve las imágenes que adjuntes. En el plan gratuito Google puede usar lo que envías para mejorar sus modelos."
-                    : root.prov === "ollama" ? "Todo se queda en tu equipo. Necesita Ollama en marcha y un modelo descargado (ollama pull llama3.2)."
+                    : root.prov === "ollama" ? "Todo se queda en tu equipo. Necesita Ollama en marcha y un modelo descargado (ollama pull gemma4:e4b)."
                     : root.prov === "openai-compatible" ? "Cualquier servidor con la API /v1/chat/completions (LM Studio, vLLM, OpenRouter…). La clave se lee de una variable de entorno."
                     : "El asistente queda apagado: el panel lateral y «?» en Spotlight no responden."
             }
@@ -265,9 +265,15 @@ ColumnLayout {
             Field {
                 icon: ""
                 text: Settings.get("aiFallbackModel", "")
-                placeholder: ({ ollama: "llama3.2", "claude-code": "haiku", gemini: "gemini-flash-latest" })[Settings.get("aiFallbackProvider", "")] ?? ""
+                placeholder: ({ ollama: "gemma4:e4b", "claude-code": "haiku", gemini: "gemini-flash-latest" })[Settings.get("aiFallbackProvider", "")] ?? ""
                 onAccepted: Settings.set("aiFallbackModel", text.trim())
             }
+        }
+        SwRow {
+            visible: Settings.get("aiFallbackProvider", "") === "ollama" && (root.prov === "gemini" || root.prov === "claude-code")
+            label: "Voz con el modelo local primero"
+            sub: "contesta en menos de 1 s en la gráfica; si falla, responde " + (root.prov === "gemini" ? "Gemini" : "Claude")
+            key: "aiVoiceLocal"; def: false
         }
     }
 

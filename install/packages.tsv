@@ -130,6 +130,8 @@ firewall	optional	ufw	firewalld	firewalld	ufw	ufw	cortafuegos (firewalld o ufw)	
 bluetooth	optional	bluez,bluez-utils	bluez	bluez	bluez	bluez	Bluetooth	bluetooth	bluetoothctl
 bt-sendto	optional	gnome-bluetooth-3.0,bluez-obex	gnome-bluetooth,bluez-obexd	gnome-bluetooth	gnome-bluetooth-sendto	gnome-bluetooth	enviar archivos por Bluetooth (bluetooth-sendto)	bluetooth	bluetooth-sendto
 # — Ajustes › Escritorio remoto
+ssh-server	optional	openssh	openssh-server	openssh	openssh-server	openssh	entrar a este equipo por SSH (hf-remote acceso on: sshd, cortafuegos y Tailscale)	remoto	sshd
+remote-anydesk	optional	aur:anydesk-bin	-	-	-	-	AnyDesk para conectarte a otros equipos (en Wayland no acepta conexiones entrantes: para eso, RustDesk o RDP)	remoto	anydesk
 remote	optional	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	compartir este escritorio por VNC (wayvnc; openssl para el cifrado)	remoto	wayvnc,wayvncctl,openssl
 remote-rustdesk	optional	aur:rustdesk-bin	-	-	-	-	entrar a esta sesión con RustDesk, también desde el móvil (necesita además el portal: hf-remote rustdesk portal; luego sudo systemctl enable --now rustdesk)	remoto	rustdesk
 remote-rdp	optional	aur:hypr-rdp	-	-	-	-	compartir esta sesión por RDP (entrar desde Windows con mstsc; hypr-rdp)	remoto	hypr-rdp
@@ -178,6 +180,7 @@ whisper-gpu	optional	ggml-vulkan	-	-	libggml0-backend-vulkan	-	whisper.cpp en la
 vosk	recommended	python-vosk,vosk-api	-	-	-	-	Vosk: dictado en tiempo real, palabra a palabra (motor por defecto si está; si no, whisper); sin paquete: hf-dictate install-vosk (venv con pip en ~/.local/share/hyprfrijol/whisper/vosk-venv) · modelos de alphacephei.com/vosk/models	dictado	
 # — Ajustes › Asistente de IA
 ollama	optional	ollama	ollama	ollama	-	-	IA local con Ollama (en otras distros: ollama.com/download)	ia	ollama
+ollama-gpu	optional	ollama-vulkan	-	-	-	-	Ollama en la gráfica con Vulkan (AMD, Intel o NVIDIA): respuestas en ~1 s en vez de ~30 (en otras distros el instalador de ollama.com ya la usa)	ia	
 # — Capturas y grabación
 screenshot	recommended	grim,slurp	grim,slurp	grim,slurp	grim,slurp	grim,slurp	capturas de pantalla	captura	grim,slurp
 recorder	recommended	wf-recorder	wf-recorder	wf-recorder	wf-recorder	wf-recorder	grabación de pantalla	captura	wf-recorder

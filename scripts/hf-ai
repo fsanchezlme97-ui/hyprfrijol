@@ -46,7 +46,7 @@
 
 Proveedor (Ajustes › IA, settings.json):
   aiProvider  "claude-code" (CLI `claude -p`, por defecto) | "ollama" | "openai-compatible" | "gemini" | "off"
-  aiModel     p. ej. "haiku" / "sonnet" (claude-code), "llama3.2" (ollama), "gpt-4o-mini", "gemini-flash-latest"…
+  aiModel     p. ej. "haiku" / "sonnet" (claude-code), "gemma4:e4b" (ollama), "gpt-4o-mini", "gemini-flash-latest"…
   aiEndpoint  http://localhost:11434 (ollama) · https://api…/v1 (openai-compatible)
   aiKeyEnv    variable de entorno con la clave (openai-compatible), por defecto HF_AI_KEY
   Gemini      clave de https://aistudio.google.com/apikey: $GEMINI_API_KEY / $GOOGLE_API_KEY, o guardada con
@@ -219,7 +219,12 @@ SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden
 - {"type":"browser","op":OP,"value":"…"}      teclas al navegador (enfoca uno si hace falta). OP: new-tab|close-tab|
                                               reopen-tab|next-tab|prev-tab|back|forward|reload|scroll-down|scroll-up|top|
                                               bottom|fullscreen|zoom-in|zoom-out|find (value: texto)|search (value)|open (value: web)
-- {"type":"run","command":"…"}               comando de terminal; el usuario debe confirmarlo antes"""
+- {"type":"run","command":"…"}               comando de terminal; el usuario debe confirmarlo antes
+Ejemplos del formato exacto (los ajustes SIEMPRE con "type":"set"; "quitar"/"desactivar" es false):
+«barra a la izquierda» → [{"type":"set","key":"barPos","value":"izquierda"}]
+«baja el volumen» → [{"type":"volume","value":"-5"}] · «canción anterior» → [{"type":"media","value":"previous"}]
+«activa la transparencia y pon el tema oscuro» → [{"type":"set","key":"transparencia","value":true},
+{"type":"set","key":"themeMode","value":"oscuro"}]"""
 
 QUERY_DOC = """Consultas (solo lectura; se ejecutan solas y te devuelvo el resultado para que sigas):
 ```hf-query
@@ -516,6 +521,8 @@ def validate(actions):
             continue
         a = dict(a)
         t = a.get("type")
+        if t in SET_KEYS and "value" in a:    # {"type":"barPos","value":"arriba"}: el atajo de los modelos pequeños
+            a, t = {"type": "set", "key": t, "value": a["value"]}, "set"
         try:
             if t == "set":
                 k, v = a.get("key"), a.get("value")
@@ -2112,6 +2119,12 @@ def gather(ctx, ocr=True):
     dia = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][t.tm_wday]
     mes = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"][t.tm_mon - 1]
     parts = [f"Ahora (hora local del usuario): {dia} {t.tm_mday} de {mes} de {t.tm_year}, {t.tm_hour:02d}:{t.tm_min:02d} (UTC{time.strftime('%z', t)})"]
+    # Los modelos pequeños no saben contar días («el viernes» → la semana que viene): las fechas, ya hechas
+    import datetime as dt
+    hoy = dt.date(t.tm_year, t.tm_mon, t.tm_mday)
+    dias = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+    parts.append("Próximos días: " + ", ".join(("mañana " if i == 1 else "") + f"{dias[d.weekday()]} {d.isoformat()}"
+                                              for i in range(1, 8) for d in [hoy + dt.timedelta(days=i)]))
     s = settings()
     w = jrun(["hyprctl", "activewindow", "-j"])
     private = is_private(w.get("class"), s) or is_private((ctx.get("windowInfo") or {}).get("class"), s)
@@ -2293,6 +2306,8 @@ def http_stream(url, body, headers=None, timeout=120):
         raise AIError(f"{url} respondió con un error {e.code}: {detail}", e.code)
     except urllib.error.URLError as e:
         raise AIError(f"No puedo conectar con {url}: {getattr(e, 'reason', e)}")
+    except OSError as e:          # p. ej. TimeoutError al leer: que salte el respaldo en vez de romper la petición
+        raise AIError(f"{url} no respondió a tiempo ({e.__class__.__name__})")
 
 def http_json(url, body, headers=None, timeout=120):
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json", **(headers or {})})
@@ -2307,6 +2322,8 @@ def http_json(url, body, headers=None, timeout=120):
         raise AIError(f"{url} respondió con un error {e.code}: {detail}", e.code)
     except urllib.error.URLError as e:
         raise AIError(f"No puedo conectar con {url}: {getattr(e, 'reason', e)}")
+    except OSError as e:          # p. ej. TimeoutError al leer: que salte el respaldo en vez de romper la petición
+        raise AIError(f"{url} no respondió a tiempo ({e.__class__.__name__})")
 
 def chat_messages(system, messages, ctx_text, fmt="openai"):
     """Mensajes estilo OpenAI / Ollama; las imágenes van como image_url (data URL) o "images" (base64)."""
@@ -2324,7 +2341,11 @@ def chat_messages(system, messages, ctx_text, fmt="openai"):
     return msgs
 
 def ollama_body(system, messages, ctx_text, s):
-    return {"model": s.get("aiModel") or "llama3.2", "stream": False, "messages": chat_messages(system, messages, ctx_text, "ollama")}
+    # num_ctx: las instrucciones ya son ~2.400 tokens; con los 4.096 de Ollama por defecto se cortaban historial e imágenes.
+    # keep_alive: cargado 30 min, para que la voz no espere a cargarlo otra vez (5 s en GPU, 30 s en CPU)
+    return {"model": s.get("aiModel") or "gemma4:e4b", "stream": False, "messages": chat_messages(system, messages, ctx_text, "ollama"),
+            "options": {"num_ctx": int(s.get("aiOllamaCtx") or 16384)}, "keep_alive": "30m",
+            "think": False}   # los que piensan (qwen3.5…) tardan 30 s o más en pensar; aquí solo se lee la respuesta
 
 def ollama_ep(s):
     """El servidor de Ollama. En modo local solo vale uno de este equipo (localhost, 127.x, ::1): si aiEndpoint apunta
@@ -2358,7 +2379,7 @@ def ollama_vision(s):
     """¿El modelo de Ollama ve imágenes? (/api/show → capabilities contiene "vision")."""
     try:
         ep = ollama_ep(s)
-        caps = http_json(ep + "/api/show", {"model": s.get("aiModel") or "llama3.2"}, timeout=5).get("capabilities") or []
+        caps = http_json(ep + "/api/show", {"model": s.get("aiModel") or "gemma4:e4b"}, timeout=5).get("capabilities") or []
         return "vision" in caps
     except Exception:
         return False
@@ -2630,20 +2651,24 @@ def gemini_model(s):
     m = str(s.get("aiModel") or "").strip().removeprefix("models/")
     return m if re.match(r"(gemini|gemma|learnlm)", m) else GEMINI_DEFAULT
 
-def gemini_http(method, path, key, body=None, timeout=120):
-    with gemini_open(method, path, key, body, timeout) as resp:
+# Cuánto se espera a Gemini (s). En la conversación por voz, con respaldo configurado, solo 10: mejor que conteste el
+# respaldo (Ollama en tu GPU, ~1 s) que tener a Helpert callado medio minuto (el plan gratuito a veces tarda 30-40 s)
+GEMINI_WAIT = 120
+
+def gemini_http(method, path, key, body=None, timeout=None):
+    with gemini_open(method, path, key, body, timeout or GEMINI_WAIT) as resp:
         try:
             return json.loads(resp.read() or b"{}")
         except TimeoutError:
             raise AIError("Gemini tardó demasiado en responder.")
 
-def gemini_open(method, path, key, body=None, timeout=120):
+def gemini_open(method, path, key, body=None, timeout=None):
     """La respuesta abierta de la API de Gemini (hay que cerrarla), con sus errores explicados en español."""
     req = urllib.request.Request(GEMINI_API + path, method=method,
                                  data=json.dumps(body).encode() if body is not None else None,
                                  headers={"Content-Type": "application/json", "x-goog-api-key": key})
     try:
-        return urllib.request.urlopen(req, timeout=timeout)
+        return urllib.request.urlopen(req, timeout=timeout or GEMINI_WAIT)
     except urllib.error.HTTPError as e:
         try:
             err = json.loads(e.read()).get("error", {})
@@ -2709,12 +2734,12 @@ def call_gemini(system, messages, ctx_text, s):
                 raise
             return gemini_live(f"/models/{GEMINI_LITE}:generateContent", key, body)
     try:
-        data = gemini_http("POST", path, key, body, timeout=120)
+        data = gemini_http("POST", path, key, body)
     except AIError as e:
         if "no responden" not in str(e) or GEMINI_LITE in path:
             raise
         # modelo saturado (503, pasa a menudo con el gratuito): una vez con el ligero
-        data = gemini_http("POST", f"/models/{GEMINI_LITE}:generateContent", key, body, timeout=120)
+        data = gemini_http("POST", f"/models/{GEMINI_LITE}:generateContent", key, body)
     fb = data.get("promptFeedback") or {}
     if fb.get("blockReason"):
         raise AIError("Gemini no ha respondido a esto (bloqueado por sus filtros de seguridad).")
@@ -2836,15 +2861,29 @@ def parse_queries(raw):
         qs = []
     return qs, (raw[:m.start()] + raw[m.end():]).strip()
 
+def actions_json(body):
+    """Las acciones de un bloque hf-actions: la lista que pide el formato o, como escriben los modelos pequeños, una
+    acción suelta o una por línea. Lo que no sea JSON válido se ignora."""
+    try:
+        v = json.loads(body)
+        return v if isinstance(v, list) else [v] if isinstance(v, dict) else []
+    except ValueError:
+        pass
+    out = []
+    for line in body.splitlines():
+        try:
+            v = json.loads(line.strip().rstrip(","))
+        except ValueError:
+            continue
+        out += v if isinstance(v, list) else [v] if isinstance(v, dict) else []
+    return out
+
 def parse_reply(raw, s=None):
     shell, term = allowed(s)
     actions, code = [], ""
-    m = re.search(r"```(?:hf-actions|hl-actions|json)\s*(\[.*?\])\s*```", raw, re.S)
+    m = re.search(r"```(?:hf-actions|hl-actions|json)\s*(.*?)\s*```", raw, re.S)
     if m:
-        try:
-            actions = validate(json.loads(m.group(1)))
-        except Exception:
-            actions = []
+        actions = validate(actions_json(m.group(1)))
         raw = (raw[:m.start()] + raw[m.end():]).strip()
     raw = re.sub(r"```hf-query.*?```", "", raw, flags=re.S).strip()
     runs = [a for a in actions if a["type"] == "run"] if term else []
@@ -2920,7 +2959,17 @@ def do_chat(req, print_request=False):
     if (s0.get("aiProvider") or "claude-code") == "off":
         return {"text": "", "actions": [], "labels": [], "code": "",
                 "error": "El asistente está desactivado. Actívalo en Ajustes › Asistente de IA."}
+    p0 = s0.get("aiProvider") or "claude-code"
+    if ((req.get("context") or {}).get("spoken") and s0.get("aiVoiceLocal") and s0.get("aiFallbackProvider") == "ollama"
+            and p0 in ("gemini", "claude-code") and not req.get("_fallback")):
+        # Voz: primero el modelo local (~0,6 s en la gráfica; la nube tarda 6 s o más) y la nube de respaldo
+        s0 = dict(s0, aiProvider="ollama", aiModel=s0.get("aiFallbackModel") or "", aiModelQuick="", aiModelVision="",
+                  aiEndpoint="", aiFallbackProvider=p0,
+                  aiFallbackModel=s0.get("aiModelQuick") or s0.get("aiModel") or (GEMINI_LITE if p0 == "gemini" else ""))
     prov, s = provider_for(s0, "quick" if req.get("task") == "quick" else "")
+    global GEMINI_WAIT
+    if (req.get("context") or {}).get("spoken") and fallback_for(s0, prov)[0]:
+        GEMINI_WAIT = 10
     if req.get("model") and not req.get("_fallback"):   # «Repetir con otro modelo» del panel
         s["aiModel"] = str(req["model"])[:80]
     fn = PROVIDERS.get(prov)
@@ -3039,7 +3088,7 @@ def model_name(prov, s):
     m = str(s.get("aiModel") or "").strip()
     if prov == "gemini":
         return gemini_model(s)
-    return m or {"ollama": "llama3.2", "openai-compatible": "gpt-4o-mini"}.get(prov, "")
+    return m or {"ollama": "gemma4:e4b", "openai-compatible": "gpt-4o-mini"}.get(prov, "")
 
 CLAUDE_CODE_MODELS = [["", "Predeterminado de Claude Code"], ["haiku", "Haiku (rápido)"], ["sonnet", "Sonnet (equilibrado)"],
                       ["opus", "Opus (el más capaz)"]]

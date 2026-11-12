@@ -15,6 +15,8 @@
 #   ./install.sh --greeter-off    vuelve al gestor de inicio que había antes
 #   ./install.sh --greeter-sync   copia tu tema y tu fondo al login (scripts/hf-greeter-sync)
 #   ./install.sh --migrate        pasa una instalación de hypr-liquid (nombre anterior) a hyprfrijol
+#   ./install.sh --perfil=ARCHIVO al terminar, deja el equipo como ese perfil (scripts/hf-perfil: paquetes, apps,
+#                                 servicios, acceso remoto, voz, dictado, modelos locales, login y tus ajustes)
 #   ./install.sh --apps=serie,productividad   apps por nivel (install/apps.json, scripts/hf-apps): serie (por defecto),
 #                                 productividad, destacada, creativa, experimental, all; --apps=none o --no-apps: ninguna
 #
@@ -26,7 +28,7 @@
 # ~/.config/matugen: hyprfrijol se ejecuta desde esta carpeta como una sesión aparte.
 set -euo pipefail
 
-DRY=0 YES=0 FULL=0 DEPS=1 SYSTEM=1 SESSION=1 UNINSTALL=0 PURGE=0 GREETER="" MIGRATE=0
+DRY=0 YES=0 FULL=0 DEPS=1 SYSTEM=1 SESSION=1 UNINSTALL=0 PURGE=0 GREETER="" MIGRATE=0 PERFIL=""
 APPS=""   # niveles de install/apps.json (--apps=…); vacío = preguntar (o «serie» con --yes/--dry-run)
 for a in "$@"; do
   case "$a" in
@@ -44,6 +46,7 @@ for a in "$@"; do
     --apps=*)       APPS="${a#--apps=}" ;;
     --no-apps)      APPS=none ;;
     --migrate)      MIGRATE=1 ;;
+    --perfil=*)     PERFIL="${a#--perfil=}" ;;
     -h|--help)      sed -n '2,/^set -euo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
     *) echo "Opción desconocida: $a (usa --help)" >&2; exit 1 ;;
   esac
@@ -917,3 +920,9 @@ apps_install() {
 [ "$DEPS" = 1 ] && apps_install || { [ "$DEPS" = 0 ] && skip_ "apps por nivel (--no-deps)"; }
 HAS_DM="$(current_dm)"; [ "$HAS_DM" = greetd ] && HAS_DM="el login (greetd)"
 summary
+if [ -n "$PERFIL" ]; then
+  [ -f "$PERFIL" ] || { warn "No existe el perfil $PERFIL"; exit 1; }
+  hdr "Tu perfil ($PERFIL)"
+  pf=(aplicar "$PERFIL"); [ "$DRY" = 1 ] && pf+=(--dry-run)
+  HF_ROOT="$HERE" "$HERE/scripts/hf-perfil" "${pf[@]}"
+fi

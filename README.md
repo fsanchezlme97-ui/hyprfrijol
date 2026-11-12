@@ -160,6 +160,12 @@ Además de los paquetes, el instalador deja lista una sesión que arranca sin es
   O instala el login visual: `./install.sh --greeter`.
 - **Probarlo sin cerrar sesión:** `hf-session --nested` lo abre en una ventana dentro de tu sesión actual (ciérralo con Super+Shift+Esc).
 
+- **Dejarlo como tu otro equipo:** `hf-perfil guardar` guarda en `~/.config/hyprfrijol/perfil.json` (solo tuyo) lo que
+  tienes: paquetes y apps, servicios, acceso remoto (SSH, cortafuegos, Tailscale, RustDesk), voz de Helpert, modelos de
+  dictado y de Ollama, el login y tus ajustes. `hf-update` lo guarda solo antes de cada actualización. En el equipo
+  nuevo: `./install.sh --perfil=perfil.json` (o `hf-perfil aplicar perfil.json`; `hf-perfil ver` dice qué falta). No
+  lleva claves ni contraseñas ni tus fondos: guárdalo tú (USB, tu nube), nunca en el repo.
+
 Si mueves la carpeta del repo, ejecuta desde la nueva ubicación `./install.sh --no-deps --no-system --no-session` para rehacer los enlaces de `~/.local/bin`.
 
 ### Desinstalar

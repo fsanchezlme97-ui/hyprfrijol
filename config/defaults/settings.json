@@ -55,6 +55,8 @@
   "aiModelVision": "",
   "aiFallbackProvider": "",
   "aiFallbackModel": "",
+  "aiOllamaCtx": 16384,
+  "aiVoiceLocal": false,
   "aiLocalOnly": false,
   "aiRedactSecrets": true,
   "privateApps": ["keepassxc", "bitwarden", "1password", "seahorse", "kwalletmanager", "enpass", "proton pass"],

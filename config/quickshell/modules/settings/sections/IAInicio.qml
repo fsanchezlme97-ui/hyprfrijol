@@ -50,8 +50,8 @@ ColumnLayout {
     // «Gemini · gemini-flash-latest · listo»
     readonly property string effProv: localOnly && prov !== "off" ? "ollama" : prov
     readonly property string modelTxt: {
-        if (localOnly && prov !== "ollama") return Settings.get("aiFallbackProvider", "") === "ollama" ? (Settings.get("aiFallbackModel", "") || "llama3.2") : "llama3.2";
-        return st?.model || ({ "claude-code": "predeterminado", ollama: "llama3.2", "openai-compatible": "gpt-4o-mini" })[prov] || "";
+        if (localOnly && prov !== "ollama") return Settings.get("aiFallbackProvider", "") === "ollama" ? (Settings.get("aiFallbackModel", "") || "gemma4:e4b") : "gemma4:e4b";
+        return st?.model || ({ "claude-code": "predeterminado", ollama: "gemma4:e4b", "openai-compatible": "gpt-4o-mini" })[prov] || "";
     }
     readonly property bool ready: prov !== "off" && !!st?.available
     readonly property string stateTxt: prov === "off" ? "apagado" : st === null ? "comprobando…" : st.available ? "listo" : (st.hint || "no disponible").toLowerCase()

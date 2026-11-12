@@ -12,7 +12,11 @@
 #   hf-remote rdp status|start|stop|restart   compartir ESTA sesión por RDP (hypr-rdp): desde Windows con mstsc
 #   hf-remote rdp password               pide la contraseña de RDP (usuario = el tuyo) y la guarda en ~/.config/hypr-rdp
 #   hf-remote rdp boot                   al iniciar sesión: lo arranca si rdpServer está activo
-#   hf-remote rustdesk status|portal     entrar a ESTA sesión con RustDesk (status: JSON; portal: instala el portal RemoteDesktop)
+#   hf-remote rustdesk status|portal|instalar   entrar a ESTA sesión con RustDesk (status: JSON; portal: instala el
+#                                        portal RemoteDesktop; instalar: rustdesk-bin + su servicio)
+#   hf-remote acceso status|on|off [--sin-lan]   entrar a este equipo desde fuera: SSH (sshd), cortafuegos (ufw o
+#                                        firewalld: SSH y RDP solo por Tailscale, SSH también desde tu red local) y
+#                                        Tailscale (si no está conectado, «tailscale up» da el enlace para entrar)
 #
 # RDP (hypr-rdp, AUR): sin contraseña NUNCA se arranca (hypr-rdp aceptaría a cualquiera). rdpListen: «tailscale»
 # (por defecto: solo la IP de Tailscale), «red» (0.0.0.0) o «local». rdpOutput: la pantalla que se ve ("" = la
@@ -382,7 +386,72 @@ rustdesk() {
       rm -rf "$b"
       systemctl --user restart xdg-desktop-portal-hyprland xdg-desktop-portal 2>/dev/null
       portal_rd && echo "Listo: el portal ya ofrece RemoteDesktop. Reinicia RustDesk para que lo use.";;
-    *) echo "rustdesk status|portal" >&2; exit 1;;
+    instalar)   # rustdesk-bin (AUR) y su servicio de sistema (sin él no hay conexiones entrantes desatendidas)
+      if ! have rustdesk; then
+        local aur; aur="$(command -v paru || command -v yay)" || { echo "Falta paru o yay (rustdesk-bin está en AUR)" >&2; exit 1; }
+        "$aur" -S --needed rustdesk-bin || exit 1
+      fi
+      sudo systemctl enable --now rustdesk && echo "RustDesk listo. Pon una contraseña permanente en su ventana.";;
+    *) echo "rustdesk status|portal|instalar" >&2; exit 1;;
+  esac
+}
+
+# ---------- acceso: SSH + cortafuegos + Tailscale (lo que deja el equipo accesible desde fuera, y solo por donde toca)
+lan_net() {   # la red local de la salida por defecto, p. ej. 192.168.1.0/24 ("" si no hay)
+  local dev; dev="$(ip -4 route show default 2>/dev/null | awk '{for(i=1;i<NF;i++) if($i=="dev"){print $(i+1); exit}}')"
+  [ -n "$dev" ] && ip -4 route show dev "$dev" scope link proto kernel 2>/dev/null | awk 'NR==1{print $1}'
+}
+sshd_unit() { systemctl list-unit-files sshd.service >/dev/null 2>&1 && echo sshd || echo ssh; }   # Debian/Ubuntu: ssh
+acceso() {
+  local lan=1; [ "${2:-}" = "--sin-lan" ] && lan=0
+  local net; net="$(lan_net)"; local u; u="$(sshd_unit)"
+  case "${1:-status}" in
+    status)
+      local fw=""; systemctl is-active -q ufw 2>/dev/null && fw=ufw; systemctl is-active -q firewalld 2>/dev/null && fw=firewalld
+      jq -cn --argjson ssh "$(systemctl is-active -q "$u" 2>/dev/null && echo true || echo false)" --arg fw "$fw" --arg lan "$net" \
+        --argjson tailscale "$(have tailscale && tailscale status >/dev/null 2>&1 && echo true || echo false)" \
+        --arg ip "$(have tailscale && tailscale ip -4 2>/dev/null | head -n1)" \
+        '{ssh:$ssh,firewall:$fw,lan:$lan,tailscale:$tailscale,tailscaleIp:$ip}';;
+    on)
+      have sshd || { echo "Falta openssh: hf-deps install ssh-server" >&2; exit 1; }
+      sudo systemctl enable --now "$u" || exit 1
+      if have ufw; then
+        sudo ufw default deny incoming && sudo ufw default allow outgoing
+        sudo ufw allow in on tailscale0 to any port 22 proto tcp comment "SSH por Tailscale"
+        sudo ufw allow in on tailscale0 to any port 3389 proto tcp comment "Escritorio remoto (hypr-rdp) por Tailscale"
+        [ "$lan" = 1 ] && [ -n "$net" ] && sudo ufw allow from "$net" to any port 22 proto tcp comment "SSH en la red local"
+        sudo ufw --force enable && sudo systemctl enable --now ufw
+      elif have firewall-cmd; then
+        sudo systemctl enable --now firewalld
+        sudo firewall-cmd -q --permanent --new-zone=tailscale 2>/dev/null
+        sudo firewall-cmd -q --permanent --zone=tailscale --add-interface=tailscale0
+        sudo firewall-cmd -q --permanent --zone=tailscale --add-port=22/tcp --add-port=3389/tcp
+        [ "$lan" = 1 ] && [ -n "$net" ] && sudo firewall-cmd -q --permanent --add-rich-rule="rule family=ipv4 source address=$net port port=22 protocol=tcp accept"
+        sudo firewall-cmd -q --reload
+      else
+        echo "Sin cortafuegos (hf-deps install firewall): SSH queda abierto a cualquier red" >&2
+      fi
+      if have tailscale; then
+        sudo systemctl enable --now tailscaled
+        tailscale status >/dev/null 2>&1 || sudo tailscale up   # la primera vez imprime el enlace para iniciar sesión
+      else
+        echo "Sin Tailscale (hf-deps install tailscale): solo se podrá entrar desde la red local" >&2
+      fi
+      echo "Acceso listo: SSH${net:+ (red local $net)}, RDP solo por Tailscale.";;
+    off)
+      if have ufw; then
+        local r; for r in "in on tailscale0 to any port 22 proto tcp" "in on tailscale0 to any port 3389 proto tcp" ${net:+"from $net to any port 22 proto tcp"}; do
+          # shellcheck disable=SC2086
+          sudo ufw delete allow $r >/dev/null 2>&1
+        done
+      elif have firewall-cmd; then
+        sudo firewall-cmd -q --permanent --delete-zone=tailscale 2>/dev/null
+        [ -n "$net" ] && sudo firewall-cmd -q --permanent --remove-rich-rule="rule family=ipv4 source address=$net port port=22 protocol=tcp accept"
+        sudo firewall-cmd -q --reload
+      fi
+      sudo systemctl disable --now "$u"
+      echo "Acceso cerrado: sin SSH ni RDP desde fuera (Tailscale sigue conectado: tailscale down para cortarlo).";;
+    *) echo "acceso status|on|off [--sin-lan]" >&2; exit 1;;
   esac
 }
 
@@ -394,5 +463,6 @@ case "${1:-}" in
   server) shift; server "$@";;
   rdp) shift; rdp "$@";;
   rustdesk) shift; rustdesk "$@";;
+  acceso) shift; acceso "$@";;
   *) sed -n '2,/^# Seguridad/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 1;;
 esac

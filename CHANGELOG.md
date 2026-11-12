@@ -3,6 +3,28 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.49] — 2026-11-12
+
+### Añadido
+- **IA local de respaldo**: Ollama en la gráfica (`ollama-vulkan`, nuevo en el instalador) con gemma4:e4b, el mejor
+  de 7 modelos probados (18/18 órdenes de voz, 0,5 s; la tabla está en `docs/IA.md`). Si Gemini falla o tarda,
+  contesta el local; en la voz la espera a Gemini es de 10 s.
+- **Voz con el modelo local primero** (Ajustes › Asistente de IA › Modelos, `aiVoiceLocal`): la voz pregunta a Ollama
+  (menos de 1 s) y Gemini o Claude quedan de respaldo.
+- **`hf-perfil`**: guarda lo que tiene tu equipo (paquetes, apps, servicios, acceso remoto, voz, dictado, modelos
+  locales, login y ajustes) y lo deja igual en otro con `./install.sh --perfil=perfil.json`. `hf-update` lo guarda
+  antes de cada actualización. Sin claves ni contraseñas.
+- `hf-remote acceso on|off|status`: SSH, cortafuegos (ufw o firewalld) y Tailscale de una vez;
+  `hf-remote rustdesk instalar`. En el instalador: servidor SSH y AnyDesk (solo saliente).
+
+### Corregido
+- Modelos pequeños: entienden más órdenes. Las instrucciones llevan ejemplos del formato, se arregla
+  `{"type":"barPos",…}` (sin «set»), se aceptan acciones sueltas o una por línea y la fecha de los próximos 7 días
+  va en el contexto («el viernes» caía en la semana siguiente).
+- Ollama: contexto de 16.384 tokens (con 4.096 se cortaban las instrucciones), cargado 30 min y sin «pensar»
+  (los modelos que piensan tardaban más de 30 s).
+- Si un servidor de IA dejaba de responder a mitad de la respuesta, la petición fallaba sin pasar al respaldo.
+
 ## [0.9.48] — 2026-11-12
 
 ### Corregido
