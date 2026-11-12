@@ -214,6 +214,8 @@ SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden
 - {"type":"download_ctl","op":"pause"|"resume"|"cancel"|"retry","id":ID|"all"}   controlar la cola (consulta "downloads")
 - {"type":"wallhaven","op":"add"|"set","id":"abc123"}   fondo de wallhaven.cc: añadir a mis fondos o ponerlo (consulta
                                               "wallhaven" para buscar)
+- {"type":"unsplash","op":"add"|"set","id":"Bkci_8qcdvQ"}   foto de unsplash.com: añadir a mis fondos o ponerla (consulta
+                                              "unsplash" para buscar; nombra al autor)
 - {"type":"youtube","query":"Walk Foo Fighters","service":"youtube"|"music"|"spotify"}   reproducir una canción o vídeo:
                                               abre el primer resultado (YouTube arranca solo; Spotify abre su búsqueda)
 - {"type":"browser","op":OP,"value":"…"}      teclas al navegador (enfoca uno si hace falta). OP: new-tab|close-tab|
@@ -235,7 +237,8 @@ por OCR) · notifications (avisos sin leer e historial) · files {"query":"infor
 personal) · apps {"query":"editor"} (apps instaladas) · settings {"filter":"barra"} (claves de ajustes y su valor) ·
 system (volumen, brillo, batería, música, no molestar, cafeína, modo de ventanas) · timers (temporizadores en marcha) ·
 devices (memorias USB, tarjetas SD y discos, con su espacio) · downloads (la cola de descargas) ·
-wallhaven {"query":"montañas","sorting":"toplist"|"random"} (buscar fondos en wallhaven.cc).
+wallhaven {"query":"montañas","sorting":"toplist"|"random"} (buscar fondos en wallhaven.cc) ·
+unsplash {"query":"bosque","order":"relevant"|"popular"|"latest"} (fotos de unsplash.com, con su autor).
 Usa una consulta solo si la necesitas de verdad; después responde (con hf-actions si hay que cambiar algo)."""
 
 # Formato de las respuestas (el panel lo dibuja: Markdown, bloques de código con «Copiar», gráficos e imágenes)
@@ -406,9 +409,10 @@ def label(a):
     if t == "download_ctl":
         who = "todas las descargas" if a.get("id") == "all" else "la descarga " + (a.get("name") or str(a.get("id")))
         return {"pause": "Pausar ", "resume": "Reanudar ", "cancel": "Cancelar ", "retry": "Reintentar "}.get(a.get("op"), "") + who
-    if t == "wallhaven":
-        return (f"Añadir el fondo {a.get('id')} de Wallhaven a mis fondos" if a.get("op") == "add"
-                else f"Poner de fondo {a.get('id')} (Wallhaven)")
+    if t in ("wallhaven", "unsplash"):
+        src = "Wallhaven" if t == "wallhaven" else "Unsplash"
+        return (f"Añadir el fondo {a.get('id')} de {src} a mis fondos" if a.get("op") == "add"
+                else f"Poner de fondo {a.get('id')} ({src})")
     if t == "youtube":
         return f"Reproducir «{a.get('query')}» en " + {"music": "YouTube Music", "spotify": "Spotify"}.get(a.get("service"), "YouTube")
     if t == "browser":
@@ -452,6 +456,8 @@ def preview(a, s=None):
             return (a.get("dev") or "") + (f" · montada en {a['mountpoint']}" if a.get("mountpoint") else "")
         if t == "wallhaven":
             return f"wallhaven.cc/w/{a.get('id')}"
+        if t == "unsplash":
+            return f"unsplash.com/photos/{a.get('id')}"
         if t == "youtube":
             return "el primer resultado de la búsqueda"
         if t == "browser":
@@ -471,7 +477,8 @@ KIND_LABELS = {"wallpaper": "Cambiar el fondo", "workspace": "Ir a otro espacio"
                "download": "Añadir descargas", "device:mount": "Montar unidades", "device:unmount": "Desmontar unidades",
                "device:open": "Abrir unidades", "download_ctl:pause": "Pausar descargas", "download_ctl:resume": "Reanudar descargas",
                "download_ctl:retry": "Reintentar descargas", "wallhaven:add": "Añadir fondos de Wallhaven",
-               "wallhaven:set": "Poner fondos de Wallhaven", "youtube": "Reproducir canciones y vídeos"}
+               "wallhaven:set": "Poner fondos de Wallhaven",
+               "unsplash:add": "Añadir fotos de Unsplash", "unsplash:set": "Poner fotos de Unsplash", "youtube": "Reproducir canciones y vídeos"}
 
 def kind_label(kind):
     """Nombre en español de una clave de aiAlwaysApprove (para la lista de Ajustes › IA)."""
@@ -490,7 +497,7 @@ def approve_kind(a):
     t = a.get("type")
     if t == "set":
         return "set:" + str(a.get("key"))
-    op = a.get("op") if t in ("window", "device", "download_ctl", "wallhaven", "browser") else None
+    op = a.get("op") if t in ("window", "device", "download_ctl", "wallhaven", "unsplash", "browser") else None
     return f"{t}:{op}" if op else str(t)
 
 def meta(a):
@@ -644,6 +651,8 @@ def validate(actions):
                 a["id"] = str(a.get("id") or "all")[:40]
                 ok.append(a)
             elif t == "wallhaven" and a.get("op") in ("add", "set") and re.fullmatch(r"[a-z0-9]{4,12}", str(a.get("id") or "")):
+                ok.append(a)
+            elif t == "unsplash" and a.get("op") in ("add", "set") and re.fullmatch(r"[A-Za-z0-9_-]{6,20}", str(a.get("id") or "")):
                 ok.append(a)
             elif t == "youtube" and isinstance(a.get("query"), str) and a["query"].strip():
                 a["query"] = a["query"].strip()[:200]
@@ -1035,16 +1044,17 @@ def exec_action(a):
         r = script_json("hf-voice", *args, timeout=40) or {}
         if not r.get("ok"):
             return {"kind": "error", "msg": r.get("msg") or "No se pudo"}
-    elif t == "wallhaven":
+    elif t in ("wallhaven", "unsplash"):
         t0 = time.time()
+        tool = "hf-wallhaven" if t == "wallhaven" else "hf-unsplash"
         if a["op"] == "add":
-            r = script_json("hf-wallhaven", "add", a["id"], timeout=120) or {}
+            r = script_json(tool, "add", a["id"], timeout=120) or {}
             if not r.get("ok"):
                 return {"kind": "error", "msg": r.get("error") or "No se pudo traer el fondo"}
             p = r.get("path") or ""
             fresh = p and os.path.exists(p) and os.path.getmtime(p) >= t0 - 1   # solo la copia nueva se borra al deshacer
             return {"kind": "rmfile", "path": p} if fresh else None
-        r = script_json("hf-wallhaven", "fetch", a["id"], timeout=120) or {}
+        r = script_json(tool, "fetch", a["id"], timeout=120) or {}
         if not r.get("ok"):
             return {"kind": "error", "msg": r.get("error") or "No se pudo traer el fondo"}
         subprocess.Popen([str(ROOT / "scripts/hf-wallpaper"), r["path"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -1168,7 +1178,7 @@ def do_undo(uid):
             undo_record(r)
         except Exception:
             pass
-    if ("wallpaper" in types or any(a["type"] == "wallhaven" and a.get("op") == "set" for a in acts)) and b.get("wallpaper"):
+    if ("wallpaper" in types or any(a["type"] in ("wallhaven", "unsplash") and a.get("op") == "set" for a in acts)) and b.get("wallpaper"):
         subprocess.Popen([str(ROOT / "scripts/hf-wallpaper"), b["wallpaper"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if "dnd" in types:
         qs_call("notifs", "setDnd", "true" if b.get("dnd") else "false")
@@ -1185,6 +1195,7 @@ QUERY_LABELS = {"windows": "Miró las ventanas abiertas", "active_window": "Ley�
                 "apps": "Buscó apps instaladas", "settings": "Consultó los ajustes", "system": "Miró el estado del sistema",
                 "timers": "Miró los temporizadores", "devices": "Miró las unidades conectadas",
                 "downloads": "Miró la cola de descargas", "wallhaven": "Buscó fondos en Wallhaven",
+                "unsplash": "Buscó fotos en Unsplash",
                 "doctor": "Hizo un diagnóstico del sistema", "deps": "Miró qué dependencias faltan",
                 "mcp": "Usó un servidor MCP"}
 WINDOW_CAP = HOME / ".cache/hyprfrijol/ai-window.png"
@@ -1315,6 +1326,13 @@ def run_query(q, ctx=None, s=None):
         if r.get("error"):
             return lab, r["error"]
         return lab, json.dumps([{k: x.get(k) for k in ("id", "resolution", "category", "url")} for x in (r.get("results") or [])[:12]], ensure_ascii=False)
+    if t == "unsplash":
+        args = ["search"] + (["--q", str(q.get("query"))[:80]] if q.get("query") else []) \
+            + (["--order", q["order"]] if q.get("order") in ("relevant", "popular", "latest") else [])
+        r = script_json("hf-unsplash", *args, timeout=30) or {}
+        if r.get("error"):
+            return lab, r["error"]
+        return lab, json.dumps([{k: x.get(k) for k in ("id", "resolution", "author", "url")} for x in (r.get("results") or [])[:12]], ensure_ascii=False)
     if t == "timers":
         now = time.time()
         return lab, json.dumps([{"id": x["id"], "label": x["label"], "left_s": int(x["end"] - now)} for x in timers_list()], ensure_ascii=False)
@@ -3407,6 +3425,13 @@ TOOL_SPECS = [
     ("wallhaven_wallpaper", "Con un id de wallhaven_search: 'add' lo añade a los fondos del usuario, 'set' lo pone de fondo.",
      {"type": "object", "properties": {"op": {"enum": ["add", "set"]}, "id": {"type": "string"}}, "required": ["op", "id"]},
      "action", lambda a: {"type": "wallhaven", "op": a.get("op"), "id": a.get("id")}),
+    ("unsplash_search", "Busca fotos en unsplash.com (necesita la clave de Unsplash en Ajustes › Fondos); da id, resolución y autor, "
+     "al que hay que nombrar.",
+     {"type": "object", "properties": {"query": {"type": "string"}, "order": {"enum": ["relevant", "popular", "latest"]}}},
+     "query", lambda a: {"type": "unsplash", "query": a.get("query", ""), "order": a.get("order")}),
+    ("unsplash_wallpaper", "Con un id de unsplash_search: 'add' la añade a los fondos del usuario, 'set' la pone de fondo.",
+     {"type": "object", "properties": {"op": {"enum": ["add", "set"]}, "id": {"type": "string"}}, "required": ["op", "id"]},
+     "action", lambda a: {"type": "unsplash", "op": a.get("op"), "id": a.get("id")}),
     # Ronda 9: lo mismo que los comandos de voz (scripts/hf-voice)
     ("play_music", "Reproduce una canción o vídeo: busca «query» y abre el primer resultado en YouTube (arranca solo), "
      "YouTube Music o Spotify (búsqueda). Ej.: query «Walk Foo Fighters».",

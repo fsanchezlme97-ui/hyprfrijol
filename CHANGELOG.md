@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.52] — 2026-11-12
+
+### Añadido
+- El asistente busca fotos en Unsplash y las pone de fondo o las añade a los tuyos, como con Wallhaven (también por
+  MCP: `unsplash_search`, `unsplash_wallpaper`). Nombra al autor, como pide Unsplash.
+- `perfil/perfil.json` en el proyecto: el equipo de referencia sin datos personales (paquetes, apps, servicios,
+  acceso remoto, voz, dictado, modelos locales, login y ajustes de aspecto). `./install.sh --perfil` lo aplica; los
+  ajustes se suman a los tuyos con copia de los de antes. `hf-perfil publicar` lo rehace.
+
 ## [0.9.50] — 2026-11-12
 
 ### Seguridad

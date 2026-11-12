@@ -37,15 +37,16 @@ reducción automática) se descartó en las decisiones del plan.
       genera con `dev/gen-pkgbuild.py` y se construye bien con `makepkg`). Falta subirlo con la cuenta del autor
       (instrucciones en la cabecera de `dev/gen-pkgbuild.py`) y añadir «Arch: `paru -S hyprfrijol-git`» al README.
 
-- [x] **Fondos de Wallhaven y Unsplash**: Wallhaven ya estaba (Ajustes › Fondos); Unsplash en 0.9.36 (`hf-unsplash`,
-      necesita su clave gratuita). Falta: probarlo con una clave de verdad y darle a la IA `unsplash_search` como a Wallhaven.
+- [x] **Fondos de Wallhaven y Unsplash**: Wallhaven ya estaba (Ajustes › Fondos); Unsplash en 0.9.36 (`hf-unsplash`)
+      y la IA lo busca y pone como Wallhaven (0.9.52; probado con una clave real).
 - [~] **Entrar desde otro equipo o el móvil**: AnyDesk no acepta entrantes en Wayland (solo Xorg; lo dice su
       documentación y se comprobó: corta con «servidor de pantalla no admitido» sin tocar el portal). Alternativas: RDP
       (hypr-rdp, 0.9.34) y RustDesk (0.9.40) con el portal RemoteDesktop de xdph + PR #448
       (`install/pkgbuilds/xdg-desktop-portal-hyprland-rd`, solo Arch). Falta: probar una conexión real de RustDesk;
       volver al paquete oficial cuando xdph publique RemoteDesktop; Fedora/openSUSE/Debian.
 - [~] **Reinstalar y quedar igual** (`hf-perfil`, 0.9.49): guarda paquetes, servicios, acceso remoto, voz, dictado,
-      modelos de Ollama, login y ajustes; `install.sh --perfil=` lo aplica. Falta: probarlo en un equipo limpio.
+      modelos de Ollama, login y ajustes; `install.sh --perfil=` lo aplica. El repo trae `perfil/perfil.json` sin
+      datos personales (0.9.52, `./install.sh --perfil`). Falta: probarlo en una máquina virtual.
 - [~] **IA local** (0.9.49): gemma4:e4b en la gráfica (0,5 s; tabla en `docs/IA.md`) como respaldo y, con
       `aiVoiceLocal`, primero en la voz. Falta: probarlo con tu voz unos días; ROCm sin probar (gfx1032 no está
       soportado oficialmente y son varios GB).

@@ -17,6 +17,7 @@
 #   ./install.sh --migrate        pasa una instalación de hypr-liquid (nombre anterior) a hyprfrijol
 #   ./install.sh --perfil=ARCHIVO al terminar, deja el equipo como ese perfil (scripts/hf-perfil: paquetes, apps,
 #                                 servicios, acceso remoto, voz, dictado, modelos locales, login y tus ajustes)
+#   ./install.sh --perfil         lo mismo con el perfil público del repo (perfil/perfil.json, sin datos personales)
 #   ./install.sh --apps=serie,productividad   apps por nivel (install/apps.json, scripts/hf-apps): serie (por defecto),
 #                                 productividad, destacada, creativa, experimental, all; --apps=none o --no-apps: ninguna
 #
@@ -47,6 +48,7 @@ for a in "$@"; do
     --no-apps)      APPS=none ;;
     --migrate)      MIGRATE=1 ;;
     --perfil=*)     PERFIL="${a#--perfil=}" ;;
+    --perfil)       PERFIL="$HERE/perfil/perfil.json" ;;
     -h|--help)      sed -n '2,/^set -euo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
     *) echo "Opción desconocida: $a (usa --help)" >&2; exit 1 ;;
   esac

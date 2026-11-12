@@ -7,7 +7,7 @@ Herramientas: get_state, set_settings, apply_actions, undo, wallpaper, open_view
 mismas que usa el asistente del panel (hf-ai TOOL_SPECS): list_windows, read_active_window, read_screen,
 notifications, find_files, list_apps, list_settings, system_status, window_action, launch_app, open_url, media,
 volume, brightness, do_not_disturb, caffeine, timer, window_mode, pomodoro, clear_notifications, list_devices,
-device_action, list_downloads, download, download_control, wallhaven_search, wallhaven_wallpaper, diagnose, check_deps.
+device_action, list_downloads, download, download_control, wallhaven_search, wallhaven_wallpaper, unsplash_search, unsplash_wallpaper, diagnose, check_deps.
 Cada herramienta lleva anotaciones MCP: readOnlyHint (consultas: sin aprobación) o no (cambios: el cliente pide permiso)
 y destructiveHint para lo que no se puede deshacer (cerrar ventanas, expulsar, cancelar descargas).
 Todo pasa por las mismas piezas que el panel: scripts/hf-ai (acciones validadas + deshacer, consultas de solo
@@ -145,7 +145,7 @@ DESTRUCTIVE = set(getattr(hlai, "DESTRUCTIVE_TOOLS", set()))
 def annotations(name):
     ro = name in READ_ONLY
     return {"readOnlyHint": ro, "destructiveHint": (not ro) and name in DESTRUCTIVE, "idempotentHint": ro,
-            "openWorldHint": name in ("wallhaven_search", "wallhaven_wallpaper", "download", "open_url")}
+            "openWorldHint": name in ("wallhaven_search", "wallhaven_wallpaper", "unsplash_search", "unsplash_wallpaper", "download", "open_url")}
 
 
 def handle(msg):
