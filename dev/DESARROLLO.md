@@ -73,7 +73,14 @@ Las vistas que solo hacen falta abiertas se crean al abrirlas y se destruyen un 
 - **Cómo se abre**: `LazyView` crea el contenido dentro de `Shell.open()` (al cambiar `Shell.view`), antes de que se
   emita `Shell.opened`, así que los `Connections { onOpened }` del módulo siguen funcionando. `Overlay`/`ChipPopup` (y
   `Capture`/`ColorPicker`) tienen `ready`: esperan un ciclo antes de `shown`, para que la animación de entrada se vea
-  también la primera vez.
+  también la primera vez. Lo que el panel lanza al abrirse y no se ve enseguida (procesos de comprobación) va con
+  un Timer de `Theme.durIn`: un proceso que tarde en arrancar (la primera vez, `adb devices`) bloquea la interfaz
+  en plena entrada. `Overlay { warmup: true }` se dibuja una vez, invisible, al crearse (el centro de control).
+- **Transformación entre paneles** (`components/Morph.qml`): `ChipPopup` siempre y `Overlay { morphs: true }`. Al
+  sustituir una vista por otra sin cerrar (`Shell.leaving`), el que se va espera quieto y, cuando el que llega ya
+  se ha dibujado, uno se estira hasta la caja del otro mientras se desvanece y el otro nace con esa caja.
+  `Overlay { passBar: true }` y `ChipPopup` dejan pasar el ratón a la franja de la barra (así un chip abre otro
+  panel con este abierto); pulsar el fondo de la barra los cierra. Los botones de la barra abren al pulsar.
 - **Cuándo se descarga**: `grace` ms después de cerrarse (45 s; el centro de control, 2 min; Spotlight, el más usado, se queda tras abrirlo una vez: `warm`). `keep: true` lo
   retiene (Captura mientras graba o hay capturas fijadas; Color mientras elige) y `warm: true` no lo descarga nunca.
   Tras descargar se llama a `gc()`.

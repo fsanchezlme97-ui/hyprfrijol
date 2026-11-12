@@ -3,6 +3,23 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.33] — 2026-11-11
+
+### Cambiado
+- **Paneles más rápidos al abrir**: los botones de la barra (chips, música, centro de control, aplicaciones) abren
+  al pulsar, no al soltar, y la animación de entrada arranca un fotograma antes. Pulsar fuera de un panel lo cierra
+  también al pulsar.
+- **El centro de control ya no se atasca la primera vez**: al abrirse preguntaba enseguida a `adb` por el móvil, y
+  la primera vez tras arrancar eso paraba la interfaz 120-170 ms en plena animación. Ahora esas comprobaciones van
+  cuando ya ha aparecido, y el panel se dibuja una vez, invisible, al cargarse. Primera apertura: de unos 100 ms con
+  un parón de 160 ms a unos 50 ms sin parón (medido en una sesión anidada).
+
+### Añadido
+- **Paneles que se transforman uno en otro** (prueba): con el panel de un chip de la barra abierto (música, clima,
+  sistema, impresora, pomodoro, unidades, descargas) o el centro de control, un clic en otro botón de la barra no
+  cierra uno y abre el otro: la tarjeta se estira hasta el sitio y el tamaño del nuevo mientras cambia el contenido.
+  Con el panel abierto la barra sigue funcionando; pulsar su fondo lo cierra. «Reducir movimiento» lo quita.
+
 ## [0.9.32] — 2026-11-11
 
 ### Corregido

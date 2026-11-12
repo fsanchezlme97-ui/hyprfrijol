@@ -130,6 +130,14 @@ PanelWindow {
             onHoveredChanged: if (!hovered && bar.edgeMode) hideDelay.restart()
         }
         Timer { id: hideDelay; interval: 600 }
+        // Fondo de la barra con un panel suyo abierto (los que se transforman entre sí y dejan pasar el ratón a la
+        // barra: los de los chips y el centro de control): pulsar aquí lo cierra
+        MouseArea {
+            anchors.fill: parent
+            z: -1
+            enabled: Shell.view !== "" && Shell.morphViews[Shell.view] === true
+            onPressed: Shell.close()
+        }
 
         Item {
             id: body

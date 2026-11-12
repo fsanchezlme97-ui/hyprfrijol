@@ -173,7 +173,7 @@ Rectangle {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-        onClicked: m => m.button === Qt.MiddleButton ? Media.toggle() : Shell.toggle("musica")
+        onPressed: m => m.button === Qt.MiddleButton ? Media.toggle() : Shell.toggle("musica")
         onWheel: w => Audio.setVolume(Audio.volume + (w.angleDelta.y > 0 ? 0.05 : -0.05))
     }
 }

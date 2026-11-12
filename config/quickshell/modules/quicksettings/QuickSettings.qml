@@ -23,6 +23,8 @@ Overlay {
     id: win
     view: "ajustes"
     place: barPos === "izquierda" ? "left" : "right"
+    morphs: true; passBar: true      // se transforma desde/hacia los paneles de los chips de la barra
+    warmup: true                     // se carga a los 6 s del arranque: se dibuja ya, invisible
     panelWidth: 404
 
     // ── Estado local ───────────────────────────────────────────────
@@ -110,14 +112,19 @@ Overlay {
             win.expanded = ["audio", "dnd", "wifi", "bt", "ventanas"].includes(Shell.arg) ? Shell.arg : ""; win.pwFor = "";
             agenda.reset(true);   // teclas del calendario (← → días, N nuevo evento)
             notif.reset(Shell.section === "notificaciones" ? Shell.arg : null);
-            nightCheck.running = true;
-            phoneCheck.running = true;
-            adbCheck.running = true;
+            checks.restart();
             Net.refresh();
             HyprClients.refreshNow();
             flick.contentY = 0;
             scrollTimer.restart();
         }
+    }
+    // Luz nocturna, móvil y adb, cuando el panel ya ha terminado de aparecer: la primera vez `adb devices` arranca
+    // su servicio y bloqueaba el hilo de la interfaz 120-170 ms en plena animación de entrada
+    Timer {
+        id: checks
+        interval: Theme.durIn + 60
+        onTriggered: { nightCheck.running = true; phoneCheck.running = true; adbCheck.running = true; }
     }
     // Desplaza la columna a la parte pedida (campana → notificaciones, hora → agenda), cuando ya está colocada
     Timer {

@@ -19,5 +19,5 @@ Rectangle {
         Rectangle { width: 6; height: 6; radius: 3; color: Theme.ter }
         Txt { text: "Micrófono"; size: 11.5; weight: Font.Medium }
     }
-    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Shell.toggle("ajustes") }
+    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onPressed: Shell.toggle("ajustes") }
 }

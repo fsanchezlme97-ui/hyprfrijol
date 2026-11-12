@@ -60,7 +60,7 @@ Item {
             Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 4
             implicitWidth: 8; implicitHeight: 8; radius: 4
             color: Theme.ter
-            MouseArea { anchors.fill: parent; anchors.margins: -6; cursorShape: Qt.PointingHandCursor; onClicked: Shell.toggle("ajustes") }
+            MouseArea { anchors.fill: parent; anchors.margins: -6; cursorShape: Qt.PointingHandCursor; onPressed: Shell.toggle("ajustes") }
         }
         StatusGroup { id: status; vertical: true; visible: !root.secondary; Layout.alignment: Qt.AlignHCenter; Layout.topMargin: root.islands ? root.gapS : 4 }
     }

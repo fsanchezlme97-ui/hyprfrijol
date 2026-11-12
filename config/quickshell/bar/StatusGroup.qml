@@ -111,7 +111,7 @@ Rectangle {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        onClicked: e => root.open("centro", e.button === Qt.RightButton ? "audio" : undefined)
+        onPressed: e => root.open("centro", e.button === Qt.RightButton ? "audio" : undefined)   // al pulsar: abre antes
         onWheel: w => Audio.setVolume(Audio.volume + (w.angleDelta.y > 0 ? 0.05 : -0.05))
     }
     MouseArea {
@@ -125,7 +125,7 @@ Rectangle {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        onClicked: e => e.button === Qt.RightButton ? Notifs.setDnd(!Notifs.dnd) : root.open("notificaciones")
+        onPressed: e => e.button === Qt.RightButton ? Notifs.setDnd(!Notifs.dnd) : root.open("notificaciones")
     }
     MouseArea {
         id: mClock
@@ -136,7 +136,7 @@ Rectangle {
         height: root.vertical ? Math.max(0, root.height - root.cut2) : root.height
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: root.open("agenda")
+        onPressed: root.open("agenda")
         onWheel: w => w.accepted = false
     }
     BarTip { target: mIcons; text: root.on ? "" : "Red, sonido y ajustes rápidos · clic derecho: sonido" }

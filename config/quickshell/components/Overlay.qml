@@ -5,6 +5,10 @@
 // - place: "center" | "screen" (centrado en la pantalla entera, sea cual sea la barra; `lift` lo sube y
 //   `centerHeight` fija la altura con la que se centra, para que no salte al cambiar de tamaño) | "top" | "top-right" | "bottom-right" | "bottom-left" | "right" | "left" | "bottom" | "fill"
 //   Respeta la barra (abajo/arriba/izquierda) con los mismos márgenes que el diseño.
+// - morph: true → se transforma desde/hacia otro panel al saltar entre ellos sin cerrar (components/Morph).
+// - passBar: true → la barra sigue recibiendo el ratón con el panel abierto (sus botones abren otro panel).
+// - warmup: true → al crearse se dibuja una vez, invisible y sin ratón ni teclado: el primer dibujo de la sesión
+//   (sombreadores, texto) es el lento, y así no lo paga la primera apertura.
 //
 //   Overlay {
 //       view: "agenda"; place: "bottom-right"; panelWidth: 380; panelHeight: 520
@@ -25,20 +29,29 @@ PanelWindow {
     property bool dim: false                 // oscurecer el fondo (vista general, energía…)
     property bool closeOnOutside: true
     property bool grabKeyboard: true
+    property bool morphs: false
+    property bool passBar: false
+    property bool warmup: false
+    property bool warming: false
     property real margin: Settings.winGap   // como las ventanas (gaps_out)
     property real yOffset: 0                 // ajuste fino para "center"/"top"/"screen"
     property real lift: 0                    // "screen": cuánto por encima del centro (como Spotlight de macOS)
     property real centerHeight: 0            // "screen": altura con la que se centra (0 = la del panel)
     // ready: un ciclo después de crearse, para que al cargarlo al abrir (LazyView) se vea la animación de entrada
     property bool ready: false
-    Component.onCompleted: Qt.callLater(() => win.ready = true)
+    Component.onCompleted: Qt.callLater(() => { win.ready = true; if (win.warmup && !win.shown) win.warming = true; })
     readonly property bool shown: ready && Shell.view === view
     default property alias content: panel.data
     property alias panel: panel
     signal escapePressed()
 
     screen: Shell.screen
-    visible: shown || fade.running
+    visible: shown || fade.running || mo.busy || warming
+    Connections {
+        target: win.warming ? panel.Window.window : null
+        function onFrameSwapped() { win.warming = false; }
+    }
+    Timer { running: win.warming; interval: 500; onTriggered: win.warming = false }
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "hf-" + view
@@ -64,10 +77,26 @@ PanelWindow {
         opacity: win.dim && win.shown ? 0.28 : 0
         Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
+    // passBar: todo recibe el ratón menos la franja de la barra de esta pantalla
+    mask: warming ? noInput : passBar ? passMask : null
+    Region { id: noInput }
+    Region { id: passMask; item: whole; Region { item: barStrip; intersection: Intersection.Subtract } }
+    Item { id: whole; anchors.fill: parent }
+    Item {
+        id: barStrip
+        readonly property bool vertical: win.barPos === "izquierda" || win.barPos === "derecha"
+        readonly property bool on: win.passBar && Shell.barModeFor(win.screen) !== "oculta" && !Settings.barAutoHide && !Shell.barHidden
+        readonly property real t: on ? Settings.barOffset + Settings.barThickness + 2 : 0
+        x: win.barPos === "derecha" ? win.width - t : 0
+        y: win.barPos === "abajo" ? win.height - t : 0
+        width: vertical ? t : (on ? win.width : 0)
+        height: vertical ? (on ? win.height : 0) : t
+    }
+    // Al pulsar (no al soltar): se cierra en cuanto tocas fuera
     MouseArea {
         anchors.fill: parent
-        enabled: win.closeOnOutside
-        onClicked: Shell.close()
+        enabled: win.closeOnOutside && win.shown
+        onPressed: Shell.close()
     }
 
     Item {
@@ -116,27 +145,36 @@ PanelWindow {
         // del contenido es el lento (texto, iconos, efectos) y, si cae dentro de la entrada, el panel se quedaba
         // quieto unos fotogramas como un bloque gris desenfocado y luego arrancaba: parecían dos animaciones.
         // Con 0,004 no se ve ni lleva desenfoque (ignore_alpha de la capa en look.lua).
-        opacity: waitFrame.running ? 0.004 : Math.min(1, p * 1.5)
-        property int swaps: 0
+        // Empieza en cuanto ese primer dibujo llega a la pantalla (antes esperaba un fotograma más).
+        opacity: (waitFrame.running || win.warming ? 0.004 : Math.min(1, p * 1.5)) * mo.op
         function go(open: bool): void {
-            if (!open) { waitFrame.stop(); p = 0; }
+            if (!open) { waitFrame.stop(); if (p > 0 && win.morphs && mo.leave()) return; p = 0; }
             else if (p > 0) p = 1;                      // reabierto mientras se cerraba: ya está pintado
-            else { swaps = 0; waitFrame.restart(); }
+            else waitFrame.restart();
         }
-        function start(): void { waitFrame.stop(); if (win.shown) p = 1; }
-        Timer { id: waitFrame; interval: 160; onTriggered: panel.start() }   // por si no llega el aviso del fotograma
+        function start(): void { waitFrame.stop(); if (win.shown) { if (win.morphs) mo.enter(); p = 1; } }
+        Timer { id: waitFrame; interval: 120; onTriggered: panel.start() }   // por si no llega el aviso del fotograma
         Connections {
             target: waitFrame.running ? panel.Window.window : null
-            function onFrameSwapped() { if (++panel.swaps >= 2) panel.start(); }
+            function onFrameSwapped() { panel.start(); }
+        }
+        Morph {
+            id: mo
+            target: panel; view: win.view; screenName: win.screen?.name ?? ""; on: win.morphs
+            onFinished: panel.p = 0          // sin animar: busy aún es true
+            onReleased: if (!win.shown) panel.p = 0
         }
         transform: [
             Scale {
                 origin.x: panel.edgeOrg.x; origin.y: panel.edgeOrg.y
                 xScale: panel.sc0 + (1 - panel.sc0) * panel.p; yScale: xScale
             },
-            Translate { x: panel.dx * (1 - panel.p); y: panel.dy * (1 - panel.p) }
+            Translate { x: panel.dx * (1 - panel.p); y: panel.dy * (1 - panel.p) },
+            Scale { xScale: mo.sx; yScale: mo.sy },
+            Translate { x: mo.tx; y: mo.ty }
         ]
         Behavior on p {
+            enabled: !mo.busy
             NumberAnimation {
                 id: fade
                 duration: win.shown ? Theme.durIn : Theme.durOut
@@ -146,6 +184,6 @@ PanelWindow {
 
         Keys.onEscapePressed: { win.escapePressed(); Shell.close(); }
     }
-    onShownChanged: { panel.go(shown); if (shown) panel.forceActiveFocus(); }
+    onShownChanged: { if (shown) warming = false; panel.go(shown); if (shown) panel.forceActiveFocus(); }
     OpenProbe { name: win.view; shown: win.shown }
 }

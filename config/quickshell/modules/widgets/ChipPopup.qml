@@ -3,6 +3,8 @@
 //   ChipPopup { view: "w-clima"; panelWidth: 380; panelHeight: body.implicitHeight; … contenido … }
 // El chip la abre con BarAnchor.open(chip, "w-clima"): Shell.arg = { chip: true, c, screen } con c = centro
 // del chip a lo largo de la barra (px lógicos de la pantalla). Sin arg (atajo, IPC) se centra en la barra.
+// La barra sigue recibiendo el ratón con el panel abierto (barStrip): un clic en otro chip salta a su panel y el
+// panel se transforma en el nuevo (components/Morph); un clic en el fondo de la barra lo cierra (bar/Bar.qml).
 import QtQuick
 import QtQuick.Window
 import Quickshell
@@ -36,7 +38,7 @@ PanelWindow {
     }
 
     screen: Quickshell.screens.find(s => s.name === a?.screen) ?? Shell.screen
-    visible: shown || fade.running
+    visible: shown || fade.running || morph.busy
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "hf-" + view
@@ -50,7 +52,19 @@ PanelWindow {
     // Centro del chip a lo largo de la barra (o el centro de la pantalla si no hay chip)
     readonly property real c: a && isFinite(a.c) ? a.c : (vertical ? height / 2 : width / 2)
 
-    MouseArea { anchors.fill: parent; onClicked: Shell.close() }
+    // Todo recibe el ratón menos la franja de la barra de esta pantalla (sus chips siguen funcionando)
+    mask: Region { item: whole; Region { item: barStrip; intersection: Intersection.Subtract } }
+    Item { id: whole; anchors.fill: parent }
+    Item {
+        id: barStrip
+        readonly property bool on: Shell.barModeFor(win.screen) !== "oculta" && !Settings.barAutoHide && !Shell.barHidden
+        readonly property real t: on ? Settings.barOffset + Settings.barThickness + 2 : 0
+        x: win.pos === "derecha" ? win.width - t : 0
+        y: win.pos === "abajo" ? win.height - t : 0
+        width: win.vertical ? t : (on ? win.width : 0)
+        height: win.vertical ? (on ? win.height : 0) : t
+    }
+    MouseArea { anchors.fill: parent; enabled: win.shown; onPressed: Shell.close() }
 
     Item {
         id: panel
@@ -73,27 +87,36 @@ PanelWindow {
         // Una sola animación como components/Overlay: «p» (0 → 1) mueve a la vez opacidad, escala y desplazamiento,
         // y antes se dibuja una vez casi transparente para que el primer dibujo (el lento) no caiga en la entrada
         property real p: 0
-        property int swaps: 0
-        opacity: waitFrame.running ? 0.004 : Math.min(1, p * 1.5)
+        opacity: (waitFrame.running ? 0.004 : Math.min(1, p * 1.5)) * morph.op
         function go(open: bool): void {
-            if (!open) { waitFrame.stop(); p = 0; }
+            if (!open) { waitFrame.stop(); if (p > 0 && morph.leave()) return; p = 0; }
             else if (p > 0) p = 1;
-            else { swaps = 0; waitFrame.restart(); }
+            else { waitFrame.restart(); }
         }
-        function start(): void { waitFrame.stop(); if (win.shown) p = 1; }
-        Timer { id: waitFrame; interval: 160; onTriggered: panel.start() }
+        function start(): void { waitFrame.stop(); if (win.shown) { morph.enter(); p = 1; } }
+        Timer { id: waitFrame; interval: 120; onTriggered: panel.start() }
+        // El primer dibujo (el lento) ya está en pantalla: empieza la entrada
         Connections {
             target: waitFrame.running ? panel.Window.window : null
-            function onFrameSwapped() { if (++panel.swaps >= 2) panel.start(); }
+            function onFrameSwapped() { panel.start(); }
+        }
+        Morph {
+            id: morph
+            target: panel; view: win.view; screenName: win.screen?.name ?? ""
+            onFinished: panel.p = 0          // sin animar: busy aún es true
+            onReleased: if (!win.shown) panel.p = 0
         }
         transform: [
             Scale {
                 origin.x: panel.ox; origin.y: panel.oy
                 xScale: 0.92 + 0.08 * panel.p; yScale: 0.86 + 0.14 * panel.p
             },
-            Translate { x: panel.dx * (1 - panel.p); y: panel.dy * (1 - panel.p) }
+            Translate { x: panel.dx * (1 - panel.p); y: panel.dy * (1 - panel.p) },
+            Scale { xScale: morph.sx; yScale: morph.sy },
+            Translate { x: morph.tx; y: morph.ty }
         ]
         Behavior on p {
+            enabled: !morph.busy
             NumberAnimation {
                 id: fade
                 duration: win.shown ? Theme.durIn : Theme.durOut

@@ -33,6 +33,6 @@ Rectangle {
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onEntered: if (chip.popup) Shell.preload(chip.popup)     // carga diferida: crear su ventana mientras llega el clic
-        onClicked: e => e.button === Qt.RightButton ? chip.rightClicked() : chip.toggle()
+        onPressed: e => e.button === Qt.RightButton ? chip.rightClicked() : chip.toggle()     // al pulsar: abre antes
     }
 }

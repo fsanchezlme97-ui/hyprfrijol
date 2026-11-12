@@ -69,6 +69,13 @@ Singleton {
 
     signal opened(string view)
 
+    // Transformación entre paneles (components/Morph): la vista que se acaba de sustituir por otra sin cerrar, la
+    // caja de cada panel al irse y qué vistas saben transformarse
+    property string leaving: ""
+    property var morphBoxes: ({})
+    property var morphViews: ({})
+    signal morphStarted(string from, string to, var box)
+
     // Carga diferida (components/LazyView, ajuste lazyModules): los módulos se crean al abrir su vista y se
     // descargan poco después de cerrarla. preload(v) los va creando en segundo plano (al pasar el cursor por el
     // botón que los abre), para que la primera apertura no espere.
@@ -89,7 +96,9 @@ Singleton {
         openedAt = Date.now();
         arg = a ?? null;
         section = al ? al[1] : v === "ajustes" ? "ajustes" : "";
-        view = al ? al[0] : v;
+        const nv = al ? al[0] : v;
+        leaving = view !== "" && view !== nv ? view : "";
+        view = nv;
         if (view === "ia") sideHidden = false;
         opened(view);
     }
@@ -106,7 +115,7 @@ Singleton {
         if (view === (al ? al[0] : v) && (a === undefined || a === null || arg === a)) close();
         else open(v, a);
     }
-    function close(): void { view = ""; arg = null; section = ""; }
+    function close(): void { leaving = ""; view = ""; arg = null; section = ""; }
     function isOpen(v: string): bool { const rd = redirects[v]; if (rd) return view === rd[0] && arg === rd[1]; const al = aliases[v]; return al ? view === al[0] && section === al[1] : view === v; }
 
     // Ajustes › Enfoque: focusNoGaps (sin huecos ni bordes); focusHideBar lo aplica la barra (Settings.barAutoHide)
