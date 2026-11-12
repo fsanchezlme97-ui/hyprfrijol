@@ -37,6 +37,15 @@ Item {
     property bool active: false
     // [{ role: "user"|"ai", text, images, actions, labels, code, state: ""|"applied"|"discarded"|"undone", undo, error, confirm }]
     property var messages: []
+    // Los mensajes se pintan desde un ListModel que solo sigue la LONGITUD de messages: con el array de modelo, el
+    // Repeater destruía y recreaba TODAS las burbujas (Markdown, imágenes) en cada mensaje y en cada cambio de estado;
+    // ahora añadir crea una sola y cambiar una no recrea ninguna (cada burbuja lee root.messages[index]).
+    ListModel { id: msgModel }
+    onMessagesChanged: {
+        while (msgModel.count > messages.length) msgModel.remove(msgModel.count - 1);
+        while (msgModel.count < messages.length) msgModel.append({ n: msgModel.count });
+        if (keepHistory && !histLoading) histTimer.restart();
+    }
     property bool busy: false
     readonly property string aiName: String(Settings.get("aiName", "") ?? "").trim()
     property bool useWindow: Settings.get("aiContextWindow", true)
@@ -457,7 +466,7 @@ Item {
 
     // ---- historial (aiHistory)
     property bool histLoading: false               // al abrir una guardada no se vuelve a escribir (subía a «Hoy»)
-    onMessagesChanged: if (keepHistory && !histLoading) histTimer.restart()
+    // (onMessagesChanged, arriba junto a msgModel, también guarda el historial con histTimer)
     Timer {
         id: histTimer
         interval: 800
@@ -858,11 +867,11 @@ print(json.dumps(out[:300]))
                 spacing: 10
 
                 Repeater {
-                    model: root.messages
+                    model: msgModel
                     delegate: Item {
                         id: msg
-                        required property var modelData
                         required property int index
+                        readonly property var modelData: root.messages[index] ?? ({})
                         readonly property bool mine: modelData.role === "user"
                         width: msgs.width
                         // respuestas: Copiar · Regenerar (la última) debajo de la burbuja, al pasar el cursor

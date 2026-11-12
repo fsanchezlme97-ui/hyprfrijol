@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.54] — 2026-11-12
+
+### Mejorado
+- Chat del asistente: cada mensaje nuevo (o cada cambio de estado, como aplicar un paso) destruía y volvía a crear
+  todas las burbujas de la conversación, con su Markdown e imágenes. Ahora solo se crea la nueva: menos CPU al
+  responder y un 40 % menos de memoria retenida en conversaciones largas.
+- `dev/perf.sh -c N`: prueba de fugas (abre y cierra todas las vistas y secciones N veces y da la memoria tras cada
+  vuelta y al descargarse).
+
 ## [0.9.53] — 2026-11-12
 
 ### Seguridad

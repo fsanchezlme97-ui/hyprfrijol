@@ -4,13 +4,17 @@
 #   dev/perf.sh               reposo: 20 s tras asentarse
 #   dev/perf.sh -t 40         ventana de medida en segundos
 #   dev/perf.sh -v ajustes    además mide con esa vista abierta (spotlight, ajustes, vista…)
+#   dev/perf.sh -c 3          fugas: abre y cierra todas las vistas y secciones de Ajustes 3 veces y da la memoria
+#                             (anónima) tras cada vuelta; si sigue subiendo después de la primera, algo no se libera
 #
 # Imprime CPU del hilo principal de Quickshell (JS/QML), de los hilos de render, de los procesos que lanza, y la
 # memoria (RSS). Sirve para comparar antes y después de un cambio: la sesión anidada no recibe tu teclado ni tu ratón.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
-T=20; VIEW=""
-while getopts "t:v:" o; do case $o in t) T=$OPTARG;; v) VIEW=$OPTARG;; *) exit 1;; esac; done
+T=20; VIEW=""; CYC=0
+while getopts "t:v:c:" o; do case $o in t) T=$OPTARG;; v) VIEW=$OPTARG;; c) CYC=$OPTARG;; *) exit 1;; esac; done
+VIEWS="spotlight ajustes energia fondos actualizaciones vista widgets w-clima w-sistema bienvenida atajos musica captura color tareas remoto maquinas impresion restauracion"
+SECTIONS="$(grep -oE '\{ key: "[a-z]+"' "$ROOT/config/quickshell/modules/settings/SettingsApp.qml" | sed -E 's/.*"([a-z]+)"/\1/' | tr '\n' ' ')"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/hf-perf.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
 FH="$TMP/home"
@@ -38,6 +42,18 @@ measure() {
   printf '  %-10s principal %5s %%  render %5s %%  otros hilos %5s %%  procesos lanzados %5s %%   RSS %s MB\n' "\$1" \
     "\$(pc \$((m1-m0)))" "\$(pc \$((r1-r0)))" "\$(pc \$((o1-o0)))" "\$(pc \$((h1-h0)))" "\$((\$(awk '/VmRSS/{print \$2}' /proc/\$q/status) / 1024))"
 }
+anon() { echo \$((\$(awk '/RssAnon/{print \$2}' /proc/\$q/status) / 1024)); }
+if [ "$CYC" -gt 0 ]; then
+  Q="\${QS:-qs -p $ROOT/config/quickshell}"
+  echo "  arranque   memoria anónima \$(anon) MB"
+  for i in \$(seq $CYC); do
+    for v in $VIEWS; do \$Q ipc call shell open "\$v"; sleep 0.8; \$Q ipc call shell close 2>/dev/null; sleep 0.3; done
+    for s in $SECTIONS; do \$Q ipc call settings open "\$s"; sleep 0.6; done; \$Q ipc call settings close; sleep 4
+    echo "  vuelta \$i   memoria anónima \$(anon) MB"
+  done
+  sleep 60; echo "  60 s después (vistas ya descargadas) \$(anon) MB"
+  exit 0
+fi
 measure reposo
 if [ -n "$VIEW" ]; then \$QS ipc call shell open "$VIEW"; sleep 3; measure "$VIEW"; fi
 EOF

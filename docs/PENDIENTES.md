@@ -69,11 +69,11 @@ reducción automática) se descartó en las decisiones del plan.
 
 ## Mejorar lo que ya hay
 
-- [ ] **Rendimiento**: arranque del shell y carga diferida de más módulos. Hecho (0.9.23): en reposo ya no se lanza
-      ningún proceso (antes `hyprctl` cada 600 ms con flotantes o PiP, `hf-caffeine` cada 30 s, `nmcli` también por
-      cable, `nvidia-smi` cada 2 s); los lectores se paran con la barra escondida o la sesión bloqueada. Queda: el hilo
-      principal sigue en ~1,5 % de un núcleo en reposo, casi todo la lectura de SysStats cada 2 s para la pastilla.
-      0.9.28: con dos pantallas, el consumo por programa de la barra sencilla lee los procesos cada 4 s y no cada 2.
+- [x] **Rendimiento** (cerrado en 0.9.54, medido en la sesión real tras 5 h de uso): arranque en 1-2 s, 0,5 % de un
+      núcleo en reposo y ningún proceso lanzado cada pocos segundos (solo vigilantes que esperan eventos). Memoria:
+      abrir y cerrar todas las vistas no fuga (`dev/perf.sh -c 3`: se queda en ~330 MB y baja a ~300 al descargarse);
+      el chat del asistente recreaba todas las burbujas en cada mensaje y retenía ~2,6 MB por mensaje (ahora ~1,6,
+      que es lo que crece la conversación). Limitar los arenas de malloc no cambia nada.
 - [ ] **Productividad**: revisar Spotlight, portapapeles, ventanas y atajos con uso real; quitar pasos. Hecho
       (0.9.25): deshacer al borrar tareas o vaciar el historial de avisos, «Copiado» al copiar un aviso, las teclas de
       Alt + Tab a la vista, botones pequeños más fáciles de acertar. Queda lo que pide uso real.
