@@ -76,29 +76,14 @@ reducción automática) se descartó en las decisiones del plan.
 
 Lo que la revisión encontró y no se arregló en la 0.9.22, por orden de valor:
 
-- [ ] **Buscador de Ajustes**: no indexa las tarjetas de `settings/ui/` (Wallhaven, Calendarios, Mis temas,
-      Diagnóstico, Modo seguro…) ni sus claves para «Restaurar valores por defecto».
 - [ ] **Sistema en otras distros**: Kernel LTS, snap-pac y OpenTabletDriver siguen siendo solo de Arch (ahora se
       ocultan fuera de Arch); falta su equivalente. Las órdenes nuevas de `hf-updates` para dnf, apt, zypper y xbps
       están sin probar en esas distros.
-- [ ] **Claves sin uso** en `defaults/settings.json`: `widgetsOnDesktop`, `dictation`, `floatWorkspace`, `estilo`,
-      `syncMethod`. Y claves usadas sin valor por defecto: `dimInactive`, `workspaceAnim`, `dragSnap`,
-      `floatRemember`, `lazyModules`, `startSplash`.
-- [ ] `hf-apps`: comprobar la suma (sha256) de AppImage y paquetes Flatpak bajados de GitHub.
-- [ ] `hf-fileact`: PDF a PNG pisa archivos con el mismo nombre; el OCR de un PDF grande llena `/tmp`.
-- [ ] `hf-theme`: un tema llamado «Rosa claro» choca con la variante clara de «Rosa».
-- [ ] `hf-shell`: una carpeta del proyecto con espacios o paréntesis impide arrancar el shell.
-- [ ] Eventos diarios que empezaron hace más de 8 años no salen en la agenda (tope de 3000 repeticiones).
-- [ ] El pomodoro cuenta tics y no reloj: una suspensión lo retrasa.
 
 Añadidos sugeridos (sin empezar):
 
-- [ ] **Deshacer** al borrar una conversación del asistente (tareas y avisos ya lo tienen, 0.9.25).
-- [ ] **Reanudar descargas** al iniciar sesión.
 - [ ] **Un solo motor de paquetes** (`hf-pkg`) para actualizaciones, VPN, máquinas virtuales y apps, en vez de
       cuatro detecciones de distro distintas.
-- [ ] `dev/lint.sh`: comprobar que cada programa que usa el código está en `install/packages.tsv` y que cada clave
-      de ajustes tiene valor por defecto.
 
 ## Ideas propuestas (sin empezar)
 

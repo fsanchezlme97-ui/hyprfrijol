@@ -127,18 +127,28 @@ def do_ocr(files):
     langs, parts = ocr_langs(), []
     for f in files:
         f = pathlib.Path(f).resolve()
-        imgs = [f]
-        tmp = None
-        if kind(f) == "pdf":
-            tmp = pathlib.Path(tempfile.mkdtemp(prefix="hf-ocr-"))
-            run(["pdftoppm", "-r", "300", "-png", str(f), str(tmp / "p")])
-            imgs = sorted(tmp.glob("p*.png")) if not PRINT else [tmp / "p-1.png"]
-        for i in imgs:
+        if kind(f) != "pdf":
             if PRINT:
-                run(["tesseract", str(i), "-", "-l", langs]); continue
-            r = subprocess.run(["tesseract", str(i), "-", "-l", langs], capture_output=True, text=True, timeout=180)
-            parts.append(r.stdout.strip())
-        if tmp and not PRINT: shutil.rmtree(tmp, ignore_errors=True)
+                run(["tesseract", str(f), "-", "-l", langs]); continue
+            r = subprocess.run(["tesseract", str(f), "-", "-l", langs], capture_output=True, text=True, timeout=180)
+            parts.append(r.stdout.strip()); continue
+        # PDF: una página cada vez en ~/.cache (un PDF grande a 300 ppp no cabe en /tmp, que suele ser RAM)
+        if PRINT:
+            run(["pdftoppm", "-r", "300", "-png", "-f", "N", "-l", "N", "-singlefile", str(f), "~/.cache/…/p"])
+            run(["tesseract", "p.png", "-", "-l", langs]); continue
+        CACHE.mkdir(parents=True, exist_ok=True)
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="hf-ocr-", dir=CACHE))
+        try:
+            for n in range(1, 5000):
+                ok = subprocess.run(["pdftoppm", "-r", "300", "-png", "-f", str(n), "-l", str(n), "-singlefile", str(f), str(tmp / "p")],
+                                    capture_output=True, timeout=120).returncode == 0
+                if not ok or not (tmp / "p.png").exists():
+                    break                                    # pasada la última página
+                r = subprocess.run(["tesseract", str(tmp / "p.png"), "-", "-l", langs], capture_output=True, text=True, timeout=180)
+                parts.append(r.stdout.strip())
+                (tmp / "p.png").unlink(missing_ok=True)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
     text = "\n\n".join(p for p in parts if p)
     if PRINT:
         print("wl-copy  # ← el texto"); notify("Texto copiado", "…"); return 0
@@ -147,6 +157,10 @@ def do_ocr(files):
     subprocess.run(["wl-copy"], input=text, text=True)
     notify(f"Texto copiado ({len(text)} caracteres)", text[:200] + ("…" if len(text) > 200 else ""), "edit-paste")
     return 0
+
+
+def glob_escape(s):
+    return "".join(f"[{c}]" if c in "*?[" else c for c in s)
 
 
 def magick():
@@ -159,7 +173,10 @@ def convert_cmd(src, fmt):
         if fmt == "jpg": return magick() + [f"{src}[0]" if pathlib.Path(src).suffix.lower() == ".gif" else str(src), "-background", "white", "-flatten", "-quality", "92", str(out)], out
         return magick() + [str(src), str(out)], out
     if k == "pdf" and fmt == "png":
-        out = pathlib.Path(src).with_suffix("")
+        src, i = pathlib.Path(src), 1
+        out = src.with_suffix("")
+        while list(out.parent.glob(glob_escape(out.name) + "-*.png")):   # no pisar las páginas de otra conversión
+            out = src.with_name(f"{src.stem} ({i})"); i += 1
         return ["pdftoppm", "-r", "150", "-png", str(src), str(out)], pathlib.Path(str(out) + "-1.png")
     ff = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-i", str(src)]
     if fmt == "mp4": return ff + ["-c:v", "libx264", "-crf", "23", "-preset", "medium", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", str(out)], out

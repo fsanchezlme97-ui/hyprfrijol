@@ -169,7 +169,7 @@ orca	optional	orca	orca	orca	orca	orca	lector de pantalla	accesibilidad	orca
 # — Ajustes › Dictado
 typing	recommended	wtype	wtype	wtype	wtype	wtype	escribir emojis / dictado en la ventana con foco	dictado	wtype
 alsa	recommended	alsa-utils	alsa-utils	alsa-utils	alsa-utils	alsa-utils	grabar el micrófono con arecord (si no hay pw-record)	dictado	arecord
-pw-tools	recommended	pipewire	pipewire-utils	pipewire-tools	pipewire-bin	pipewire	pw-record y pw-dump: dictado y «micrófono en uso»	dictado	pw-record,pw-dump
+pw-tools	recommended	pipewire	pipewire-utils	pipewire-tools	pipewire-bin	pipewire	pw-record y pw-dump: dictado y «micrófono en uso»	dictado	pw-record,pw-dump,pw-play
 ydotool	recommended	ydotool	ydotool	ydotool	ydotool	-	escribir en apps XWayland y clics simulados (si wtype no basta)	dictado	ydotool
 whisper	optional	whisper-cpp	whisper-cpp	-	whisper.cpp,whisper.cpp-tools	-	motor de dictado local whisper.cpp (whisper-server queda residente; modelos: hf-dictate manage, de huggingface.co/ggerganov/whisper.cpp)	dictado	whisper-cli,whisper-server
 whisper-gpu	optional	ggml-vulkan	-	-	libggml0-backend-vulkan	-	whisper.cpp en la GPU con Vulkan (AMD/Intel/NVIDIA; dictado con «small» o «turbo» al momento)	dictado	
@@ -195,7 +195,7 @@ calculator	optional	libqalculate	qalculate	qalculate	qalc	libqalculate	calculado
 # — Archivos y PDF (Nautilus, Firmar)
 pymupdf	recommended	python-pymupdf	python3-PyMuPDF	python313-PyMuPDF	python3-pymupdf	python3-PyMuPDF	Firmar documentos PDF (hf-sign); sin él usa Poppler y se pierden enlaces y formularios	archivos	
 pygobject	recommended	python-gobject	python3-gobject	python313-gobject	python3-gi	python3-gobject	selector de archivos, enviar al móvil y avisos del asistente (hf-pickfile, hf-phone, hf-ai)	archivos	
-pdftools	recommended	poppler	poppler-utils	poppler-tools	poppler-utils	poppler-utils	OCR y conversión de PDF desde Nautilus (pdftoppm, hf-fileact)	archivos	pdftoppm,pdfinfo
+pdftools	recommended	poppler	poppler-utils	poppler-tools	poppler-utils	poppler-utils	OCR y conversión de PDF desde Nautilus (pdftoppm, hf-fileact)	archivos	pdftoppm,pdfinfo,pdftotext
 rembg	optional	aur:python-rembg	-	-	-	-	quitar el fondo de firmas e imágenes (en otras distros: pipx install rembg)	archivos	rembg
 # — Descargas
 ytdlp	recommended	yt-dlp	yt-dlp	yt-dlp	yt-dlp	yt-dlp	descargas de vídeo y audio (hf-download)	descargas	yt-dlp

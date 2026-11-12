@@ -26,7 +26,7 @@ Orden de fuentes: paquete nativo → AUR (Arch, con paru/yay) → repositorio de
   Flatpak (Flathub o el remoto oficial de la app) → AppImage / .flatpak de GitHub → compilar. «prefer» en el
   catálogo lo cambia para una app. Lo de sistema solo se ejecuta con sudo/pkexec cuando tú lo pides.
 """
-import json, os, pathlib, re, shlex, shutil, subprocess, sys, urllib.request
+import hashlib, json, os, pathlib, re, shlex, shutil, subprocess, sys, urllib.request
 for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
     if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
@@ -417,16 +417,51 @@ def gh_asset(spec):
     rx = re.compile(spec["asset"])
     for rel in rels:
         if rel.get("draft") or (rel.get("prerelease") and not spec.get("pre")): continue
-        for a in rel.get("assets", []):
-            if rx.search(a["name"]): return rel["tag_name"], a["name"], a["browser_download_url"]
+        assets = rel.get("assets", [])
+        for a in assets:
+            if rx.search(a["name"]): return rel["tag_name"], a["name"], a["browser_download_url"], gh_sha256(a, assets)
     raise RuntimeError("no encuentro el archivo en las releases de " + spec["repo"])
 
 
-def download(url, dst):
+def gh_sha256(asset, assets):
+    """sha256 del archivo: el «digest» que da GitHub o, si no, un .sha256 / SHA256SUMS de la misma release ("" si nada)."""
+    d = str(asset.get("digest") or "")
+    if d.startswith("sha256:"):
+        return d[7:].lower()
+    name = asset["name"]
+    for s in assets:
+        n = s["name"].lower()
+        if n in (name.lower() + ".sha256", name.lower() + ".sha256sum") or re.fullmatch(r"(sha256sums?|checksums?)(\.txt)?|.*sha256.*\.txt", n):
+            try:
+                req = urllib.request.Request(s["browser_download_url"], headers={"User-Agent": "hyprfrijol"})
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    text = r.read(200_000).decode("utf-8", "replace")
+            except Exception:
+                continue
+            for line in text.splitlines():
+                m = re.match(r"\s*([0-9a-fA-F]{64})\b(?:\s+\*?(.+))?", line)
+                if m and (not m.group(2) or m.group(2).strip().split("/")[-1] == name):
+                    return m.group(1).lower()
+    return ""
+
+
+def download(url, dst, sha256=""):
+    """curl a un .part; si la release publica la suma y no coincide, se borra y falla (no se instala nada)."""
     dst.parent.mkdir(parents=True, exist_ok=True)
     tmp = dst.with_suffix(dst.suffix + ".part")
     r = subprocess.run(["curl", "-fL", "--progress-bar", "-o", str(tmp), url])
     if r.returncode != 0: tmp.unlink(missing_ok=True); raise RuntimeError("la descarga falló")
+    if sha256:
+        h = hashlib.sha256()
+        with open(tmp, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        if h.hexdigest() != sha256:
+            tmp.unlink(missing_ok=True)
+            raise RuntimeError("la suma sha256 no coincide con la publicada: descarga corrupta o alterada, no se instala")
+        say("  suma sha256 comprobada")
+    else:
+        say("  (la release no publica suma sha256: no se pudo comprobar)")
     tmp.rename(dst)
 
 
@@ -446,10 +481,10 @@ def do_appimage(app_id):
         print(f"  [dry-run] curl -fL -o {appimage_path(a)} <la última release de github.com/{sp['repo']} que case con {sp['asset']}>")
         print(f"  [dry-run] chmod +x {appimage_path(a)} && lanzador {LAUNCH}/hf-app-{a['id']}.desktop"); return True
     try:
-        tag, name, url = gh_asset(a["src"]["appimage"])
+        tag, name, url, sha = gh_asset(a["src"]["appimage"])
         say(f"  {name} ({tag})")
         dst = appimage_path(a)
-        download(url, dst)
+        download(url, dst, sha)
         dst.chmod(0o755)
         if a.get("bin"):
             b = HOME / ".local/bin" / a["bin"]
@@ -470,10 +505,10 @@ def do_bundle(app_id):
         print(f"  [dry-run] curl -fL -o ~/.cache/hyprfrijol/apps/<archivo> <release de github.com/{sp['repo']} que case con {sp['asset']}>")
         print("  [dry-run] flatpak install --user -y --bundle ~/.cache/hyprfrijol/apps/<archivo>"); return True
     try:
-        tag, name, url = gh_asset(a["src"]["flatpakBundle"])
+        tag, name, url, sha = gh_asset(a["src"]["flatpakBundle"])
         say(f"  {name} ({tag})")
         dst = HOME / ".cache/hyprfrijol/apps" / name
-        download(url, dst)
+        download(url, dst, sha)
         r = subprocess.run(["flatpak", "install", "--user", "-y", "--bundle", str(dst)])
         return r.returncode == 0
     except Exception as e:

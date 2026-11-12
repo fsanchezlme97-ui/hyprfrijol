@@ -3,6 +3,31 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.27] — 2026-11-11
+
+### Añadido
+- **Deshacer al borrar una conversación del asistente** (8 s, «Deshacer» bajo la lista de conversaciones).
+- **Las descargas a medias se reanudan al iniciar sesión** (Ajustes › Almacenamiento › «Reanudar al iniciar
+  sesión», `downloadsResume`).
+- **El buscador de Ajustes encuentra también las tarjetas propias**: Wallhaven, Calendarios (.ics), Mis temas,
+  Nombres de los espacios, VPN de empresa, Diagnóstico, Modo seguro, Actualizaciones de HyprFrijol… y «Restaurar
+  valores por defecto» de esas secciones restaura también sus claves.
+- `hf-apps` comprueba la suma sha256 de las AppImage y paquetes Flatpak que baja de GitHub (la que publica GitHub o
+  el SHA256SUMS de la release); si no coincide, no instala nada.
+- `dev/lint.sh` comprueba que cada clave de ajustes tiene valor por defecto, que cada programa que usa el código está
+  en `install/packages.tsv` (`dev/coherencia.py`) y que el índice de búsqueda de Ajustes está al día.
+
+### Corregido
+- El pomodoro y el temporizador cuentan por reloj: tras suspender el equipo siguen donde toca.
+- Los eventos diarios o semanales que empezaron hace muchos años vuelven a salir en la agenda.
+- Convertir un PDF a PNG ya no pisa las páginas de otra conversión; el OCR de un PDF va página a página en
+  `~/.cache` (antes un PDF grande llenaba `/tmp`).
+- Un tema propio llamado «Rosa claro» ya no pisa la variante clara de «Rosa».
+- El shell arranca aunque la carpeta del proyecto tenga espacios o paréntesis (`hf-shell` y las órdenes de
+  Hyprland escapan la ruta).
+- Valores por defecto que faltaban (`dimInactive`, `workspaceAnim`, `dragSnap`, `floatRemember`, `lazyModules`,
+  `startSplash`, `timerMin`…); fuera las claves sin uso `widgetsOnDesktop` y `dictation`.
+
 ## [0.9.26] — 2026-11-11
 
 ### Añadido

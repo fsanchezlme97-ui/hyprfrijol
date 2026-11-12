@@ -3,6 +3,7 @@
 #   · sintaxis: bash -n (scripts bash), py_compile (python), luac -p (config de Hyprland en Lua)
 #   · shellcheck (avisos y errores) y pyflakes, si están instalados; si no, lo dice y sigue
 #   · JSON del repo (jq)
+#   · dev/coherencia.py: claves de ajustes con valor por defecto y programas en install/packages.tsv
 # Sale con 0 si todo bien, 1 si algo falla. Complemento: dev/check.sh (abre todas las vistas en una sesión anidada).
 #
 # Para tener shellcheck y pyflakes sin tocar el sistema:
@@ -34,6 +35,9 @@ if command -v luac >/dev/null; then
 else note "sin luac: no reviso los .lua"; fi
 n=0; while IFS= read -r f; do jq -e . "$f" >/dev/null 2>&1 || { bad "JSON roto: $f"; n=1; }; done < <(git ls-files '*.json')
 [ "$n" = 0 ] && ok "JSON del repo"
+if out="$(python3 dev/coherencia.py 2>&1)"; then ok "ajustes con valor por defecto y dependencias en packages.tsv"
+else bad "coherencia:"; printf '%s\n' "$out" | sed 's|^|  |'; fi
+python3 dev/gen-settings-index.py --check >/dev/null && ok "índice de búsqueda de Ajustes al día" || bad "índice de Ajustes desactualizado: dev/gen-settings-index.py"
 
 # ── shellcheck ──
 # Excluidos: SC2034 (variables que leen otros scripts con source), SC2155 (local x="$(…)": estilo), SC2088 (~ en

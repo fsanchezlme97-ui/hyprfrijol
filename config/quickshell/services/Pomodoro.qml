@@ -70,7 +70,11 @@ Singleton {
     // Pasa al siguiente bloque sin avisar (un foco saltado no cuenta como ronda)
     function skip(): void { if (isTimer) { running = false; load(mode); } else next(false); }
 
-    onRunningChanged: if (running) fresh = false
+    // Cuenta por reloj, no por tics: tras suspender el equipo, el bloque sigue donde toca (endsAt = hora del final)
+    property real endsAt: 0
+    property bool _tick: false
+    onRunningChanged: if (running) { fresh = false; endsAt = Date.now() + left * 1000; }
+    onLeftChanged: if (running && !_tick) endsAt = Date.now() + left * 1000
     onFocusMinChanged: if (fresh && !running && mode === "foco") load(mode)
     onBreakMinChanged: if (fresh && !running && mode === "descanso") load(mode)
     onLongMinChanged: if (fresh && !running && mode === "largo") load(mode)
@@ -123,7 +127,8 @@ Singleton {
     Timer {
         interval: 1000; repeat: true; running: root.running
         onTriggered: {
-            if (root.left > 1) { root.left--; return; }
+            const l = Math.ceil((root.endsAt - Date.now()) / 1000);
+            if (l > 0) { root._tick = true; root.left = Math.min(root.total, l); root._tick = false; return; }
             root.next(true);
         }
     }

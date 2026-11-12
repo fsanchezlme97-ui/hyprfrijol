@@ -232,6 +232,16 @@ Singleton {
         const out = [];
         let n = 0;
         const cur = new Date(start);
+        // Diarios o semanales que empezaron hace años: se salta hasta justo antes de la ventana (si no, el tope de
+        // 3000 vueltas se acababa antes de llegar a hoy). Con COUNT y BYDAY no se salta: la primera semana va incompleta.
+        const stepDays = freq === "DAILY" ? interval : freq === "WEEKLY" ? 7 * interval : 0;
+        if (stepDays && !(byday && r.COUNT)) {
+            const k = Math.floor((from - cur) / (stepDays * 86400000)) - 1;
+            if (k > 0) {
+                cur.setDate(cur.getDate() + k * stepDays);
+                if (!byday) n = Math.min(k, count);
+            }
+        }
         for (let guard = 0; guard < 3000 && n < count; guard++) {
             if (until && cur > until) break;
             if (cur > to) break;

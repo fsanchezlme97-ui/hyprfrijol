@@ -2,7 +2,7 @@
 // discos internos con su espacio (hf-devices list --all), qué pasa al conectar una (devicesAutomount,
 // devicesOpenOnPlug, devicesNotify), icono de la barra (devicesBarIcon), GNOME Discos, y las descargas
 // (scripts/hf-download): carpeta por tipo (downloadsVideoPath/AudioPath/ImagePath/FilePath; vacía = la de XDG),
-// formatos (downloadsVideoFormat, downloadsAudioFormat), a la vez (downloadsParallel), aviso (downloadsNotify),
+// formatos (downloadsVideoFormat, downloadsAudioFormat), a la vez (downloadsParallel), aviso (downloadsNotify), reanudar al iniciar sesión (downloadsResume),
 // historial (downloadsHistory) e indicador de la barra (downloadsBarIcon).
 import QtQuick
 import QtQuick.Layouts
@@ -243,7 +243,8 @@ RowLayout {
         Section {
             Layout.fillWidth: true
             title: "Avisos y privacidad"
-            SwRow { separator: false; label: "Avisar al terminar"; sub: "con «Abrir carpeta»"; key: "downloadsNotify"; def: true }
+            SwRow { label: "Avisar al terminar"; sub: "con «Abrir carpeta»"; key: "downloadsNotify"; def: true }
+            SwRow { separator: false; label: "Reanudar al iniciar sesión"; sub: "las que quedaron a medias al apagar o cerrar la sesión"; key: "downloadsResume"; def: true }
             SwRow { label: "Indicador en la barra"; sub: "número de descargas y progreso, solo mientras hay alguna"; key: "downloadsBarIcon"; def: true }
             SwRow { label: "Guardar el historial"; sub: "si lo apagas, las terminadas se quitan de la lista al acabar"; key: "downloadsHistory"; def: true }
             RowLayout {

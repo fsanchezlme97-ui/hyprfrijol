@@ -9,6 +9,8 @@
   hf-download list [--json]                 la cola
   hf-download pause|resume|cancel|retry|remove <id|all>
   hf-download clear                         quita las terminadas, canceladas y con error
+  hf-download boot                          al iniciar sesión: si quedaron descargas a medias, las reanuda
+                                            (Ajustes › Almacenamiento › «Reanudar al iniciar sesión», downloadsResume)
   hf-download open <id>                     abre la carpeta de destino
   hf-download detect URL                    qué herramienta y tipo usaría → {"tool", "type"}
   hf-download tools                         qué hay instalado (yt-dlp, gallery-dl, aria2c, ffmpeg)
@@ -680,6 +682,11 @@ def main(argv):
         out = control(cmd, rest[0] if rest else "all")
     elif cmd == "clear":
         out = clear()
+    elif cmd == "boot":
+        pend = [x for x in items() if x["status"] in ("queued", "running")]
+        if pend and settings().get("downloadsResume", True) is not False:
+            ensure_worker()
+        out = {"resumed": len(pend) if settings().get("downloadsResume", True) is not False else 0}
     elif cmd == "open":
         out = open_folder(rest[0] if rest else "")
     elif cmd == "detect":

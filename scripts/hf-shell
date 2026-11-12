@@ -14,7 +14,9 @@ ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
 SIG="${HYPRLAND_INSTANCE_SIGNATURE:-sin-hyprland}"
 RUN="${XDG_RUNTIME_DIR:-/tmp}/hf-shell-$SIG"
 LOCK="$RUN.lock"
-CMD="qs -p $ROOT/config/quickshell"
+CMD=(qs -p "$ROOT/config/quickshell")
+# para pgrep -xf (expresión regular): la carpeta puede llevar espacios, paréntesis o puntos
+CMD_RX="$(printf '%s' "qs -p $ROOT/config/quickshell" | sed 's/[][\.*^$+?(){}|]/\\&/g')"
 
 running() { ! flock -n "$LOCK" true 2>/dev/null; }
 # El socket queda como archivo tras cerrar una sesión anidada: hay que preguntar a Hyprland
@@ -28,12 +30,12 @@ command -v python3 >/dev/null && NOTHP=(python3 -Ic 'import ctypes,os,sys
 try: ctypes.CDLL(None).prctl(41, 1, 0, 0, 0)
 except Exception: pass
 os.execvp(sys.argv[1], sys.argv[1:])')
-start() { running || setsid -f flock -n -o "$LOCK" "${NOTHP[@]}" $CMD >/dev/null 2>&1; }
+start() { running || setsid -f flock -n -o "$LOCK" "${NOTHP[@]}" "${CMD[@]}" >/dev/null 2>&1; }
 
 # Solo los Quickshell de ESTA sesión (no los de una sesión de prueba anidada con el mismo repo)
 mine() {
   local p
-  for p in $(pgrep -xf "$CMD"); do
+  for p in $(pgrep -xf "$CMD_RX"); do
     tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null | grep -qx "HYPRLAND_INSTANCE_SIGNATURE=$SIG" && echo "$p"
   done
 }

@@ -5,7 +5,7 @@ local nested = (os.getenv("HF_NESTED") or os.getenv("HL_NESTED")) ~= nil   -- hf
 if nested then hl.config({ ecosystem = { no_update_news = true, no_donation_nag = true } }) end
 
 hl.on("hyprland.start", function()
-    hl.exec_cmd(HF.root .. "/scripts/hf-shell")                -- Quickshell (fondo, barra, avisos, polkit) + vigilante que lo reabre si se cae
+    hl.exec_cmd(HF.scripts .. "/hf-shell")                -- Quickshell (fondo, barra, avisos, polkit) + vigilante que lo reabre si se cae
     hl.exec_cmd("hf-wallpaper restore")
     if HF.cursor then hl.exec_cmd("hyprctl setcursor " .. HF.cursor .. " 24") end
 
@@ -29,6 +29,8 @@ hl.on("hyprland.start", function()
         -- Apps de inicio XDG (~/.config/autostart, /etc/xdg/autostart): Hyprland no las lanza solo.
         -- Ajustes › Apps predeterminadas e inicio (autostartApps); hf-defaults evita las que chocan con el shell.
         hl.exec_cmd("sh -c 'sleep 3; [ \"$(jq -r .autostartApps " .. HF.user .. "/settings.json 2>/dev/null)\" = false ] || exec " .. HF.scripts .. "/hf-defaults autostart-run'")
+        -- Descargas que quedaron a medias al cerrar la sesión (downloadsResume): se reanudan
+        hl.exec_cmd("sh -c 'sleep 8; exec " .. HF.scripts .. "/hf-download boot'")
         -- Efectos de audio si los usas
         hl.exec_cmd("sh -c 'command -v easyeffects >/dev/null && exec easyeffects --hide-window --service-mode'")
         -- Icono de Tailscale en la bandeja: tailscaled no lo pone; espera a que la bandeja del shell esté lista

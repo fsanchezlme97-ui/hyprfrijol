@@ -71,7 +71,7 @@ b(mod .. " + SHIFT + W", hl.dsp.global("hf:fondos"),         { description = "Fo
 b("CTRL + " .. mod .. " + T", hl.dsp.global("hf:fondos"))
 b(mod .. " + CTRL + W",  exec("hf-wallpaper next"),          { description = "Siguiente fondo" })
 b("CTRL + " .. mod .. " + SHIFT + D", exec(S .. "/hf-apply toggle-mode"), { description = "Claro / oscuro" })
-b("CTRL + " .. mod .. " + R", exec(HF.root .. "/scripts/hf-shell restart"),
+b("CTRL + " .. mod .. " + R", exec(S .. "/hf-shell restart"),
                                                               { description = "Reiniciar el shell" })
 
 -- ── Captura y utilidades ─────────────────────────────────────────────────────

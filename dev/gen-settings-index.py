@@ -20,6 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SECT = ROOT / "config/quickshell/modules/settings/sections"
+UI = ROOT / "config/quickshell/modules/settings/ui"   # tarjetas propias (Wallhaven, Mis temas…): cuentan en la sección que las usa
 OUT = ROOT / "config/quickshell/modules/settings/search-index.json"
 DEFAULTS = ROOT / "config/defaults/settings.json"
 
@@ -114,21 +115,32 @@ def written_keys(src: str, known: set) -> list:
     return sorted(ks)
 
 
-def index_file(path: Path, known: set):
+def index_file(path: Path, known: set, host: str = "", group: str = "", visited=None):
+    """Filas de una sección; las de los componentes de ui/ que use van con ella (host) y bajo su tarjeta (group)."""
+    visited = visited if visited is not None else set()
+    visited.add(path.stem)
+    host = host or path.stem
     src = strip_comments(path.read_text())
     bl = blocks(src)
     rows, seen = [], set()
+    keys = set(written_keys(src, known))
+    for typ, a, b, parents in bl:
+        if b is None or typ in visited or typ in ROW_TYPES or not (UI / f"{typ}.qml").exists():
+            continue
+        card = next((prop(own_text(src, bl[p][1], bl[p][2]), "title") for p in reversed(parents) if bl[p][0] == "Section" and bl[p][2] is not None), None) or group
+        r, k = index_file(UI / f"{typ}.qml", known, host, card, visited)
+        rows += r; keys |= set(k)
     for typ, a, b, parents in bl:
         if b is None:
             continue
         txt = own_text(src, a, b)
         insec = any(bl[p][0] == "Section" for p in parents)
-        card = next((prop(own_text(src, bl[p][1], bl[p][2]), "title") for p in reversed(parents) if bl[p][0] == "Section"), None) or ""
+        card = next((prop(own_text(src, bl[p][1], bl[p][2]), "title") for p in reversed(parents) if bl[p][0] == "Section" and bl[p][2] is not None), None) or ""
         if typ in ROW_TYPES and "Se configura en" in src[a:b]:
             continue    # fila que remite a la sección dueña del ajuste: no es un resultado
         if typ in ROW_TYPES:
             label = prop(txt, "title" if typ in ("Section", "Card") else "label")
-            if not label:
+            if not label or len(label) < 3:     # «De», «A»: no sirven para buscar
                 continue
             sub = prop(txt, "sub") or prop(txt, "hint") or ""
             kind = ROW_TYPES[typ]
@@ -144,11 +156,17 @@ def index_file(path: Path, known: set):
         if k in seen:
             continue
         seen.add(k)
-        r = {"f": path.stem, "l": label, "t": kind}
+        card = card or (group if group != label else "")
+        r = {"f": host, "l": label, "t": kind}
         if sub: r["s"] = sub
         if card and card != label: r["g"] = card
         rows.append(r)
-    return rows, written_keys(src, known)
+    out, seen = [], set()      # sin repetidos (una tarjeta de ui/ usada dos veces en la misma sección)
+    for r in rows:
+        k = (r["l"], r.get("g", ""), r["f"])
+        if k not in seen:
+            seen.add(k); out.append(r)
+    return out, sorted(keys)
 
 
 def build() -> str:

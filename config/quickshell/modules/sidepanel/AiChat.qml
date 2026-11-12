@@ -493,11 +493,30 @@ print(json.dumps(out[:300]))
             }
         }
     }
+    // Borrar con deshacer: el archivo pasa a «.borrado» y se elimina del todo a los 8 s (o al borrar otra)
+    property var histDeleted: null
     function deleteHistory(h) {
-        Quickshell.execDetached(["rm", "-f", h.file]);
+        purgeDeleted();
+        Quickshell.execDetached(["mv", "-f", h.file, h.file + ".borrado"]);
+        histDeleted = h;
+        histUndoT.restart();
         histList = histList.filter(x => x.file !== h.file);
         if (h.file === historyFile) clear();
     }
+    function undoDeleteHistory() {
+        const h = histDeleted;
+        if (!h) return;
+        histUndoT.stop(); histDeleted = null;
+        Quickshell.execDetached(["mv", "-f", h.file + ".borrado", h.file]);
+        histList = histList.concat([h]).sort((a, b) => b.t - a.t);
+    }
+    function purgeDeleted() {
+        if (histDeleted) Quickshell.execDetached(["rm", "-f", histDeleted.file + ".borrado"]);
+        histDeleted = null; histUndoT.stop();
+    }
+    Timer { id: histUndoT; interval: 8000; onTriggered: root.purgeDeleted() }
+    // lo que quedó a medio borrar si el shell se cerró antes de los 8 s
+    Component.onCompleted: Quickshell.execDetached(["sh", "-c", 'rm -f "$1"/*.json.borrado', "sh", root.historyDir])
     function histWhen(t) {
         const d = new Date(t * 1000), now = new Date();
         const days = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
@@ -1309,6 +1328,13 @@ print(json.dumps(out[:300]))
                         onClicked: root.deleteHistory(hrow.modelData)
                     }
                 }
+            }
+            RowLayout {
+                visible: root.histDeleted !== null
+                Layout.fillWidth: true
+                Layout.leftMargin: 16; Layout.rightMargin: 12; Layout.bottomMargin: 6
+                Txt { Layout.fillWidth: true; text: "Conversación borrada"; size: 12; muted: true; elide: Text.ElideRight }
+                SmallBtn { text: "Deshacer"; onClicked: root.undoDeleteHistory() }
             }
         }
 

@@ -60,7 +60,7 @@ hl.env("XDG_DATA_DIRS", pathlist(home .. "/.local/share/flatpak/exports/share:/v
 -- Para los scripts y Quickshell
 hl.env("HF_ROOT", HF.root)
 hl.env("HF_SESSION", "1")
-hl.env("PATH", pathlist(HF.scripts, os.getenv("PATH")))
+hl.env("PATH", pathlist(HF.scriptsDir, os.getenv("PATH")))
 
 -- Programas (cámbialos en ~/.config/hyprfrijol/local.lua)
 -- La primera instalada de cada lista (hf-launch), como en illogical-impulse.

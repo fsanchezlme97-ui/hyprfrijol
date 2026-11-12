@@ -219,8 +219,13 @@ def store(theme):
     name = str(theme.get("name") or "Mi tema").strip()[:40]
     t = finish(name, str(theme.get("origen") or "hex"), theme.get("dark") or theme.get("oscuro") or {},
                theme.get("light") or theme.get("claro") or {})
-    key = t["key"]
+    key = base = t["key"]
     pals = load(USER_PALETTES, {}) or {}
+    n = 2   # «Rosa claro» no puede pisar la variante clara de «Rosa» (ni al revés): se numera la clave
+    while (isinstance(pals.get(key), dict) and (pals[key].get("variant") or pals[key].get("group") != "propio")) or \
+            (isinstance(pals.get(key + "-claro"), dict) and pals[key + "-claro"].get("pair") != key):
+        key = f"{base}-{n}"; n += 1
+    t["key"] = key
     old = str(theme.get("replace") or "")
     if old and old != key and isinstance(pals.get(old), dict) and pals[old].get("group") == "propio" and not pals[old].get("variant"):
         for k in (old, pals[old].get("pair")):
