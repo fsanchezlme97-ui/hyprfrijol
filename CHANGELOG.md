@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.38] — 2026-11-12
+
+### Cambiado
+- AnyDesk sin nadie delante (`remoteUnattended`): ahora es opcional (desactivado por defecto), aprueba una sola
+  vez por conexión entrante y nunca a una app aislada (Flatpak/Snap, que el portal identifica por su id), para que
+  otra app que pida controlar el equipo justo después no aproveche el permiso.
+
 ## [0.9.37] — 2026-11-12
 
 ### Añadido

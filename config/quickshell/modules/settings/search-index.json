@@ -428,7 +428,7 @@
   {"f": "Remoto", "l": "Pantalla", "t": "row", "g": "Entrar desde Windows (RDP)"},
   {"f": "Remoto", "l": "Entrar con AnyDesk o RustDesk", "t": "card"},
   {"f": "Remoto", "l": "Portal de control remoto", "t": "row", "g": "Entrar con AnyDesk o RustDesk"},
-  {"f": "Remoto", "l": "Permitir sin que nadie acepte en pantalla", "t": "row", "s": "cuando AnyDesk acaba de aceptar una conexión entrante (con su contraseña de acceso desatendido); comparte la pantalla elegida para RDP", "g": "Entrar con AnyDesk o RustDesk"},
+  {"f": "Remoto", "l": "Permitir sin que nadie acepte en pantalla", "t": "row", "s": "una vez por conexión, justo cuando AnyDesk acepta una entrante con su contraseña de acceso desatendido; nunca a apps aisladas (Flatpak). Comparte la pantalla elegida para RDP", "g": "Entrar con AnyDesk o RustDesk"},
   {"f": "Sistema", "l": "Diagnóstico", "t": "card"},
   {"f": "Sistema", "l": "Actualizaciones de HyprFrijol", "t": "card"},
   {"f": "Sistema", "l": "Buscar solo", "t": "row", "g": "Actualizaciones de HyprFrijol"},

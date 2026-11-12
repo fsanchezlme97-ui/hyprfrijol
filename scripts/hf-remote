@@ -25,8 +25,9 @@
 # (xdph 1.5.0 + la PR hyprwm/xdg-desktop-portal-hyprland#448, PKGBUILD en install/pkgbuilds/). Ese portal pregunta
 # en pantalla antes de dejar controlar el equipo, y AnyDesk no guarda el permiso: nadie lo vería desde fuera.
 # «anydesk setup» pone este script delante de hyprland-share-picker (PATH del servicio de xdph) y, con
-# remoteUnattended (por defecto activado), aprueba solo cuando AnyDesk acaba de aceptar una conexión entrante (su
-# registro dice «Connecting to current session» hace menos de 90 s): sin pantalla que elegir, comparte la de rdpOutput.
+# remoteUnattended (desactivado por defecto), aprueba solo cuando AnyDesk acaba de aceptar una conexión entrante (su
+# registro dice «Connecting to current session» hace menos de 90 s), una vez por conexión y nunca a una app aislada
+# (Flatpak/Snap: llegan con su id); sin pantalla que elegir, comparte la de rdpOutput.
 # Cualquier otra petición (compartir pantalla en Meet, otra app que quiera controlar) sigue preguntando como siempre.
 # AnyDesk sigue pidiendo su propia contraseña de acceso desatendido (o que alguien acepte en pantalla).
 #
@@ -374,7 +375,7 @@ PICKBIN="${XDG_DATA_HOME:-$HOME/.local/share}/hyprfrijol/xdph-bin"
 DROPIN="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/xdg-desktop-portal-hyprland.service.d/hyprfrijol-remote.conf"
 REALPICK="${HF_REAL_PICKER:-/usr/bin/hyprland-share-picker}"
 portal_rd() { busctl --user get-property org.freedesktop.portal.Desktop /org/freedesktop/portal/desktop org.freedesktop.portal.RemoteDesktop AvailableDeviceTypes >/dev/null 2>&1; }
-anydesk_incoming() {   # ¿AnyDesk aceptó una conexión entrante hace menos de 90 s? (su registro va en UTC)
+anydesk_incoming() {   # ¿AnyDesk aceptó una conexión entrante hace menos de 90 s? → imprime su hora (su registro va en UTC)
   local f line t now
   for f in "$HOME/.anydesk/anydesk.trace" /var/log/anydesk.trace; do
     [ -r "$f" ] || continue
@@ -382,15 +383,25 @@ anydesk_incoming() {   # ¿AnyDesk aceptó una conexión entrante hace menos de 
     t="$(awk '{print $2" "$3}' <<<"$line" | cut -d. -f1)"
     [ -n "$t" ] && t="$(date -u -d "$t" +%s 2>/dev/null)" || continue
     now="$(date +%s)"
-    [ $((now - t)) -ge 0 ] && [ $((now - t)) -le "${HF_REMOTE_WINDOW:-90}" ] && return 0
+    [ $((now - t)) -ge 0 ] && [ $((now - t)) -le "${HF_REMOTE_WINDOW:-90}" ] && { echo "$t"; return 0; }
   done
   return 1
 }
-auto_ok() { [ "$(setting remoteUnattended)" != false ] && anydesk_incoming; }
+# auto_ok <consent|source>: una sola aprobación de cada tipo por conexión entrante (la hora de la conexión se apunta
+# en $XDG_RUNTIME_DIR). Así una app que pida control justo después no se cuela con el permiso de AnyDesk.
+auto_ok() {
+  local t used="${XDG_RUNTIME_DIR:-/tmp}/hf-remote-anydesk.$1"
+  [ "$(setting remoteUnattended)" = true ] || return 1
+  t="$(anydesk_incoming)" || return 1
+  [ "$(cat "$used" 2>/dev/null)" = "$t" ] && return 1
+  printf '%s\n' "$t" > "$used"
+}
+# Las apps aisladas (Flatpak, Snap) siempre llegan con su id; AnyDesk instalado en el sistema llega sin id
+host_or_remote_app() { [[ -z "${XDPH_REMOTE_DESKTOP_APP_ID:-}" || "${XDPH_REMOTE_DESKTOP_APP_ID,,}" =~ ^(com\.anydesk\.|com\.rustdesk\.|anydesk|rustdesk) ]]; }
 picker() {
   local out
   if [ "${1:-}" = --remote-desktop ]; then
-    if auto_ok; then
+    if host_or_remote_app && auto_ok consent; then
       logger -t hf-remote "AnyDesk: control remoto permitido sin preguntar (remoteUnattended)" 2>/dev/null
       notify "AnyDesk está controlando este equipo" "Conexión entrante aceptada. Se desactiva en Ajustes › Escritorio remoto."
       printf '[AUTHORIZED]'; exit 0
@@ -398,7 +409,7 @@ picker() {
     exec "$REALPICK" "$@"
   fi
   # Sesión de control remoto: xdph no ofrece ventanas ni espacios, solo pantallas
-  if [ -z "${XDPH_WINDOW_SHARING_LIST:-}" ] && [ -z "${XDPH_WORKSPACE_SHARING_LIST_V3:-}" ] && auto_ok; then
+  if [ -z "${XDPH_WINDOW_SHARING_LIST:-}" ] && [ -z "${XDPH_WORKSPACE_SHARING_LIST_V3:-}" ] && auto_ok source; then
     out="$(rdp_output)"
     [ -n "$out" ] || out="$(hyprctl monitors -j 2>/dev/null | jq -r 'max_by(.width * .height) | .name // empty')"
     [ -n "$out" ] && { logger -t hf-remote "AnyDesk: compartiendo $out" 2>/dev/null; printf '[SELECTION]/screen:%s\n' "$out"; exit 0; }
@@ -413,7 +424,7 @@ anydesk() {
         --argjson portal "$(portal_rd && echo true || echo false)" \
         --argjson pkg "$(pacman -Q xdg-desktop-portal-hyprland-rd >/dev/null 2>&1 && echo true || echo false)" \
         --argjson setup "$([ -f "$DROPIN" ] && [ -x "$PICKBIN/hyprland-share-picker" ] && echo true || echo false)" \
-        --argjson unattended "$([ "$(setting remoteUnattended)" != false ] && echo true || echo false)" \
+        --argjson unattended "$([ "$(setting remoteUnattended)" = true ] && echo true || echo false)" \
         --argjson running "$(pgrep -x anydesk >/dev/null && echo true || echo false)" \
         '{installed:$installed,rustdesk:$rustdesk,portal:$portal,package:$pkg,setup:$setup,unattended:$unattended,running:$running}';;
     setup)   # idempotente: solo reinicia xdph si algo cambió

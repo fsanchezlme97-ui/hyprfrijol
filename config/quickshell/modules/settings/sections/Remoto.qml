@@ -519,8 +519,8 @@ ColumnLayout {
         }
         SwRow {
             label: "Permitir sin que nadie acepte en pantalla"
-            sub: "cuando AnyDesk acaba de aceptar una conexión entrante (con su contraseña de acceso desatendido); comparte la pantalla elegida para RDP"
-            key: "remoteUnattended"; def: true
+            sub: "una vez por conexión, justo cuando AnyDesk acepta una entrante con su contraseña de acceso desatendido; nunca a apps aisladas (Flatpak). Comparte la pantalla elegida para RDP"
+            key: "remoteUnattended"; def: false
         }
         Txt {
             Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5
