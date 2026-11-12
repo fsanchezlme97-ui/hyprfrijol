@@ -1,6 +1,7 @@
 // Superficie con los tokens del estilo Math. El desenfoque lo pone Hyprland (layer_rule blur sobre el espacio
 // de nombres "hf-…" de la ventana); aquí se dibuja todo lo demás. Según el material (S.material):
-//   sólido   Material 3: superficie tonal sólida, sin borde, elevación con sombra corta
+//   sólido   Material 3: superficie tonal sólida, sin borde; elevación con sombra en dos capas (una cercana y nítida,
+//            otra amplia y difusa) y un filo de luz de 1 px arriba en los paneles y popups
 //   cristal  (transparencia) la estructura de Material hecha de cristal: muy transparente y muy desenfocado, con un
 //            esmerilado más claro arriba, un resplandor suave del acento que se desliza despacio y un filo de luz muy
 //            tenue, más visible arriba y que se desvanece hacia abajo, sin contorno oscuro, como las ventanas de macOS
@@ -27,6 +28,17 @@ Item {
     readonly property real rr: Math.min(radius, width / 2, height / 2)
     readonly property bool glass: Theme.glassy && root.effects && root.width > 2 && root.height > 2
 
+    // Sombra cercana y nítida (solo sólido: en cristal se transparentaría como una franja)
+    RectangularShadow {
+        visible: root.shadow && !Theme.glassy && Theme.shadow.a > 0
+        anchors.fill: bgRect
+        radius: root.rr
+        offset.y: 1
+        blur: 3
+        spread: 0
+        color: Qt.alpha(Theme.shadow, Math.min(1, Theme.shadow.a * 0.8))
+    }
+    // Sombra amplia y difusa
     RectangularShadow {
         visible: root.shadow && (root.big ? Theme.shadowBig.a : Theme.shadow.a) > 0
         anchors.fill: bgRect
@@ -107,6 +119,22 @@ Item {
             }
             // En el mismo filo del cristal (sin hueco entre el borde y la luz, que se leía como una línea)
             PathRectangle { x: 0.5; y: 0.5; width: Math.max(0, fx.width - 1); height: Math.max(0, fx.height - 1); radius: Math.max(0, root.rr - 0.5) }
+        }
+    }
+    // Sólido: filo de luz arriba que se apaga en las esquinas superiores (no en la barra ni en los rellenos)
+    Shape {
+        visible: !root.glass && root.kind !== "bar" && root.kind !== "fill" && Theme.rimTop.a > 0 && root.width > 24 && root.height > 24
+        anchors.fill: parent
+        preferredRendererType: Shape.CurveRenderer
+        ShapePath {
+            fillColor: "transparent"
+            strokeWidth: 1
+            strokeGradient: LinearGradient {
+                x1: 0; y1: 0; x2: 0; y2: Math.max(1, root.rr + 6)
+                GradientStop { position: 0.0; color: Theme.rimTop }
+                GradientStop { position: 1.0; color: Qt.alpha(Theme.rimTop, 0) }
+            }
+            PathRectangle { x: 0.5; y: 0.5; width: Math.max(0, root.width - 1); height: Math.max(0, root.height - 1); radius: Math.max(0, root.rr - 0.5) }
         }
     }
     Item { id: inner; anchors.fill: parent }

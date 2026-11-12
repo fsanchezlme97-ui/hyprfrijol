@@ -7,6 +7,7 @@ pragma Singleton
 //                             shadow shadowBig shBlur shY · card cardBorder · barRadius panelRadius winRadius · blur
 //           estilo: Math (Material 3), sólido o con transparencia (cristal: transparente y desenfocado)
 //                    · tonal (cristal con «Reducir transparencia»). La geometría (radios): Ajustes › Apariencia › Redondeo
+//  Estados:    stateTone stHover stPress stDisabled focusRing focusWidth (components/StateLayer.qml)
 //  Movimiento: dur durIn durOut · durShort durMedium durLong durXLong · ease easeIn easeOut (theme.json motion)
 //  Tipografía: font, size(px) — tamaño base 12.5 como en el diseño
 //  Nota: en QML los nombres "on" + mayúscula son manejadores, por eso pText (=onP), pcText (=onPc)…
@@ -88,6 +89,15 @@ Singleton {
     // Tarjetas (secciones de Ajustes): con cristal, cristal con borde; si no, c.s3
     readonly property color card: st.card ?? (glassy ? fill2 : s3)
     readonly property int cardBorder: st.cardBorder ?? (glassy ? 1 : 0)
+    // Estados de los controles (Math, como Material 3): una capa del color del texto encima del control, con la misma
+    // opacidad en todos (components/StateLayer.qml); el foco del teclado (Tab) se ve como un anillo del acento, y
+    // lo deshabilitado baja a stDisabled.
+    readonly property color stateTone: light ? "#000000" : "#FFFFFF"
+    readonly property real stHover: 0.07
+    readonly property real stPress: 0.12
+    readonly property real stDisabled: 0.4
+    readonly property color focusRing: p
+    readonly property int focusWidth: 2
     // Lo activo (mosaicos, deslizadores): el color de acento
     readonly property color fillOn: p
     readonly property color fillOnText: pText

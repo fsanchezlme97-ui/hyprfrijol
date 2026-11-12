@@ -520,7 +520,8 @@ def style_tokens(c, s):
             bg=argb(sur, 1), bgPanel=argb(sur, 1), bgPopup=argb(sur, 1),
             bg2=argb(mix(mix(c["s3"], c["s4"], .5), c["p"], .08), 1),
             border=argb(c["ov"], .5), borderWidth=0, highlight=none, glow=none,
-            rimTop=none, rimBottom=none, sheen=none, tint=none, tint2=none,
+            # Math: un filo de luz de 1 px arriba en lo elevado (paneles, popups), como el canto de una tarjeta
+            rimTop=argb(W, .6 if LT else .055), rimBottom=none, sheen=none, tint=none, tint2=none,
             shadow=argb(K, .12 if LT else .30), shadowBig=argb(K, .20 if LT else .45),
             win=argb(sur, 1), winSolid=argb(sur, 1), winBorder=argb(c["ov"], 1))
     S.update(GEOMETRY, estilo="math", material=mat)

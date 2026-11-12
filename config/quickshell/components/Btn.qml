@@ -16,26 +16,24 @@ Rectangle {
     property real h: 30
     property real padX: 12
     property real textSize: 12.5
+    property bool focusable: true
     signal clicked()
+    // Teclado: se llega con Tab (anillo de foco) y se pulsa con Intro o Espacio
+    activeFocusOnTab: focusable
+    Keys.onPressed: e => { if (root.enabled && (e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space)) { root.clicked(); e.accepted = true; } }
 
     readonly property color fg: kind === "primary" || active ? Theme.pText : Theme.t
     implicitHeight: h
     implicitWidth: row.implicitWidth + padX * 2
     radius: Theme.ctl(h)
     Behavior on scale { NumberAnimation { duration: Theme.durShort; easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
-    opacity: enabled ? 1 : 0.45
+    opacity: enabled ? 1 : Theme.stDisabled
     color: kind === "primary" || active ? Theme.p : kind === "tonal" ? Theme.fill2 : "transparent"
     border.width: kind === "outline" ? 1 : 0
     border.color: Theme.ov
     Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
-    Rectangle {   // hover: brillo(1.06) del diseño
-        anchors.fill: parent
-        radius: parent.radius
-        color: Theme.light ? "#000000" : "#FFFFFF"
-        opacity: mouse.containsMouse && root.enabled ? (mouse.pressed ? 0.10 : 0.06) : 0
-        Behavior on opacity { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
-    }
+    StateLayer { radius: root.radius; hovered: mouse.containsMouse && root.enabled; pressed: mouse.pressed && root.enabled; focused: root.activeFocus }
     Ripple { id: rip; anchors.fill: parent; radius: root.radius; color: root.fg }
     RowLayout {
         id: row

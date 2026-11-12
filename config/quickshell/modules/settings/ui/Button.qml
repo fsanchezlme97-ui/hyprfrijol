@@ -9,16 +9,24 @@ Rectangle {
     property string kind: "outline"
     // enabled: el de Item (antes se redeclaraba y tapaba al de Qt; mismo valor por defecto)
     property real h: 30
+    property bool focusable: true
     signal clicked()
+    activeFocusOnTab: focusable
+    Keys.onPressed: e => { if (root.enabled && (e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space)) { root.clicked(); e.accepted = true; } }
     implicitHeight: h
     implicitWidth: kind === "link" ? t.implicitWidth : t.implicitWidth + 26
     radius: Theme.ctl(h)
     Behavior on scale { NumberAnimation { duration: Theme.durShort; easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
-    opacity: enabled ? 1 : 0.45
+    opacity: enabled ? 1 : Theme.stDisabled
     color: kind === "primary" ? Theme.p : "transparent"
     border.width: kind === "outline" ? 1 : 0
     border.color: Theme.ov
-    Rectangle { anchors.fill: parent; radius: parent.radius; color: Theme.t; opacity: ma.containsMouse && root.enabled && root.kind !== "link" ? 0.07 : 0 }
+    StateLayer {
+        radius: root.radius
+        hovered: ma.containsMouse && root.enabled && root.kind !== "link"
+        pressed: ma.pressed && root.enabled && root.kind !== "link"
+        focused: root.activeFocus
+    }
     Ripple { id: rip; anchors.fill: parent; radius: root.radius; color: t.color }
     Txt {
         id: t

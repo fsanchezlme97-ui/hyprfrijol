@@ -10,19 +10,20 @@ Rectangle {
     property string label: ""
     property string sub: ""
     property bool on: false
+    property bool focusable: true
     signal clicked()
     signal rightClicked()
+    // Teclado: se llega con Tab (anillo de foco) y se pulsa con Intro o Espacio
+    activeFocusOnTab: focusable
+    Keys.onPressed: e => { if (root.enabled && (e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space)) { root.clicked(); e.accepted = true; } }
     implicitHeight: 44
     radius: Theme.pill ? Math.min(height / 2, Theme.r(11)) : Theme.r(8)
     color: on ? Theme.fillOn : Theme.fill2
+    opacity: enabled ? 1 : Theme.stDisabled
     Behavior on scale { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutBack; easing.overshoot: 2 } }
     Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     readonly property color fg: on ? Theme.fillOnText : Theme.t
-    Rectangle {
-        anchors.fill: parent; radius: parent.radius
-        color: Theme.light ? "#000000" : "#FFFFFF"
-        opacity: mouse.containsMouse ? 0.06 : 0
-    }
+    StateLayer { radius: root.radius; hovered: mouse.containsMouse; pressed: mouse.pressed; focused: root.activeFocus }
     Ripple { id: rip; anchors.fill: parent; radius: root.radius; color: root.fg }
     RowLayout {
         anchors.fill: parent

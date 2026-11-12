@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.16] — 2026-11-11
+
+### Cambiado
+- **Estados iguales en todos los controles** (estilo Math): botones, botones de icono, mosaicos, interruptores y segmentos se iluminan igual al pasar el cursor y al pulsarlos, y lo desactivado se atenúa igual en todos.
+- **Se puede usar con el teclado**: Tab recorre los botones, interruptores y segmentos de los paneles y de Ajustes con un anillo del color de acento; Intro o Espacio los pulsa, y las flechas cambian la opción de un segmento. Spotlight, la vista de ventanas y las demás vistas que ya usaban Tab siguen igual.
+- **Más profundidad sin transparencia**: los paneles llevan una sombra en dos capas (una cercana y nítida y otra amplia) y un filo de luz muy fino arriba.
+
 ## [0.9.15] — 2026-11-11
 
 ### Añadido

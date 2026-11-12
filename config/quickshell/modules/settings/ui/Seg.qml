@@ -14,13 +14,34 @@ Rectangle {
     property real textSize: 12
     property bool fill: true
     signal picked(var key)
+    // Teclado: Tab llega al grupo (anillo de foco) y las flechas cambian de opción
+    property bool focusable: true
+    activeFocusOnTab: focusable
+    Keys.onPressed: e => {
+        const i = items.findIndex(it => it.key === current);
+        if (e.key === Qt.Key_Left || e.key === Qt.Key_Right) {
+            const n = items.length;
+            if (n) root.picked(items[((i < 0 ? 0 : i) + (e.key === Qt.Key_Right ? 1 : -1) + n) % n].key);
+            e.accepted = true;
+        }
+    }
     implicitHeight: h
     implicitWidth: row.implicitWidth + 2
     radius: pill || Theme.pill ? h / 2 : Theme.r(6)
     color: "transparent"
     border.width: 1
     border.color: Theme.o
-    clip: true
+    clip: !activeFocus
+    // anillo de foco del grupo entero
+    Rectangle {
+        visible: root.activeFocus
+        anchors.fill: parent
+        anchors.margins: -(Theme.focusWidth + 1)
+        radius: root.radius + Theme.focusWidth + 1
+        color: "transparent"
+        border.width: Theme.focusWidth
+        border.color: Theme.focusRing
+    }
     readonly property var items: model.map(m => Array.isArray(m) ? { key: m[0], label: m[1] } : (typeof m === "object" ? m : { key: m, label: String(m) }))
     RowLayout {
         id: row
@@ -38,8 +59,9 @@ Rectangle {
                 Layout.fillHeight: true
                 implicitWidth: lbl.implicitWidth + 24
                 radius: root.pill || Theme.pill ? height / 2 : Theme.r(5)
-                color: on ? Theme.segThumb : ma.containsMouse ? Qt.alpha(Theme.t, 0.05) : "transparent"
+                color: on ? Theme.segThumb : "transparent"
                 Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                StateLayer { radius: seg.radius; hovered: ma.containsMouse && !seg.on; pressed: ma.pressed }
                 Rectangle {   // separador entre segmentos
                     visible: seg.index > 0 && !seg.on && root.current !== root.items[seg.index - 1]?.key && !root.pill && !Theme.pill
                     width: 1; height: parent.height; color: Theme.ov

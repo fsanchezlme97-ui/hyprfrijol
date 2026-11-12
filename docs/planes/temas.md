@@ -244,6 +244,6 @@ El flujo de **Crear tema**: elegir la entrada (imagen, foto o hex), ver la vista
 - Rosa pastel se mantiene junto a Ciruela.
 - «Auto · Atardecer» se quita: el modo automático (amanecer/atardecer) vale para cualquier tema.
 - El estilo se llama Math.
-- Fuente: se decide en la fase 3 (pulido); si se añade una, va al instalador en todas las distros.
+- Fuente: Inter (variable), la que ya trae el instalador en todas las distros (decidido en la fase 3, 0.9.16).
 - Sin tope de temas propios: el tope obligaba a un selector de «cuál reemplazo» y no ahorra nada.
 - Creador: heurística primero; la IA para asignar roles llega después, como opción.

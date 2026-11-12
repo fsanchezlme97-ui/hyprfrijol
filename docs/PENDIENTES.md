@@ -17,8 +17,10 @@ entre la 0.9.0 y la 0.9.12 está en el CHANGELOG. Queda, en este orden:
 3. [x] [Temas](planes/temas.md), resto de las fases 4–5: editar los colores uno a uno, editar un tema guardado y la
        vista previa sobre la barra y el centro de control (0.9.15). Queda, opcional en el plan: que la IA asigne los
        papeles de cada color.
-4. [ ] [Temas](planes/temas.md), fase 3 (pulido de Math): sombras, bordes, espaciado y estados en `Ui/` y
-       `components/`, y decidir la fuente. El movimiento ya se hizo con Animaciones (0.9.1); lo demás, sin empezar.
+4. [ ] [Temas](planes/temas.md), fase 3 (pulido de Math). Hecho (0.9.16): estados uniformes con foco de teclado,
+       sombra en dos capas y filo de luz arriba; la fuente se queda en Inter. Falta: la escala de espaciado
+       (4/8/12/16/24) y los radios concéntricos, que tocan casi todas las vistas. `Ui/` es la capa de compatibilidad
+       con Omarchy y sigue su propio estilo.
 5. [ ] [Productividad](planes/productividad.md), fase 5: revisión con uso real (la hace el autor usando el
        escritorio; lo que se mide está en la sección 4 del plan). Los relojes del mundo siguen en Fecha, con un
        enlace desde Agenda y alarmas.
