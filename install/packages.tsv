@@ -131,7 +131,7 @@ bluetooth	optional	bluez,bluez-utils	bluez	bluez	bluez	bluez	Bluetooth	bluetooth
 bt-sendto	optional	gnome-bluetooth-3.0,bluez-obex	gnome-bluetooth,bluez-obexd	gnome-bluetooth	gnome-bluetooth-sendto	gnome-bluetooth	enviar archivos por Bluetooth (bluetooth-sendto)	bluetooth	bluetooth-sendto
 # — Ajustes › Escritorio remoto
 remote	optional	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	compartir este escritorio por VNC (wayvnc; openssl para el cifrado)	remoto	wayvnc,wayvncctl,openssl
-remote-anydesk	optional	aur:anydesk-bin	-	-	-	-	entrar a esta sesión con AnyDesk (necesita además el portal: hf-remote anydesk portal)	remoto	anydesk
+remote-rustdesk	optional	aur:rustdesk-bin	-	-	-	-	entrar a esta sesión con RustDesk, también desde el móvil (necesita además el portal: hf-remote rustdesk portal; luego sudo systemctl enable --now rustdesk)	remoto	rustdesk
 remote-rdp	optional	aur:hypr-rdp	-	-	-	-	compartir esta sesión por RDP (entrar desde Windows con mstsc; hypr-rdp)	remoto	hypr-rdp
 remote-client	optional	remmina,freerdp,libvncserver	remmina,remmina-plugins-rdp,remmina-plugins-vnc	remmina,remmina-plugin-rdp,remmina-plugin-vnc	remmina,remmina-plugin-rdp,remmina-plugin-vnc	remmina,freerdp	conectarse a Windows por RDP y a otros por VNC (Remmina: el más compatible; sin él, FreeRDP o Conexiones)	remoto	remmina
 # — Ajustes › Sonido

@@ -1,6 +1,6 @@
 # hyprfrijol: xdg-desktop-portal-hyprland 1.5.0 + la PR hyprwm/xdg-desktop-portal-hyprland#448 (portal RemoteDesktop),
 # para entrar a la sesión con AnyDesk o RustDesk. Sustituye al paquete oficial (vuelve a él: pacman -S xdg-desktop-portal-hyprland).
-# Fijado a un commit revisado de la PR; lo instala «hf-remote anydesk portal». Basado en el PKGBUILD de Arch (alerque).
+# Fijado a un commit revisado de la PR; lo instala «hf-remote rustdesk portal». Basado en el PKGBUILD de Arch (alerque).
 pkgname=xdg-desktop-portal-hyprland-rd
 pkgver=1.5.0.r32.g6a32fa8
 pkgrel=1

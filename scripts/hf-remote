@@ -12,24 +12,18 @@
 #   hf-remote rdp status|start|stop|restart   compartir ESTA sesión por RDP (hypr-rdp): desde Windows con mstsc
 #   hf-remote rdp password               pide la contraseña de RDP (usuario = el tuyo) y la guarda en ~/.config/hypr-rdp
 #   hf-remote rdp boot                   al iniciar sesión: lo arranca si rdpServer está activo
-#   hf-remote anydesk status|setup|unsetup|portal|boot   entrar a ESTA sesión con AnyDesk (o RustDesk) desde otro equipo
-#   hf-remote picker [--remote-desktop]  lo llama el portal (xdph) en lugar de hyprland-share-picker; ver «AnyDesk» abajo
+#   hf-remote rustdesk status|portal     entrar a ESTA sesión con RustDesk (status: JSON; portal: instala el portal RemoteDesktop)
 #
 # RDP (hypr-rdp, AUR): sin contraseña NUNCA se arranca (hypr-rdp aceptaría a cualquiera). rdpListen: «tailscale»
 # (por defecto: solo la IP de Tailscale), «red» (0.0.0.0) o «local». rdpOutput: la pantalla que se ve ("" = la
 # principal o, si no está conectada, la más grande; «virtual» = una pantalla nueva solo para la conexión). Corre
 # como unidad de usuario hf-rdp (systemd-run, se reintenta si Tailscale aún no está conectado al arrancar).
 #
-# AnyDesk / RustDesk entrantes: en Wayland necesitan el portal RemoteDesktop (pantalla + teclado y ratón en la
-# misma sesión). El xdph oficial (1.5.0) no lo trae: «anydesk portal» compila e instala xdg-desktop-portal-hyprland-rd
-# (xdph 1.5.0 + la PR hyprwm/xdg-desktop-portal-hyprland#448, PKGBUILD en install/pkgbuilds/). Ese portal pregunta
-# en pantalla antes de dejar controlar el equipo, y AnyDesk no guarda el permiso: nadie lo vería desde fuera.
-# «anydesk setup» pone este script delante de hyprland-share-picker (PATH del servicio de xdph) y, con
-# remoteUnattended (desactivado por defecto), aprueba solo cuando AnyDesk acaba de aceptar una conexión entrante (su
-# registro dice «Connecting to current session» hace menos de 90 s), una vez por conexión y nunca a una app aislada
-# (Flatpak/Snap: llegan con su id); sin pantalla que elegir, comparte la de rdpOutput.
-# Cualquier otra petición (compartir pantalla en Meet, otra app que quiera controlar) sigue preguntando como siempre.
-# AnyDesk sigue pidiendo su propia contraseña de acceso desatendido (o que alguien acepte en pantalla).
+# RustDesk entrante: en Wayland usa el portal RemoteDesktop (pantalla + teclado y ratón en la misma sesión), que el
+# xdph oficial (1.5.0) no trae: «rustdesk portal» compila e instala xdg-desktop-portal-hyprland-rd (xdph 1.5.0 + la PR
+# hyprwm/xdg-desktop-portal-hyprland#448, PKGBUILD en install/pkgbuilds/). La primera conexión hay que aceptarla en el
+# equipo (pantalla y control) marcando «recordar»; después RustDesk entra sin que nadie acepte. AnyDesk NO acepta
+# conexiones entrantes en Wayland (solo en Xorg), ni con el portal: para eso, RustDesk o RDP.
 #
 # Seguridad: sin contraseña wayvnc NUNCA escucha en la red; aunque vncListen pida 0.0.0.0, «server start»
 # se queda en 127.0.0.1 y avisa. «status» da listen (lo pedido) y effective (lo que se usa de verdad).
@@ -370,98 +364,25 @@ rdp() {
   esac
 }
 
-# ---------- AnyDesk / RustDesk entrantes (portal RemoteDesktop) ----------
-PICKBIN="${XDG_DATA_HOME:-$HOME/.local/share}/hyprfrijol/xdph-bin"
-DROPIN="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/xdg-desktop-portal-hyprland.service.d/hyprfrijol-remote.conf"
-REALPICK="${HF_REAL_PICKER:-/usr/bin/hyprland-share-picker}"
+# ---------- RustDesk entrante (portal RemoteDesktop) ----------
 portal_rd() { busctl --user get-property org.freedesktop.portal.Desktop /org/freedesktop/portal/desktop org.freedesktop.portal.RemoteDesktop AvailableDeviceTypes >/dev/null 2>&1; }
-anydesk_incoming() {   # ¿AnyDesk aceptó una conexión entrante hace menos de 90 s? → imprime su hora (su registro va en UTC)
-  local f line t now
-  for f in "$HOME/.anydesk/anydesk.trace" /var/log/anydesk.trace; do
-    [ -r "$f" ] || continue
-    line="$(tail -n 4000 "$f" | grep -a 'app.session - Connecting to current session' | tail -n1)"
-    t="$(awk '{print $2" "$3}' <<<"$line" | cut -d. -f1)"
-    [ -n "$t" ] && t="$(date -u -d "$t" +%s 2>/dev/null)" || continue
-    now="$(date +%s)"
-    [ $((now - t)) -ge 0 ] && [ $((now - t)) -le "${HF_REMOTE_WINDOW:-90}" ] && { echo "$t"; return 0; }
-  done
-  return 1
-}
-# auto_ok <consent|source>: una sola aprobación de cada tipo por conexión entrante (la hora de la conexión se apunta
-# en $XDG_RUNTIME_DIR). Así una app que pida control justo después no se cuela con el permiso de AnyDesk.
-# La marca se reclama con mkdir (atómico: dos peticiones a la vez no pasan las dos) y solo en $XDG_RUNTIME_DIR
-# (privado del usuario); sin él no se aprueba nada.
-auto_ok() {
-  local t run="${XDG_RUNTIME_DIR:-}"
-  [ "$(setting remoteUnattended)" = true ] || return 1
-  [ -n "$run" ] && [ -d "$run" ] && [ -O "$run" ] && [ ! -L "$run" ] || return 1
-  t="$(anydesk_incoming)" || return 1
-  mkdir "$run/hf-remote-anydesk.$1.$t" 2>/dev/null || return 1
-  find "$run" -maxdepth 1 -name "hf-remote-anydesk.$1.*" ! -name "hf-remote-anydesk.$1.$t" -exec rmdir {} + 2>/dev/null
-  return 0
-}
-# Las apps aisladas (Flatpak, Snap) siempre llegan con su id (xdph lo pasa en XDPH_REMOTE_DESKTOP_APP_ID); AnyDesk
-# instalado en el sistema llega sin id. Se admiten además los id exactos de los Flatpak de AnyDesk y RustDesk.
-host_or_remote_app() { [[ -z "${XDPH_REMOTE_DESKTOP_APP_ID:-}" || "$XDPH_REMOTE_DESKTOP_APP_ID" =~ ^(com\.anydesk\.Anydesk|com\.rustdesk\.RustDesk)$ ]]; }
-picker() {
-  local out
-  if [ "${1:-}" = --remote-desktop ]; then
-    if host_or_remote_app && auto_ok consent; then
-      logger -t hf-remote "AnyDesk: control remoto permitido sin preguntar (remoteUnattended)" 2>/dev/null
-      notify "AnyDesk está controlando este equipo" "Conexión entrante aceptada. Se desactiva en Ajustes › Escritorio remoto."
-      printf '[AUTHORIZED]'; exit 0
-    fi
-    exec "$REALPICK" "$@"
-  fi
-  # Sesión de control remoto: xdph no ofrece ventanas ni espacios, solo pantallas. El selector de pantalla llega
-  # antes que el permiso y sin id de app; elegir pantalla no da nada por sí solo: sin el permiso de abajo (que sí
-  # mira la app) la sesión no arranca y no hay imagen.
-  if [ -z "${XDPH_WINDOW_SHARING_LIST:-}" ] && [ -z "${XDPH_WORKSPACE_SHARING_LIST_V3:-}" ] && auto_ok source; then
-    out="$(rdp_output)"
-    [ -n "$out" ] || out="$(hyprctl monitors -j 2>/dev/null | jq -r 'max_by(.width * .height) | .name // empty')"
-    [ -n "$out" ] && { logger -t hf-remote "AnyDesk: compartiendo $out" 2>/dev/null; printf '[SELECTION]/screen:%s\n' "$out"; exit 0; }
-  fi
-  exec "$REALPICK" "$@"
-}
-anydesk() {
-  local op="${1:-status}" want
-  case "$op" in
+rustdesk() {
+  case "${1:-status}" in
     status)
-      jq -cn --argjson installed "$(have anydesk && echo true || echo false)" --argjson rustdesk "$(have rustdesk && echo true || echo false)" \
+      jq -cn --argjson installed "$(have rustdesk && echo true || echo false)" \
+        --argjson service "$(systemctl is-active -q rustdesk 2>/dev/null && echo true || echo false)" \
+        --arg id "$(have rustdesk && timeout 4 rustdesk --get-id 2>/dev/null | tail -n1)" \
         --argjson portal "$(portal_rd && echo true || echo false)" \
-        --argjson pkg "$(pacman -Q xdg-desktop-portal-hyprland-rd >/dev/null 2>&1 && echo true || echo false)" \
-        --argjson setup "$([ -f "$DROPIN" ] && [ -x "$PICKBIN/hyprland-share-picker" ] && echo true || echo false)" \
-        --argjson unattended "$([ "$(setting remoteUnattended)" = true ] && echo true || echo false)" \
-        --argjson running "$(pgrep -x anydesk >/dev/null && echo true || echo false)" \
-        '{installed:$installed,rustdesk:$rustdesk,portal:$portal,package:$pkg,setup:$setup,unattended:$unattended,running:$running}';;
-    setup)   # idempotente: solo reinicia xdph si algo cambió
-      want="$(printf '#!/bin/sh\n# hyprfrijol: el portal llama aquí; ver hf-remote (AnyDesk)\nexec "%s" picker "$@"\n' "$ROOT/scripts/hf-remote")"
-      local changed=0
-      mkdir -p "$PICKBIN" "$(dirname "$DROPIN")"
-      [ "$(cat "$PICKBIN/hyprland-share-picker" 2>/dev/null)" = "$want" ] || { printf '%s\n' "$want" > "$PICKBIN/hyprland-share-picker"; changed=1; }
-      chmod 755 "$PICKBIN/hyprland-share-picker"
-      want="$(printf '# hyprfrijol (hf-remote anydesk setup): su hyprland-share-picker va primero\n[Service]\nEnvironment=PATH=%s:/usr/local/bin:/usr/bin\n' "$PICKBIN")"
-      [ "$(cat "$DROPIN" 2>/dev/null)" = "$want" ] || { printf '%s\n' "$want" > "$DROPIN"; changed=1; }
-      if [ "$changed" = 1 ]; then
-        systemctl --user daemon-reload
-        systemctl --user is-active -q xdg-desktop-portal-hyprland && systemctl --user restart xdg-desktop-portal-hyprland
-      fi
-      portal_rd || echo "Aviso: el portal no ofrece RemoteDesktop; instala el de hyprfrijol con: hf-remote anydesk portal" >&2
-      true;;
-    unsetup)
-      rm -f "$DROPIN" "$PICKBIN/hyprland-share-picker"
-      systemctl --user daemon-reload
-      systemctl --user is-active -q xdg-desktop-portal-hyprland && systemctl --user restart xdg-desktop-portal-hyprland; true;;
+        --argjson package "$(pacman -Q xdg-desktop-portal-hyprland-rd >/dev/null 2>&1 && echo true || echo false)" \
+        '{installed:$installed,service:$service,id:$id,portal:$portal,package:$package}';;
     portal)   # compila e instala xdph con RemoteDesktop (Arch; pide la contraseña de administrador)
       have makepkg || { echo "Solo en Arch (makepkg): en otras distros, xdph con RemoteDesktop aún no está empaquetado" >&2; exit 1; }
       local b; b="$(mktemp -d)"; cp "$ROOT/install/pkgbuilds/xdg-desktop-portal-hyprland-rd/PKGBUILD" "$b/"
       ( cd "$b" && makepkg -si --needed ) || { echo "No se pudo compilar o instalar" >&2; exit 1; }
       rm -rf "$b"
       systemctl --user restart xdg-desktop-portal-hyprland xdg-desktop-portal 2>/dev/null
-      "$0" anydesk setup
-      portal_rd && echo "Listo: el portal ya ofrece RemoteDesktop. Reinicia AnyDesk para que lo use.";;
-    boot) pacman -Q xdg-desktop-portal-hyprland-rd >/dev/null 2>&1 || portal_rd && exec "$0" anydesk setup; true;;
-    *) echo "anydesk status|setup|unsetup|portal|boot" >&2; exit 1;;
+      portal_rd && echo "Listo: el portal ya ofrece RemoteDesktop. Reinicia RustDesk para que lo use.";;
+    *) echo "rustdesk status|portal" >&2; exit 1;;
   esac
 }
 
@@ -472,7 +393,6 @@ case "${1:-}" in
   secret) secret "${2:-}" "${3:-}";;
   server) shift; server "$@";;
   rdp) shift; rdp "$@";;
-  anydesk) shift; anydesk "$@";;
-  picker) shift; picker "$@";;
+  rustdesk) shift; rustdesk "$@";;
   *) sed -n '2,/^# Seguridad/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 1;;
 esac

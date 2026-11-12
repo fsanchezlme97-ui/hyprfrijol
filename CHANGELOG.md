@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.40] — 2026-11-12
+
+### Cambiado
+- **Entrar con RustDesk** en lugar de AnyDesk (Ajustes › Escritorio remoto). AnyDesk no acepta conexiones
+  entrantes en Wayland ni con el portal (lo dicho en 0.9.37 era un error: corta con «servidor de pantalla no
+  admitido» sin llegar a pedir nada). RustDesk sí usa el portal RemoteDesktop que instala `hf-remote rustdesk portal`;
+  la primera conexión se acepta en el equipo marcando «recordar». Se quita la aprobación automática de AnyDesk
+  (`hf-remote picker`, `remoteUnattended`): ya no tenía uso.
+
 ## [0.9.39] — 2026-11-12
 
 ### Seguridad
