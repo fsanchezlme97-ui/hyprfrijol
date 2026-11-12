@@ -7,6 +7,8 @@
 // Pulsar una tarjeta abre su ficha (StoreDetail: capturas, descripción, versión, fuentes…); la casilla la marca.
 // La insignia dice de dónde se instala («Repos oficiales», «AUR», «Flatpak», «AppImage»…) y los chips «Fuente» filtran.
 // La categoría «Apps de GNOME» (StoreGnome) junta las apps principales de GNOME y sus alternativas de KDE.
+// «Instaladas» (cat:instaladas) es todo lo que tiene lanzador en este equipo, con «Desinstalar» (settings/ui/InstalledApps,
+// hf-apps installed): antes estaba en Ajustes › Aplicaciones; se carga solo al abrirla.
 // Vista "herramientas": Shell.open("herramientas", "<id de app>") la deja preseleccionada; "cat:<clave>" abre
 // esa categoría; "q:<texto>" busca; "app:<id>" abre su ficha. También por IPC, Ajustes › Aplicaciones y Spotlight:
 //   qs -p <repo>/config/quickshell ipc call tools open        · … tools detail <id>
@@ -24,6 +26,7 @@ Scope {
     id: root
     property bool open: false
     property string cat: "top"
+    readonly property bool instView: cat === "instaladas" && query.trim() === "" && !detail
     property var sel: ({ btrfsa: true, pika: true, bazaar: true })
     property var extra: ({})            // resultados de la búsqueda en vivo elegidos: id → resultado
     property bool onlyWayland: false
@@ -158,12 +161,12 @@ Scope {
                             width: parent.width
                             spacing: 2
                           Repeater {
-                            model: root.catalog.categories
+                            model: root.catalog.categories.concat([{ key: "instaladas", label: "Instaladas", glyph: "✓" }])
                             Rectangle {
                                 id: ci
                                 required property var modelData
                                 readonly property bool on: root.cat === modelData.key && root.query === "" && !root.detail
-                                readonly property int n: root.all.filter(t => root.inCat(t, modelData.key) && root.pass(t)).length + (modelData.key === "sel" ? Object.keys(root.extra).length : 0)
+                                readonly property int n: modelData.key === "instaladas" ? -1 : root.all.filter(t => root.inCat(t, modelData.key) && root.pass(t)).length + (modelData.key === "sel" ? Object.keys(root.extra).length : 0)
                                 Layout.fillWidth: true
                                 implicitHeight: 33
                                 radius: Theme.r(5)
@@ -173,7 +176,7 @@ Scope {
                                     spacing: 12
                                     Txt { Layout.preferredWidth: 14; text: ci.modelData.glyph; size: 12; color: ci.on ? Theme.selText : Theme.tv; horizontalAlignment: Text.AlignHCenter }
                                     Txt { Layout.fillWidth: true; text: ci.modelData.label; color: ci.on ? Theme.selText : Theme.t; weight: ci.on ? Font.DemiBold : Font.Normal }
-                                    Txt { text: ci.n; size: 11.5; tabular: true; color: ci.on ? Theme.selText : Theme.tv }
+                                    Txt { visible: ci.n >= 0; text: ci.n; size: 11.5; tabular: true; color: ci.on ? Theme.selText : Theme.tv }
                                 }
                                 MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.cat = ci.modelData.key; root.detail = null; search.text = ""; } }
                             }
@@ -229,7 +232,7 @@ Scope {
                             spacing: 12
                             Txt {
                                 Layout.fillWidth: true
-                                text: root.query.trim() ? "Resultados para «" + root.query.trim() + "»" : (root.catalog.categories.find(c => c.key === root.cat)?.label ?? "")
+                                text: root.query.trim() ? "Resultados para «" + root.query.trim() + "»" : (root.cat === "instaladas" ? "Instaladas en este equipo" : root.catalog.categories.find(c => c.key === root.cat)?.label ?? "")
                                 size: 20; weight: Font.DemiBold
                             }
                             Field {
@@ -242,6 +245,7 @@ Scope {
                             }
                         }
                         RowLayout {
+                            visible: !root.instView
                             Layout.fillWidth: true
                             Layout.preferredHeight: 28
                             spacing: 6
@@ -271,7 +275,7 @@ Scope {
                         }
                         // Fuente: solo las apps que se pueden instalar desde ahí (la insignia dice cuál se usará; se cambia en ella)
                         RowLayout {
-                            visible: root.mode === "cat"
+                            visible: root.mode === "cat" && !root.instView
                             Layout.fillWidth: true
                             spacing: 6
                             Txt { text: "Fuente:"; muted: true }
@@ -321,9 +325,27 @@ Scope {
                         Layout.rightMargin: 6
                         store: root
                     }
+                    // ---------- instaladas en este equipo (con «Desinstalar») ----------
+                    Flickable {
+                        visible: root.instView
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.leftMargin: 18
+                        Layout.rightMargin: 18
+                        clip: true
+                        contentHeight: instLoader.implicitHeight + 18
+                        boundsBehavior: Flickable.StopAtBounds
+                        ScrollBar.vertical: ScrollBar { policy: parent.contentHeight > parent.height ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff }
+                        Loader {
+                            id: instLoader
+                            width: parent.width
+                            active: root.instView || item !== null
+                            sourceComponent: InstalledApps {}
+                        }
+                    }
                     Item {
                         id: gridBox
-                        visible: !root.detail && root.mode === "cat" && (root.cat !== "gnome" || !!root.query.trim())
+                        visible: !root.detail && root.mode === "cat" && !root.instView && (root.cat !== "gnome" || !!root.query.trim())
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         Layout.leftMargin: 18

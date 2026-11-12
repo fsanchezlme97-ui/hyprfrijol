@@ -22,7 +22,9 @@ BarChip {
         Canvas {
             id: cv
             anchors.fill: parent
-            readonly property real p: chip.prog
+            // la cola se lee cada 1,5 s: el anillo avanza en ese rato en vez de saltar
+            property real p: Math.max(0, chip.prog)
+            Behavior on p { enabled: !Theme.still && chip.prog >= 0; NumberAnimation { duration: 1500; easing.type: Easing.Linear } }
             readonly property color base: Qt.alpha(Theme.t, 0.18)
             readonly property color fg: chip.failed ? Theme.danger : Theme.p
             onPChanged: requestPaint()

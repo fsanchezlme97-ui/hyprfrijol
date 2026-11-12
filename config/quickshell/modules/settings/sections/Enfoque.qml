@@ -3,12 +3,13 @@ import QtQuick
 import QtQuick.Layouts
 import "../../.."
 import "../../../components"
+import "../../../services"
 import "../ui"
 
 ColumnLayout {
     id: root
     spacing: 12
-    ProdTabs { current: "enfoque" }   // Enfoque | Portapapeles | Agenda | Tareas (una sola entrada en la lista)
+    ProdTabs { current: "enfoque" }   // Enfoque | Spotlight | Portapapeles | Agenda (una sola entrada en la lista)
     readonly property int fMin: Settings.get("pomodoroFocus", 25)
     readonly property int brk: Settings.get("pomodoroBreak", 5)
     readonly property int lng: Settings.get("pomodoroLong", 15)
@@ -60,6 +61,37 @@ ColumnLayout {
             SwRow { label: "Silenciar notificaciones"; sub: "no molestar mientras dure el foco"; key: "focusMuteNotifs"; def: true }
             SwRow { label: "Iniciar descansos automáticamente"; sub: "y el siguiente bloque de foco"; key: "focusAutoBreak" }
             SwRow { label: "Sonido al terminar cada bloque"; sub: "canberra-gtk-play · complete"; key: "focusSound"; def: true }
+        }
+    }
+    // Las apps de productividad tienen su ventana: Ajustes solo las abre (aquí no se gestionan tareas ni alarmas)
+    Section {
+        Layout.fillWidth: true
+        title: "Apps"
+        Repeater {
+            model: [
+                { icon: "check", name: "Tareas", sub: Tasks.pending.length ? (Tasks.pending.length === 1 ? "1 pendiente" : Tasks.pending.length + " pendientes") + (Tasks.overdue.length ? " · " + Tasks.overdue.length + (Tasks.overdue.length === 1 ? " vencida" : " vencidas") : "") : "tu lista de pendientes con fecha", view: "tareas", arg: "" },
+                { icon: "clock", name: "Alarmas y temporizador", sub: Alarms.count ? (Alarms.count === 1 ? "1 alarma" : Alarms.count + " alarmas") : "alarmas por días y cuentas atrás", view: "w-pomodoro", arg: "alarmas" },
+                { icon: "focus", name: "Pomodoro", sub: "empezar un bloque de foco", view: "w-pomodoro", arg: "pomodoro" }
+            ]
+            RowLayout {
+                required property var modelData
+                required property int index
+                Layout.fillWidth: true
+                Layout.topMargin: index ? 2 : 0
+                spacing: 12
+                Rectangle {
+                    implicitWidth: 32; implicitHeight: 32; radius: Theme.r(8)
+                    color: Theme.fill2
+                    Icon { anchors.centerIn: parent; name: parent.parent.modelData.icon; size: 16; stroke: 1.8; color: Theme.t }
+                }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 0
+                    Txt { text: parent.parent.modelData.name; weight: Font.Medium }
+                    Txt { Layout.fillWidth: true; text: parent.parent.modelData.sub; muted: true; size: 11.5; elide: Text.ElideRight }
+                }
+                Button { text: "Abrir"; h: 28; onClicked: Shell.open(parent.modelData.view, parent.modelData.arg) }
+            }
         }
     }
     Section {

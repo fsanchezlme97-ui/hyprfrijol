@@ -160,27 +160,15 @@ ChipPopup {
                                         onClicked: ["queued", "running", "paused"].includes(row.it.status) ? Downloads.cancel(row.it.id) : Downloads.remove(row.it.id)
                                     }
                                 }
-                                Rectangle {
+                                // la cola se lee cada 1,5 s (services/Downloads.qml): el relleno avanza ese rato sin pararse
+                                Progress {
                                     visible: row.live || row.it.status === "paused" || row.it.status === "queued"
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: 4
-                                    radius: 2
-                                    color: Qt.alpha(Theme.t, 0.12)
-                                    clip: true
-                                    Rectangle {
-                                        id: bar
-                                        readonly property bool unknown: !(row.it.progress > 0) && row.live
-                                        onUnknownChanged: if (!unknown) x = 0
-                                        width: unknown ? parent.width * 0.3 : parent.width * Math.max(0, Math.min(1, row.it.progress))
-                                        height: parent.height; radius: 2
-                                        color: row.it.status === "paused" ? Theme.ter : Theme.p
-                                        Behavior on width { enabled: !bar.unknown; NumberAnimation { duration: Theme.ms(400); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
-                                        SequentialAnimation on x {
-                                            running: bar.unknown && !Theme.reduceMotion
-                                            loops: Animation.Infinite
-                                            NumberAnimation { from: -bar.width; to: bar.parent.width; duration: 1200 }
-                                        }
-                                    }
+                                    value: !(row.it.progress > 0) && row.live ? -1 : Math.max(0, row.it.progress || 0)
+                                    period: 1500
+                                    busy: row.live
+                                    color: row.it.status === "paused" ? Theme.ter : Theme.p
                                 }
                             }
                         }

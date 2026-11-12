@@ -346,6 +346,14 @@ Glass {
                 HoverHandler { id: tkHov }
             }
         }
+        Txt {
+            visible: Tasks.list.length > 0 && !win.adding
+            Layout.leftMargin: 3
+            text: "Todas las tareas" + (Tasks.pending.length ? " (" + Tasks.pending.length + ")" : "") + "  ›"
+            size: 11.5
+            color: allMa.containsMouse ? Theme.t : Theme.p
+            MouseArea { id: allMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Shell.open("tareas") }
+        }
         RowLayout {
             visible: win.dayEvents.length === 0 && win.dayTasks.length === 0 && !win.adding
             Layout.fillWidth: true

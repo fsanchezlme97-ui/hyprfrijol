@@ -259,7 +259,7 @@ ColumnLayout {
                 Layout.preferredHeight: 6
                 radius: Theme.r(3)
                 color: Theme.fill2
-                Rectangle { width: parent.width * Printer.progress; height: parent.height; radius: Theme.r(3); color: Theme.p; Behavior on width { NumberAnimation { duration: Theme.ms(500); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } } }
+                Progress { anchors.fill: parent; value: Printer.progress; period: 5000; busy: Printer.state === "printing"; track: "transparent" }
             }
             RowLayout {
                 visible: Printer.online
@@ -330,9 +330,13 @@ ColumnLayout {
                 Txt { text: Pomodoro.label + (Pomodoro.done ? " · ronda " + (Pomodoro.done + 1) : ""); muted: true; size: 11 }
             }
             Txt { text: Pomodoro.time; size: 28; weight: Font.Medium; tabular: true }
-            Rectangle {
-                Layout.fillWidth: true; Layout.preferredHeight: 6; radius: Theme.r(3); color: Theme.fill2
-                Rectangle { width: parent.width * Pomodoro.progress; height: parent.height; radius: Theme.r(3); color: Pomodoro.mode === "foco" ? Theme.p : Theme.ter }
+            Progress {
+                Layout.fillWidth: true; Layout.preferredHeight: 6
+                value: Pomodoro.progress
+                period: 1000            // avanza segundo a segundo, sin saltos
+                busy: false
+                track: Theme.fill2
+                color: Pomodoro.mode === "foco" ? Theme.p : Theme.ter
             }
             RowLayout {
                 Layout.fillWidth: true

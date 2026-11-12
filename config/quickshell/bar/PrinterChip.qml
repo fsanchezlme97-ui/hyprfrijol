@@ -33,7 +33,7 @@ BarChip {
             visible: Printer.busy
             Layout.preferredWidth: 30; Layout.preferredHeight: 4
             radius: Theme.r(2); color: Theme.fill2
-            Rectangle { width: parent.width * Printer.progress; height: parent.height; radius: parent.radius; color: Printer.state === "paused" ? Theme.ter : Theme.p }
+            Progress { anchors.fill: parent; value: Printer.progress; period: 5000; busy: false; track: "transparent"; color: Printer.state === "paused" ? Theme.ter : Theme.p }
         }
         Txt {
             text: Printer.busy ? Math.round(Printer.progress * 100) + " %" : !Printer.online ? "sin conexión" : Printer.stateText

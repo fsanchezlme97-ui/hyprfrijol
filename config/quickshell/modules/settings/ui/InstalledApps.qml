@@ -1,4 +1,4 @@
-// Ajustes › Aplicaciones › «Instaladas en este equipo»: todas las apps con lanzador (scripts/hf-apps installed:
+// Centro de aplicaciones › «Instaladas» (Tools.qml, cat:instaladas; antes en Ajustes › Aplicaciones): todas las apps con lanzador (scripts/hf-apps installed:
 // paquete de la distro, AUR, Flatpak o AppImage de hyprfrijol), con búsqueda y «Desinstalar». La orden se abre en una
 // terminal (Pkg.runInTerminal), donde el gestor de paquetes pide la contraseña y confirmación. Lo que hyprfrijol
 // necesita (niveles required/base de install/packages.tsv, el compositor, el shell, el kernel, la terminal…) sale

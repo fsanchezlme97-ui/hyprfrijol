@@ -3,7 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
-## [0.9.20] — 2026-11-11
+## [0.9.21] — 2026-11-11
+
+### Cambiado
+- **Ajustes es para ajustes**: lo que eran apps dentro de Ajustes ahora va por fuera.
+  - **Tareas es una app propia**: su ventana (flotante, centrada), en el menú de apps y en Spotlight («Tareas»), con `hf-tareas` y su atajo global `hf:tareas`. Agrupa vencidas, hoy, mañana, más adelante, sin fecha y hechas; fecha rápida al añadir (sin fecha, hoy, mañana u otro día), editar con doble clic o el lápiz, y filtros Pendientes · Hechas · Todas (1, 2, 3). La agenda tiene «Todas las tareas ›».
+  - **Alarmas**: se gestionan en su ventana (la del pomodoro); Ajustes › Productividad › Agenda solo tiene el botón para abrirla.
+  - **Apps instaladas**: la lista con «Desinstalar» pasa al Centro de aplicaciones, categoría «Instaladas». Ajustes › Aplicaciones se queda con las fuentes de software, los niveles de HyprFrijol y los botones para abrir el Centro.
+  - Ajustes › Productividad tiene un apartado «Apps» para abrir Tareas, Alarmas y el Pomodoro.
+- **Barras de progreso sin parones**: los datos llegan a saltos (las descargas cada 1,5 s, la instalación por pasos, el pomodoro cada segundo) y la barra llegaba al valor y se quedaba quieta hasta el siguiente. Ahora avanza sin pararse durante ese rato, un brillo recorre lo hecho mientras trabaja, en los pasos largos sigue avanzando despacio, y sin tamaño conocido un tramo va y viene. Descargas (lista y anillo de la barra), modelos del dictado, instalación de apps, pomodoro, impresora 3D y la cuenta atrás de «¿Se ve bien?».
+
 
 ### Añadido
 - **Dictado: nombres bien escritos**. El reconocedor oye bien el español pero confunde nombres propios, grupos, creadores, marcas y términos de internet con palabras que suenan parecido («mi dev», «Fo Fitters»). Ahora se corrigen al acabar cada frase:

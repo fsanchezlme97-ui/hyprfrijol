@@ -271,12 +271,12 @@ ColumnLayout {
                             spacing: 2
                             Txt { text: mrow.modelData.name.charAt(0).toUpperCase() + mrow.modelData.name.slice(1) + "  ·  " + root.sizeOf(mrow.modelData.mb); weight: Font.DemiBold }
                             Txt { visible: !mrow.prog; Layout.fillWidth: true; text: mrow.modelData.desc + (mrow.modelData.installed ? " · descargado" : ""); muted: true; size: 11.5 }
-                            Rectangle {
+                            Progress {
                                 visible: !!mrow.prog
                                 Layout.fillWidth: true
-                                implicitHeight: 4; radius: 2; color: Theme.fill2
-                                Rectangle { width: parent.width * (mrow.prog?.pct ?? 0) / 100; height: 4; radius: 2; color: Theme.p
-                                    Behavior on width { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } } }
+                                value: (mrow.prog?.pct ?? 0) / 100
+                                period: 700            // hf-dictate avisa a cada 1 %
+                                track: Theme.fill2
                             }
                             Txt { visible: !!mrow.prog; text: "Descargando… " + (mrow.prog?.pct ?? 0) + " % · " + (mrow.prog?.mb ?? 0) + " de " + (mrow.prog?.total || mrow.modelData.mb) + " MB"; muted: true; size: 11; tabular: true }
                         }

@@ -3,7 +3,7 @@
 // calendario de la agenda), relojes del mundo (worldClocks), idioma del sistema (localectl set-locale), idioma
 // y formatos de tu sesión (~/.config/locale.conf: LANG y LC_TIME/NUMERIC/MONETARY/MEASUREMENT/PAPER) y añadir
 // idiomas (descomenta /etc/locale.gen y ejecuta locale-gen con pkexec). Los calendarios .ics de la agenda
-// están en Productividad › Agenda y alarmas (sections/Agenda.qml).
+// están en Productividad › Agenda (sections/Agenda.qml).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell

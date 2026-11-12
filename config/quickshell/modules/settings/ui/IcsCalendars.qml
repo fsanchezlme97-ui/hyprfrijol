@@ -1,4 +1,4 @@
-// Ajustes › Productividad › Agenda y alarmas › Calendarios: suscripciones .ics de la agenda ("calendarIcs" =
+// Ajustes › Productividad › Agenda › Calendarios: suscripciones .ics de la agenda ("calendarIcs" =
 // [{ url, name, color }]). Añadir (URL https/webcal o archivo local), quitar, cambiar nombre y color,
 // «Actualizar ahora» y estado de la última sincronización (services/Events.qml: status, lastSync).
 import QtQuick

@@ -43,8 +43,26 @@ def _firmar_desktop():
     except Exception:
         pass
 
+def _tareas_desktop():
+    """Lanzador de la app «Tareas» (menú de apps y Spotlight)."""
+    text = (
+        "[Desktop Entry]\nType=Application\nName=Tareas\n"
+        "Comment=Tu lista de pendientes con fecha (hyprfrijol)\n"
+        f"Exec={ROOT}/scripts/hf-tareas\n"
+        "Icon=checkbox-checked-symbolic\nTerminal=false\nCategories=Office;Utility;\n"
+        "Keywords=tareas;pendientes;todo;lista;recordatorio;tasks;\n"
+    )
+    path = HOME / ".local/share/applications/hf-tareas.desktop"
+    try:
+        if not path.exists() or path.read_text() != text:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text)
+    except Exception:
+        pass
+
 def hypr_lua(s, c):
     _firmar_desktop()
+    _tareas_desktop()
     try:
         STATE.mkdir(parents=True, exist_ok=True)
         rm = STATE / "reduce-motion"

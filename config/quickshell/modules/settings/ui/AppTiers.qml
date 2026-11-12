@@ -22,6 +22,7 @@ Section {
     property string tier: "serie"
     property string busy: ""           // id de la app (o «tier:x») que se instala con pkexec
     property real progress: 0
+    property real progressCeil: -1      // final del paso en curso: la barra avanza sola hasta ahí mientras tarda
     property string progressText: ""
     readonly property string mode: Settings.get("appsInstallMode", "terminal")
     readonly property var tiers: info.tiers ?? []
@@ -44,7 +45,7 @@ Section {
     function act(action: string, target: string, title: string): void {
         const cmd = [Paths.script("hf-apps"), action, target];
         if (mode === "pkexec") {
-            busy = target; progress = 0; progressText = "Preparando…";
+            busy = target; progress = 0; progressCeil = 0.08; progressText = "Preparando…";
             worker.command = cmd.concat(["--pkexec", "--yes", "--progress"]);
             worker.running = true;
         } else {
@@ -64,12 +65,18 @@ Section {
         stdout: SplitParser {
             onRead: l => {
                 const m = /^@@ (\d+)\/(\d+) (.*)$/.exec(l);
-                if (m) { root.progress = Number(m[2]) ? Number(m[1]) / Number(m[2]) : 0; root.progressText = m[3]; }
+                // «@@ i/n» avisa al EMPEZAR el paso i: hecho (i−1)/n; mientras dura, avanza despacio hacia i/n
+                if (m) {
+                    const i = Number(m[1]), n = Number(m[2]);
+                    root.progress = n ? Math.max(0, i - 1) / n : 0;
+                    root.progressCeil = n && i > 0 ? i / n : -1;
+                    root.progressText = m[3];
+                }
                 else if (/^@@ sistema: /.test(l)) root.progressText = l.slice(12);
                 else if (/^\s*✗/.test(l)) root.progressText = l.trim();
             }
         }
-        onExited: (code) => { root.progressText = code === 0 ? "Listo" : "Terminó con errores (código " + code + ")"; root.busy = ""; root.reload(); }
+        onExited: (code) => { if (code === 0) root.progress = 1; root.progressCeil = -1; root.progressText = code === 0 ? "Listo" : "Terminó con errores (código " + code + ")"; root.busy = ""; root.reload(); }
     }
     // En modo terminal no sabemos cuándo acaba: se vuelve a mirar el estado cada 15 s durante 3 min
     Timer { id: poll; interval: 15000; repeat: true; property int n: 0; onTriggered: { root.reload(); if (++n >= 12) stop(); } }
@@ -101,10 +108,14 @@ Section {
         visible: root.busy !== "" || (root.progressText !== "" && root.mode === "pkexec")
         spacing: 4
         Txt { Layout.fillWidth: true; text: root.progressText; size: 11.5; elide: Text.ElideRight }
-        Rectangle {
-            Layout.fillWidth: true; implicitHeight: 4; radius: Theme.r(2); color: Theme.s4
-            Rectangle { width: parent.width * root.progress; height: parent.height; radius: parent.radius; color: Theme.p
-                        Behavior on width { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } } }
+        Progress {
+            Layout.fillWidth: true
+            value: root.progress
+            ceiling: root.progressCeil
+            period: 500
+            creepMs: 45000
+            busy: root.busy !== ""
+            track: Theme.s4
         }
     }
 

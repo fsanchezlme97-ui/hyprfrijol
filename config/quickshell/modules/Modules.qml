@@ -9,7 +9,7 @@
 // Siempre cargados, y por qué: Lock y Polkit (seguridad, deben responder al instante), Osd y Dictado (reaccionan
 // solos), Focus (bloqueo de apps), Pip (detecta vídeos), SidePanel (acopla las web apps; su chat sí es diferido),
 // AltTab y Snap (atajos globales que actúan sin abrir nada y deben ser instantáneos), Desktop (dock e iconos),
-// OmarchyHost (servicios; sus paneles ya se cargan al abrirlos) y SettingsApp, Tools y Firmar (su ventana ya
+// OmarchyHost (servicios; sus paneles ya se cargan al abrirlos) y SettingsApp, Tools, Firmar y Tareas (su ventana ya
 // era diferida; queda el IPC y Daemons).
 import QtQuick
 import Quickshell
@@ -43,6 +43,7 @@ import "cheatsheet"
 import "media"
 import "dictado"
 import "firmar"
+import "tareas"
 import "omarchy"
 import "devices"
 import "downloads"
@@ -64,6 +65,7 @@ Scope {
     Tools {}
     Dictado {}
     Firmar {}
+    Tareas {}             // app «Tareas» (su ventana es diferida)
     OmarchyHost {}        // plugins de Omarchy: servicios y vistas (panel/overlay/menu); ver scripts/hf-plugin
     UpdatesCheck {}       // comprobación de actualizaciones en segundo plano (la vista es diferida)
 

@@ -40,6 +40,6 @@ Rectangle {
         height: 2
         color: Theme.p
         width: parent.width * (Confirm.total > 0 ? Confirm.left / Confirm.total : 0)
-        Behavior on width { NumberAnimation { duration: Theme.ms(1000); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+        Behavior on width { NumberAnimation { duration: Theme.ms(1000); easing.type: Easing.Linear } }   // segundo a segundo, sin tirones
     }
 }

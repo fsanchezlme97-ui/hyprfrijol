@@ -112,7 +112,7 @@ ChipPopup {
                     Layout.preferredHeight: 6
                     radius: Theme.r(3)
                     color: Theme.fill2
-                    Rectangle { width: parent.width * Printer.progress; height: parent.height; radius: Theme.r(3); color: Printer.state === "paused" ? Theme.ter : Theme.p; Behavior on width { NumberAnimation { duration: Theme.ms(500); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } } }
+                    Progress { anchors.fill: parent; value: Printer.progress; period: 5000; busy: Printer.state === "printing"; track: "transparent"; color: Printer.state === "paused" ? Theme.ter : Theme.p }
                 }
                 Txt {
                     Layout.fillWidth: true

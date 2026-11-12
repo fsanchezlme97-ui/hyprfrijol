@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# hf-tareas — abre la app «Tareas» de hyprfrijol (la usa hf-tareas.desktop). «hf-tareas add <texto> [AAAA-MM-DD]» añade una.
+for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+if [ "${1:-}" = "add" ] && [ -n "${2:-}" ]; then
+  exec qs -p "$ROOT/config/quickshell" ipc call tasks add "$2" "${3:-}"
+fi
+exec qs -p "$ROOT/config/quickshell" ipc call tareas open

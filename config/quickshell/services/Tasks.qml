@@ -1,9 +1,9 @@
 pragma Singleton
 // Tareas (plan de Productividad, mínimo: una lista con fecha opcional; sin proyectos ni sincronización).
 // ~/.local/share/hyprfrijol/tasks.json: [{ id, text, done, due? ("AAAA-MM-DD"), created (ms), doneAt? (ms) }]
-// Se ven en la agenda (bajo los eventos del día), en Ajustes › Productividad › Tareas, se crean con «+texto» en
+// Se ven en la agenda (bajo los eventos del día) y en su app, «Tareas» (modules/tareas), se crean con «+texto» en
 // Spotlight y el asistente las añade (hf-ai, acción task: escribe el mismo archivo, que aquí se recarga solo).
-//   add(text, due) · toggle(id) · remove(id) · clearDone() · forDay(fecha) · overdue · pending
+//   add(text, due) · edit(id, text, due) · toggle(id) · remove(id) · clearDone() · forDay(fecha) · overdue · pending
 // IPC:  qs … ipc call tasks list | add <texto> <AAAA-MM-DD o ""> | done <id> | remove <id>
 import QtQuick
 import Quickshell
@@ -34,6 +34,19 @@ Singleton {
         save(list.concat([Object.assign({ id: id, text: text, done: false, created: Date.now() },
                                         /^\d{4}-\d{2}-\d{2}$/.test(due ?? "") ? { due: due } : {})]));
         return id;
+    }
+    // Cambia el texto y la fecha («» = sin fecha; una fecha mal escrita deja la que tenía)
+    function edit(id: string, text: string, due: string): void {
+        text = String(text ?? "").trim().slice(0, 200);
+        if (!text) return;
+        due = String(due ?? "").trim();
+        save(list.map(t => {
+            if (t.id !== id) return t;
+            const n = Object.assign({}, t, { text: text });
+            if (due === "") delete n.due;
+            else if (/^\d{4}-\d{2}-\d{2}$/.test(due)) n.due = due;
+            return n;
+        }));
     }
     function toggle(id: string): void {
         save(list.map(t => t.id !== id ? t : Object.assign({}, t, { done: !t.done, doneAt: t.done ? undefined : Date.now() })));

@@ -55,6 +55,8 @@ reducción automática) se descartó en las decisiones del plan.
 
 - [ ] **Rendimiento**: arranque del shell, carga diferida de más módulos, menos procesos de `hyprctl` y `nmcli`.
 - [ ] **Productividad**: revisar Spotlight, portapapeles, ventanas y atajos con uso real; quitar pasos.
+- [ ] **Ajustes es para ajustes**: Tareas ya es app, las alarmas van en su ventana y las instaladas en el Centro de
+      aplicaciones (0.9.21). Revisar si queda contenido de app en otras secciones (colas de impresión, usuarios…).
 - [ ] **Dictado por voz**: precisión, latencia, puntuación, idioma y que funcione en todas las apps. Nombres propios
       e internet: vocabulario con todos los motores y corrección con la IA (0.9.20); falta probarlo con voz real.
 - [ ] **Chat en vivo con el asistente** (hablar y que responda en voz): conversación fluida, interrumpirlo,
