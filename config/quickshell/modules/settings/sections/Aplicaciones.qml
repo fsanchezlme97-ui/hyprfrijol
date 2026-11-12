@@ -3,7 +3,7 @@
 // las fuentes de software de esta distro (repos, AUR, Flatpak, AppImage) y una búsqueda que abre la tienda. Las
 // listas de apps (instaladas, por categoría, recomendadas) están en el propio Centro (categoría «Instaladas»): Ajustes
 // es para ajustes.
-// Misma lógica que la tienda y la Bienvenida: services/Pkg.qml. Arriba, las apps de HyprFrijol por nivel (ui/AppTiers.qml → scripts/hf-apps)
+// Misma lógica que la tienda y la Bienvenida: services/Pkg.qml. Las apps de HyprFrijol por nivel (ui/AppTiers.qml → scripts/hf-apps) están en el Centro (cat:hyprfrijol)
 // («Instaladas en este equipo», con «Desinstalar», es ui/InstalledApps.qml dentro del Centro: Shell.open("herramientas", "cat:instaladas")).
 import QtQuick
 import QtQuick.Layouts
@@ -68,6 +68,7 @@ ColumnLayout {
                     }
                     Button { h: 36; kind: "primary"; text: "Abrir el centro"; onClicked: root.openCenter(q.text.trim() ? "q:" + q.text.trim() : "") }
                     Button { h: 36; text: "Ver las instaladas"; onClicked: root.openCenter("cat:instaladas") }
+                    Button { h: 36; text: "Apps de HyprFrijol"; onClicked: root.openCenter("cat:hyprfrijol") }
                     Button { h: 36; text: "Volver a ver la bienvenida"; onClicked: Shell.open("bienvenida") }
                     Item { Layout.fillWidth: true }
                 }
@@ -75,9 +76,6 @@ ColumnLayout {
             }
         }
     }
-
-    // ---------- apps de hyprfrijol por nivel (install/apps.json · scripts/hf-apps) ----------
-    AppTiers { Layout.fillWidth: true }
 
     // ---------- fuentes de software ----------
     Section {

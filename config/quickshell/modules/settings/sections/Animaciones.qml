@@ -135,7 +135,7 @@ ColumnLayout {
             Layout.fillWidth: true
             settingKey: "inactiveOpacityExclude"
             intro: "Estas apps no se vuelven translúcidas al perder el foco: vídeos y videollamadas se siguen viendo bien mientras trabajas en otra ventana. "
-                + "«Automática» deja el resto un 3 % translúcido solo con desenfoque."
+                + "«Automática» deja el resto un 3\u00a0% translúcido solo con desenfoque."
             groups: [
                 { key: "video", label: "Vídeo", sub: "mpv, Celluloid, Showtime, Totem, VLC", classes: ["mpv", "io.github.celluloid_player.Celluloid", "org.gnome.Showtime", "org.gnome.Totem", "vlc"] },
                 { key: "llamadas", label: "Videollamadas", sub: "Zoom, Teams, Discord, Vesktop", classes: ["zoom", "teams-for-linux", "discord", "vesktop"] },

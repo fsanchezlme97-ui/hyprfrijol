@@ -91,7 +91,7 @@ ColumnLayout {
         }
         SwRow {
             label: "Cargar los plugins de Omarchy"
-            sub: "Apagado: no se carga ninguno (siguen instalados)"
+            sub: "Si lo apagas, no se carga ninguno (siguen instalados)"
             key: "omarchyPlugins"; def: true
         }
         LabeledRow {

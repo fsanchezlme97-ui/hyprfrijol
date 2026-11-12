@@ -40,7 +40,6 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Preajustes"
-        headerRight: Mono { text: "highContrast · reduceTransparency · fontScale" }
         RowLayout {
             Layout.fillWidth: true
             spacing: 10

@@ -44,6 +44,11 @@ BarChip {
     implicitHeight: vertical ? vcol.implicitHeight + 10 : 22
     implicitWidth: vertical ? 26 : r.implicitWidth + 14
     UseCounter { target: SysStats; active: chip.visible }
+    // ancho fijo para «88 %» y «88°»: la isla no cambia de ancho (ni recoloca la barra) cada vez que cambia una cifra
+    Txt { id: m2; visible: false; text: "88 %"; tabular: true }
+    Txt { id: mT; visible: false; text: "88°"; tabular: true }
+    readonly property real w2: Math.ceil(m2.implicitWidth)
+    readonly property real wT: Math.ceil(mT.implicitWidth)
     RowLayout {
         id: r
         visible: !chip.vertical
@@ -64,7 +69,7 @@ BarChip {
             values: chip.meters[0]?.h ?? []
             color: chip.meters[0]?.c ?? Theme.p
         }
-        Txt { visible: chip.style !== "texto" && chip.meters.length > 0; text: chip.meters.length ? chip.pct(chip.meters[0].v) : ""; tabular: true }
+        Txt { visible: chip.style !== "texto" && chip.meters.length > 0; text: chip.meters.length ? chip.pct(chip.meters[0].v) : ""; tabular: true; Layout.minimumWidth: chip.w2; horizontalAlignment: Text.AlignRight }
         // texto: «CPU 12 %  RAM 40 %»
         Repeater {
             model: chip.style === "texto" ? chip.meters : []
@@ -74,10 +79,10 @@ BarChip {
                 spacing: 4
                 Layout.leftMargin: index > 0 ? 3 : 0
                 Icon { name: parent.modelData.i; size: 13; color: Theme.tv; anchors.verticalCenter: v.verticalCenter }
-                Txt { id: v; text: chip.pct(parent.modelData.v); tabular: true; color: parent.modelData.v > 0.9 ? Theme.danger : Theme.t }
+                Txt { id: v; text: chip.pct(parent.modelData.v); tabular: true; width: Math.max(implicitWidth, chip.w2); horizontalAlignment: Text.AlignRight; color: parent.modelData.v > 0.9 ? Theme.danger : Theme.t }
             }
         }
-        Txt { visible: chip.showTemp; text: Math.round(SysStats.cpuTemp) + "°"; muted: !chip.hot; color: chip.hot ? Theme.danger : Theme.tv; tabular: true }
+        Txt { visible: chip.showTemp; text: Math.round(SysStats.cpuTemp) + "°"; Layout.minimumWidth: chip.wT; horizontalAlignment: Text.AlignRight; muted: !chip.hot; color: chip.hot ? Theme.danger : Theme.tv; tabular: true }
         // red
         Row {
             visible: chip.showNet

@@ -171,7 +171,7 @@ RowLayout {
                     : text.includes("EXPORT") ? "Exportado: " + text.trim().split(" ").slice(1).join(" ") : (text.trim() || "No se pudo sincronizar")
             }
         }
-        Mono { Layout.fillWidth: true; text: "En otro equipo: git clone <remoto> ~/.config/hyprfrijol && hf-apply"; wrapMode: Text.WrapAnywhere; elide: Text.ElideNone }
+        Mono { Layout.fillWidth: true; text: "En otro equipo: git clone <remoto> ~/.config/hyprfrijol && hf-apply"; wrapMode: Text.WrapAtWordBoundaryOrAnywhere; elide: Text.ElideNone }
         Txt { Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; text: root.syncMsg || "No incluye contraseñas ni llaves." }
     }
 }

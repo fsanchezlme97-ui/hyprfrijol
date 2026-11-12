@@ -66,7 +66,7 @@ RowLayout {
         const n = lc.nativeLanguageName + (base.includes("_") && lc.nativeTerritoryName ? " (" + lc.nativeTerritoryName + ")" : "");
         return n.charAt(0).toUpperCase() + n.slice(1);
     }
-    function zoneName(z) { return z.replace(/_/g, " ").replace(/\//g, " / "); }
+    function zoneName(z) { return WorldClock.label(z); }
     readonly property string userLang: user.LANG ?? ""
     readonly property string userFormats: user.LC_TIME ?? ""
 

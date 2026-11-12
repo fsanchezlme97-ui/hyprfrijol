@@ -191,6 +191,7 @@ RowLayout {
                 label: "Ubicación aproximada por IP para el tiempo"
                 sub: Settings.get("weatherLat", "") !== "" ? "no hace falta: tienes una ciudad fija en Escritorio" : "consulta ipapi.co / ipinfo.io una vez"
                 key: "weatherIpLocation"; def: true
+                enabled: Settings.get("weatherLat", "") === ""     // con ciudad fija no se usa
             }
             Button {
                 visible: !root.sec.geoclue

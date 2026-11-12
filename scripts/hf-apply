@@ -56,6 +56,23 @@ def _profiles_left():
     return any((HOME / ".local/share/applications").glob("hf-webapp-*.desktop"))
 if _profiles_left():
     subprocess.run([str(ROOT / "scripts/hf-migrate"), "--retired-only", "--quiet"], check=False)
+# 0.9.58: el portapapeles y el historial del asistente caducan a los 30 días en las instalaciones nuevas. Quien ya
+# tenía ajustes guardados conserva «nunca»/«siempre» (los de antes): se escriben una sola vez (marca en el estado).
+_mark = STATE / "migrated-0.9.58"
+if not _mark.exists():
+    try:
+        if SETTINGS.exists() and SETTINGS.read_text().strip():
+            _d = json.loads(SETTINGS.read_text())
+            if isinstance(_d, dict) and not all(k in _d for k in ("clipExpireDays", "aiHistoryDays")):
+                for _k in ("clipExpireDays", "aiHistoryDays"):
+                    _d.setdefault(_k, 0)
+                _t = SETTINGS.with_suffix(".json.tmp")
+                _t.write_text(json.dumps(_d, ensure_ascii=False, indent=2))
+                os.replace(_t, SETTINGS)
+        STATE.mkdir(parents=True, exist_ok=True)
+        _mark.touch()
+    except Exception:
+        pass
 
 def load(p, default=None):
     try:

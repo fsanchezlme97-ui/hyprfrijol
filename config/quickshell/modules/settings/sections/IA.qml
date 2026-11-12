@@ -234,7 +234,6 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: root.prov !== "off"
         title: "Modelos"
-        headerRight: Mono { text: "aiModelQuick · aiModelVision · aiFallbackProvider" }
         SwRow {
             separator: false
             label: "Solo en este equipo"

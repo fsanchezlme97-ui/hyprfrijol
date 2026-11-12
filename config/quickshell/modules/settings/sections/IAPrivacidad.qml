@@ -39,7 +39,6 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Apps privadas"
-        headerRight: Mono { text: "privateApps" }
         FloatApps {
             Layout.fillWidth: true
             settingKey: "privateApps"
@@ -67,7 +66,7 @@ ColumnLayout {
             enabled: Settings.get("aiHistory", true) === true
             Seg {
                 model: [[7, "7 días"], [30, "30 días"], [90, "90 días"], [0, "Siempre"]]
-                current: Settings.get("aiHistoryDays", 0)
+                current: Settings.get("aiHistoryDays", 30)
                 onPicked: k => Settings.set("aiHistoryDays", k)
             }
         }

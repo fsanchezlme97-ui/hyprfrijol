@@ -37,6 +37,12 @@ Singleton {
     }
 
     function norm(s): string { return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+    readonly property var byTz: { const m = {}; for (const z of zones) m[z.tz] = z; return m; }
+    // «America/Lima» → «Lima · Perú» (nombres en español de zonas-es.json)
+    function label(tz: string): string {
+        const z = byTz[tz];
+        return z ? z.city + " · " + z.country : tz.replace(/_/g, " ").replace(/\//g, " · ");
+    }
     function cityOf(tz: string): string { return names.cities[tz] ?? tz.split("/").pop().replace(/_/g, " "); }
     function search(q: string): var {
         const n = norm(q.trim());
@@ -55,10 +61,19 @@ Singleton {
         const c = list.slice(); const t = c[i]; c[i] = c[j]; c[j] = t;
         Settings.set("worldClocks", c);
     }
-    function refresh(): void { if (!list.length) return; offProc.running = false; offProc.running = true; }
+    // La orden se monta aquí y no con un enlace: onListChanged llega antes de que el enlace se recalcule y el proceso
+    // salía con la lista vieja (vacía al arrancar) → relojes en «--:--» hasta la vuelta de 10 min
+    function refresh(): void {
+        if (!list.length) return;
+        offProc.running = false;
+        offProc.command = ["sh", "-c", 'for z; do printf "%s %s\\n" "$z" "$(TZ="$z" date +%z)"; done', "sh"].concat(list.map(z => z[1]));
+        offProc.running = true;
+    }
     // «list» cambia de referencia con cualquier ajuste: solo se recalcula si cambian los relojes
     property string _listKey: ""
     onListChanged: { const k = JSON.stringify(list); if (k !== _listKey) { _listKey = k; refresh(); } }
+    // El servicio puede nacer con la lista ya leída (sin cambio que avise): se piden los desfases al crearse
+    Component.onCompleted: { _listKey = JSON.stringify(list); refresh(); }
 
     property string tab: ""
     readonly property var zones: {
@@ -87,7 +102,6 @@ Singleton {
 
     Process {
         id: offProc
-        command: ["sh", "-c", 'for z; do printf "%s %s\\n" "$z" "$(TZ="$z" date +%z)"; done', "sh"].concat(root.list.map(z => z[1]))
         stdout: StdioCollector {
             onStreamFinished: {
                 const o = {};

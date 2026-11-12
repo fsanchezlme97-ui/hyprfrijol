@@ -147,7 +147,9 @@ Singleton {
     }
 
     // Esperar a Settings: si no, la primera vuelta no ve la ciudad fija ni weatherIpLocation = false y pregunta por IP
-    Timer { running: root.users > 0 && Settings.loaded; repeat: true; interval: 30 * 60 * 1000; triggeredOnStart: true; onTriggered: root.refresh() }
+    Timer { running: root.users > 0 && Settings.loaded; repeat: true; interval: 30 * 60 * 1000; triggeredOnStart: true
+            // al volver a abrir el panel no se pide de nuevo si la previsión tiene menos de 15 min
+            onTriggered: if (Date.now() - root.fetched > 15 * 60000) root.refresh() }
     onSetLatChanged: if (users > 0) refresh()
     onSetLonChanged: if (users > 0) refresh()
 
@@ -161,7 +163,7 @@ Singleton {
             try {
                 const c = JSON.parse(text());
                 if (!root.loc && c.loc) root.loc = c.loc;
-                if (!root.ready && c.data) root.applyData(c.data);
+                if (!root.ready && c.data) { root.applyData(c.data); if (!root.fetched && (isNaN(root.setLat) || Math.abs((c.loc?.lat ?? 999) - root.setLat) < 0.01)) root.fetched = c.fetched || 0; }
             } catch (e) {}
         }
     }
@@ -178,7 +180,7 @@ Singleton {
                     if (!isNaN(root.setLat) && !isNaN(root.setLon)) return;   // entretanto se puso una ciudad fija
                     root.loc = { lat: ll[0], lon: ll[1], city: g.city ?? "" };
                     if (root.users > 0) root.fetchWeather();
-                    else { Quickshell.execDetached(["sh", "-c", 'mkdir -p "$1"', "sh", Paths.cache]); cache.setText(JSON.stringify({ loc: root.loc, data: root.lastData })); }
+                    else { Quickshell.execDetached(["sh", "-c", 'mkdir -p "$1"', "sh", Paths.cache]); cache.setText(JSON.stringify({ loc: root.loc, data: root.lastData, fetched: root.fetched })); }
                 } catch (e) { root.err = "No se pudo saber tu ubicación · ponla en Ajustes"; }
             }
         }
@@ -193,7 +195,7 @@ Singleton {
                     root.err = "";
                     root.fetched = Date.now();
                     Quickshell.execDetached(["sh", "-c", 'mkdir -p "$1"', "sh", Paths.cache]);
-                    cache.setText(JSON.stringify({ loc: root.loc, data: d }));
+                    cache.setText(JSON.stringify({ loc: root.loc, data: d, fetched: root.fetched }));
                 } catch (e) { if (!root.ready) root.err = "Sin conexión con Open-Meteo"; }
             }
         }

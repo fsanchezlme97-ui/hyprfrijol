@@ -142,7 +142,7 @@ ColumnLayout {
                 label: "Historial de conversaciones"; section: "iaprivacidad"; sectionLabel: "Privacidad"; target: "Guardar historial de conversaciones"
                 value: {
                     if (Settings.get("aiHistory", true) !== true) return "No se guarda";
-                    const d = Number(Settings.get("aiHistoryDays", 0)) || 0;
+                    const d = Number(Settings.get("aiHistoryDays", 30)) || 0;
                     return d > 0 ? d + " días" : "Siempre";
                 }
             }

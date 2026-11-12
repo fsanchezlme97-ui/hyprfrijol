@@ -31,7 +31,7 @@ PanelWindow {
 
     property bool showA: true
     // Ya se ve algo (Splash.qml espera a esto): la imagen cargada o, con vídeo, el fotograma/mpvpaper detrás
-    readonly property bool ready: wpLoaded && (wp.video || a.status === Image.Ready || b.status === Image.Ready || win.image === "")
+    readonly property bool ready: wpLoaded && (win.showVideo || a.status === Image.Ready || b.status === Image.Ready || win.image === "")
     property bool wpLoaded: false
     readonly property string outName: screen?.name ?? ""
     // Fondo propio de esta pantalla, si lo tiene
@@ -45,7 +45,7 @@ PanelWindow {
     readonly property bool primary: Quickshell.screens.length === 0 || screen === Shell.primaryScreen
 
     function apply() {
-        if (!image) return;
+        if (!image || showVideo) return;
         const url = "file://" + image;
         const cur = showA ? a : b;
         if (cur.source.toString() === url && cur.status === Image.Ready && !changedSinceShown) return;
@@ -57,6 +57,8 @@ PanelWindow {
     property bool changedSinceShown: false
     readonly property int fadeMs: Settings.get("wallpaperTransition", "fundido") === "ninguna" ? 0 : wp.fadeMs
     onImageChanged: apply()
+    // Con vídeo la imagen no se ve: se suelta (≈ 9 MB por pantalla más su textura) y se recarga al volver a la imagen
+    onShowVideoChanged: if (showVideo) { a.source = ""; b.source = ""; } else { changedSinceShown = true; apply(); }
 
     FileView {
         path: Paths.state + "/wallpaper.json"
@@ -156,7 +158,10 @@ PanelWindow {
         (pauseOn.includes("cubierto") && covered) ||
         (pauseOn.includes("bateria") && Battery.onBattery) ||
         (pauseOn.includes("juego") && anyGame) ||
-        (pauseOn.includes("foco") && Shell.focusMode))
+        (pauseOn.includes("foco") && Shell.focusMode) ||
+        // Siempre: detrás del bloqueo (que reproduce su propia copia) o de una vista a pantalla completa con desenfoque
+        // (Energía, Bienvenida, Vista general) el vídeo no se ve moverse, y Hyprland rehacía el desenfoque en cada fotograma
+        Shell.locked || ["energia", "bienvenida", "vista"].includes(Shell.view))
     property bool sentPause: false
     onPausedChanged: if (primary) syncPause()
     function syncPause() {

@@ -114,7 +114,7 @@
   ]
  },
  "greeter": true,
- "hyprfrijol": "v0.9.51",
+ "hyprfrijol": "v0.9.57",
  "ollama": [
   "gemma4:e4b"
  ],
@@ -124,7 +124,7 @@
   "rustdesk": true,
   "rustdeskPortal": true
  },
- "saved": "2026-11-12 12:12",
+ "saved": "2026-11-12 14:09",
  "services": [
   "sshd",
   "ufw",
@@ -143,6 +143,7 @@
   "aiCompanion": true,
   "aiFallbackModel": "gemma4:e4b",
   "aiFallbackProvider": "ollama",
+  "aiHistoryDays": 0,
   "aiModel": "",
   "aiOnboarded": true,
   "aiProvider": "gemini",
@@ -186,6 +187,7 @@
   "blurQuality": "alta",
   "bongoSleep": false,
   "calendarCollapsed": false,
+  "clipExpireDays": 0,
   "colorMode": "elegir",
   "deskIconSize": "pequeno",
   "deskIcons": "no",
@@ -229,13 +231,15 @@
   ],
   "kbRepeatDelay": 250,
   "kbRepeatRate": 35,
+  "lockBg": "fondo",
+  "lockScene": "bosque",
   "lockWidgets": [
    "fecha",
    "musica",
    "clima"
   ],
   "lowBatterySaver": false,
-  "micMode": "dictado",
+  "micMode": "silencio",
   "naturalScroll": true,
   "nightLight": "off",
   "nightTemp": 5500,

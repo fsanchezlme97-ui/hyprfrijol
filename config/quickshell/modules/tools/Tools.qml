@@ -26,7 +26,8 @@ Scope {
     id: root
     property bool open: false
     property string cat: "top"
-    readonly property bool instView: cat === "instaladas" && query.trim() === "" && !detail
+    // «Instaladas» y «Apps de HyprFrijol» (los niveles de install/apps.json, con instalar/quitar) son listas propias, no la cuadrícula
+    readonly property bool instView: (cat === "instaladas" || cat === "hyprfrijol") && query.trim() === "" && !detail
     property var sel: ({ btrfsa: true, pika: true, bazaar: true })
     property var extra: ({})            // resultados de la búsqueda en vivo elegidos: id → resultado
     property bool onlyWayland: false
@@ -161,12 +162,12 @@ Scope {
                             width: parent.width
                             spacing: 2
                           Repeater {
-                            model: root.catalog.categories.concat([{ key: "instaladas", label: "Instaladas", glyph: "✓" }])
+                            model: root.catalog.categories.concat([{ key: "hyprfrijol", label: "Apps de HyprFrijol", glyph: "◆" }, { key: "instaladas", label: "Instaladas", glyph: "✓" }])
                             Rectangle {
                                 id: ci
                                 required property var modelData
                                 readonly property bool on: root.cat === modelData.key && root.query === "" && !root.detail
-                                readonly property int n: modelData.key === "instaladas" ? -1 : root.all.filter(t => root.inCat(t, modelData.key) && root.pass(t)).length + (modelData.key === "sel" ? Object.keys(root.extra).length : 0)
+                                readonly property int n: modelData.key === "instaladas" || modelData.key === "hyprfrijol" ? -1 : root.all.filter(t => root.inCat(t, modelData.key) && root.pass(t)).length + (modelData.key === "sel" ? Object.keys(root.extra).length : 0)
                                 Layout.fillWidth: true
                                 implicitHeight: 33
                                 radius: Theme.r(5)
@@ -232,7 +233,7 @@ Scope {
                             spacing: 12
                             Txt {
                                 Layout.fillWidth: true
-                                text: root.query.trim() ? "Resultados para «" + root.query.trim() + "»" : (root.cat === "instaladas" ? "Instaladas en este equipo" : root.catalog.categories.find(c => c.key === root.cat)?.label ?? "")
+                                text: root.query.trim() ? "Resultados para «" + root.query.trim() + "»" : (root.cat === "instaladas" ? "Instaladas en este equipo" : root.cat === "hyprfrijol" ? "Apps de HyprFrijol" : root.catalog.categories.find(c => c.key === root.cat)?.label ?? "")
                                 size: 20; weight: Font.DemiBold
                             }
                             Field {
@@ -340,7 +341,9 @@ Scope {
                             id: instLoader
                             width: parent.width
                             active: root.instView || item !== null
-                            sourceComponent: InstalledApps {}
+                            sourceComponent: root.cat === "hyprfrijol" ? tiersComp : instComp
+                            Component { id: instComp; InstalledApps {} }
+                            Component { id: tiersComp; AppTiers {} }
                         }
                     }
                     Item {

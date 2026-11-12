@@ -56,9 +56,20 @@ ColumnLayout {
     // Lo de la lista que se ve: lo instalado y lo añadido a mano (las del grupo sin instalar no se enseñan)
     readonly property var shown: {
         DesktopEntries.applications.values.length;
-        return list.map(c => ({ cls: c, e: entry(c) })).filter(x => x.e || !preset.some(p => p.toLowerCase() === String(x.cls).toLowerCase()));
+        // dos clases de la misma app (com.obsproject.Studio y obs) salen en una sola ficha, que quita las dos
+        const out = [], byEntry = {};
+        for (const c of list) {
+            const e = entry(c);
+            if (!e && preset.some(p => p.toLowerCase() === String(c).toLowerCase())) continue;
+            const id = e?.id ?? "";
+            if (id && byEntry[id]) { byEntry[id].all.push(c); continue; }
+            const x = { cls: c, e: e, all: [c] };
+            if (id) byEntry[id] = x;
+            out.push(x);
+        }
+        return out;
     }
-    readonly property int hidden: list.length - shown.length
+    readonly property int hidden: list.length - shown.reduce((n, x) => n + x.all.length, 0)
 
     // Candidatos para añadir: ventanas abiertas y apps instaladas (clase = StartupWMClass o el id del .desktop)
     property string query: ""
@@ -150,7 +161,7 @@ ColumnLayout {
                     IconBtn {
                         implicitWidth: 18; implicitHeight: 18; radius: 9
                         icon: "x"; iconSize: 10; tooltip: "Quitar de la lista"
-                        onClicked: root.remove(chip.modelData.cls)
+                        onClicked: root.apply(root.list.filter(c => !chip.modelData.all.some(x => x.toLowerCase() === String(c).toLowerCase())))
                     }
                 }
             }

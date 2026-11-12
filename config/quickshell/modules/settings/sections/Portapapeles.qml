@@ -26,7 +26,7 @@ ColumnLayout {
         }
         LabeledRow {
             label: "Borrar lo copiado tras"; labelWidth: 140
-            Seg { model: [[1, "1 día"], [7, "7 días"], [30, "30 días"], [0, "Nunca"]]; current: Settings.get("clipExpireDays", 0); onPicked: k => Settings.set("clipExpireDays", k) }
+            Seg { model: [[1, "1 día"], [7, "7 días"], [30, "30 días"], [0, "Nunca"]]; current: Settings.get("clipExpireDays", 30); onPicked: k => Settings.set("clipExpireDays", k) }
         }
         SwRow { label: "Vaciar el portapapeles al iniciar sesión"; sub: "los elementos fijados se conservan"; key: "clipboardClearOnLogin"; def: false }
         RowLayout {

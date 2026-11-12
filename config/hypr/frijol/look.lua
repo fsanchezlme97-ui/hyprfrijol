@@ -51,6 +51,9 @@ hl.config({
         force_default_wallpaper  = 0,
         background_color         = c.surface,
     },
+
+    -- Juegos y vídeo a pantalla completa van directos a la pantalla, sin componer (2 = solo esos, no el escritorio)
+    render = { direct_scanout = 2 },
 })
 
 -- Movimiento: entrada «emphasized» (Material 3), salida rápida y un leve rebote elástico al abrir/mover

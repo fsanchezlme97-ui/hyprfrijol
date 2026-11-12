@@ -435,7 +435,7 @@ ColumnLayout {
                 }
             }
             LabeledRow {
-                label: "El texto se…"
+                label: "Al dictar"
                 labelWidth: 110
                 Seg {
                     model: [["escribir", "Escribe"], ["pegar", "Pega"], ["portapapeles", "Copia"]]

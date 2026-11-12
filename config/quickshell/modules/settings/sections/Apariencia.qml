@@ -503,7 +503,6 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Tema en las apps"
-        headerRight: Mono { text: "config/apply/17-theme-apps.py" }
         SwRow {
             separator: false
             label: "Aplicar el tema a las apps"

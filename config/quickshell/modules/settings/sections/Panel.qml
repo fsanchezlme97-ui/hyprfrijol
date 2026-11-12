@@ -135,7 +135,7 @@ ColumnLayout {
             SwRow { label: "Reproductores (Spotify…)"; sub: "miniventana con pausa, siguiente y volver a la app"; key: "pipPlayers"; def: true }
             Mono {
                 Layout.fillWidth: true
-                wrapMode: Text.WrapAnywhere; elide: Text.ElideNone
+                wrapMode: Text.WrapAtWordBoundaryOrAnywhere; elide: Text.ElideNone
                 text: 'window_rule { title = Picture-in-Picture, float, pin = ' + Settings.get("pipAllWs", true) + ', size = ' + root.size[0] + ' ' + root.size[1] + ', opacity = ' + Settings.get("pipOpacity", 1) + ' }'
             }
         }

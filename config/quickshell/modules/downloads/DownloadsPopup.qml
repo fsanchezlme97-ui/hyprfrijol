@@ -118,7 +118,7 @@ ChipPopup {
                                     ColumnLayout {
                                         Layout.fillWidth: true
                                         spacing: 0
-                                        Txt { Layout.fillWidth: true; text: row.it.title || row.it.name; weight: Font.DemiBold; size: 12 }
+                                        Txt { Layout.fillWidth: true; text: String(row.it.title || row.it.name).replace(/(?:[\uD83C-\uD83E][\uDC00-\uDFFF]|[\u2600-\u27BF])\uFE0F?\s?/g, ""); weight: Font.DemiBold; size: 12 }   // sin los emojis del título de la web
                                         Txt {
                                             Layout.fillWidth: true
                                             text: row.it.status === "error" ? row.it.error

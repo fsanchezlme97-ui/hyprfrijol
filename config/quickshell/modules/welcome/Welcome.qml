@@ -241,7 +241,7 @@ Scope {
                 k: "Zona horaria"
                 Dropdown {
                     anchors.fill: parent; flat: true; popupWidth: 300; searchable: true
-                    model: root.zones.map(z => [z, z.replace(/_/g, " ").replace("/", " · ")])
+                    model: root.zones.map(z => [z, WorldClock.label(z)])
                     current: root.zone
                     onPicked: z => { root.zone = z; Quickshell.execDetached(["timedatectl", "set-timezone", z]); }
                 }

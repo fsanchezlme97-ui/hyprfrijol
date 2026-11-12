@@ -30,6 +30,7 @@ ColumnLayout {
     readonly property var listed: order.length ? order.filter(k => movable.includes(k)).concat(movable.filter(k => !order.includes(k))) : movable
     readonly property string ws: String(Settings.get("webSearch", "duckduckgo"))
     readonly property bool custom: !["duckduckgo", "google", "brave", "kagi", "startpage"].includes(ws)
+    property bool wantCustom: false        // «Otro» elegido y aún sin dirección guardada
     function move(k, d) {
         const l = listed.slice(), i = l.indexOf(k), j = i + d;
         if (j < 0 || j >= l.length) return;
@@ -94,11 +95,12 @@ ColumnLayout {
             label: "Buscar con"; labelWidth: 120
             Seg {
                 model: [["duckduckgo", "DuckDuckGo"], ["google", "Google"], ["brave", "Brave"], ["kagi", "Kagi"], ["startpage", "Startpage"], ["otro", "Otro"]]
-                current: root.custom ? "otro" : root.ws
-                onPicked: k => { if (k === "otro") Qt.callLater(() => urlField.focusInput()); else Settings.set("webSearch", k); }
+                current: root.custom || root.wantCustom ? "otro" : root.ws
+                onPicked: k => { root.wantCustom = k === "otro"; if (k === "otro") Qt.callLater(() => urlField.focusInput()); else Settings.set("webSearch", k); }
             }
         }
         LabeledRow {
+            visible: root.custom || root.wantCustom   // la dirección solo hace falta con «Otro»
             label: "Dirección"; labelWidth: 120
             hint: "%s = lo que buscas"
             Field {

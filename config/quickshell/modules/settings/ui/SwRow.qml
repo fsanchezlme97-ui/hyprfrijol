@@ -19,13 +19,15 @@ Item {
     property alias trailing: extra.data
     signal toggled(bool value)
     Layout.fillWidth: true
-    implicitHeight: sub !== "" ? 48 : 46
+    // el subtítulo largo pasa a dos líneas en vez de cortarse («…»)
+    implicitHeight: Math.max(sub !== "" ? 48 : 46, col.implicitHeight + 14)
     Rectangle { visible: root.separator; width: parent.width; height: 1; color: Theme.ov }
     RowLayout {
         anchors.fill: parent
         anchors.topMargin: 1
         spacing: 10
         ColumnLayout {
+            id: col
             Layout.fillWidth: true
             spacing: 1
             Txt { Layout.fillWidth: true; text: root.label; weight: Font.DemiBold; opacity: root.enabled ? 1 : 0.6 }
@@ -36,6 +38,8 @@ Item {
                 muted: true
                 size: root.mono ? 11 : 11.5
                 font.family: root.mono ? Theme.mono : Theme.font
+                wrapMode: Text.WordWrap
+                maximumLineCount: 2
             }
         }
         Row { id: extra; spacing: 8; Layout.alignment: Qt.AlignVCenter }

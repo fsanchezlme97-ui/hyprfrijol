@@ -141,7 +141,7 @@ Overlay {
             }
             Txt {
                 Layout.alignment: Qt.AlignHCenter
-                text: "Antes de reiniciar por una actualización se crea un snapshot · Esc para cancelar"
+                text: "Antes de reiniciar por una actualización se crea un punto de restauración · Esc para cancelar"
                 size: 11.5
                 muted: true
             }

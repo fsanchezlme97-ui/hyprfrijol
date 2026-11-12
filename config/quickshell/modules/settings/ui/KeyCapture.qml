@@ -3,6 +3,7 @@
 import QtQuick
 import "../../.."
 import "../../../components"
+import "keys.js" as KeyNames
 
 Rectangle {
     id: root
@@ -52,7 +53,7 @@ Rectangle {
                 required property string modelData
                 width: kt.implicitWidth + 12; height: 22; radius: Theme.r(4)
                 color: "transparent"; border.width: 1; border.color: Theme.o
-                Txt { id: kt; anchors.centerIn: parent; text: ({ SUPER: "Super", CTRL: "Ctrl", ALT: "Alt", SHIFT: "Mayús", RETURN: "Enter", SPACE: "Espacio", PRINT: "Impr", TAB: "Tab" })[parent.modelData] ?? parent.modelData; size: 11.5; weight: Font.Medium }
+                Txt { id: kt; anchors.centerIn: parent; text: KeyNames.label(parent.modelData); size: 11.5; weight: Font.Medium }
             }
         }
         Txt { visible: root.listening || !root.value; text: root.listening ? "Pulsa la combinación…" : root.placeholder; size: 11.5; color: root.listening ? Theme.selText : Theme.tv }

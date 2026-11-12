@@ -124,6 +124,7 @@ ColumnLayout {
             Txt { visible: !Net.wifiEnabled; muted: true; text: "Wi-Fi desactivado" }
             Txt { visible: Net.wifiEnabled && Net.networks.length === 0; muted: true; text: "Buscando redes…" }
             RowLayout {
+                visible: Net.wifiEnabled      // con el Wi-Fi apagado no hay red que añadir, compartir ni buscar
                 spacing: 4
                 Button { kind: "link"; text: "+ Red oculta"; onClicked: Quickshell.execDetached(["sh", "-c", "command -v nm-connection-editor >/dev/null && nm-connection-editor --create --type=802-11-wireless || " + Pkg.terminal + " -e nmtui-connect"]) }
                 Txt { text: "·"; color: Theme.p }

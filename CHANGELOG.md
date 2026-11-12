@@ -3,6 +3,35 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.58] — 2026-11-12
+
+### Rendimiento (sin cambiar cómo se ve)
+- El fondo en vídeo se pausa detrás del bloqueo (que ya reproduce su propia copia) y de Energía, Bienvenida y la
+  vista general: Hyprland ya no rehace el desenfoque en cada fotograma de algo que no se ve moverse.
+- Con fondo en vídeo se suelta la imagen fija que quedaba cargada debajo (unos 9 MB por pantalla, más su textura).
+- Juegos y vídeo a pantalla completa van directos a la pantalla, sin componer (`render:direct_scanout = 2`).
+- El tiempo no se vuelve a pedir al abrir el panel si la previsión tiene menos de 15 minutos.
+- La isla de recursos de la barra tiene ancho fijo para sus cifras: no cambia de tamaño (ni recoloca la barra)
+  cada vez que la CPU pasa de 9 % a 10 %.
+
+### Corregido
+- Relojes del mundo en «--:--» durante los primeros 10 minutos: el proceso salía con la lista vieja.
+- Atajos con nombres en inglés («APOSTROPHE», «SEMICOLON») en Teclado: ahora «'» y «;».
+- Textos cortados en Ajustes: las explicaciones de cada fila pasan a dos líneas en vez de acabar en «…», y las
+  órdenes largas (Acerca, regla de PiP) ya no se parten a mitad de palabra.
+- La barra lateral de Ajustes se funde en los bordes en vez de cortar el primer y el último elemento.
+- Zonas horarias en español («Lima · Perú» en vez de «America · Lima») en la Bienvenida y en Fecha y hora.
+- Contradicciones: el interruptor de plugins de Omarchy, la dirección del buscador web (solo con «Otro»), las
+  acciones de Wi-Fi con el Wi-Fi apagado, OBS repetido en «Siempre opacas» y la ubicación por IP con ciudad fija.
+- Sin emojis en los títulos de Descargas; «punto de restauración» en vez de «snapshot» en Energía.
+- Fuera de las cabeceras los nombres internos (claves de ajustes y rutas del proyecto).
+
+### Cambiado
+- «Apps de HyprFrijol» (los niveles con instalar y quitar) pasa de Ajustes › Aplicaciones a una categoría propia
+  del Centro de aplicaciones: Ajustes es solo para ajustes.
+- Instalaciones nuevas: el portapapeles y el historial del asistente se borran a los 30 días (antes, nunca). Quien
+  ya tenía ajustes guardados conserva «nunca» y «siempre» (`hf-apply` los escribe una vez); se puede cambiar en Portapapeles y en Asistente de IA › Privacidad.
+
 ## [0.9.57] — 2026-11-12
 
 ### Documentación
