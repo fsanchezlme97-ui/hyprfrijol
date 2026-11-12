@@ -7,8 +7,8 @@ illogical-impulse (end-4) y Omarchy 4.5 (noviembre de 2026). Al terminar algo, s
 
 Cada plan tiene sus fases y sus decisiones tomadas en `docs/planes/`. Al cerrar una fase se marca aquí.
 
-Estado a 2026-11-11 (v0.9.12), comprobado contra el código y el shell en marcha en el equipo del autor. Lo hecho
-entre la 0.9.0 y la 0.9.12 está en el CHANGELOG. Queda, en este orden:
+Estado a 2026-11-11 (v0.9.17). Lo hecho está en el CHANGELOG. Lo que queda de los planes: el espaciado de Math
+(punto 4), la revisión con uso real (punto 5) y, opcional, que la IA asigne los papeles de un tema.
 
 1. [x] [Asistente de IA](planes/asistente-ia.md), fase 6 (panel): respuesta en directo con Detener y repetir con
        otro modelo (0.9.13). Los chips de contexto y la lista de conversaciones con búsqueda ya estaban.
@@ -82,8 +82,9 @@ reducción automática) se descartó en las decisiones del plan.
 - [ ] VGA por la GT 710 (`nouveau`): ya da imagen, pero la copia entre GPUs puede hacer las animaciones menos
       fluidas en esa pantalla. El registro de Hyprland repite `eglCreateSyncKHR … EGL_BAD_ATTRIBUTE` (300 veces
       en este arranque); ver si viene de esa gráfica.
-- [ ] Lo que avisa `hf-doctor` (2026-11-11): faltan los enlaces `hf-clip` y `hf-theme` en `~/.local/bin`
-      (`./install.sh --no-deps`), el login de greetd es de otra versión (`hf-greeter-sync`) y faltan 4 paquetes
-      recomendados (fuente mono, pavucontrol, nm-connection-editor, impresión).
-- [ ] `xdg-document-portal.service` está en fallo en la sesión: ver por qué y si afecta a abrir archivos desde
-      apps Flatpak.
+- [ ] Lo que avisa `hf-doctor` (2026-11-11): el login de greetd es de otra versión (`hf-greeter-sync`, pide la
+      contraseña de administrador) y faltan 4 paquetes recomendados (fuente mono, pavucontrol, nm-connection-editor,
+      impresión: `hf-deps install --recommended`). Los enlaces `hf-clip` y `hf-theme` ya están.
+- [ ] `xdg-document-portal.service` salió a las 17:28 con el código 21 y quedó como fallido. Se vuelve a lanzar
+      solo cuando una app lo pide (D-Bus), así que no bloquea nada; si se repite, mirar si coincide con una prueba
+      anidada (`dev/try.sh`), que arranca sus propios portales.
