@@ -707,7 +707,26 @@ def clean_out(t):
         ln = re.sub(r"\[[^\]]{0,30}\]|\([A-ZÁÉÍÓÚ ]{3,30}\)", "", ln).strip()
         if ln:
             lines.append(ln)
-    return re.sub(r"\s+", " ", " ".join(lines)).strip()
+    return spanish_marks(re.sub(r"\s+", " ", " ".join(lines)).strip())
+
+ES_WORDS = set("el la los las de del que y en a se por un una es no con para su al lo como más pero me te le mi tu qué cómo "
+               "dónde cuándo cuál quién cuánto puedes hay está están eso esto muy ya".split())
+EN_WORDS = set("the you to is are what how do does can it of and i we they this that my your will would".split())
+
+def spanish_marks(t):
+    """«¿» y «¡» de apertura: los motores (Parakeet, Whisper) solo ponen el de cierre. Solo en frases en español
+    (con es+en, «How are you?» se queda como está)."""
+    def fix(sent):
+        end = sent.rstrip()[-1:]
+        op = {"?": "¿", "!": "¡"}.get(end)
+        if not op or op in sent:
+            return sent
+        w = re.findall(r"[a-záéíóúñü]+", sent.lower())
+        if sum(x in ES_WORDS for x in w) < max(1, sum(x in EN_WORDS for x in w)):
+            return sent
+        m = re.match(r"(\W*)(.*)", sent, re.S)
+        return m.group(1) + op + m.group(2)
+    return "".join(fix(x) for x in re.split(r"(?<=[.!?…])(\s+)", t)) if t else t
 
 def fold(s):
     import unicodedata

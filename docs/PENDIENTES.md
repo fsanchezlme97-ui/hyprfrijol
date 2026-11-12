@@ -80,8 +80,9 @@ reducción automática) se descartó en las decisiones del plan.
 - [x] **Ajustes es para ajustes**: Tareas ya es app, las alarmas van en su ventana y las instaladas en el Centro de
       aplicaciones (0.9.21); Conexiones remotas, Máquinas virtuales y Cola de impresión son apps (0.9.24); Puntos de
       restauración es app y las unidades extraíbles se ven en el icono de la barra (0.9.30).
-- [ ] **Dictado por voz**: precisión, latencia, puntuación, idioma y que funcione en todas las apps. Nombres propios
-      e internet: vocabulario con todos los motores y corrección con la IA (0.9.20); falta probarlo con voz real.
+- [x] **Dictado por voz** (medido en 0.9.56 con 10 frases de 4 voces y ruido de fondo): Parakeet (el de serie)
+      9 % de palabras mal y 0,13 s por frase; Whisper small 12 % y 1 s; Vosk 17 % y 0,3 s. Los motores no ponían
+      «¿» ni «¡» de apertura: ahora sí, solo en frases en español. Probarlo con tu voz va en tus pruebas.
 - [x] **Chat en vivo con el asistente** (v0.9.41): Super + Alt + H activa la conversación (escucha, Helpert responde,
       vuelve a escuchar) y la desactiva. Falta: interrumpir a Helpert hablando encima (necesita cancelar el eco del
       altavoz) y probarlo con voz real.

@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.56] — 2026-11-12
+
+### Mejorado
+- Dictado: «¿» y «¡» de apertura en las preguntas y exclamaciones en español (los motores solo ponían el de cierre);
+  en inglés no se tocan. Medidos los motores con 10 frases, 4 voces y ruido de fondo: Parakeet, el de serie, se
+  equivoca en el 9 % de las palabras y tarda 0,13 s por frase (Whisper small: 12 % y 1 s; Vosk: 17 % y 0,3 s).
+
 ## [0.9.55] — 2026-11-12
 
 ### Mejorado
