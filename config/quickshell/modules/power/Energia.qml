@@ -56,7 +56,12 @@ Overlay {
         command: ["systemctl", "can-hibernate"]
         stdout: StdioCollector { onStreamFinished: win.canHibernate = text.trim() === "yes" }
     }
-    onShownChanged: if (shown) { sel = -1; Qt.callLater(() => keys.forceActiveFocus()); }
+    // abierto con una opción (openWith energia apagar, p. ej. por voz): queda marcada y se confirma con Intro o clic
+    onShownChanged: if (shown) {
+        const k = { bloquear: "l", suspender: "s", hibernar: "h", salir: "e", reiniciar: "r", apagar: "p" }[Shell.arg ?? ""] ?? "";
+        sel = k ? actions.findIndex(a => a.key === k) : -1;
+        Qt.callLater(() => keys.forceActiveFocus());
+    }
 
     Glass {
         id: card

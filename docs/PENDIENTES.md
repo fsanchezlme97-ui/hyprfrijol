@@ -67,7 +67,8 @@ reducción automática) se descartó en las decisiones del plan.
       e internet: vocabulario con todos los motores y corrección con la IA (0.9.20); falta probarlo con voz real.
 - [ ] **Chat en vivo con el asistente** (hablar y que responda en voz): conversación fluida, interrumpirlo,
       latencia baja.
-- [ ] **Comandos por voz**: más órdenes, entender frases naturales, confirmar antes de lo peligroso.
+- [x] **Comandos por voz** (v0.9.26): energía (se confirma en el menú), micrófono, hora y fecha, tareas y recordatorios,
+      cortesías («¿puedes…?»). Falta probarlo hablando de verdad y, si hace falta, cerrar apps por su nombre.
 - [ ] **Micrófono de tres modos** (v0.8.42): probar en uso real dictar y hablar con el asistente con Super + Alt + M
       (mantener); solo se probó por IPC el cambio de modo y el silencio.
 

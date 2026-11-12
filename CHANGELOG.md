@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.26] — 2026-11-11
+
+### Añadido
+- **Comandos por voz nuevos** (antes iban a la IA):
+  - «apaga / reinicia / suspende el equipo», «cierra sesión»: abren el menú de Energía con esa opción marcada, y
+    no se hace nada hasta que pulsas Intro o haces clic;
+  - «silencia el micro» / «activa el micrófono»;
+  - «qué hora es», «qué día es hoy»: lo contesta la píldora sin preguntar a la IA;
+  - «recuérdame llamar a mamá mañana», «añade una tarea comprar leche», «apunta …»: tarea en la agenda, con fecha si
+    dices hoy, mañana o pasado mañana (con una hora concreta sigue yendo al asistente);
+  - «pon el volumen a tope», «vete al escritorio dos», «enciende el modo oscuro», «me pones …».
+- Se entienden las frases con cortesía delante: «¿puedes subir un poco el volumen?», «me podrías…», «quiero que…».
+
 ## [0.9.25] — 2026-11-11
 
 ### Añadido

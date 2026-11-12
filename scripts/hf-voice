@@ -251,7 +251,7 @@ def parse(text, s=None, wake=True, custom_ok=True):
     is_wake, raw = strip_wake(raw, s.get("dictationWakeWord")) if wake else (False, raw)
     o = clean(raw)
     t = fold(o)
-    t = re.sub(r"^(?:por favor|porfa|oye|venga|vale|ahora)\s+", "", t)
+    t = re.sub(r"^(?:(?:por favor|porfa|oye|venga|vale|ahora|me (?:puedes|podrias)|(?:puedes|podrias)(?: por favor)?|quiero que)\s+)+", "", t)
     o = o[len(o) - len(t):] if len(t) <= len(o) else o
     t = re.sub(r"\s+(?:por favor|porfa)$", "", t)
     o = o[:len(t)]
@@ -317,6 +317,12 @@ def parse(text, s=None, wake=True, custom_ok=True):
         up = m.group(1) in ("sube", "subir", "aumenta", "mas")
         n = num(m.group(2)) if m.group(2) else 10
         return I("volume", ("Subir" if up else "Bajar") + f" el volumen {n} %", value=("+" if up else "-") + str(n))
+    if re.fullmatch(r"(?:(?:pon|sube|subir)(?: el)? volumen (?:a tope|al maximo)|volumen (?:a tope|al maximo))", t):
+        return I("volume", "Volumen al 100 %", value=100)
+    m = re.fullmatch(r"(silencia(?:r)?|apaga(?:r)?|mutea(?:r)?|desactiva(?:r)?|activa(?:r)?|enciende|quita(?:r)? el silencio (?:a|al|del))(?: el)? (?:micro|microfono|mic)", t)
+    if m:
+        on = m.group(1).startswith(("activa", "enciende", "quita"))
+        return I("mic", "Activar el micrófono" if on else "Silenciar el micrófono", value=not on)
     if re.fullmatch(r"(?:silencia(?:r)?(?: el (?:sonido|audio|volumen|equipo))?|silencio|mute|quita(?:r)? el sonido|"
                     r"sin sonido|mutea)", t):
         return I("volume", "Silenciar", value="mute")
@@ -365,6 +371,30 @@ def parse(text, s=None, wake=True, custom_ok=True):
     if m:
         return I("url", f"Ruta a «{q(m)}»", url="https://www.google.com/maps/dir/?api=1&destination=" + urllib.parse.quote_plus(q(m)))
 
+    # --- preguntas que se contestan aquí
+    if re.fullmatch(r"(?:que hora es|(?:me dices |dime )?la hora|que horas son|hora)", t):
+        return I("say", "La hora", what="hora")
+    if re.fullmatch(r"(?:que dia es(?: hoy)?|a que (?:dia|fecha) estamos(?: hoy)?|(?:dime )?la fecha(?: de hoy)?|que fecha es(?: hoy)?)", t):
+        return I("say", "La fecha", what="fecha")
+
+    # --- tareas («recuérdame …» sin hora: tarea con fecha si dice hoy/mañana/pasado mañana)
+    m = re.fullmatch(r"(?:(?:anade|apunta|crea|anota|pon)(?: una)?(?: nueva)? tarea(?: de| para| que)?|apunta(?:me)?|anota(?:me)?|"
+                     r"recuerdame(?: que)?|no me dejes olvidar(?: que)?)\s+(.+?)(?:\s+(hoy|manana|pasado manana|esta tarde|esta noche))?", t)
+    if m and not re.search(r"\b(?:a las|en \d|dentro de)\b", m.group(1)):
+        when = {"hoy": 0, "esta tarde": 0, "esta noche": 0, "manana": 1, "pasado manana": 2}.get(m.group(2) or "")
+        due = time.strftime("%Y-%m-%d", time.localtime(time.time() + 86400 * when)) if when is not None else None
+        return I("task", f"Nueva tarea: {q(m)}" + (f" ({o[m.start(2):m.end(2)]})" if due else ""), text=q(m)[:1].upper() + q(m)[1:], due=due)
+
+    # --- energía: nunca directo; abre el menú con la opción marcada (Intro o clic para confirmar)
+    PW = [(r"(?:apaga(?:r)?|apagame)(?: el (?:equipo|ordenador|portatil|pc|sistema)| todo)?|apagado", "apagar", "Apagar"),
+          (r"(?:reinicia(?:r)?|reiniciame)(?: el (?:equipo|ordenador|portatil|pc|sistema))?", "reiniciar", "Reiniciar"),
+          (r"(?:suspende(?:r)?|duerme|a dormir|pon a dormir)(?: el (?:equipo|ordenador|portatil|pc))?", "suspender", "Suspender"),
+          (r"hiberna(?:r)?(?: el (?:equipo|ordenador|portatil|pc))?", "hibernar", "Hibernar"),
+          (r"(?:cierra(?:r)?|sal de|salir de)(?: la)? sesion|desconectate", "salir", "Cerrar sesión")]
+    for rx, key, lab in PW:
+        if re.fullmatch(rx, t):
+            return I("power", f"{lab} (confírmalo en el menú)", value=key)
+
     # --- escritorio
     if re.fullmatch(r"(?:haz(?: una)?|hazme(?: una)?|toma(?: una)?|saca(?: una)?)? ?captura(?: de pantalla)?|pantallazo|captura la pantalla", t):
         return I("screenshot", "Captura de pantalla")
@@ -378,7 +408,7 @@ def parse(text, s=None, wake=True, custom_ok=True):
         on = not (m.group(1) or "").startswith(("quita", "desactiva", "apaga"))
         mins = (num(m.group(2)) or 0) * (60 if (m.group(3) or "").startswith("hora") else 1) if m.group(2) else None
         return I("dnd", ("Activar" if on else "Desactivar") + " No molestar" + (f" {mins} min" if mins else ""), value=on, minutes=mins)
-    m = re.fullmatch(r"(?:cambia(?:r)?|ve|ir|pasa|salta|muevete|llevame|vamos)(?: me)? (?:al|a el|a)(?: espacio| escritorio| escrito(?: yo)?)?(?: de trabajo)?"
+    m = re.fullmatch(r"(?:cambia(?:r)?|ve|vete|ir|pasa|salta|muevete|llevame|vamos)(?: me)? (?:al|a el|a)(?: espacio| escritorio| escrito(?: yo)?)?(?: de trabajo)?"
                      r"(?: numero)? " + NUM_RE, t) or re.fullmatch(r"(?:escritorio|espacio)(?: de trabajo)?(?: numero)? " + NUM_RE, t)
     if m and num(m.group(1)) and 1 <= num(m.group(1)) <= 20:
         n = num(m.group(1))
@@ -403,7 +433,7 @@ def parse(text, s=None, wake=True, custom_ok=True):
         return I("wallpaper", "Fondo anterior", value="prev")
     if re.fullmatch(r"(?:pon(?: un)?|elige(?: un)?) fondo (?:al azar|aleatorio)", t):
         return I("wallpaper", "Fondo al azar", value="random")
-    m = re.fullmatch(r"(?:pon|activa|cambia a)(?: el)? (?:modo|tema) (oscuro|claro|automatico|noche)", t)
+    m = re.fullmatch(r"(?:pon|activa|enciende|usa|cambia a|cambia al)(?: el)? (?:modo|tema) (oscuro|claro|automatico|noche)", t)
     if m:
         v = {"noche": "oscuro", "automatico": "auto"}.get(m.group(1), m.group(1))
         return I("set", f"Tema {v}", key="themeMode", value=v)
@@ -441,7 +471,7 @@ def parse(text, s=None, wake=True, custom_ok=True):
         return I("launch", f"Abrir {wo}", app=wo, guess_url="https://www." + re.sub(r"[^a-z0-9\-]", "", what.replace("ñ", "n")) + ".com")
 
     # --- «pon X» sin decir dónde: música en el servicio de Ajustes
-    m = re.fullmatch(r"(?:reproduce(?:me)?|pon(?:me)?|toca|quiero escuchar)\s+(?:la cancion |el tema |musica de |algo de |la musica de )?(.{2,})", t)
+    m = re.fullmatch(r"(?:reproduce(?:me)?|pon(?:me)?|(?:me )?pones|toca|quiero escuchar)\s+(?:la cancion |el tema |musica de |algo de |la musica de )?(.{2,})", t)
     if m and not re.match(r"(?:el|la|los|las|un|una)? ?(?:volumen|brillo|fondo|modo|temporizador|alarma|pantalla)\b", m.group(1)):
         svc = music_service("", s)
         return I("play", f"Reproducir «{q(m)}» en {SVC_NAMES[svc]}", query=q(m), service=svc)
@@ -600,6 +630,14 @@ def plan_of(it):
         return {"run": [str(ROOT / "scripts/hf-lock")]}
     if k == "ia":
         return {"run": QS + ["ipc", "call", "shell", "open", "ia"]}
+    if k == "power":
+        return {"run": QS + ["ipc", "call", "shell", "openWith", "energia", it["value"]]}
+    if k == "mic":
+        return {"run": ["wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "1" if it["value"] else "0"]}
+    if k == "task":
+        return {"hf-ai": [{"type": "task", "text": it["text"], **({"due": it["due"]} if it.get("due") else {})}]}
+    if k == "say":
+        return {"say": it["what"]}
     if k == "unknown":
         return {"ai": it.get("text")}
     if k == "run":
@@ -629,6 +667,19 @@ def execute(it, s=None, no_ai=False):
     if k == "run":                     # orden propia del usuario (voiceCommands): la escribió él en Ajustes
         subprocess.Popen(["sh", "-c", it["command"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         return {"ok": True, "msg": "Hecho"}
+    if k == "say":
+        if it["what"] == "hora":
+            return {"ok": True, "msg": "Son las " + time.strftime("%H:%M")}
+        d = time.localtime()
+        dias = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+        meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+        return {"ok": True, "msg": f"Hoy es {dias[d.tm_wday]}, {d.tm_mday} de {meses[d.tm_mon - 1]}"}
+    if k == "mic":
+        r = run(plan_of(it)["run"], timeout=4)
+        return {"ok": r.returncode == 0, "msg": ("Micrófono silenciado" if it["value"] else "Micrófono activado") if r.returncode == 0 else "No pude cambiar el micrófono"}
+    if k == "power":
+        r = run(plan_of(it)["run"], timeout=6)
+        return {"ok": r.returncode == 0, "msg": "Confírmalo con Intro" if r.returncode == 0 else "No pude abrir el menú de energía"}
     if k in ("lock", "ia"):
         subprocess.Popen(plan_of(it)["run"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         return {"ok": True, "msg": "Hecho"}
@@ -660,7 +711,9 @@ TESTS = [
     "Busca la última de Rosalía en YouTube", "Nueva pestaña", "Cierra la pestaña", "Vuelve atrás", "Recarga la página",
     "Baja", "Sube la página", "Haz una captura de pantalla", "Bloquea la pantalla", "Activa el modo no molestar",
     "Cambia al escritorio tres", "Cierra la ventana", "Fondo siguiente", "Sube el brillo", "Pon un temporizador de 10 minutos para el té",
-    "Abre los ajustes", "Pon el modo oscuro", "¿Qué tiempo hará mañana en Sevilla?", "Reproduce", "Llévame a la Puerta del Sol",
+    "Abre los ajustes", "Pon el modo oscuro", "Apaga el equipo", "Reinicia el ordenador",
+    "Cierra sesión", "Silencia el micro", "¿Qué hora es?", "Recuérdame llamar a mamá mañana", "Añade una tarea comprar leche",
+    "¿Puedes subir un poco el volumen?", "Pon el volumen a tope", "¿Qué tiempo hará mañana en Sevilla?", "Reproduce", "Llévame a la Puerta del Sol",
 ]
 
 def main(argv):
@@ -714,7 +767,9 @@ INTENT_DOC = [
     ["Música", "«Reproduce/pon <canción> en YouTube | YouTube Music | Spotify» · «pausa» · «sigue» · «siguiente/anterior canción»"],
     ["Volumen y brillo", "«sube/baja el volumen» · «volumen al 40 %» · «silencia» · «activa el sonido» · «sube/baja el brillo» · «brillo al 70»"],
     ["Navegador", "«abre <web>» · «busca <algo> (en Google/Wikipedia/YouTube)» · «nueva pestaña» · «cierra la pestaña» · «atrás» · «adelante» · «recarga» · «baja/sube» · «busca <x> en la página»"],
-    ["Escritorio", "«abre <app>» · «abre los ajustes» · «captura de pantalla» · «bloquea» · «no molestar» · «escritorio 3» · «cierra/maximiza la ventana» · «fondo siguiente» · «modo oscuro» · «temporizador de 10 minutos» · «cafeína»"],
+    ["Escritorio", "«abre <app>» · «abre los ajustes» · «captura de pantalla» · «bloquea» · «no molestar» · «escritorio 3» · «cierra/maximiza la ventana» · «fondo siguiente» · «modo oscuro» · «temporizador de 10 minutos» · «cafeína» · «silencia el micro»"],
+    ["Tareas y preguntas", "«recuérdame <algo> (mañana)» · «añade una tarea <algo>» · «qué hora es» · «qué día es hoy»"],
+    ["Energía", "«apaga / reinicia / suspende el equipo» · «cierra sesión»: abre el menú con esa opción marcada; se confirma con Intro"],
     ["Tuyas", "las órdenes propias y las palabras que añadas abajo van antes que todas estas"],
     ["Lo demás", "solo entonces se lo pregunto al asistente de IA (panel lateral), que pide aprobación para cambiar cosas"],
 ]
