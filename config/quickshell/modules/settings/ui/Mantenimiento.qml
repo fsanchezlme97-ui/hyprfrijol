@@ -96,7 +96,8 @@ ColumnLayout {
         Txt {
             Layout.fillWidth: true; wrapMode: Text.WordWrap
             visible: !!root.upd
-            text: !root.upd ? "" : root.upd.update ? "Hay una versión nueva: <b>" + root.upd.latest + "</b>"
+            text: !root.upd ? "" : root.upd.packaged ? "Instalado con el paquete " + root.upd.package + ": se actualiza con tu ayudante del AUR (paru -Syu o yay -Syu)"
+                : root.upd.update ? "Hay una versión nueva: <b>" + root.upd.latest + "</b>"
                 : root.upd.latest ? "Estás en la última versión (" + root.upd.latest + ")" : "Aún no hay versiones publicadas"
             textFormat: Text.StyledText
             color: root.upd?.update ? Theme.p : Theme.t

@@ -38,6 +38,7 @@ n=0; while IFS= read -r f; do jq -e . "$f" >/dev/null 2>&1 || { bad "JSON roto: 
 if out="$(python3 dev/coherencia.py 2>&1)"; then ok "ajustes con valor por defecto y dependencias en packages.tsv"
 else bad "coherencia:"; printf '%s\n' "$out" | sed 's|^|  |'; fi
 python3 dev/gen-settings-index.py --check >/dev/null && ok "índice de búsqueda de Ajustes al día" || bad "índice de Ajustes desactualizado: dev/gen-settings-index.py"
+python3 dev/gen-pkgbuild.py --check >/dev/null && ok "PKGBUILD del AUR al día con packages.tsv" || bad "PKGBUILD desactualizado: dev/gen-pkgbuild.py"
 
 # ── shellcheck ──
 # Excluidos: SC2034 (variables que leen otros scripts con source), SC2155 (local x="$(…)": estilo), SC2088 (~ en

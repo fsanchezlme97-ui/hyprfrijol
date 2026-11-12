@@ -1,0 +1,9 @@
+post_install() {
+  echo ":: HyprFrijol está en /opt/hyprfrijol. Cada usuario, una vez (sin paquetes ni sesión, que ya pone el paquete):"
+  echo "     /opt/hyprfrijol/install.sh --no-deps --no-session"
+  echo "   Luego elige «Hyprland (HyprFrijol)» en el gestor de inicio. Las actualizaciones llegan con tu ayudante del AUR."
+}
+
+post_upgrade() {
+  echo ":: HyprFrijol actualizado: dentro de la sesión, Ctrl + Super + R reinicia el shell (o cierra sesión y vuelve a entrar)."
+}

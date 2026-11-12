@@ -18,7 +18,7 @@ Item {
     property bool islands: false          // archipiélago: cada grupo en su propia píldora (BarPill)
     // Pantalla secundaria: sus espacios, el título de su ventana y, a la derecha, lo que gastan sus programas (sin
     // aplicaciones, onda, chips, bandeja ni estado)
-    readonly property bool secondary: barWindow.screen !== Shell.primaryScreen
+    readonly property bool secondary: Shell.barModeFor(barWindow.screen) === "sencilla"
     // Píldoras del archipiélago (Bar.qml las usa de máscara para el ratón)
     readonly property var pills: [pillL, pillC, pillR, pillS]
     readonly property real gapC: 14

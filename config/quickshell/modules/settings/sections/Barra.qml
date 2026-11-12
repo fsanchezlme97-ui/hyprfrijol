@@ -298,7 +298,29 @@ ColumnLayout {
                 : Settings.barBehavior === "inteligente" ? "Se aparta cuando una ventana flotante la tapa o hay una maximizada o a pantalla completa, y vuelve al llevar el cursor al borde. En mosaico sigue reservando su sitio."
                 : "Siempre a la vista; las ventanas no se colocan debajo."
         }
-        SwRow { label: "Mostrar en todas las pantallas"; sub: "o solo en la principal"; key: "barAllScreens"; def: true }
+        // Una fila por pantalla: completa (todo), sencilla (espacios y consumo por programa) u oculta
+        Repeater {
+            model: Quickshell.screens
+            LabeledRow {
+                required property var modelData
+                label: modelData.name + (modelData === Shell.primaryScreen ? " (principal)" : ""); labelWidth: 120
+                Seg {
+                    model: [["completa", "Barra completa"], ["sencilla", "Sencilla"], ["oculta", "Sin barra"]]
+                    current: Shell.barModeFor(modelData)
+                    onPicked: k => {
+                        const m = Object.assign({}, Settings.get("barScreens", {}) ?? {});
+                        m[modelData.name] = k;
+                        Settings.set("barScreens", m);
+                    }
+                }
+            }
+        }
+        Txt {
+            Layout.fillWidth: true
+            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+            text: "Sencilla: los espacios de esa pantalla y lo que gasta cada programa abierto en ella."
+        }
+        SwRow { label: "Barra en las pantallas nuevas"; sub: "sencilla al conectar otra pantalla; si no, sin barra hasta que la elijas"; key: "barAllScreens"; def: true }
         SwRow { label: "Transparente en espacios vacíos"; sub: "la barra se funde con el fondo si no hay ventanas"; key: "barTransparentEmpty" }
     }
 }

@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.28] — 2026-11-11
+
+### Añadido
+- **La barra en cada pantalla** (Ajustes › Barra › Comportamiento): una fila por monitor para elegir barra
+  completa, sencilla (sus espacios y lo que gasta cada programa) o ninguna (`barScreens`). Antes solo se podía
+  elegir entre todas las pantallas o solo la principal, y la completa era siempre la de la principal.
+- **Paquete para el AUR** (`hyprfrijol-git`) en `packaging/aur/`, generado desde `install/packages.tsv`
+  (`dev/gen-pkgbuild.py`): instala en `/opt/hyprfrijol` con las entradas de sesión. `install.sh` respeta la
+  sesión que pone el paquete y `hf-update` (y Ajustes › Sistema) dicen que se actualiza con el ayudante del AUR.
+
+### Mejorado
+- Menos CPU en reposo con dos pantallas: el consumo por programa de la barra sencilla lee los procesos cada 4 s y
+  el análisis de cada lectura se salta el trabajo que no hace falta.
+
 ## [0.9.27] — 2026-11-11
 
 ### Añadido

@@ -49,6 +49,13 @@ Singleton {
     // de nombre al mover el cable o añadir una gráfica: HDMI-A-1 → HDMI-A-2), la más grande
     readonly property var primaryScreen: Quickshell.screens.find(s => s.name === Settings.get("primaryMonitor", ""))
         ?? Quickshell.screens.reduce((a, s) => !a || s.width * s.height > a.width * a.height ? s : a, null)
+    // Barra de cada pantalla (Ajustes › Barra › Pantallas, barScreens { "HDMI-A-2": "completa"|"sencilla"|"oculta" }):
+    // sin elegir, la principal completa y las demás sencillas (o ninguna con barAllScreens = false)
+    function barModeFor(scr): string {
+        const m = (Settings.get("barScreens", {}) ?? {})[scr?.name ?? ""];
+        if (m === "completa" || m === "sencilla" || m === "oculta") return m;
+        return scr === primaryScreen ? "completa" : Settings.get("barAllScreens", true) ? "sencilla" : "oculta";
+    }
 
     // Centro de control: ajustes rápidos, notificaciones y agenda viven en UN panel (vista "ajustes",
     // modules/quicksettings/QuickSettings.qml). Los nombres antiguos siguen valiendo como alias y dicen

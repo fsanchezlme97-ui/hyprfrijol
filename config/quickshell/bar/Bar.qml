@@ -7,7 +7,8 @@
 //                        (se aparta cuando una ventana flotante la tapa o hay una maximizada / a pantalla
 //                        completa; en los espacios en mosaico reserva su sitio salvo con una maximizada, en los
 //                        flotantes no reserva nada; vuelve con el cursor en el borde — WinMode.covered)
-//   barAllScreens        false → solo en la pantalla principal
+//   barScreens           por pantalla: completa · sencilla (espacios y consumo por programa) · oculta (Shell.barModeFor)
+//   barAllScreens        false → las pantallas sin elegir en barScreens, sin barra
 //   barTransparentEmpty  sin fondo cuando el espacio activo de esa pantalla no tiene ventanas
 //   visualBell           parpadea al llegar un aviso (alerta visual en vez de sonido)
 // Isla central: la barra flota y mide lo que su contenido, centrada; el resto de la franja deja pasar el ratón.
@@ -49,7 +50,7 @@ PanelWindow {
     }
     // En mosaico reserva su sitio (salvo con una ventana maximizada, que así ocupa toda la pantalla)
     readonly property bool smartReserve: { WinMode.overrides; WinMode.mode; return smart && !WinMode.isFloat(wsId) && !WinMode.hasFullscreen(screen?.name ?? ""); }
-    readonly property bool onThisScreen: Settings.get("barAllScreens", true) || screen === Shell.primaryScreen
+    readonly property bool onThisScreen: Shell.barModeFor(screen) !== "oculta"
     // Mostrada: siempre, salvo que se oculte sola y el cursor no esté encima
     readonly property bool revealed: (!autoHide && !smartCovered) || hover.hovered || hideDelay.running || flash.running
     // Para que los textos escalados se vean nítidos (Txt usa QtRendering si la ventana lo pide)

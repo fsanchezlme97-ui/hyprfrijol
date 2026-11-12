@@ -715,7 +715,9 @@ user_install() {
   [ -e "$USERCFG/local.lua" ] || { run cp "$HERE/config/defaults/local.lua" "$USERCFG/local.lua"; done_ "~/.config/hyprfrijol/local.lua (plantilla)"; }
   [ -e "$STATE/colors.json" ] || run cp "$HERE/config/defaults/colors.json" "$STATE/colors.json"
   # Entrada de sesión para el gestor de inicio
-  if [ "$SESSION" = 1 ] && [ "$FAMILY" = nixos ]; then
+  if [ "$SESSION" = 1 ] && command -v pacman >/dev/null && pacman -Qqo "$SESSION_FILE" >/dev/null 2>&1; then
+    say "Entrada de sesión ✓ (la pone el paquete $(pacman -Qqo "$SESSION_FILE" 2>/dev/null))"
+  elif [ "$SESSION" = 1 ] && [ "$FAMILY" = nixos ]; then
     warn "NixOS: /usr/share es de solo lectura; arranca con hf-session desde una TTY o declara la sesión en tu configuración."
   elif [ "$SESSION" = 1 ]; then
     local want; want="$(printf '%s\n' '[Desktop Entry]' 'Name=Hyprland (HyprFrijol)' 'Comment=Hyprland con el shell HyprFrijol' \

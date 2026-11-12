@@ -1,0 +1,116 @@
+# Maintainer: SrFrijol
+# Generado por dev/gen-pkgbuild.py desde install/packages.tsv: no editar a mano.
+pkgname=hyprfrijol-git
+pkgver=0
+pkgrel=1
+pkgdesc='Escritorio completo sobre Hyprland con un shell de Quickshell (barra, paneles, asistente de IA, dictado)'
+arch=('any')
+url='https://github.com/fsanchezlme97-ui/hyprfrijol'
+license=('MIT')
+depends=('hyprland'
+         'hyprlock'
+         'hypridle'
+         'xdg-desktop-portal-hyprland'
+         'quickshell'
+         'qt6-declarative'
+         'qt6-svg'
+         'qt6-wayland'
+         'qt6-imageformats'
+         'matugen'
+         'python'
+         'jq'
+         'wl-clipboard'
+         'polkit'
+         'inter-font')
+optdepends=('xdg-desktop-portal-gtk: portal: diálogos de abrir/guardar'
+         'libnotify: notify-send'
+         'zenity: diálogos de los scripts'
+         'xdg-user-dirs: carpetas del usuario y xdg-open'
+         'xdg-utils: carpetas del usuario y xdg-open'
+         'gnome-keyring: llavero (contraseñas, claves de la IA)'
+         'libsecret: llavero (contraseñas, claves de la IA)'
+         'curl: IA, actualizaciones'
+         'glib2: gsettings, gdbus y gio (tema GTK, papelera, avisos de unidades)'
+         'gtk3: abrir apps por su .desktop (gtk-launch)'
+         'util-linux: lsblk, findmnt y rfkill (discos y modo avión)'
+         'noto-fonts: tipografía de respaldo'
+         'noto-fonts-emoji: emojis (Spotlight «;»)'
+         'ttf-jetbrains-mono: monoespaciada (Ajustes, terminal)'
+         'papirus-icon-theme: iconos de apps (con carpetas del acento)'
+         'gsettings-desktop-schemas: tema claro/oscuro de las apps GTK'
+         'adw-gtk-theme: tema claro/oscuro de las apps GTK'
+         'qt6ct: tema y colores de las apps Qt'
+         'imagemagick: miniaturas, fondos animados, conversión'
+         'ffmpeg: miniaturas, fondos animados, conversión'
+         'qt6-webengine: web apps del panel lateral (WhatsApp, YouTube…)'
+         'kitty: terminal por defecto (HF.terminal)'
+         'btop: administrador de tareas y mezclador'
+         'pavucontrol: administrador de tareas y mezclador'
+         'flatpak: apps de Flathub (Aplicaciones, Subtítulos en vivo)'
+         'desktop-file-utils: registrar apps y web apps (update-desktop-database)'
+         'hyprsunset: luz nocturna'
+         'networkmanager: red y Wi-Fi (nmcli)'
+         'nm-connection-editor: editor avanzado de conexiones y VPN (nm-connection-editor)'
+         'pipewire: sonido (PipeWire) y pactl'
+         'wireplumber: sonido (PipeWire) y pactl'
+         'pipewire-pulse: sonido (PipeWire) y pactl'
+         'libpulse: sonido (PipeWire) y pactl'
+         'cava: onda de audio de la barra'
+         'cups: impresoras: lpstat, lpoptions y el asistente (servicio: systemctl enable --now cups.socket)'
+         'cups-filters: impresoras: lpstat, lpoptions y el asistente (servicio: systemctl enable --now cups.socket)'
+         'system-config-printer: impresoras: lpstat, lpoptions y el asistente (servicio: systemctl enable --now cups.socket)'
+         'udisks2: memorias USB y tarjetas SD: montar, expulsar y avisos (hf-devices)'
+         'ntfs-3g: discos de Windows (NTFS) y memorias exFAT, aunque el kernel no traiga o no cargue su driver'
+         'exfatprogs: discos de Windows (NTFS) y memorias exFAT, aunque el kernel no traiga o no cargue su driver'
+         'power-profiles-daemon: batería y modos de energía'
+         'upower: batería y modos de energía'
+         'git: actualizar HyprFrijol por versiones (hf-update)'
+         'pciutils: nombre de la GPU (lspci) en Acerca y hf-doctor'
+         'pacman-contrib: ver qué hay por actualizar sin tocar el sistema (checkupdates)'
+         'accountsservice: nombre y avatar de tu cuenta (AccountsService)'
+         'wtype: escribir emojis / dictado en la ventana con foco'
+         'alsa-utils: grabar el micrófono con arecord (si no hay pw-record)'
+         'ydotool: escribir en apps XWayland y clics simulados (si wtype no basta)'
+         'python-vosk: Vosk: dictado en tiempo real, palabra a palabra (motor por defecto si está; si no, whisper); sin paquete: hf-dictate install-vosk (venv con pip en ~/.local/share/hyprfrijol/whisper/vosk-venv) · modelos de alphacephei.com/vosk/models'
+         'vosk-api: Vosk: dictado en tiempo real, palabra a palabra (motor por defecto si está; si no, whisper); sin paquete: hf-dictate install-vosk (venv con pip en ~/.local/share/hyprfrijol/whisper/vosk-venv) · modelos de alphacephei.com/vosk/models'
+         'grim: capturas de pantalla'
+         'slurp: capturas de pantalla'
+         'wf-recorder: grabación de pantalla'
+         'tesseract: OCR de capturas (copiar texto)'
+         'tesseract-data-spa: OCR de capturas (copiar texto)'
+         'tesseract-data-eng: OCR de capturas (copiar texto)'
+         'cliphist: historial del portapapeles'
+         'playerctl: música y brillo'
+         'brightnessctl: música y brillo'
+         'python-pymupdf: Firmar documentos PDF (hf-sign); sin él usa Poppler y se pierden enlaces y formularios'
+         'python-gobject: selector de archivos, enviar al móvil y avisos del asistente (hf-pickfile, hf-phone, hf-ai)'
+         'poppler: OCR y conversión de PDF desde Nautilus (pdftoppm, hf-fileact)'
+         'yt-dlp: descargas de vídeo y audio (hf-download)'
+         'qt6-multimedia: fondo en movimiento (vídeo) en el bloqueo, el selector de fondos y el login visual'
+         'qt6-multimedia-ffmpeg: fondo en movimiento (vídeo) en el bloqueo, el selector de fondos y el login visual')
+makedepends=('git')
+provides=('hyprfrijol')
+conflicts=('hyprfrijol')
+install=hyprfrijol-git.install
+source=('hyprfrijol::git+https://github.com/fsanchezlme97-ui/hyprfrijol.git')
+sha256sums=('SKIP')
+
+pkgver() {
+  cd hyprfrijol
+  git describe --long --tags --abbrev=7 | sed 's/^v//; s/\([^-]*-g\)/r\1/; s/-/./g'
+}
+
+package() {
+  cd hyprfrijol
+  install -d "$pkgdir/opt/hyprfrijol"
+  # sin lo que solo sirve para desarrollar (diseños, herramientas de pruebas)
+  tar --exclude=.git --exclude=./design --exclude=./packaging -cf - . | tar -xf - -C "$pkgdir/opt/hyprfrijol"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -d "$pkgdir/usr/share/wayland-sessions"
+  printf '%s\n' '[Desktop Entry]' 'Name=Hyprland (HyprFrijol)' 'Comment=Hyprland con el shell HyprFrijol' \
+    'Exec=/opt/hyprfrijol/scripts/hf-session' 'Type=Application' 'DesktopNames=Hyprland' 'Keywords=tiling;wayland;compositor;' \
+    > "$pkgdir/usr/share/wayland-sessions/hyprfrijol.desktop"
+  printf '%s\n' '[Desktop Entry]' 'Name=HyprFrijol (modo seguro)' 'Comment=Hyprland mínimo para reparar HyprFrijol: sin shell ni plugins' \
+    'Exec=/opt/hyprfrijol/scripts/hf-session --safe' 'Type=Application' 'DesktopNames=Hyprland' 'Keywords=recovery;safe;rescue;' \
+    > "$pkgdir/usr/share/wayland-sessions/hyprfrijol-seguro.desktop"
+}

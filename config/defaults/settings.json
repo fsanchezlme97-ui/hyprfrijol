@@ -187,6 +187,7 @@
   ],
   "barBehavior": "siempre",
   "barAllScreens": true,
+  "barScreens": {},
   "barWeatherText": false,
   "barStatsStyle": "texto",
   "barStatsShow": [

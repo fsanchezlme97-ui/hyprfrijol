@@ -15,7 +15,7 @@ Item {
     property bool compact: false
     property bool islands: false          // archipiélago: cada grupo en su píldora (BarPill)
     // Pantalla secundaria: solo sus espacios (sin aplicaciones, chips, bandeja ni estado)
-    readonly property bool secondary: barWindow.screen !== Shell.primaryScreen
+    readonly property bool secondary: Shell.barModeFor(barWindow.screen) === "sencilla"
     readonly property var pills: [pillT, pillB, pillS]
     readonly property real naturalLength: colMain.implicitHeight + 24
     BarPill { id: pillT; bar: root.barWindow; visible: root.islands; y: 0; width: parent.width; height: colMain.y + topEnd.y + topEnd.height + 6 }

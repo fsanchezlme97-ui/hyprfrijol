@@ -54,9 +54,10 @@ Singleton {
             cpu += e.cpu; mem += e.rss; n++;
             for (const k of procKids[p] || []) st.push(k);
         }
-        return { cpu: cpu / Math.max(1, cores.length), mem: mem, n: n };
+        return { cpu: cpu / Math.max(1, nCores), mem: mem, n: n };
     }
     property var cores: []
+    readonly property int nCores: cores.length      // un int: quien usa tree() no se recalcula con cada lectura de núcleos
     property real swapUsed: 0
     property real swapTotal: 0
     property real netRx: 0
@@ -166,7 +167,8 @@ Singleton {
               done < /proc/diskstats
               echo "dio $((r * 512)) $((w * 512))"
               [ $((i % 15)) = 0 ] && df -B1 --output=used,size / | { read -r _; read -r u s; echo "disk $u $s"; }
-              if [ "$detail" != 0 ]; then
+              # por programa (barra secundaria): cada 4 s basta; con el monitor del sistema abierto, cada 2 s
+              if [ "$detail" = 2 ] || { [ "$detail" = 1 ] && [ $((i % 2)) = 0 ]; }; then
                 # tiempo de CPU de cada proceso (el % se calcula entre dos medidas, como top), memoria y padre
                 # Memoria: la propia de cada proceso (residente menos lo compartido, de statm), no el RSS: con el RSS las
                 # bibliotecas y la memoria compartida de Chrome o Electron contaban una vez por proceso y salían gigas de más
@@ -192,6 +194,11 @@ Singleton {
                 let swT = 0, swF = 0;
                 const detail = root.detailUsers > 0, anyProc = root.procMode > 0;
                 for (const l of text.split("\n")) {
+                    if (l.startsWith("proc ")) {      // cientos por vuelta: sin el split general
+                        const m = l.match(/^proc\s+\/proc\/(\d+)\/stat\s+(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/);
+                        if (m) procs.push({ pid: +m[1], ticks: +m[2], rss: +m[3], ppid: +m[4], name: m[5] });
+                        continue;
+                    }
                     const f = l.trim().split(/[\s,]+/);
                     if (f[0] === "cpu") {
                         const v = f.slice(1).map(Number), idle = v[3] + (v[4] || 0), tot = v.reduce((a, b) => a + b, 0);
@@ -216,9 +223,6 @@ Singleton {
                             root.netTx = (tx - pn.tx) * 1000 / (t - pn.t);
                         }
                         root.prevNet = { rx: rx, tx: tx, t: t };
-                    } else if (f[0] === "proc") {
-                        const m = l.trim().match(/^proc\s+\/proc\/(\d+)\/stat\s+(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/);
-                        if (m) procs.push({ pid: +m[1], ticks: +m[2], rss: +m[3], ppid: +m[4], name: m[5] });
                     } else if (f[0] === "mnt") {
                         const m = l.trim().match(/^mnt\s+\S+\s+(.+?)\s+(\d+)\s+(\d+)$/);
                         if (m) disks.push({ mount: m[1], used: +m[2], size: +m[3] });
@@ -269,7 +273,7 @@ Singleton {
                 root.gpuTemp = main ? main.temp : (gpus.find(g => g.temp > 0)?.temp ?? -1);
                 root.cores = cores; root.prevCores = prevCores;
                 root.swapTotal = swT; root.swapUsed = swT - swF;
-                if (anyProc) {
+                if (anyProc && procs.length) {     // (vuelta sin procesos: se quedan los de la anterior)
                     // % de CPU (100 = un núcleo) entre esta medida y la anterior; ticks de 1/100 s
                     const t = Date.now(), pp = root.prevProcs, dt = pp ? (t - pp.t) / 1000 : 0, cur = {};
                     for (const p of procs) cur[p.pid] = p.ticks;
@@ -287,7 +291,7 @@ Singleton {
                     }
                     root.prevProcs = { t: t, m: cur };
                     if (detail) root.disks = disks.slice(0, 5);
-                } else { root.prevProcs = null; root.procTable = ({}); root.procKids = ({}); }
+                } else if (!anyProc) { root.prevProcs = null; root.procTable = ({}); root.procKids = ({}); }
                 root.cpuHist = root.push(root.cpuHist, root.cpu);
                 root.memHist = root.push(root.memHist, root.memTotal ? 100 * root.memUsed / root.memTotal : 0);
                 root.gpuHist = root.push(root.gpuHist, Math.max(0, root.gpu));

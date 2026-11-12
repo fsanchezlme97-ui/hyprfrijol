@@ -48,7 +48,18 @@ setting() { # setting <clave> <defecto>
   echo "$2"
 }
 
-G rev-parse --git-dir >/dev/null 2>&1 || die "$REPO no es un clon de git: no se puede actualizar con hf-update (vuelve a instalar con el bootstrap)"
+if ! G rev-parse --git-dir >/dev/null 2>&1; then
+  # Instalado con un paquete (hyprfrijol-git del AUR, en /opt): lo actualiza el gestor de paquetes
+  pkg="$(command -v pacman >/dev/null && pacman -Qqo "$REPO/scripts/hf-update" 2>/dev/null)"
+  if [ -n "$pkg" ]; then
+    case "$CMD" in
+      auto) exit 0 ;;
+      status|check) [ "$JSON" = 1 ] && { printf '{"packaged":true,"package":"%s","msg":"Se actualiza con tu ayudante del AUR (paru -Syu o yay -Syu)"}\n' "$pkg"; exit 0; } ;;
+    esac
+    die "HyprFrijol está instalado con el paquete $pkg: actualízalo con tu ayudante del AUR (paru -Syu o yay -Syu)" 0
+  fi
+  die "$REPO no es un clon de git: no se puede actualizar con hf-update (vuelve a instalar con el bootstrap)"
+fi
 
 # Versiones: solo X.Y.Z (con o sin «v»), de más nueva a más vieja
 tags() { G tag -l | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V -r; }

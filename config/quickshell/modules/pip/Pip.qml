@@ -135,7 +135,7 @@ Scope {
         // Zona libre: pantalla menos lo reservado (la barra u otras barras: monitor.reserved, en px lógicos)
         // y el panel lateral. La barra de hyprfrijol cuenta aunque aún no haya reservado (al arrancar).
         const r = mon.reserved ?? [0, 0, 0, 0];
-        const barHere = !Shell.focusMode && (Settings.get("barAllScreens", true) !== false || mon.name === (Shell.primaryScreen?.name ?? mon.name));
+        const barHere = !Shell.focusMode && Shell.barModeFor(Quickshell.screens.find(s => s.name === mon.name) ?? Shell.primaryScreen) !== "oculta";
         const edge = side => Math.max(4, (r[side] ?? 0) > 0 ? r[side] + 4 : 0,
                                       barHere && barPos === ["izquierda", "arriba", "derecha", "abajo"][side] ? barEdge : 0);
         const aL = edge(0), aT = edge(1), aR = edge(2), aB = edge(3);

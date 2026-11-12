@@ -33,8 +33,9 @@ reducción automática) se descartó en las decisiones del plan.
 
 ## Baratos de añadir (primero)
 
-- [ ] **Ajustes de la barra por pantalla**: mostrar u ocultar la barra y sus módulos en cada monitor.
-- [ ] **Paquete en el AUR** (`hyprfrijol-git`), para poder probarlo sin clonar.
+- [ ] **Paquete en el AUR** (`hyprfrijol-git`): el PKGBUILD está en `packaging/aur/hyprfrijol-git/` (0.9.28, se
+      genera con `dev/gen-pkgbuild.py` y se construye bien con `makepkg`). Falta subirlo con la cuenta del autor
+      (instrucciones en la cabecera de `dev/gen-pkgbuild.py`) y añadir «Arch: `paru -S hyprfrijol-git`» al README.
 
 ## Donde vamos por detrás
 
@@ -57,6 +58,7 @@ reducción automática) se descartó en las decisiones del plan.
       ningún proceso (antes `hyprctl` cada 600 ms con flotantes o PiP, `hf-caffeine` cada 30 s, `nmcli` también por
       cable, `nvidia-smi` cada 2 s); los lectores se paran con la barra escondida o la sesión bloqueada. Queda: el hilo
       principal sigue en ~1,5 % de un núcleo en reposo, casi todo la lectura de SysStats cada 2 s para la pastilla.
+      0.9.28: con dos pantallas, el consumo por programa de la barra sencilla lee los procesos cada 4 s y no cada 2.
 - [ ] **Productividad**: revisar Spotlight, portapapeles, ventanas y atajos con uso real; quitar pasos. Hecho
       (0.9.25): deshacer al borrar tareas o vaciar el historial de avisos, «Copiado» al copiar un aviso, las teclas de
       Alt + Tab a la vista, botones pequeños más fáciles de acertar. Queda lo que pide uso real.

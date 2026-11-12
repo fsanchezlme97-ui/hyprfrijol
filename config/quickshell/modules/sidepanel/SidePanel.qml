@@ -123,7 +123,7 @@ PanelWindow {
     // (Hyprland suma las zonas exclusivas; las ventanas quedan a gaps_out del panel, como del borde: sin doble hueco)
     readonly property real barSideReserve: {
         if (Settings.barPos !== (onLeft ? "izquierda" : "derecha") || Shell.focusMode) return 0;
-        if (Settings.get("barAllScreens", true) === false && pinScreen !== Shell.primaryScreen) return 0;
+        if (Shell.barModeFor(pinScreen) === "oculta") return 0;
         if (Settings.barAutoHide || Shell.barHidden) return 0;
         if (Settings.barSmartHide) {
             WinMode.overrides; WinMode.mode;
