@@ -16,6 +16,8 @@
 //     theme:   el tema resuelto de tu sesión (copia de ~/.local/state/hyprfrijol/theme.json: c = colores,
 //              S = estilo flat/aurora (o tonal con «Reducir transparencia»), light, font, reduceMotion). Lo escribe scripts/hf-greeter-sync
 //              y, si está, manda sobre «palette».  defaultUser: usuario preseleccionado la primera vez.
+//     widgets: lo que se ve (reloj fecha equipo bateria red teclado energia; la accesibilidad siempre)
+//     curtain: false = sin cortina, el formulario directamente (también tras 90 s sin tocar nada)
 //
 // Vista previa sin greetd (no inicia nada, imprime el comando):
 //   HF_GREETER_PREVIEW=1 qs -p greeter/quickshell                  (contraseña «error» → simula fallo)
@@ -49,6 +51,12 @@ ShellRoot {
     readonly property string wallVideo: Quickshell.env("HF_GREETER_VIDEO") ?? cfg.wallpaperVideo ?? ""
     property var palettes: ({})
     readonly property var palette: palettes[paletteKey] ?? palettes.atardecer ?? fallbackPalette
+    // Qué se ve (Ajustes › Bloqueo e inicio de sesión → hf-greeter-sync): reloj fecha equipo bateria red teclado energia.
+    // La accesibilidad no se puede quitar: quien la necesita no podría volver a activarla.
+    readonly property var widgets: Array.isArray(cfg.widgets) ? cfg.widgets : ["reloj", "fecha", "equipo", "bateria", "red", "teclado", "energia"]
+    function has(w): bool { return widgets.includes(w); }
+    readonly property bool useCurtain: Quickshell.env("HF_GREETER_OPEN") !== "1" && cfg.curtain !== false
+    onUseCurtainChanged: if (!useCurtain) curtain = false
     readonly property var fallbackPalette: ({ bg: "#14151B", s1: "#1C1D24", s3: "#272832", s4: "#31323D", p: "#EDBFA5", onP: "#4A2414",
         pc: "#4A3A45", onPc: "#F6DCCF", sc: "#3A3D4C", onSc: "#E2E3EE", ter: "#A9B4D6", t: "#E6E5EC", tv: "#B6B5C2",
         o: "#8E8D9B", ov: "#3A3A46", light: false })
@@ -378,7 +386,7 @@ ShellRoot {
     function wake(): void { if (curtain) { curtain = false; idleTimer.restart(); Qt.callLater(() => focusPassword()); } }
     function activity(): void { idleTimer.restart(); }
     // Sin actividad, vuelve a la cortina (como un salvapantallas)
-    Timer { id: idleTimer; interval: 90000; running: !root.curtain && root.phase === "idle"; onTriggered: { root.curtain = true; root.sessOpen = false; root.a11yOpen = false; } }
+    Timer { id: idleTimer; interval: 90000; running: root.useCurtain && !root.curtain && root.phase === "idle"; onTriggered: { root.curtain = true; root.sessOpen = false; root.a11yOpen = false; } }
 
     function pickUser(i: int): void {
         cancelAuth();
@@ -852,6 +860,8 @@ ShellRoot {
                 focus: true
                 Keys.onPressed: event => {
                     root.activity();
+                    // Vista previa (Ajustes › Bloqueo e inicio de sesión): Esc la cierra
+                    if (root.preview && event.key === Qt.Key_Escape && !root.sessOpen && !root.a11yOpen && root.phase !== "auth") { Qt.quit(); return; }
                     if (root.curtain) { root.wake(); event.accepted = true; return; }
                     if (event.key === Qt.Key_Escape) {
                         if (root.sessOpen || root.a11yOpen) { root.sessOpen = false; root.a11yOpen = false; }
@@ -883,13 +893,14 @@ ShellRoot {
                         layer.effect: MultiEffect { shadowEnabled: true; shadowColor: th.textShadow; shadowBlur: 0.9; shadowVerticalOffset: 1; shadowHorizontalOffset: 0 }
                         GText {
                             Layout.alignment: Qt.AlignHCenter
+                            visible: root.has("reloj")
                             text: root.hhmm
                             font.pixelSize: 132
                             font.weight: Font.Light
                             font.letterSpacing: -0.045 * 132
                             font.features: { "tnum": 1 }
                         }
-                        GText { Layout.alignment: Qt.AlignHCenter; Layout.topMargin: -10; text: root.longDate; size: 19 }
+                        GText { Layout.alignment: Qt.AlignHCenter; Layout.topMargin: root.has("reloj") ? -10 : 0; visible: root.has("fecha"); text: root.longDate; size: 19 }
                         Item {
                             Layout.alignment: Qt.AlignHCenter
                             Layout.topMargin: 26
@@ -913,8 +924,8 @@ ShellRoot {
                         layer.effect: MultiEffect { shadowEnabled: true; shadowColor: th.textShadow; shadowBlur: 0.9; shadowVerticalOffset: 1; shadowHorizontalOffset: 0 }
                         Repeater {
                             model: {
-                                const a = [Quickshell.env("HOSTNAME") || "hyprfrijol"];
-                                if (root.hasBattery) a.push("Batería " + root.batteryPct + " %");
+                                const a = root.has("equipo") ? [Quickshell.env("HOSTNAME") || "hyprfrijol"] : [];
+                                if (root.hasBattery && root.has("bateria")) a.push("Batería " + root.batteryPct + " %");
                                 if (root.caps) a.push("Bloq Mayús activado");
                                 const out = [];
                                 for (let i = 0; i < a.length; i++) { if (i) out.push("·"); out.push(a[i]); }
@@ -943,13 +954,14 @@ ShellRoot {
                         layer.effect: MultiEffect { shadowEnabled: true; shadowColor: th.textShadow; shadowBlur: 0.9; shadowVerticalOffset: 1; shadowHorizontalOffset: 0 }
                         GText {
                             Layout.alignment: Qt.AlignHCenter
+                            visible: root.has("reloj")
                             text: root.hhmm
                             font.pixelSize: 64
                             font.weight: Font.Light
                             font.letterSpacing: -0.035 * 64
                             font.features: { "tnum": 1 }
                         }
-                        GText { Layout.alignment: Qt.AlignHCenter; Layout.topMargin: -6; text: root.longDate; size: 14; muted: true }
+                        GText { Layout.alignment: Qt.AlignHCenter; Layout.topMargin: root.has("reloj") ? -6 : 0; visible: root.has("fecha"); text: root.longDate; size: 14; muted: true }
                     }
 
                     // Centro: tarjeta con avatar (asomando por arriba), nombre y acceso
@@ -1400,19 +1412,20 @@ ShellRoot {
                                 x: 12
                                 spacing: 6
                                 Item {
+                                    visible: root.has("teclado")
                                     implicitWidth: layoutTxt.implicitWidth; implicitHeight: 26
                                     GText { id: layoutTxt; anchors.centerIn: parent; text: root.layout; font.weight: Font.Medium }
                                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.nextLayout() }
                                 }
-                                Rectangle { implicitWidth: 1; implicitHeight: 14; color: th.ov; Layout.leftMargin: 4; Layout.rightMargin: 4 }
-                                GIcon { name: root.online ? "wifi" : "wifioff"; color: th.tv }
-                                GIcon { name: "battery"; color: th.tv; visible: root.hasBattery; Layout.leftMargin: 2 }
-                                GText { text: root.batteryPct + " %"; size: 12; muted: true; visible: root.hasBattery; font.features: { "tnum": 1 } }
+                                Rectangle { visible: root.has("teclado"); implicitWidth: 1; implicitHeight: 14; color: th.ov; Layout.leftMargin: 4; Layout.rightMargin: 4 }
+                                GIcon { name: root.online ? "wifi" : "wifioff"; color: th.tv; visible: root.has("red") }
+                                GIcon { name: "battery"; color: th.tv; visible: root.hasBattery && root.has("bateria"); Layout.leftMargin: 2 }
+                                GText { text: root.batteryPct + " %"; size: 12; muted: true; visible: root.hasBattery && root.has("bateria"); font.features: { "tnum": 1 } }
                                 RoundBtn { icon: "a11y"; on: root.a11yOpen; onClicked: { root.a11yOpen = !root.a11yOpen; root.sessOpen = false; } }
-                                Rectangle { implicitWidth: 1; implicitHeight: 14; color: th.ov; Layout.leftMargin: 2; Layout.rightMargin: 2 }
-                                RoundBtn { icon: "moon"; onClicked: root.power("suspend") }
-                                RoundBtn { icon: "restart"; onClicked: root.power("reboot") }
-                                RoundBtn { icon: "power"; onClicked: root.power("poweroff") }
+                                Rectangle { visible: root.has("energia"); implicitWidth: 1; implicitHeight: 14; color: th.ov; Layout.leftMargin: 2; Layout.rightMargin: 2 }
+                                RoundBtn { visible: root.has("energia"); icon: "moon"; onClicked: root.power("suspend") }
+                                RoundBtn { visible: root.has("energia"); icon: "restart"; onClicked: root.power("reboot") }
+                                RoundBtn { visible: root.has("energia"); icon: "power"; onClicked: root.power("poweroff") }
                             }
                         }
                     }

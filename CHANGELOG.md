@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.42] — 2026-11-12
+
+### Añadido
+- **Ajustes › Bloqueo e inicio de sesión**: personaliza la pantalla de bloqueo y el login con los temas de
+  Apariencia (las paletas del sistema y las tuyas) y con tus fondos (de la colección o cualquier imagen).
+  - Bloqueo, con vista previa en vivo: tema, fondo (imagen, desenfocada, paisaje o color liso), oscurecido,
+    disposición (izquierda, centro, derecha), estilo del reloj y qué mostrar (fecha, tiempo, música, batería,
+    no molestar).
+  - Login: tema, fondo (imagen o vídeo, o paisaje), pantalla de reposo, movimiento y qué mostrar (reloj, fecha,
+    nombre del equipo, batería, red, distribución del teclado, apagar y reiniciar; la accesibilidad siempre).
+    «Ver el login» lo abre en vista previa (Esc sale). Los cambios se copian solos al login (`hf-greeter-sync --auto`).
+
 ## [0.9.41] — 2026-11-12
 
 ### Añadido

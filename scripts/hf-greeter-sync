@@ -14,7 +14,10 @@
 #   hf-greeter-sync --dry-run   prepara los archivos en una carpeta temporal y muestra lo que haría
 #   hf-greeter-sync --print     solo imprime el live/greeter.json que generaría
 #
-# Ajustes: greeterMotion = false deja quieto el fondo del login (también wallpaperMotion = false o «Reducir movimiento»).
+# Ajustes (Ajustes › Bloqueo e inicio de sesión): greeterPalette ("" = la del escritorio; si no, esa paleta con tu
+# estilo) · greeterBg (fondo | paisaje) · greeterWallpaper ("" = el fondo actual; si no, esa imagen o vídeo) ·
+# greeterScene (paisaje; "" = según claro u oscuro) · greeterCurtain · greeterWidgets · greeterMotion = false deja
+# quieto el fondo (también wallpaperMotion = false o «Reducir movimiento»).
 #
 # Variables: HF_GREETER_DEST (por defecto /etc/greetd/quickshell) · HF_PRIV (pkexec|sudo|none, fuerza el método)
 set -euo pipefail
@@ -62,10 +65,33 @@ setting() {   # setting <clave> <por defecto>  (settings.json del usuario sobre 
   printf '%s' "${v:-$2}"
 }
 
+# Paleta propia del login: sus colores sobre tu tema (se conservan estilo, tipografía y movimiento)
+G_PAL="$(setting greeterPalette "")"
+if [ -n "$G_PAL" ] && [ "$THEME_JSON" != null ]; then
+  _pals=(); for f in "$ROOT/config/themes/palettes.json" "$HOME/.config/hyprfrijol/palettes-user.json"; do [ -s "$f" ] && _pals+=("$f"); done
+  _p="$(jq -nc --arg k "$G_PAL" '[inputs] | add | .[$k] // empty' "${_pals[@]}" 2>/dev/null || true)"
+  if [ -n "$_p" ]; then
+    THEME_JSON="$(jq -c --argjson p "$_p" --arg k "$G_PAL" '
+      .c = (.c + ($p | with_entries(select(.key | IN("bg","s1","s3","s4","p","onP","pc","onPc","sc","onSc","ter","t","tv","o","ov")))) + { accent: $p.p })
+      | .light = ($p.light == true) | .paletteKey = $k | .paletteName = ($p.name // $k)' <<<"$THEME_JSON")"
+  else
+    warn "La paleta «$G_PAL» no existe: el login usa la del escritorio."
+  fi
+  unset _pals _p
+fi
+G_BG="$(setting greeterBg fondo)"
+G_WALL="$(setting greeterWallpaper "")"
+G_SCENE="$(setting greeterScene "")"
+G_CURTAIN="$(setting greeterCurtain true)"
+G_WIDGETS="$(setting greeterWidgets '["reloj","fecha","equipo","bateria","red","teclado","energia"]')"
+jq -e 'type == "array"' <<<"$G_WIDGETS" >/dev/null 2>&1 || G_WIDGETS='["reloj","fecha","equipo","bateria","red","teclado","energia"]'
+
 # ---------- Fondo ----------
 # Origen: wallpaper-path (el archivo real: imagen, vídeo o carpeta de Wallpaper Engine) o current-wallpaper.
 wall_src() {
   local w=""
+  [ "$G_BG" = paisaje ] && return 0                                      # paisaje dibujado: sin fondo
+  [ -n "$G_WALL" ] && [ -f "$G_WALL" ] && [ -r "$G_WALL" ] && { printf '%s' "$G_WALL"; return 0; }   # imagen elegida
   [ -s "$STATE/wallpaper-path" ] && w="$(head -n1 "$STATE/wallpaper-path")"
   if [ -z "$w" ] || [ ! -e "$w" ]; then
     w=""; [ -e "$STATE/current-wallpaper" ] && w="$(readlink -f "$STATE/current-wallpaper")"
@@ -98,8 +124,10 @@ build_live_json() { # $1 = fondo fijo · $2 = vídeo ("" = sin vídeo)
   local base='{}'
   [ -r "$LIVE/greeter.json" ] && jq -e 'type == "object"' "$LIVE/greeter.json" >/dev/null 2>&1 && base="$(jq -c . "$LIVE/greeter.json")"
   jq -n --argjson base "$base" --argjson theme "$THEME_JSON" --arg wall "$1" --arg vid "$2" --arg user "${USER:-$(id -un)}" \
-        --arg when "$(date -Iseconds)" '
-    ($base | del(.wallpaperVideo))
+        --arg when "$(date -Iseconds)" --arg scene "$G_SCENE" --argjson widgets "$G_WIDGETS" --arg curtain "$G_CURTAIN" '
+    ($base | del(.wallpaperVideo, .wallpaper, .scene))
+    + { widgets: $widgets, curtain: ($curtain != "false") }
+    + (if $scene != "" then { scene: $scene } else {} end)
     + (if $theme != null then { theme: $theme } else {} end)
     + (if $wall != "" then { wallpaper: $wall } else {} end)
     + (if $vid != "" then { wallpaperVideo: $vid } else {} end)
@@ -148,7 +176,7 @@ make_live() {
     [ -z "$vid" ] && rm -f "$out/wallpaper.mp4"
     [ -n "$img" ] && printf '%s' "$stamp" > "$out/wallpaper.src"
   fi
-  [ -z "$img" ] && [ -s "$have/wallpaper.jpg" ] && img="$LIVE/wallpaper.jpg"   # se conserva el que hubiera
+  [ -z "$img" ] && [ "$G_BG" != paisaje ] && [ -s "$have/wallpaper.jpg" ] && img="$LIVE/wallpaper.jpg"   # se conserva el que hubiera
 
   # Foto (256×256)
   if [ -n "$FACE" ]; then

@@ -198,7 +198,7 @@ RowLayout {
             RowLayout {
                 Layout.topMargin: 2
                 spacing: 4
-                Button { kind: "link"; text: "Bloqueo de pantalla (Privacidad)"; onClicked: Shell.open("ajustesapp", "privacidad") }
+                Button { kind: "link"; text: "Aspecto del bloqueo y del login"; onClicked: Shell.open("ajustesapp", "bloqueo") }
             }
         }
     }

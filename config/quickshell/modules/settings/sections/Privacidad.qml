@@ -173,6 +173,7 @@ RowLayout {
                 Seg { model: [[2, "2 min"], [5, "5 min"], [10, "10 min"], [0, "Nunca"]]; current: Settings.get("idleLock", 5); onPicked: k => Settings.set("idleLock", k) }
             }
             SwRow { label: "Bloquear al suspender"; sub: "pide la contraseña al volver de la suspensión"; key: "lockOnSuspend"; def: true }
+            LinkRow { label: "Tema, fondo y widgets"; target: "Pantalla de bloqueo"; section: "bloqueo"; sectionLabel: "Bloqueo e inicio de sesión" }
             LinkRow { label: "Aviso de notificaciones al bloquear"; target: "En la pantalla de bloqueo"; value: Settings.get("notifyLock", true) ? "Activado" : "Desactivado"; section: "notificaciones"; sectionLabel: "Notificaciones" }
         }
         Section {
