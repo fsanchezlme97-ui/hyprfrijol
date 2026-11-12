@@ -98,7 +98,7 @@ PanelWindow {
         target: Shell
         function onPreloadRequested(v) { if (v === "ia") win.chatHeld = true; }   // cursor sobre el botón de la IA
     }
-    readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, toggleHistory: () => {}, showHistory: false, handoff: () => {}, setWindow: () => {} })
+    readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, toggleHistory: () => {}, showHistory: false, toggleLog: () => {}, showLog: false, handoffTo: null, handoff: () => {}, setWindow: () => {} })
 
     readonly property string aiLabel: String(Settings.get("aiName", "") ?? "").trim() || "IA"
 
@@ -162,6 +162,7 @@ PanelWindow {
         if (a && typeof a === "object" && Array.isArray(a.images)) a.images.forEach(p => chat.attach(String(p)));
         if (a && typeof a === "object" && a.ask !== undefined) chat.ask(String(a.ask), "quick");
         else if (typeof a === "string" && a.startsWith("ask:")) chat.ask(a.slice(4), "quick");
+        if (a && typeof a === "object" && a.log) { if (!chat.showLog) chat.toggleLog(); return; }   // qs ipc call sidepanel log
         Qt.callLater(() => win.chat.focusInput());
     }
     Connections {
@@ -228,9 +229,18 @@ PanelWindow {
                         tooltip: "Conversaciones anteriores"
                         onClicked: chat.toggleHistory()
                     }
+                    IconBtn {
+                        icon: "terminal"; iconSize: 13; fg: Theme.tv
+                        implicitWidth: 26; implicitHeight: 26
+                        active: chat.showLog
+                        tooltip: "Registro del asistente"
+                        onClicked: chat.toggleLog()
+                    }
                     Item { Layout.fillWidth: true }
                     IconBtn {
+                        visible: !!chat.handoffTo
                         icon: "detach"; iconSize: 14; implicitWidth: 26; implicitHeight: 26
+                        tooltip: "Seguir en " + (chat.handoffTo?.label ?? "")
                         onClicked: chat.handoff()
                     }
                     IconBtn {
@@ -291,5 +301,7 @@ PanelWindow {
         function ask(text: string): void { Shell.open("ia", { ask: text }); }
         // Pregunta con una imagen adjunta (Super + Mayús + A: zona de la pantalla → IA)
         function askImage(text: string, image: string): void { Shell.open("ia", { ask: text, image: image }); }
+        // El registro del asistente (cada petición y cada acción aplicada)
+        function log(): void { Shell.open("ia", { log: true }); }
     }
 }

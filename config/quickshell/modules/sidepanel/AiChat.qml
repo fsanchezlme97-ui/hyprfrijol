@@ -57,6 +57,7 @@ Item {
     property var pendingDocs: []
     readonly property int maxDocs: 8
     property bool showHistory: false        // lista de conversaciones guardadas (botón del reloj en la cabecera)
+    property bool showLog: false            // registro del asistente (botón de la terminal en la cabecera; hf-ai activity)
     readonly property int maxImages: 6
     readonly property bool allowCapture: Settings.get("aiContextCapture", true) !== false
     readonly property bool confirmChanges: Settings.get("aiConfirm", true) !== false
@@ -72,7 +73,7 @@ Item {
         : ["Resume mis notificaciones", "Temporizador de 10 min para el té", "Pon la barra arriba y el fondo lago", "Cierra las ventanas de Firefox"]
 
     function focusInput() { input.forceActiveFocus(); }
-    function clear() { planIdx = -1; Shell.aiPlanPending = false; checkingIn = false; messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; focusInput(); }
+    function clear() { planIdx = -1; Shell.aiPlanPending = false; checkingIn = false; messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; showLog = false; focusInput(); }
     function setWindow(w) { if (w && w.address) { winInfo = w; useWindow = true; } Qt.callLater(focusInput); }
     function patch(i, p) { const m = messages.slice(); m[i] = Object.assign({}, m[i], p); messages = m; }
     function push(m) { messages = [...messages, m]; Qt.callLater(scrollEnd); }
@@ -506,7 +507,19 @@ Item {
         const q = histQuery.trim().toLowerCase();
         return q === "" ? histList : histList.filter(h => h.title.toLowerCase().includes(q) || h.text.includes(q));
     }
-    function toggleHistory() { showHistory = !showHistory; if (showHistory) { histQuery = ""; loadHistory(); } else focusInput(); }
+    function toggleHistory() { showHistory = !showHistory; showLog = false; if (showHistory) { histQuery = ""; loadHistory(); } else focusInput(); }
+
+    // ---- registro: cada petición (quién respondió, cuánto tardó, respaldo, error, propuesta) y cada acción aplicada
+    property var logList: []
+    function toggleLog() { showLog = !showLog; showHistory = false; if (showLog) loadLog(); else focusInput(); }
+    function loadLog() { logProc.running = false; logProc.running = true; }
+    onBusyChanged: if (!busy && showLog) loadLog()
+    Process {
+        id: logProc
+        command: [Paths.script("hf-ai"), "activity", "200"]
+        stdout: StdioCollector { onStreamFinished: { try { root.logList = JSON.parse(text); } catch (e) { root.logList = []; } } }
+    }
+    readonly property var srcNames: ({ panel: "Panel", voz: "Voz", terminal: "Terminal" })
     function loadHistory() { histLister.running = false; histLister.running = true; }
     Process {
         id: histLister
@@ -766,7 +779,7 @@ print(json.dumps(out[:300]))
         // ---------------------------------------------------- conversación
         Flickable {
             id: flick
-            visible: !root.showHistory
+            visible: !root.showHistory && !root.showLog
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
@@ -1285,7 +1298,7 @@ print(json.dumps(out[:300]))
 
         // ---------------------------------------------------- sugerencias
         Flow {
-            visible: !root.busy && !onboard.visible && !root.showHistory
+            visible: !root.busy && !onboard.visible && !root.showHistory && !root.showLog
             Layout.fillWidth: true
             Layout.preferredWidth: root.width - 24
             Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.bottomMargin: 8; Layout.topMargin: 4
@@ -1302,6 +1315,80 @@ print(json.dumps(out[:300]))
                     Rectangle { anchors.fill: parent; radius: parent.radius; color: Theme.light ? "#000" : "#FFF"; opacity: sMouse.containsMouse ? 0.06 : 0 }
                     Txt { id: sTxt; anchors.centerIn: parent; text: parent.modelData; size: 11.5 }
                     MouseArea { id: sMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.ask(parent.modelData) }
+                }
+            }
+        }
+
+        // ---------------------------------------------------- registro del asistente
+        ColumnLayout {
+            visible: root.showLog
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 8
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.topMargin: 10
+                spacing: 6
+                Txt { text: "Registro"; size: 14; weight: Font.DemiBold }
+                Txt { text: root.logList.length ? String(root.logList.length) : ""; size: 11.5; muted: true }
+                Item { Layout.fillWidth: true }
+                IconBtn { icon: "refresh"; iconSize: 12; fg: Theme.tv; implicitWidth: 26; implicitHeight: 26; tooltip: "Actualizar"; onClicked: root.loadLog() }
+                IconBtn {
+                    icon: "copy"; iconSize: 12; fg: Theme.tv; implicitWidth: 26; implicitHeight: 26; tooltip: "Copiar el registro (JSON)"
+                    onClicked: Quickshell.execDetached(["sh", "-c", '"$1" activity 200 | wl-copy', "sh", Paths.script("hf-ai")])
+                }
+                IconBtn {
+                    icon: "trash"; iconSize: 12; fg: Theme.tv; implicitWidth: 26; implicitHeight: 26; tooltip: "Vaciar el registro de peticiones"
+                    onClicked: { Quickshell.execDetached([Paths.script("hf-ai"), "activity", "clear"]); clearLater.restart(); }
+                    Timer { id: clearLater; interval: 400; onTriggered: root.loadLog() }
+                }
+                IconBtn { icon: "x"; iconSize: 12; fg: Theme.tv; implicitWidth: 26; implicitHeight: 26; onClicked: root.toggleLog() }
+            }
+            ListView {
+                id: logView
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.leftMargin: 12; Layout.rightMargin: 12
+                clip: true
+                spacing: 4
+                boundsBehavior: Flickable.StopAtBounds
+                model: root.logList
+                Txt { anchors.centerIn: parent; visible: logView.count === 0 && !logProc.running; text: "Aún no hay nada en el registro"; muted: true }
+                delegate: Rectangle {
+                    id: lrow
+                    required property var modelData
+                    readonly property var e: modelData
+                    readonly property bool bad: (e.error ?? "") !== ""
+                    width: ListView.view.width
+                    height: lcol.implicitHeight + 14
+                    radius: Theme.r(8)
+                    color: bad ? Qt.alpha(Theme.danger, 0.10) : Theme.fill2
+                    ColumnLayout {
+                        id: lcol
+                        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 10; rightMargin: 10 }
+                        spacing: 2
+                        // 16:02:27 · Panel · Gemini (gemini-flash-latest) · 3,4 s · respaldo
+                        Txt {
+                            Layout.fillWidth: true
+                            text: lrow.e.kind === "apply" ? lrow.e.time + " · Aplicado"
+                                : [lrow.e.time, root.srcNames[lrow.e.src] ?? lrow.e.src,
+                                   (lrow.e.providerName || "?") + (lrow.e.model ? " (" + lrow.e.model + ")" : ""),
+                                   String(lrow.e.secs).replace(".", ",") + " s"].concat(lrow.e.fallback ? ["respaldo"] : []).join("  ·  ")
+                            size: 10.5; muted: true; tabular: true
+                        }
+                        Txt { visible: (lrow.e.q ?? "") !== ""; Layout.fillWidth: true; text: lrow.e.q ?? ""; size: 12; wrapMode: Text.Wrap; maximumLineCount: 3; textFormat: Text.PlainText }
+                        Txt { visible: lrow.bad; Layout.fillWidth: true; text: lrow.e.error ?? ""; size: 11.5; color: Theme.danger; wrapMode: Text.Wrap; textFormat: Text.PlainText }
+                        Txt {
+                            visible: (lrow.e.steps ?? []).length > 0
+                            Layout.fillWidth: true; text: (lrow.e.steps ?? []).join(" · "); size: 11; muted: true; wrapMode: Text.Wrap; textFormat: Text.PlainText
+                        }
+                        Txt {
+                            visible: (lrow.e.labels ?? []).length > 0
+                            Layout.fillWidth: true
+                            text: (lrow.e.kind === "apply" ? "" : "Propuso: ") + (lrow.e.labels ?? []).join(" · ")
+                            size: 11.5; color: lrow.e.kind === "apply" ? Theme.t : Theme.p; wrapMode: Text.Wrap; textFormat: Text.PlainText
+                        }
+                    }
                 }
             }
         }

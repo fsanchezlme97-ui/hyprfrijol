@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.61] — 2026-11-12
+
+### Nuevo
+- Registro del asistente: un botón en la cabecera del panel muestra cada petición (hora, panel/voz/terminal, quién
+  respondió y con qué modelo, cuánto tardó, si contestó el respaldo, el error, lo que propuso) y cada acción aplicada.
+  Se puede actualizar, copiar y vaciar; también `hf-ai activity` y `qs ipc call sidepanel log`.
+
+### Mejorado
+- Con un respaldo configurado, el panel ya no espera hasta 2 minutos a Gemini cuando se atasca: a los 30 s responde el
+  respaldo (en la voz, a los 10).
+- El icono «Seguir en …» de la cabecera se oculta también cuando no hay ninguna herramienta.
+
 ## [0.9.60] — 2026-11-12
 
 ### Mejorado

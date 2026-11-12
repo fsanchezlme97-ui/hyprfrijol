@@ -182,6 +182,15 @@ Codex con `openai`) y si no, la primera instalada en el orden de la tabla; `off`
 no aparece. `hf-ai handoff-targets` lista lo instalado y el destino elegido. Con más de 120 KB se pasa el archivo en vez
 del texto (un argumento no puede pasar de 128 KB).
 
+## Registro del asistente
+
+El botón de la terminal en la cabecera del panel (o `qs ipc call sidepanel log`) abre el registro: cada petición con
+la hora, de dónde vino (panel, voz o terminal), quién respondió y con qué modelo, cuánto tardó, si contestó el
+respaldo, el error si lo hubo, las consultas que hizo y lo que propuso; y cada acción aplicada (las de Deshacer).
+Lo guarda `hf-ai` en `~/.local/state/hyprfrijol/ai-activity.jsonl` (modo 600, las 500 últimas); la pregunta va recortada,
+sin secretos y solo si el historial (`aiHistory`) está activo. `hf-ai activity [n]` lo imprime en JSON y
+`hf-ai activity clear` lo vacía; el panel tiene Actualizar, Copiar y Vaciar.
+
 ## PiP de los navegadores
 
 `Pip.qml` reconoce las ventanas «Picture-in-Picture» / «Imagen en imagen» de Firefox y Chromium, las

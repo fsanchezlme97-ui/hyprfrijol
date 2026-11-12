@@ -10,6 +10,8 @@
   hf-ai apply '<acciones>'   aplica acciones al shell y guarda cómo deshacerlas → {"undo": "<id>", "labels": [...]}
   hf-ai undo <id>            deshace un apply
   hf-ai log                  registro de acciones: las 30 últimas que se pueden deshacer [{id, time, labels}]
+  hf-ai activity [n] | clear registro del asistente: cada petición (quién respondió, tiempo, respaldo, error, propuesta)
+                             y cada acción aplicada, lo más nuevo arriba (~/.local/state/hyprfrijol/ai-activity.jsonl)
   hf-ai selftest             comprueba el filtro de secretos y las apps privadas
   hf-ai labels '<acciones>'  etiquetas en español de unas acciones (+ plan: ¿se puede deshacer?, ¿pide confirmación?)
   hf-ai query <tipo> [texto] consulta de solo lectura: windows | active_window | screen | notifications | files <texto> |
@@ -19,7 +21,7 @@
   hf-ai summon               atajo Super+Ctrl+A: guarda la ventana activa (y su captura) y abre el asistente con ella
   hf-ai timers               temporizadores en marcha (acción "timer")
   hf-ai timer start <min> [etiqueta] | timer cancel <id|all>   temporizador a mano (ventana del pomodoro)
-  hf-ai handoff '<json>'     copia la conversación y la abre en Claude Desktop (o `claude` en kitty)
+  hf-ai handoff '<json>'     lleva la conversación a otra herramienta de IA (aiHandoff; hf-ai handoff-targets)
   hf-ai attach <origen>…     adjunta imágenes al chat: clipboard | pick (selector de archivos) | - (base64 por stdin)
                              | ruta | file://… | https://…  → {"images": [rutas], "error": …}
   hf-ai capture [imagen]     captura de pantalla (o la imagen dada) + OCR (tesseract) → texto para el contexto
@@ -2677,8 +2679,8 @@ def gemini_model(s):
     m = str(s.get("aiModel") or "").strip().removeprefix("models/")
     return m if re.match(r"(gemini|gemma|learnlm)", m) else GEMINI_DEFAULT
 
-# Cuánto se espera a Gemini (s). En la conversación por voz, con respaldo configurado, solo 10: mejor que conteste el
-# respaldo (Ollama en tu GPU, ~1 s) que tener a Helpert callado medio minuto (el plan gratuito a veces tarda 30-40 s)
+# Cuánto se espera a Gemini (s). Con respaldo configurado, 10 en la voz y 30 al escribir (do_chat): mejor que conteste
+# el respaldo (Ollama en tu GPU, ~1 s) que esperar; el plan gratuito a veces tarda 30-40 s y alguna vez casi 2 min
 GEMINI_WAIT = 120
 
 def gemini_http(method, path, key, body=None, timeout=None):
@@ -2996,8 +2998,9 @@ def do_chat(req, print_request=False):
                   aiFallbackModel=s0.get("aiModelQuick") or s0.get("aiModel") or (GEMINI_LITE if p0 == "gemini" else ""))
     prov, s = provider_for(s0, "quick" if req.get("task") == "quick" else "")
     global GEMINI_WAIT
-    if (req.get("context") or {}).get("spoken") and fallback_for(s0, prov)[0]:
-        GEMINI_WAIT = 10
+    if fallback_for(s0, prov)[0]:
+        # con respaldo no se espera a Gemini los 120 s de serie (a veces tarda eso): 10 s en la voz, 30 al escribir
+        GEMINI_WAIT = 10 if (req.get("context") or {}).get("spoken") else 30
     if req.get("model") and not req.get("_fallback"):   # «Repetir con otro modelo» del panel
         s["aiModel"] = str(req["model"])[:80]
     fn = PROVIDERS.get(prov)
@@ -3107,6 +3110,51 @@ def do_chat(req, print_request=False):
     if hidden:
         out["redacted"] = hidden
     return out
+
+# Registro del asistente (botón «Registro» del panel; hf-ai activity): una línea por petición con quién respondió,
+# cuánto tardó, si hubo respaldo o error y qué propuso. La pregunta (recortada y sin secretos) solo con aiHistory activo.
+# Privado (600) en ~/.local/state; se queda con las 500 últimas.
+ACTIVITY = STATE / "ai-activity.jsonl"
+
+def log_activity(req, out, secs, src):
+    try:
+        s = settings()
+        last = next((m for m in reversed(req.get("messages") or []) if m.get("role") == "user"), {})
+        q = redact(str(last.get("text") or "")[:160], s)[0] if s.get("aiHistory", True) is not False else ""
+        e = {"t": time.time(), "src": src, "provider": out.get("provider") or out.get("fallback") or "", "model": out.get("model") or "",
+             "fallback": out.get("fallback") or "", "secs": round(secs, 1), "error": (out.get("error") or "")[:300],
+             "q": q, "steps": (out.get("steps") or [])[:6], "labels": (out.get("labels") or [])[:8]}
+        ACTIVITY.parent.mkdir(parents=True, exist_ok=True)
+        old = ACTIVITY.read_text().splitlines()[-499:] if ACTIVITY.exists() else []
+        fd = os.open(ACTIVITY.with_suffix(".tmp"), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as fh:
+            fh.write("\n".join(old + [json.dumps(e, ensure_ascii=False)]) + "\n")
+        os.replace(ACTIVITY.with_suffix(".tmp"), ACTIVITY)
+    except Exception:
+        pass   # el registro nunca debe tumbar una respuesta
+
+def activity(n=200):
+    """Peticiones (kind «chat») y acciones aplicadas (kind «apply», las de Deshacer), lo más nuevo arriba."""
+    out = []
+    for l in (ACTIVITY.read_text().splitlines() if ACTIVITY.exists() else [])[-n:]:
+        try:
+            e = json.loads(l)
+        except ValueError:
+            continue
+        e["kind"] = "chat"
+        e["providerName"] = PROVIDER_NAMES.get(e.get("provider"), e.get("provider") or "")
+        out.append(e)
+    for f in sorted(UNDO.glob("*.json"), reverse=True)[:n]:
+        rec = load(f, {}) or {}
+        out.append({"kind": "apply", "t": f.stat().st_mtime, "id": f.stem, "labels": [label(a) for a in rec.get("actions") or []]})
+    out.sort(key=lambda e: e.get("t") or 0, reverse=True)
+    for e in out:
+        e["time"] = time.strftime("%d/%m %H:%M:%S", time.localtime(e.get("t") or 0))
+    return out[:n]
+
+def clear_activity():
+    ACTIVITY.unlink(missing_ok=True)
+    return {"ok": True}
 
 PROVIDER_NAMES = {"claude-code": "Claude Code", "ollama": "Ollama", "openai-compatible": "el servidor compatible con OpenAI",
                   "gemini": "Gemini", "mock": "Prueba"}
@@ -3584,16 +3632,22 @@ def main(argv):
         if req.get("stream") and not pr:
             global LIVE
             LIVE = Live()
+            t0 = time.time()
             try:
                 out = do_chat(req)
             except Exception as e:   # que el panel reciba siempre su línea final
                 out = {"text": "", "actions": [], "labels": [], "code": "", "error": f"hf-ai falló: {e}"[:300]}
-            LIVE.emit({"final": out}); return
+            LIVE.emit({"final": out})
+            log_activity(req, out, time.time() - t0, "voz" if (req.get("context") or {}).get("spoken") else "panel"); return
+        t0 = time.time()
         out = do_chat(req, print_request=pr)
         if pr:
             print(json.dumps(out, ensure_ascii=False, indent=2)); return
+        log_activity(req, out, time.time() - t0, "voz" if (req.get("context") or {}).get("spoken") else "panel")
     elif cmd == "ask":
-        out = do_chat({"messages": [{"role": "user", "text": " ".join(rest)}], "context": {"window": False, "clipboard": False}})
+        t0, req = time.time(), {"messages": [{"role": "user", "text": " ".join(rest)}], "context": {"window": False, "clipboard": False}}
+        out = do_chat(req)
+        log_activity(req, out, time.time() - t0, "terminal")
         print(out.get("error") or out["text"])
         if out.get("labels"):
             print("\nCambios propuestos: " + " · ".join(out["labels"]))
@@ -3606,6 +3660,8 @@ def main(argv):
             rec = load(f, {}) or {}
             out.append({"id": f.stem, "time": time.strftime("%d/%m %H:%M", time.localtime(f.stat().st_mtime)),
                         "labels": [label(a) for a in rec.get("actions") or []]})
+    elif cmd == "activity":                 # registro del asistente: activity [n] | activity clear
+        out = clear_activity() if arg == "clear" else activity(int(arg) if arg.isdigit() else 200)
     elif cmd == "selftest":
         _selftest_redact()
         _selftest_handoff()
