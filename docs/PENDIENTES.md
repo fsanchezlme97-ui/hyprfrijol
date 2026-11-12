@@ -112,8 +112,6 @@ Añadidos sugeridos (sin empezar):
 
 ## Equipo del autor
 
-- [ ] Elegir otra vez la pantalla principal (HDMI-A-2) en Ajustes › Pantallas: la guardada sigue siendo «HDMI-A-1»,
-      de antes de añadir la gráfica (ahora se usa la más grande y funciona, pero el ajuste está desfasado).
 - [ ] Ver en hardware real los iconos que solo se vieron en vista previa: wifi por señal, batería cargando, volumen
       silenciado y micrófono silenciado (v0.8.44).
 - [ ] Conectar y quitar una pantalla de verdad para comprobar que los espacios se renumeran sin mover ventanas
@@ -125,4 +123,5 @@ Añadidos sugeridos (sin empezar):
       nm-connection-editor, impresión con cups.socket activo, pymupdf). QtMultimedia ya estaba (el aviso de
       `hf-greeter-sync` era falso: 0.9.46). Login al día (0.9.42) y `primaryMonitor` = HDMI-A-2.
 - [ ] `xdg-document-portal.service` volvió a quedar fallido (código 21); se reinició el 2026-11-12. Si se repite,
-      mirar si coincide con una prueba anidada (`dev/try.sh`), que arranca sus propios portales.
+      mirar si coincide con una prueba anidada (`dev/try.sh`), que arranca sus propios portales. Se repitió el
+      2026-11-12 a las 07:56 y 08:55, las dos con pruebas anidadas en marcha; reiniciado a mano otra vez.
