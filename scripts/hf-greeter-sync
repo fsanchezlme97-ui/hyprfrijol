@@ -272,7 +272,9 @@ if [ -d "$LIVE" ] && [ -w "$LIVE" ]; then
 else
   warn "No puedo escribir en $LIVE: el fondo, la foto y el tema no se copiaron."
 fi
-if [ -s "$LIVE/wallpaper.mp4" ] && ! ls -d /usr/lib/qt6/qml/QtMultimedia /usr/lib64/qt6/qml/QtMultimedia /usr/lib/*/qt6/qml/QtMultimedia >/dev/null 2>&1; then
+# Basta con que exista en una de las rutas (ls -d con varias falla si falta cualquiera: daba el aviso aun instalado)
+has_qtmm() { local d; for d in /usr/lib/qt6/qml/QtMultimedia /usr/lib64/qt6/qml/QtMultimedia /usr/lib/*/qt6/qml/QtMultimedia; do [ -d "$d" ] && return 0; done; return 1; }
+if [ -s "$LIVE/wallpaper.mp4" ] && ! has_qtmm; then
   warn "Para ver el fondo en movimiento en el login falta QtMultimedia: hf-deps install fondos"
 fi
 say "Login sincronizado en $DEST. Lo verás la próxima vez que se muestre (al cerrar sesión o reiniciar)."

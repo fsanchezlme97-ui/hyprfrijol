@@ -3,6 +3,11 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.46] — 2026-11-12
+
+### Corregido
+- `hf-greeter-sync` avisaba de que faltaba QtMultimedia (fondo en vídeo del login) aunque estuviera instalado.
+
 ## [0.9.45] — 2026-11-12
 
 ### Seguridad

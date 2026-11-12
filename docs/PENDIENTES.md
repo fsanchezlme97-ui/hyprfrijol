@@ -116,8 +116,8 @@ Añadidos sugeridos (sin empezar):
 - [ ] VGA por la GT 710 (`nouveau`): ya da imagen, pero la copia entre GPUs puede hacer las animaciones menos
       fluidas en esa pantalla. El registro de Hyprland repite `eglCreateSyncKHR … EGL_BAD_ATTRIBUTE` (300 veces
       en este arranque); ver si viene de esa gráfica.
-- [ ] Lo que avisa `hf-doctor` (2026-11-11): faltan 4 paquetes recomendados (fuente mono, pavucontrol,
-      nm-connection-editor, impresión: `hf-deps install --recommended`) y QtMultimedia para el fondo en vídeo del
-      login (`hf-deps install fondos`). El login ya está al día (0.9.42) y `primaryMonitor` es HDMI-A-2.
+- [x] Lo que avisaba `hf-doctor` (2026-11-11): recomendados instalados el 2026-11-12 (fuente mono, pavucontrol,
+      nm-connection-editor, impresión con cups.socket activo, pymupdf). QtMultimedia ya estaba (el aviso de
+      `hf-greeter-sync` era falso: 0.9.46). Login al día (0.9.42) y `primaryMonitor` = HDMI-A-2.
 - [ ] `xdg-document-portal.service` volvió a quedar fallido (código 21); se reinició el 2026-11-12. Si se repite,
       mirar si coincide con una prueba anidada (`dev/try.sh`), que arranca sus propios portales.
