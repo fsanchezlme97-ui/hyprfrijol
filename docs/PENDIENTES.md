@@ -59,7 +59,8 @@ reducción automática) se descartó en las decisiones del plan.
       principal sigue en ~1,5 % de un núcleo en reposo, casi todo la lectura de SysStats cada 2 s para la pastilla.
 - [ ] **Productividad**: revisar Spotlight, portapapeles, ventanas y atajos con uso real; quitar pasos.
 - [ ] **Ajustes es para ajustes**: Tareas ya es app, las alarmas van en su ventana y las instaladas en el Centro de
-      aplicaciones (0.9.21). Revisar si queda contenido de app en otras secciones (colas de impresión, usuarios…).
+      aplicaciones (0.9.21); Conexiones remotas, Máquinas virtuales y Cola de impresión son apps (0.9.24). Quedan,
+      dudosas: puntos de restauración (Sistema) y unidades extraíbles (Almacenamiento, repite el menú de la barra).
 - [ ] **Dictado por voz**: precisión, latencia, puntuación, idioma y que funcione en todas las apps. Nombres propios
       e internet: vocabulario con todos los motores y corrección con la IA (0.9.20); falta probarlo con voz real.
 - [ ] **Chat en vivo con el asistente** (hablar y que responda en voz): conversación fluida, interrumpirlo,
@@ -72,8 +73,6 @@ reducción automática) se descartó en las decisiones del plan.
 
 Lo que la revisión encontró y no se arregló en la 0.9.22, por orden de valor:
 
-- [ ] **Ajustes que aún son apps**: cola de impresión (Impresoras), conexiones guardadas (Escritorio remoto),
-      máquinas y contenedores (Virtualización). Candidatas a ventana propia como Tareas.
 - [ ] **Buscador de Ajustes**: no indexa las tarjetas de `settings/ui/` (Wallhaven, Calendarios, Mis temas,
       Diagnóstico, Modo seguro…) ni sus claves para «Restaurar valores por defecto».
 - [ ] **Sistema en otras distros**: Kernel LTS, snap-pac y OpenTabletDriver siguen siendo solo de Arch (ahora se

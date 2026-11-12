@@ -13,6 +13,9 @@ import "../ui"
 RowLayout {
     id: root
     spacing: 12
+    // app: true → la app «Máquinas virtuales» (modules/apps): tus máquinas y contenedores. En Ajustes, lo que hay que
+    // instalar y activar, y un botón para abrir la app.
+    property bool app: false
     implicitHeight: Math.max(left.implicitHeight, right.implicitHeight)
     readonly property string cmd: Paths.script("hf-vm")
     readonly property string cockpitUrl: Settings.get("cockpitUrl", "https://localhost:9090")
@@ -80,6 +83,19 @@ RowLayout {
         Layout.alignment: Qt.AlignTop
         spacing: 12
         Section {
+            visible: !root.app
+            Layout.fillWidth: true
+            title: "Tus máquinas y contenedores"
+            headerRight: Button { kind: "primary"; text: "Abrir Máquinas virtuales"; onClicked: Shell.open("maquinas") }
+            Txt {
+                Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 12
+                text: (root.vms.length === 1 ? "1 máquina" : root.vms.length + " máquinas") + " · "
+                    + (root.boxes.length === 1 ? "1 contenedor" : root.boxes.length + " contenedores")
+                    + ". Encender, apagar y crear contenedores está en su propia app (también en el menú de apps y en Spotlight)."
+            }
+        }
+        Section {
+            visible: !root.app
             Layout.fillWidth: true
             title: "Cockpit y libvirt"
             headerRight: [
@@ -134,6 +150,7 @@ RowLayout {
             }
         }
         Section {
+            visible: root.app
             Layout.fillWidth: true
             title: "Tus máquinas"
             headerRight: Mono { text: "virsh list --all" }
@@ -177,6 +194,7 @@ RowLayout {
         Layout.alignment: Qt.AlignTop
         spacing: 12
         Section {
+            visible: !root.app
             Layout.fillWidth: true
             title: "Otras apps"
             InfoRow {
@@ -215,7 +233,7 @@ RowLayout {
                 Button { visible: root.loaded && !root.st.boxbuddy; text: "Instalar"; onClicked: root.term("install boxbuddy", "BoxBuddy") }
             }
             Repeater {
-                model: root.boxes
+                model: root.app ? root.boxes : []        // la lista, solo en la app
                 InfoRow {
                     id: br
                     required property var modelData
@@ -229,7 +247,7 @@ RowLayout {
                 }
             }
             ColumnLayout {
-                visible: !!root.st.distrobox
+                visible: !!root.st.distrobox && root.app
                 Layout.fillWidth: true
                 spacing: 8
                 Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.ov }

@@ -60,9 +60,32 @@ def _tareas_desktop():
     except Exception:
         pass
 
+def _view_desktops():
+    """Lanzadores de las apps sueltas que abren una vista del shell (modules/apps): menú de apps y Spotlight."""
+    qs = f"qs -p {ROOT}/config/quickshell ipc call"
+    apps = [
+        ("hf-remoto", "Conexiones remotas", "Escritorios de otros equipos (RDP, VNC, SSH)", "remoto", "preferences-desktop-remote-desktop",
+         "Network;RemoteAccess;", "remoto;rdp;vnc;ssh;remmina;escritorio remoto;conexión;windows;"),
+        ("hf-maquinas", "Máquinas virtuales", "Tus máquinas virtuales y contenedores", "maquinas", "computer",
+         "System;Emulator;", "máquinas virtuales;vm;qemu;kvm;libvirt;virsh;distrobox;contenedor;podman;"),
+        ("hf-impresion", "Cola de impresión", "Trabajos esperando para imprimirse", "impresion", "printer",
+         "System;Printing;", "imprimir;cola;impresora;trabajos;cups;cancelar;"),
+    ]
+    for fid, name, comment, view, icon, cats, kw in apps:
+        text = (f"[Desktop Entry]\nType=Application\nName={name}\nComment={comment} (hyprfrijol)\n"
+                f"Exec={qs} {view} open\nIcon={icon}\nTerminal=false\nCategories={cats}\nKeywords={kw}\n")
+        path = HOME / f".local/share/applications/{fid}.desktop"
+        try:
+            if not path.exists() or path.read_text() != text:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text)
+        except Exception:
+            pass
+
 def hypr_lua(s, c):
     _firmar_desktop()
     _tareas_desktop()
+    _view_desktops()
     try:
         STATE.mkdir(parents=True, exist_ok=True)
         rm = STATE / "reduce-motion"

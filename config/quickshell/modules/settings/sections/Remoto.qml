@@ -14,6 +14,8 @@ import "../ui"
 ColumnLayout {
     id: root
     spacing: 12
+    // app: true → la app «Conexiones remotas» (modules/apps): solo las conexiones. En Ajustes, el resto y un botón.
+    property bool app: false
     readonly property string cmd: Paths.script("hf-remote")
     readonly property var hosts: Settings.get("remoteHosts", [])
     property var cl: ({ freerdp: "", remmina: false, remminaRdp: false, rdpAuto: "", connections: false, vncviewer: false, remoteviewer: false, secret: false, wayvnc: false })
@@ -87,6 +89,7 @@ ColumnLayout {
         // ================= izquierda: conectarse =================
         ColumnLayout {
             id: left
+            visible: root.app
             Layout.fillWidth: true
             Layout.preferredWidth: 1.3
             Layout.alignment: Qt.AlignTop
@@ -211,10 +214,21 @@ ColumnLayout {
         // ================= derecha: clientes =================
         ColumnLayout {
             id: right
+            visible: !root.app
             Layout.fillWidth: true
             Layout.preferredWidth: 1
             Layout.alignment: Qt.AlignTop
             spacing: 12
+            Section {
+                Layout.fillWidth: true
+                title: "Conexiones guardadas"
+                headerRight: Button { kind: "primary"; text: "Abrir Conexiones remotas"; onClicked: Shell.open("remoto") }
+                Txt {
+                    Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 12
+                    text: (root.hosts.length ? (root.hosts.length === 1 ? "1 conexión guardada" : root.hosts.length + " conexiones guardadas") : "Ninguna conexión guardada")
+                        + ". Conectarse, añadir y editar está en su propia app (también en el menú de apps y en Spotlight)."
+                }
+            }
             Section {
                 Layout.fillWidth: true
                 title: "Clientes"
@@ -268,6 +282,7 @@ ColumnLayout {
 
     // ================= compartir este escritorio =================
     Section {
+        visible: !root.app
         Layout.fillWidth: true
         title: "Compartir este escritorio"
         headerRight: Mono { text: "wayvnc" }

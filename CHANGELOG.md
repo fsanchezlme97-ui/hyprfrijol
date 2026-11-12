@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.24] — 2026-11-11
+
+### Cambiado
+- **Más apps fuera de Ajustes** (Ajustes es para ajustes): tres partes de uso diario pasan a su propia ventana, con
+  lanzador en el menú de apps y en Spotlight. En Ajustes queda lo que se configura y un botón para abrirlas.
+  - **Conexiones remotas**: conectarse, añadir y editar las conexiones guardadas (RDP, VNC, SSH, SPICE). Los clientes y
+    compartir este escritorio siguen en Ajustes › Escritorio remoto.
+  - **Máquinas virtuales**: encender, apagar y abrir tus máquinas, y tus contenedores de Distrobox. Lo que hay que
+    instalar, Cockpit y las otras apps siguen en Ajustes › Máquinas virtuales.
+  - **Cola de impresión**: los trabajos pendientes, para cancelarlos. Las impresoras y los escáneres siguen en
+    Ajustes › Impresoras y escáneres, que cuenta los trabajos y tiene «Ver la cola».
+  - Se abren también con `qs -p <repo>/config/quickshell ipc call remoto|maquinas|impresion open`.
+  - Hace falta `hf-apply` una vez para los lanzadores y para que sus ventanas floten centradas.
+
 ## [0.9.23] — 2026-11-11
 
 ### Cambiado

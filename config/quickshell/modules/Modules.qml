@@ -44,6 +44,7 @@ import "media"
 import "dictado"
 import "firmar"
 import "tareas"
+import "apps"
 import "omarchy"
 import "devices"
 import "downloads"
@@ -66,6 +67,7 @@ Scope {
     Dictado {}
     Firmar {}
     Tareas {}             // app «Tareas» (su ventana es diferida)
+    Apps {}               // Conexiones remotas, Máquinas virtuales y Cola de impresión (ventanas diferidas)
     OmarchyHost {}        // plugins de Omarchy: servicios y vistas (panel/overlay/menu); ver scripts/hf-plugin
     UpdatesCheck {}       // comprobación de actualizaciones en segundo plano (la vista es diferida)
 

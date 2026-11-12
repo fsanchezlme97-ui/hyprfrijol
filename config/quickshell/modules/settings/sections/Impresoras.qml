@@ -14,6 +14,8 @@ import "../ui"
 RowLayout {
     id: root
     spacing: 12
+    // app: true → la app «Cola de impresión» (modules/apps): solo los trabajos. En Ajustes, impresoras y escáneres.
+    property bool app: false
     implicitHeight: Math.max(left.implicitHeight, right.implicitHeight)
     property bool cups: false           // lpstat instalado
     property string svc: ""             // estado de cups.socket / cups.service
@@ -98,6 +100,7 @@ RowLayout {
         Layout.alignment: Qt.AlignTop
         spacing: 12
         Section {
+            visible: !root.app
             Layout.fillWidth: true
             title: "Impresoras"
             headerRight: Button { visible: root.cups; kind: "primary"; text: "Añadir impresora"; enabled: root.svcOn; onClicked: root.addPrinter() }
@@ -219,15 +222,22 @@ RowLayout {
             }
         }
         Section {
-            visible: root.cups
+            visible: root.cups && !root.app
             Layout.fillWidth: true
             title: "Cola de impresión"
+            headerRight: Button { text: "Ver la cola"; onClicked: Shell.open("impresion") }
+            Txt { muted: true; text: root.jobs.length ? (root.jobs.length === 1 ? "1 trabajo pendiente" : root.jobs.length + " trabajos pendientes") : "No hay trabajos pendientes." }
+        }
+        Section {
+            visible: root.app
+            Layout.fillWidth: true
+            title: "Trabajos"
             headerRight: Button {
                 visible: root.jobs.length > 1
                 kind: "link"; text: "Cancelar todos los míos"
                 onClicked: { Quickshell.execDetached(["sh", "-c", "cancel -u \"$USER\""]); later.restart(); }
             }
-            Txt { visible: root.jobs.length === 0; muted: true; text: root.cups ? "No hay trabajos pendientes." : "—" }
+            Txt { visible: root.jobs.length === 0; muted: true; text: root.cups ? "No hay trabajos pendientes." : "No está instalado el sistema de impresión (CUPS): Ajustes › Impresoras y escáneres." }
             Repeater {
                 model: root.jobs
                 RowLayout {
@@ -252,6 +262,7 @@ RowLayout {
     // ---------- escáneres y programas ----------
     ColumnLayout {
         id: right
+        visible: !root.app
         Layout.fillWidth: true
         Layout.preferredWidth: 1
         Layout.alignment: Qt.AlignTop
