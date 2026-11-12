@@ -2881,7 +2881,9 @@ def actions_json(body):
 def parse_reply(raw, s=None):
     shell, term = allowed(s)
     actions, code = [], ""
-    m = re.search(r"```(?:hf-actions|hl-actions|json)\s*(.*?)\s*```", raw, re.S)
+    # Las formas sueltas (un objeto, uno por línea) solo en un bloque hf-actions; en un ```json``` cualquiera (un ejemplo,
+    # texto copiado de una web) solo vale la lista de siempre, para que un JSON de muestra no se vuelva un plan
+    m = re.search(r"```(?:hf-actions|hl-actions)\s*(.*?)\s*```", raw, re.S) or re.search(r"```json\s*(\[.*?\])\s*```", raw, re.S)
     if m:
         actions = validate(actions_json(m.group(1)))
         raw = (raw[:m.start()] + raw[m.end():]).strip()

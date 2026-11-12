@@ -414,23 +414,28 @@ acceso() {
         '{ssh:$ssh,firewall:$fw,lan:$lan,tailscale:$tailscale,tailscaleIp:$ip}';;
     on)
       have sshd || { echo "Falta openssh: hf-deps install ssh-server" >&2; exit 1; }
-      sudo systemctl enable --now "$u" || exit 1
+      # primero el cortafuegos y luego sshd: nunca hay un momento con SSH abierto a cualquier red
+      have ufw || have firewall-cmd || { echo "Falta un cortafuegos: hf-deps install firewall (sin él SSH quedaría abierto a cualquier red)" >&2; exit 1; }
       if have ufw; then
         sudo ufw default deny incoming && sudo ufw default allow outgoing
         sudo ufw allow in on tailscale0 to any port 22 proto tcp comment "SSH por Tailscale"
         sudo ufw allow in on tailscale0 to any port 3389 proto tcp comment "Escritorio remoto (hypr-rdp) por Tailscale"
         [ "$lan" = 1 ] && [ -n "$net" ] && sudo ufw allow from "$net" to any port 22 proto tcp comment "SSH en la red local"
-        sudo ufw --force enable && sudo systemctl enable --now ufw
+        sudo ufw --force enable && sudo systemctl enable --now ufw || exit 1
+        sudo ufw status | grep -qE '^(22(/tcp)?|OpenSSH)( \(v6\))? +ALLOW( IN)? +Anywhere' &&
+          echo "Ojo: ufw ya tenía una regla que abre SSH a cualquier red; quítala con «sudo ufw status numbered» y «sudo ufw delete N»" >&2
       elif have firewall-cmd; then
         sudo systemctl enable --now firewalld
         sudo firewall-cmd -q --permanent --new-zone=tailscale 2>/dev/null
         sudo firewall-cmd -q --permanent --zone=tailscale --add-interface=tailscale0
         sudo firewall-cmd -q --permanent --zone=tailscale --add-port=22/tcp --add-port=3389/tcp
         [ "$lan" = 1 ] && [ -n "$net" ] && sudo firewall-cmd -q --permanent --add-rich-rule="rule family=ipv4 source address=$net port port=22 protocol=tcp accept"
-        sudo firewall-cmd -q --reload
-      else
-        echo "Sin cortafuegos (hf-deps install firewall): SSH queda abierto a cualquier red" >&2
+        # la zona por defecto (public en Fedora) trae ssh abierto a cualquier red: solo Tailscale y, si quieres, tu red local
+        dz=$(firewall-cmd --get-default-zone 2>/dev/null)
+        [ -n "$dz" ] && [ "$dz" != tailscale ] && sudo firewall-cmd -q --permanent --zone="$dz" --remove-service=ssh 2>/dev/null
+        sudo firewall-cmd -q --reload || exit 1
       fi
+      sudo systemctl enable --now "$u" || exit 1
       if have tailscale; then
         sudo systemctl enable --now tailscaled
         tailscale status >/dev/null 2>&1 || sudo tailscale up   # la primera vez imprime el enlace para iniciar sesión

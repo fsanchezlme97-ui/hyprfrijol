@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.50] — 2026-11-12
+
+### Seguridad
+- `hf-remote acceso on`: el cortafuegos se pone antes de arrancar sshd y, sin cortafuegos, no se arranca (antes SSH
+  quedaba abierto a cualquier red). Con firewalld se quita `ssh` de la zona por defecto (en Fedora venía abierto a
+  todas las redes): solo Tailscale y, si quieres, tu red local. Con ufw avisa si ya había una regla que abre SSH a
+  cualquier red.
+- Asistente: un bloque ```json``` de ejemplo en la respuesta ya no se convierte en un plan; las formas sueltas (un
+  objeto, uno por línea) solo valen en un bloque `hf-actions`.
+
 ## [0.9.49] — 2026-11-12
 
 ### Añadido
