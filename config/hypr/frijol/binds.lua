@@ -63,7 +63,7 @@ b(mod .. " + code:20",   hl.dsp.global("hf:atajos"))         -- tecla ' en tecla
 b(mod .. " + M",         hl.dsp.global("hf:musica"),         { description = "Controles de música" })
 b(mod .. " + G",         hl.dsp.global("hf:widgets"),        { description = "Widgets" })
 b(mod .. " + J",         hl.dsp.global("hf:barra"),          { description = "Mostrar / ocultar barra" })
-b(mod .. " + K",         exec("sh -c 'pkill -x wvkbd-mobintl || " .. S .. "/hf-launch wvkbd-mobintl'"), { description = "Teclado en pantalla" })
+b(mod .. " + K",         exec("sh -c 'pkill -x wvkbd-mobintl || pkill -x squeekboard || " .. S .. "/hf-launch wvkbd-mobintl squeekboard'"), { description = "Teclado en pantalla" })
 b(mod .. " + Z",         hl.dsp.global("hf:enfoque"),        { description = "Sin distracciones" })
 b(mod .. " + SHIFT + G", hl.dsp.global("hf:juego"),          { description = "Modo juego (sin animaciones ni efectos)" })
 b(mod .. " + ALT + C",   hl.dsp.global("hf:cafeina"),        { description = "Cafeína" })

@@ -16,6 +16,6 @@ Rectangle {
         height: Math.max(1.5, parent.height * Math.max(0, Math.min(1, root.value)))
         radius: parent.radius
         color: root.value > 0.9 ? Theme.danger : root.barColor
-        Behavior on height { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.ms(400); easing.type: Easing.OutCubic } }
+        Behavior on height { enabled: !Theme.still; NumberAnimation { duration: Theme.ms(400); easing.type: Easing.OutCubic } }
     }
 }

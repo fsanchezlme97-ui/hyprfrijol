@@ -10,7 +10,7 @@ Singleton {
     property bool available: false
     property int max: 1
     function set(v: real): void {
-        v = Math.max(0.01, Math.min(1, v));
+        v = Math.round(Math.max(0.01, Math.min(1, v)) * 100) / 100;   // en % enteros, como lo que se lee después
         value = v;
         Quickshell.execDetached(["brightnessctl", "-q", "set", Math.round(v * 100) + "%"]);
     }
@@ -26,7 +26,8 @@ Singleton {
                 const f = text.trim().split(",");
                 root.available = f.length >= 5;
                 root.checked = true;
-                if (root.available) { root.value = parseInt(f[2]) / parseInt(f[4]); root.max = parseInt(f[4]); }
+                // en % enteros, igual que set(): con decimales sueltos el valor «cambiaba» solo y salía el OSD
+                if (root.available) { root.value = Math.round(parseInt(f[2]) / parseInt(f[4]) * 100) / 100; root.max = parseInt(f[4]); }
             }
         }
     }

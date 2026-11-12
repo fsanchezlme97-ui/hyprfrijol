@@ -76,6 +76,7 @@ prune() {
   [ -L "$GOOD" ] && keep_good="$(basename "$(readlink "$GOOD")")"
   for d in $(ls -1 "$SNAPS" 2>/dev/null | grep -E '^[0-9]{8}-' | sort -r); do
     n=$((n + 1)); [ "$n" -le "$KEEP" ] && continue; [ "$d" = "$keep_good" ] && continue
+    [ "$d" = "${PRUNE_KEEP:-}" ] && continue          # la copia que se está restaurando no se borra
     rm -rf "${SNAPS:?}/$d"
   done
 }
@@ -100,7 +101,8 @@ restore() { # restore [ID]
   [ -n "$id" ] && [ -d "$SNAPS/$id/config" ] || die "No hay copias guardadas (hf-safe list)"
   say "Restaurar tus ajustes a la copia $id ($(snap_note "$id"))"
   ask "¿Restaurar? Antes se guarda lo actual" || { [ "$YES" = 1 ] || { echo "Cancelado"; return 1; }; }
-  local bak; bak="$(snapshot "antes de restaurar $id")" && say "Lo actual queda en la copia $bak"
+  local bak; bak="$(PRUNE_KEEP="$id" snapshot "antes de restaurar $id")" && say "Lo actual queda en la copia $bak"
+  [ "$DRY" = 1 ] || [ -d "$SNAPS/$id/config" ] || die "La copia $id ya no está: no toco nada"
   # Se sobrescriben los archivos de la copia; lo que no estaba en ella se aparta (*.desactivado-<fecha>)
   local s; s="$(stamp)"
   if [ "$DRY" = 0 ]; then
@@ -273,7 +275,7 @@ menu() {
       3) disable_plugins || true ;;
       4) disable_local || true ;;
       5) list; read -r -p "ID a restaurar (Intro = ninguno): " o; [ -n "$o" ] && { restore "$o" || true; } ;;
-      6) "$ROOT/scripts/hf-doctor" | ${PAGER:-less -R} ;;
+      6) if command -v "${PAGER:-less}" >/dev/null 2>&1; then "$ROOT/scripts/hf-doctor" | ${PAGER:-less -R}; else "$ROOT/scripts/hf-doctor"; fi ;;
       7) if is_safe; then leave_safe; else enter_safe; fi ;;
       0|q|"") return 0 ;;
       *) echo "Opción no válida" ;;

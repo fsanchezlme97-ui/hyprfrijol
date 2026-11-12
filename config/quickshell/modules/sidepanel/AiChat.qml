@@ -62,7 +62,7 @@ Item {
         : ["Resume mis notificaciones", "Temporizador de 10 min para el té", "Pon la barra arriba y el fondo lago", "Cierra las ventanas de Firefox"]
 
     function focusInput() { input.forceActiveFocus(); }
-    function clear() { messages = []; notice = null; busy = false; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; focusInput(); }
+    function clear() { messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; focusInput(); }
     function setWindow(w) { if (w && w.address) { winInfo = w; useWindow = true; } Qt.callLater(focusInput); }
     function patch(i, p) { const m = messages.slice(); m[i] = Object.assign({}, m[i], p); messages = m; }
     function push(m) { messages = [...messages, m]; Qt.callLater(scrollEnd); }
@@ -192,6 +192,7 @@ Item {
         if (files.length) { addImages(files.filter(f => imgRe.test(f))); addDocs(files.filter(f => !imgRe.test(f))); }
         else if (imgFmt && typeof d.getDataAsArrayBuffer === "function" && !rawProc.running) {
             rawB64 = b64(d.getDataAsArrayBuffer(imgFmt));
+            rawProc.stdinEnabled = true;
             rawProc.running = true;
         } else {
             const m = d.hasHtml ? /<img[^>]+src="([^"]+)"/i.exec(d.html) : null;
@@ -212,7 +213,10 @@ Item {
         busy = true;
         notice = null;
         liveText = ""; liveSteps = []; gotFinal = false; modelMenu = -1;
-        chatProc.command = [Paths.script("hf-ai"), "chat", payload(Object.assign({ stream: true }, model !== undefined ? { model: model } : {}))];
+        // La conversación va por la entrada estándar: como argumento, una larga pasa del límite del sistema (128 KB)
+        chatProc.sendIn = payload(Object.assign({ stream: true }, model !== undefined ? { model: model } : {}));
+        chatProc.command = [Paths.script("hf-ai"), "chat", "-"];
+        chatProc.stdinEnabled = true;
         chatProc.running = true;
         Qt.callLater(scrollEnd);
     }
@@ -294,6 +298,9 @@ Item {
     }
     Process {
         id: chatProc
+        property string sendIn: ""
+        stdinEnabled: true
+        onStarted: { write(sendIn); sendIn = ""; stdinEnabled = false; }
         stdout: SplitParser { onRead: line => root.onLine(line) }
         onExited: code => {
             if (root.gotFinal || !root.busy) return;
@@ -308,11 +315,14 @@ Item {
     function selOf(m) { return (m.actions ?? []).map((a, k) => (m.sel ?? [])[k] !== false); }
     function toggleStep(i, k) { const s = selOf(messages[i]); s[k] = !s[k]; patch(i, { sel: s }); }
     function apply(i) {
+        if (applyProc.running) return;             // un plan cada vez: el resultado se apunta en el que se lanzó
         const sel = selOf(messages[i]);
         const acts = messages[i].actions.filter((a, k) => sel[k]);
         if (!acts.length) { discard(i); return; }
         applyingIdx = i;
-        applyProc.command = [Paths.script("hf-ai"), "apply", JSON.stringify(acts)];
+        applyProc.sendIn = JSON.stringify(acts);
+        applyProc.command = [Paths.script("hf-ai"), "apply", "-"];
+        applyProc.stdinEnabled = true;
         applyProc.running = true;
     }
     // «Aprobar siempre para esta acción» (Ajustes › IA › Aprobadas siempre la revoca). Nunca para los pasos sin vuelta atrás.
@@ -339,13 +349,18 @@ Item {
     }
     Process {
         id: applyProc
+        property string sendIn: ""
+        stdinEnabled: true
+        onStarted: { write(sendIn); sendIn = ""; stdinEnabled = false; }
         stdout: StdioCollector {
             onStreamFinished: {
                 let r = {};
                 try { r = JSON.parse(text); } catch (e) {}
                 if (r.error) root.push({ role: "ai", text: r.error, error: true, local: true });
                 else {
-                    root.patch(root.applyingIdx, { state: "applied", undo: r.undo ?? "" });
+                    // si mientras tanto se vació el chat o se abrió otra conversación, ese plan ya no está
+                    if (root.applyingIdx >= 0 && root.applyingIdx < root.messages.length) root.patch(root.applyingIdx, { state: "applied", undo: r.undo ?? "" });
+                    root.applyingIdx = -1;
                     for (const t of r.results ?? []) root.push({ role: "ai", text: t, local: true });   // herramientas MCP de solo lectura
                     if (r.errors?.length) root.push({ role: "ai", text: "Algunos pasos no se pudieron hacer: " + r.errors.join(" · "), local: true });
                 }
@@ -400,7 +415,8 @@ Item {
     }
 
     // ---- historial (aiHistory)
-    onMessagesChanged: if (keepHistory) histTimer.restart()
+    property bool histLoading: false               // al abrir una guardada no se vuelve a escribir (subía a «Hoy»)
+    onMessagesChanged: if (keepHistory && !histLoading) histTimer.restart()
     Timer {
         id: histTimer
         interval: 800
@@ -408,14 +424,22 @@ Item {
             const msgs = root.messages.filter(m => !m.local);
             if (!msgs.length) return;
             if (root.historyFile === "") root.historyFile = root.historyDir + "/" + Qt.formatDateTime(new Date(), "yyyy-MM-dd_HH-mm-ss") + ".json";
-            histWriter.command = ["sh", "-c", 'mkdir -p "$(dirname "$1")" && printf "%s" "$2" > "$1"', "sh", root.historyFile,
+            histWriter.command = ["sh", "-c", 'mkdir -p "$(dirname "$1")" && cat > "$1.tmp" && mv -f "$1.tmp" "$1"', "sh", root.historyFile];
+            histWriter.sendIn = (
                                   JSON.stringify({ messages: msgs.map(m => ({ role: m.role, text: m.text, images: m.images ?? [], files: m.files ?? [], labels: m.labels ?? [], plan: m.plan ?? [],
                                                                               steps: m.steps ?? [], code: m.code ?? "",
-                                                                              state: m.state ?? "", error: !!m.error })) }, null, 1)];
+                                                                              state: m.state ?? "", error: !!m.error })) }, null, 1));
+            histWriter.stdinEnabled = true;
             histWriter.running = true;
         }
     }
-    Process { id: histWriter; onExited: if (root.showHistory) root.loadHistory() }
+    Process {
+        id: histWriter
+        property string sendIn: ""
+        stdinEnabled: true
+        onStarted: { write(sendIn); sendIn = ""; stdinEnabled = false; }
+        onExited: if (root.showHistory) root.loadHistory()
+    }
     // Lista de conversaciones guardadas: [{ file, t (epoch), title, n, text (para buscar) }]
     property var histList: []
     property string histQuery: ""
@@ -459,7 +483,9 @@ print(json.dumps(out[:300]))
                     const d = JSON.parse(text);
                     root.busy = false; chatProc.running = false; root.notice = null;
                     root.historyFile = histOpener.target;
+                    root.histLoading = true;
                     root.messages = (d.messages ?? []).map(m => Object.assign({ actions: [] }, m, { state: m.state || (m.labels?.length ? "discarded" : "") }));
+                    root.histLoading = false;
                     root.showHistory = false;
                     Qt.callLater(root.scrollEnd);
                     Qt.callLater(root.focusInput);
@@ -475,7 +501,7 @@ print(json.dumps(out[:300]))
     function histWhen(t) {
         const d = new Date(t * 1000), now = new Date();
         const days = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
-        return days === 0 ? "Hoy · " + Qt.formatTime(d, "HH:mm") : days === 1 ? "Ayer · " + Qt.formatTime(d, "HH:mm")
+        return days === 0 ? "Hoy · " + Time.fmt(d) : days === 1 ? "Ayer · " + Time.fmt(d)
              : days < 7 ? Qt.formatDate(d, "dddd") : Qt.formatDate(d, "d MMM yyyy");
     }
     // Al cargar: recupera la última conversación (si es de hoy)
@@ -489,7 +515,9 @@ print(json.dumps(out[:300]))
                 try {
                     const d = JSON.parse(text.slice(nl + 1));
                     root.historyFile = text.slice(0, nl);
+                    root.histLoading = true;
                     root.messages = (d.messages ?? []).map(m => Object.assign({ actions: [] }, m, { state: m.state || (m.labels?.length ? "discarded" : "") }));
+                    root.histLoading = false;
                 } catch (e) {}
             }
         }
@@ -1162,7 +1190,7 @@ print(json.dumps(out[:300]))
                                 width: 6; height: 6; radius: 3
                                 color: Theme.tv
                                 SequentialAnimation on opacity {
-                                    running: root.busy
+                                    running: root.busy && root.liveText === "" && root.visible && !Theme.still
                                     loops: Animation.Infinite
                                     PauseAnimation { duration: index * 160 }
                                     NumberAnimation { from: 0.3; to: 1; duration: 320 }

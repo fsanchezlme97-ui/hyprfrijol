@@ -111,7 +111,7 @@ Scope {
                             width: 7; height: 7; radius: 3.5
                             color: Pomodoro.running ? Theme.ter : Theme.o
                             SequentialAnimation on opacity {
-                                running: Pomodoro.running && !Theme.reduceMotion
+                                running: Pomodoro.running && !Theme.still
                                 loops: Animation.Infinite
                                 NumberAnimation { to: 0.35; duration: 900; easing.type: Easing.InOutSine }
                                 NumberAnimation { to: 1; duration: 900; easing.type: Easing.InOutSine }

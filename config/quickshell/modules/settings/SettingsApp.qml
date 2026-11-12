@@ -90,7 +90,11 @@ Scope {
         return out.slice(0, 40);
     }
     // Claves de la sección que el usuario ha cambiado (presentes en settings.json)
-    readonly property var changedKeys: ((index.keys ?? {})[current.file] ?? []).filter(k => k in Settings.user)
+    // Lo que son datos tuyos y no preferencias (conexiones guardadas, servidores, órdenes de voz, atajos, pantallas…)
+    // no se borra con «Restaurar valores por defecto»
+    readonly property var dataKeys: ["remoteHosts", "aiMcpServers", "voiceCommands", "voiceAliases", "aiAlwaysApprove", "aiOnboarded",
+                                     "notifyApps", "keybinds", "monitors", "alarms", "worldClocks", "calendarIcs", "dictationPrompt"]
+    readonly property var changedKeys: ((index.keys ?? {})[current.file] ?? []).filter(k => k in Settings.user && !dataKeys.includes(k))
     // «Restaurar valores por defecto» de la sección actual: borra sus claves de settings.json (con «¿Se ve bien?»)
     function resetSection(): void {
         if (!changedKeys.length) return;

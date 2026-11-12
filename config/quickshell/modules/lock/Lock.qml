@@ -76,7 +76,7 @@ Scope {
         state = "ok";
         unlockTimer.restart();
     }
-    Timer { id: unlockTimer; interval: Theme.reduceMotion ? 0 : 260; onTriggered: { sessionLock.locked = false; root.password = ""; root.state = ""; root.message = ""; } }
+    Timer { id: unlockTimer; interval: Theme.still ? 0 : 260; onTriggered: { sessionLock.locked = false; root.password = ""; root.state = ""; root.message = ""; } }
 
     PamContext {
         id: pam
@@ -140,10 +140,10 @@ Scope {
                 anchors.fill: parent
                 opacity: 0
                 Component.onCompleted: opacity = 1
-                Behavior on opacity { NumberAnimation { duration: Theme.reduceMotion ? 0 : 320; easing.type: Easing.OutCubic } }
+                Behavior on opacity { NumberAnimation { duration: Theme.still ? 0 : 320; easing.type: Easing.OutCubic } }
 
                 // Fondo: el fondo actual (enlace que mantiene hf-wallpaper) o el paisaje del diseño
-                Landscape { anchors.fill: parent; visible: wall.status !== Image.Ready; animated: !Theme.reduceMotion }
+                Landscape { anchors.fill: parent; visible: wall.status !== Image.Ready; animated: !Theme.still }
                 Image {
                     id: wall
                     anchors.fill: parent
@@ -263,7 +263,7 @@ Scope {
                             }
                             Connections {
                                 target: root
-                                function onShake() { if (!Theme.reduceMotion) shakeAnim.restart(); }
+                                function onShake() { if (!Theme.still) shakeAnim.restart(); }
                                 function onClearInput() { input.text = ""; }
                             }
 
@@ -346,7 +346,7 @@ Scope {
                                 const who = root.realName || root.userName;
                                 if (root.message) return root.message;
                                 if (root.caps) return who + " · Bloq Mayús activado";
-                                return who + " · Bloqueado desde las " + Qt.formatDateTime(root.lockedAt, "HH:mm");
+                                return who + " · Bloqueado desde las " + Time.fmt(root.lockedAt);
                             }
                         }
                     }

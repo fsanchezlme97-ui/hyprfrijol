@@ -192,8 +192,8 @@ ColumnLayout {
         LabeledRow {
             label: "Ciudad del clima"
             labelWidth: 150
-            hint: "vacío = por IP"
-            Field { Layout.preferredWidth: 260; h: 32; icon: ""; placeholder: "Lima"; text: Settings.get("weatherCity", ""); input.onEditingFinished: Settings.set("weatherCity", text.trim()) }
+            hint: Weather.cityErr || "vacío = por IP"
+            Field { Layout.preferredWidth: 260; h: 32; icon: ""; placeholder: "Lima"; text: Settings.get("weatherCity", ""); input.onEditingFinished: Weather.setCity(text) }
         }
         LabeledRow {
             label: "Impresora 3D"

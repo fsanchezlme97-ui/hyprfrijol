@@ -105,8 +105,8 @@ PanelWindow {
         transform: Translate {
             x: dockWin.revealed || dockWin.bottom ? 0 : -(6 + dock.width + 32)   // también la sombra
             y: dockWin.revealed || !dockWin.bottom ? 0 : 6 + dock.height + 32
-            Behavior on x { NumberAnimation { id: slide; duration: Theme.reduceMotion ? 0 : Theme.durIn; easing.type: Easing.OutCubic } }
-            Behavior on y { NumberAnimation { id: slideY; duration: Theme.reduceMotion ? 0 : Theme.durIn; easing.type: Easing.OutCubic } }
+            Behavior on x { NumberAnimation { id: slide; duration: Theme.still ? 0 : Theme.durIn; easing.type: Easing.OutCubic } }
+            Behavior on y { NumberAnimation { id: slideY; duration: Theme.still ? 0 : Theme.durIn; easing.type: Easing.OutCubic } }
         }
 
         Grid {

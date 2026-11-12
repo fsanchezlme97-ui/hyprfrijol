@@ -152,6 +152,7 @@ git	recommended	git	git	git	git	git	actualizar HyprFrijol por versiones (hf-upda
 pciutils	recommended	pciutils	pciutils	pciutils	pciutils	pciutils	nombre de la GPU (lspci) en Acerca y hf-doctor	sistema	lspci
 firmware	optional	fwupd	fwupd	fwupd	fwupd	fwupd	actualizaciones de firmware	sistema	fwupdmgr
 backup	optional	pika-backup	deja-dup	pika-backup	deja-dup	pika-backup	copias de seguridad (Pika Backup; Déjà Dup donde no hay)	sistema	pika-backup,deja-dup
+pacman-contrib	recommended	pacman-contrib	-	-	-	-	ver qué hay por actualizar sin tocar el sistema (checkupdates)	sistema	checkupdates
 snapper	optional	snapper,snap-pac	snapper	snapper	snapper	snapper	instantáneas del sistema (solo con btrfs)	sistema	snapper
 vulkan-tools	optional	vulkan-tools	vulkan-tools	vulkan-tools	vulkan-tools	Vulkan-Tools	vulkaninfo para hf-doctor	sistema	vulkaninfo
 limine-snapper	manual	aur:limine-snapper-sync	-	-	-	-	instantáneas en el menú de arranque Limine (solo con Limine + btrfs)	sistema	limine-snapper-sync
@@ -192,6 +193,8 @@ android	optional	scrcpy,android-tools	android-tools	scrcpy,android-tools	scrcpy,
 fd	optional	fd	fd-find	fd	fd-find	fd	búsqueda de archivos más rápida en Spotlight	spotlight	fd
 calculator	optional	libqalculate	qalculate	qalculate	qalc	libqalculate	calculadora avanzada de Spotlight (qalc)	spotlight	qalc
 # — Archivos y PDF (Nautilus, Firmar)
+pymupdf	recommended	python-pymupdf	python3-PyMuPDF	python313-PyMuPDF	python3-pymupdf	python3-PyMuPDF	Firmar documentos PDF (hf-sign); sin él usa Poppler y se pierden enlaces y formularios	archivos	
+pygobject	recommended	python-gobject	python3-gobject	python313-gobject	python3-gi	python3-gobject	selector de archivos, enviar al móvil y avisos del asistente (hf-pickfile, hf-phone, hf-ai)	archivos	
 pdftools	recommended	poppler	poppler-utils	poppler-tools	poppler-utils	poppler-utils	OCR y conversión de PDF desde Nautilus (pdftoppm, hf-fileact)	archivos	pdftoppm,pdfinfo
 rembg	optional	aur:python-rembg	-	-	-	-	quitar el fondo de firmas e imágenes (en otras distros: pipx install rembg)	archivos	rembg
 # — Descargas
@@ -203,4 +206,4 @@ gamescope	optional	gamescope	gamescope	gamescope	gamescope	gamescope	Modo juego 
 # — Login visual (greeter)
 greetd	greeter	greetd	greetd	greetd	greetd	greetd	login visual (--greeter)	login	greetd
 pamkeyring	greeter	gnome-keyring	gnome-keyring-pam	gnome-keyring-pam	libpam-gnome-keyring	gnome-keyring	el login desbloquea el llavero (Chrome no pide contraseña al abrirse)	login	
-qtmultimedia	greeter	qt6-multimedia,qt6-multimedia-ffmpeg	qt6-qtmultimedia	qt6-multimedia	qml6-module-qtmultimedia	qt6-multimedia	fondo en movimiento (vídeo) en el login visual	login	
+qtmultimedia	recommended	qt6-multimedia,qt6-multimedia-ffmpeg	qt6-qtmultimedia	qt6-multimedia	qml6-module-qtmultimedia	qt6-multimedia	fondo en movimiento (vídeo) en el bloqueo, el selector de fondos y el login visual	fondos	

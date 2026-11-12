@@ -55,7 +55,7 @@ def F():
         import pymupdf
         return pymupdf
     except Exception:
-        fitz = F()
+        import fitz
         return fitz
 
 def have_fitz():

@@ -48,7 +48,13 @@ Scope {
             onVisibleChanged: if (!visible) root.open = false
 
             OpenProbe { name: "tareas"; shown: true }
-            Shortcut { sequences: ["Ctrl+W", "Escape"]; onActivated: root.open = false }
+            Shortcut { sequence: "Ctrl+W"; onActivated: root.open = false }
+            // Esc cierra la ventana solo si no se está editando una tarea (ahí cancela la edición)
+            Shortcut { sequence: "Escape"; enabled: win.editing === ""; onActivated: root.open = false }
+            // Filtros: Alt + 1, 2, 3 (los números solos se escriben en la caja de la tarea nueva)
+            Shortcut { sequence: "Alt+1"; onActivated: win.filter = "pendientes" }
+            Shortcut { sequence: "Alt+2"; onActivated: win.filter = "hechas" }
+            Shortcut { sequence: "Alt+3"; onActivated: win.filter = "todas" }
             Shortcut { sequence: "Ctrl+N"; onActivated: addField.focusInput() }
 
             // ---------- estado ----------
@@ -63,7 +69,7 @@ Scope {
 
             function dueFor(): string {
                 return when === "hoy" ? today : when === "manana" ? tomorrow
-                     : when === "dia" && /^\d{4}-\d{2}-\d{2}$/.test(dayField.text.trim()) ? dayField.text.trim() : "";
+                     : when === "dia" ? (Tasks.parseDue(dayField.text) || "") : "";
             }
             function add(): void {
                 const t = addField.text.trim();
@@ -88,7 +94,7 @@ Scope {
                 const by = (a, b) => String(a.due || "9").localeCompare(String(b.due || "9")) || a.created - b.created;
                 const pend = L.filter(x => !x.done);
                 const g = [];
-                const push = (key, label, items, tone) => { if (items.length) g.push({ key: key, label: label, items: items.sort(by), tone: tone ?? "" }); };
+                const push = (key, label, items, tone, sorted) => { if (items.length) g.push({ key: key, label: label, items: sorted ? items : items.sort(by), tone: tone ?? "" }); };
                 if (filter !== "hechas") {
                     push("late", "Vencidas", pend.filter(x => x.due && x.due < t), "danger");
                     push("today", "Hoy", pend.filter(x => x.due === t));
@@ -97,18 +103,12 @@ Scope {
                     push("none", "Sin fecha", pend.filter(x => !x.due));
                 }
                 if (filter !== "pendientes")
-                    push("done", "Hechas", L.filter(x => x.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)));
+                    push("done", "Hechas", L.filter(x => x.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)), "", true);   // las últimas hechas, arriba
                 return g;
             }
 
             Item {
                 anchors.fill: parent
-                focus: true
-                Keys.onPressed: e => {
-                    if (e.modifiers !== Qt.NoModifier) return;
-                    const k = { [Qt.Key_1]: "pendientes", [Qt.Key_2]: "hechas", [Qt.Key_3]: "todas" }[e.key];
-                    if (k) { win.filter = k; e.accepted = true; }
-                }
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -195,7 +195,7 @@ Scope {
                                     Layout.preferredWidth: 150
                                     h: 28
                                     icon: "calendar"
-                                    placeholder: "AAAA-MM-DD"
+                                    placeholder: "vie, 12 nov, 12/11…"
                                     onAccepted: win.add()
                                 }
                                 Item { Layout.fillWidth: true }
@@ -297,6 +297,9 @@ Scope {
                                                     text: tk.modelData.due ?? ""
                                                     onVisibleChanged: if (visible) text = tk.modelData.due ?? ""
                                                     onAccepted: { Tasks.edit(tk.modelData.id, ed.text, text.trim()); win.editing = ""; }
+                                                    onKeyPressed: e => { if (e.key === Qt.Key_Escape) { win.editing = ""; e.accepted = true; } }
+                                                    // fecha que no se entiende: en rojo (al guardar se quedaría la que tenía)
+                                                    input.color: Tasks.parseDue(text) === null ? Theme.danger : Theme.t
                                                 }
                                                 Txt {
                                                     visible: !tk.edit && !!tk.modelData.due

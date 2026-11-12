@@ -209,7 +209,14 @@ def find_app(desktop):
     return None
 
 
+def _plain(i):
+    """Un id de lanzador es un nombre de archivo .desktop, nunca una ruta."""
+    return bool(re.fullmatch(r"[\w.@+-]+\.desktop", str(i or "")))
+
+
 def autostart_add(desktop):
+    if not _plain(desktop):
+        return {"ok": False, "error": "Nombre de lanzador no válido"}
     src = find_app(desktop)
     if not src:
         return {"ok": False, "error": f"No encuentro {desktop}"}
@@ -242,6 +249,8 @@ def autostart_set(i, on):
 
 
 def autostart_remove(i):
+    if not _plain(i):
+        return {"ok": False, "error": "Nombre de lanzador no válido"}
     f = USER_AUTOSTART / i
     if not f.exists():
         return {"ok": False, "error": "Solo se pueden quitar las que añadiste tú"}

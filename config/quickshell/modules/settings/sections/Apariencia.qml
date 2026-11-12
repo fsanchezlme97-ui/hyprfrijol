@@ -497,7 +497,7 @@ ColumnLayout {
             }
         }
         Item { implicitHeight: 2 }
-        LinkRow { label: "Quitar efectos en juegos"; value: Settings.get("gameNoFx", true) ? "Activado" : "Desactivado"; section: "energia"; sectionLabel: "Energía y rendimiento" }
+        LinkRow { label: "Quitar efectos en juegos"; value: Settings.get("gameNoFx", true) ? "Activado" : "Desactivado"; section: "animaciones"; sectionLabel: "Animaciones y efectos" }
     }
     // ---------- Tema en las apps ----------
     Section {

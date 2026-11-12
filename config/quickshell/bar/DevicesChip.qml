@@ -14,7 +14,7 @@ BarChip {
     readonly property string usb: '<path d="M10 2h4v4h-4z"/><path d="M8 6h8v9a4 4 0 0 1-8 0z"/><path d="M12 19v3"/>'
     implicitHeight: vertical ? vcol.implicitHeight + 10 : 22
     implicitWidth: vertical ? 26 : r.implicitWidth + 14
-    Behavior on implicitWidth { enabled: !Theme.reduceMotion && !chip.vertical; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+    Behavior on implicitWidth { enabled: !Theme.still && !chip.vertical; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
     RowLayout {
         id: r
         visible: !chip.vertical

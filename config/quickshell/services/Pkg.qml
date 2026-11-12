@@ -211,16 +211,19 @@ Singleton {
 
     // Abre la terminal preferida con el comando; al final espera una tecla.
     function runInTerminal(cmd: string, title: string): void {
-        const script = "printf '\\033[1m%s\\033[0m\\n\\n' " + JSON.stringify("HyprFrijol · " + (title || "Terminal"))
+        // El título va como argumento ($1), no dentro del texto de bash: un nombre de app con $(…) no se ejecuta
+        const script = "printf '\\033[1m%s\\033[0m\\n\\n' \"$1\""
             + "; set -x; " + cmd + "; set +x; echo; read -n1 -rsp 'Listo. Pulsa una tecla para cerrar…'";
-        const t = root.terminal;
+        const t = Settings.get("terminal", "") || root.terminal;   // la de Ajustes › Predeterminadas; si no, la que haya
         const args = t === "foot" ? ["foot", "-T", title || "HyprFrijol", "bash", "-c", script]
                    : t === "alacritty" ? ["alacritty", "-T", title || "HyprFrijol", "-e", "bash", "-c", script]
                    : t === "ghostty" ? ["ghostty", "-e", "bash", "-c", script]
                    : t === "wezterm" ? ["wezterm", "start", "--", "bash", "-c", script]
                    : t === "konsole" ? ["konsole", "-e", "bash", "-c", script]
+                   : t === "kgx" || t === "gnome-console" ? ["kgx", "-e", "bash", "-c", script]
+                   : t === "ptyxis" ? ["ptyxis", "--", "bash", "-c", script]
                    : [t, "-T", title || "HyprFrijol", "bash", "-c", script];   // kitty
-        Quickshell.execDetached(args);
+        Quickshell.execDetached(args.concat(["hf", "HyprFrijol · " + (title || "Terminal")]));
     }
 
     function refresh(): void { probe.running = true; cachedUpd.running = true; }
@@ -330,7 +333,7 @@ Singleton {
         stdout: StdioCollector {
             onStreamFinished: {
                 if (srch.ran === root.query) { root.results = root.parseSearch(text, srch.ran); root.resultsFor = srch.ran; }
-                else Qt.callLater(root.startSearch);     // llegó otra búsqueda mientras tanto
+                else if (root.query.length >= 2) Qt.callLater(root.startSearch);     // llegó otra búsqueda mientras tanto
             }
         }
     }

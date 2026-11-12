@@ -66,11 +66,39 @@ Singleton {
 
     function refresh(): void {
         if (!isNaN(setLat) && !isNaN(setLon)) {
-            loc = { lat: setLat, lon: setLon, city: Settings.get("weatherCity", "") };
+            loc = { lat: setLat, lon: setLon, city: Settings.get("weatherCity", ""), fixed: true };
             fetchWeather();
-        } else if (loc) fetchWeather();
+            return;
+        }
+        if (loc && loc.fixed) loc = null;          // se quitó la ciudad fija: se vuelve a la ubicación por IP
+        if (loc) fetchWeather();
         else if (Settings.get("weatherIpLocation", true) !== false) geo.running = true;   // Ajustes › Privacidad
         else err = "Pon tu ciudad en Ajustes › Escritorio";
+    }
+    // Ciudad escrita en Ajustes › Escritorio: se busca en Open-Meteo y se guardan sus coordenadas (vacía = por IP)
+    property string cityErr: ""
+    function setCity(name: string): void {
+        name = String(name ?? "").trim();
+        cityErr = "";
+        if (name === "") { Settings.setMany({ weatherCity: "", weatherLat: "", weatherLon: "" }); return; }
+        if (name === Settings.get("weatherCity", "") && !isNaN(setLat)) return;
+        cityProc.name = name;
+        cityProc.command = ["curl", "-fsS", "--max-time", "10", "-G", "https://geocoding-api.open-meteo.com/v1/search",
+                            "--data-urlencode", "name=" + name, "-d", "count=1", "-d", "language=es", "-d", "format=json"];
+        cityProc.running = true;
+    }
+    Process {
+        id: cityProc
+        property string name: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const r = (JSON.parse(text).results ?? [])[0];
+                    if (!r) { root.cityErr = "No encuentro «" + cityProc.name + "»"; return; }
+                    Settings.setMany({ weatherCity: r.name, weatherLat: r.latitude, weatherLon: r.longitude });
+                } catch (e) { root.cityErr = "No se pudo buscar la ciudad (sin conexión)"; }
+            }
+        }
     }
     function fetchWeather(): void {
         const u = "https://api.open-meteo.com/v1/forecast?latitude=" + loc.lat + "&longitude=" + loc.lon
@@ -169,6 +197,8 @@ Singleton {
                 } catch (e) { if (!root.ready) root.err = "Sin conexión con Open-Meteo"; }
             }
         }
-        onExited: code => { if (code !== 0 && !root.ready) root.err = "Sin conexión con Open-Meteo"; }
+        onExited: code => { if (code !== 0) { if (!root.ready) root.err = "Sin conexión con Open-Meteo"; retry.restart(); } }
     }
+    // Sin red al arrancar (o un fallo suelto): se reintenta al minuto en vez de esperar a la siguiente media hora
+    Timer { id: retry; interval: 60000; onTriggered: if (root.users > 0) root.refresh() }
 }

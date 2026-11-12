@@ -25,6 +25,8 @@ case "$REPO" in */OWNER/*) die "Este bootstrap aún tiene el marcador OWNER. Usa
 
 if [ -d "$DIR/.git" ]; then
   say "Actualizando $DIR"
+  # hf-update deja el clon en una versión suelta (sin rama): se vuelve a la rama antes de traer lo nuevo
+  git -C "$DIR" symbolic-ref -q HEAD >/dev/null || git -C "$DIR" checkout -q "$BRANCH" 2>/dev/null || true
   git -C "$DIR" pull --ff-only || say "No se pudo actualizar (¿cambios locales?): sigo con lo que hay"
 elif [ -e "$DIR" ] && [ -n "$(ls -A "$DIR" 2>/dev/null)" ]; then
   die "$DIR ya existe y no es un clon de git. Bórralo o elige otra carpeta con HF_DIR=…"

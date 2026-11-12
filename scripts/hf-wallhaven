@@ -129,7 +129,7 @@ def http(url, headers=None, timeout=20):
     except urllib.error.HTTPError as e:
         raise WHError({401: "La clave de Wallhaven no es válida", 429: "Demasiadas búsquedas seguidas: espera un minuto",
                        404: "No existe en Wallhaven"}.get(e.code, f"Wallhaven respondió {e.code}"))
-    except urllib.error.URLError:
+    except OSError:                                   # URLError, tiempo agotado o corte a media descarga
         raise WHError("Sin conexión con wallhaven.cc")
 
 
@@ -237,6 +237,8 @@ def fetch(wid, full=None):
         os.replace(tmp, dst)
     except WHError as e:
         return {"ok": False, "error": str(e)}
+    except Exception:                                 # respuesta que no es JSON (página de error del servidor)…
+        return {"ok": False, "error": "Wallhaven respondió algo que no se entiende; prueba más tarde"}
     prune()
     return {"ok": True, "path": str(dst), "id": wid}
 

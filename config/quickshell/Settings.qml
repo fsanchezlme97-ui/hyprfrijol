@@ -25,14 +25,30 @@ Singleton {
     function set(key: string, value): void { const o = {}; o[key] = value; setMany(o); }
     function setMany(obj): void {
         user = Object.assign({}, user, obj);
+        _mark(obj, []);
         saveTimer.restart();
     }
+    // Lo cambiado y aún sin guardar. Si otro programa (hf-apply set, el asistente) escribe el archivo en ese rato,
+    // al recargarlo se vuelve a poner encima: ni se pierde lo suyo ni lo nuestro.
+    property var _dirty: ({})
+    property var _gone: []
+    function _mark(obj, remove): void {
+        const d = Object.assign({}, _dirty, obj ?? {});
+        for (const k of remove ?? []) delete d[k];
+        _dirty = d;
+        _gone = _gone.filter(k => !(k in (obj ?? {}))).concat(remove ?? []);
+    }
+    // Claves que solo usa el shell: guardarlas no necesita hf-apply (tema, Hyprland, kitty…)
+    readonly property var _shellOnly: ["alarms", "timerMin", "worldClocks", "dockApps", "bongoSleep", "calendarCollapsed", "spotlightOrder",
+                                       "storeSources", "welcomeDone", "aiOnboarded", "aiAlwaysApprove", "voiceCommands", "voiceAliases", "remoteHosts"]
+    property string _written: ""
     // Como setMany, y además borra de settings.json las claves de «remove» (vuelven a su valor por defecto).
     //   Settings.patch({ barPos: "arriba" }, ["barHeight"])
     function patch(obj, remove): void {
         const u = Object.assign({}, user, obj ?? {});
         for (const k of remove ?? []) delete u[k];
         user = u;
+        _mark(obj, remove);
         saveTimer.restart();
     }
     // Quita claves de settings.json («Restaurar valores por defecto» de una sección)
@@ -83,7 +99,9 @@ Singleton {
     }
     function barHas(m: string): bool { return barModuleList.includes(m); }
 
-    function apply(): void { applier.running = false; applier.running = true; }
+    // Si hf-apply está a medias no se corta (podía saltarse la recarga de Hyprland): se repite al acabar
+    property bool _again: false
+    function apply(): void { if (applier.running) _again = true; else applier.running = true; }
 
     FileView {
         id: userFile
@@ -92,7 +110,22 @@ Singleton {
         printErrors: false
         atomicWrites: true
         onFileChanged: reload()
-        onLoaded: { try { root.user = JSON.parse(text()); } catch (e) {} root.loaded = true; }
+        onLoaded: {
+            const t = text();
+            if (t === root._written && root.loaded) return;      // el eco de lo que acabamos de guardar
+            try {
+                const u = JSON.parse(t);
+                if (saveTimer.running) { Object.assign(u, root._dirty); for (const k of root._gone) delete u[k]; }
+                root.user = u;
+            } catch (e) {
+                // Archivo roto (una coma de más al editarlo a mano): copia aparte antes de que el próximo cambio lo pise
+                if (t.trim() !== "") {
+                    console.warn("[settings] settings.json no es JSON válido; copia en settings.json.roto");
+                    Quickshell.execDetached(["cp", "-f", path, path + ".roto"]);
+                }
+            }
+            root.loaded = true;
+        }
         onLoadFailed: root.loaded = true
     }
     FileView {
@@ -105,10 +138,13 @@ Singleton {
         interval: 250
         onTriggered: {
             mkdir.running = true;
-            userFile.setText(JSON.stringify(root.user, null, 2) + "\n");
-            root.apply();
+            const keys = Object.keys(root._dirty).concat(root._gone);
+            root._dirty = ({}); root._gone = [];
+            root._written = JSON.stringify(root.user, null, 2) + "\n";
+            userFile.setText(root._written);
+            if (!keys.length || keys.some(k => !root._shellOnly.includes(k))) root.apply();
         }
     }
     Process { id: mkdir; command: ["mkdir", "-p", Paths.home + "/.config/hyprfrijol"] }
-    Process { id: applier; command: [Paths.script("hf-apply")] }
+    Process { id: applier; command: [Paths.script("hf-apply")]; onExited: if (root._again) { root._again = false; running = true; } }
 }

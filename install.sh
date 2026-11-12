@@ -677,7 +677,7 @@ greeter() {
   fi
   root install -Dm644 "$HERE/greeter/hyprland-greeter.lua" /etc/greetd/hyprland-greeter.lua
   root install -d /etc/greetd/quickshell
-  local f; for f in shell.qml Landscape.qml palettes.json; do root install -m644 "$HERE/greeter/quickshell/$f" "/etc/greetd/quickshell/$f"; done
+  local f; for f in shell.qml Landscape.qml VideoBackdrop.qml palettes.json; do root install -m644 "$HERE/greeter/quickshell/$f" "/etc/greetd/quickshell/$f"; done
   if [ "$DRY" = 1 ] || [ -f /etc/greetd/config.toml ]; then root cp -n /etc/greetd/config.toml /etc/greetd/config.toml.antes-hyprfrijol; fi
   printf '%s\n' '[terminal]' 'vt = 1' '' '[default_session]' \
     '# Login visual de hyprfrijol. Si fallara, desde otra TTY (Ctrl+Alt+F3):  ./install.sh --greeter-off' \

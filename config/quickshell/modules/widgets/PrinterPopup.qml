@@ -120,7 +120,7 @@ ChipPopup {
                     text: [Printer.layers ? "Capa " + Printer.layer + " de " + Printer.layers : "",
                            Printer.elapsed > 0 ? Printer.dur(Printer.elapsed) + " imprimiendo" : "",
                            Printer.left >= 0 ? "quedan " + Printer.dur(Printer.left) : "",
-                           Printer.left > 0 ? "termina a las " + Qt.formatDateTime(new Date(Date.now() + Printer.left * 1000), "HH:mm") : ""].filter(s => s).join(" · ")
+                           Printer.left > 0 ? "termina a las " + Time.fmt(new Date(Date.now() + Printer.left * 1000)) : ""].filter(s => s).join(" · ")
                     muted: true; size: 11.5; tabular: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
                 }
             }

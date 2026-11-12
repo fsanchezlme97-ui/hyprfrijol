@@ -15,7 +15,7 @@ BarChip {
     readonly property bool failed: Downloads.active.length === 0 && Downloads.errors > 0
     implicitHeight: vertical ? vcol.implicitHeight + 10 : 22
     implicitWidth: vertical ? 26 : r.implicitWidth + 14
-    Behavior on implicitWidth { enabled: !Theme.reduceMotion && !chip.vertical; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+    Behavior on implicitWidth { enabled: !Theme.still && !chip.vertical; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
 
     component Ring: Item {
         implicitWidth: 17; implicitHeight: 17
@@ -40,7 +40,7 @@ BarChip {
                     c.beginPath(); c.arc(width / 2, height / 2, width / 2 - 1.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, p)); c.stroke();
                 }
             }
-            RotationAnimation on rotation { running: chip.prog < 0 && !Theme.reduceMotion; from: 0; to: 360; duration: 1400; loops: Animation.Infinite }
+            RotationAnimation on rotation { running: chip.prog < 0 && !Theme.still; from: 0; to: 360; duration: 1400; loops: Animation.Infinite }
         }
         Icon { anchors.centerIn: parent; name: chip.failed ? "alert" : "download"; size: 9; stroke: 2.2; color: chip.failed ? Theme.danger : Theme.t }
     }

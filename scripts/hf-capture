@@ -29,7 +29,8 @@ TMPD="$RUN/capturas"
 mkdir -p "$TMPD"
 PICS="$(xdg-user-dir PICTURES 2>/dev/null)"; { [ -z "$PICS" ] || [ "$PICS" = "$HOME" ]; } && PICS="$HOME/Pictures"
 PICS="$PICS/Capturas"
-VIDS="$(xdg-user-dir VIDEOS 2>/dev/null || echo "$HOME/Videos")/Grabaciones"
+VIDS="$(xdg-user-dir VIDEOS 2>/dev/null)"; { [ -z "$VIDS" ] || [ "$VIDS" = "$HOME" ]; } && VIDS="$HOME/Videos"
+VIDS="$VIDS/Grabaciones"
 stamp() { date +%Y-%m-%d_%H-%M-%S; }
 notify() { command -v notify-send >/dev/null && notify-send -a "Captura" "$@" || true; }
 has_cursor() { for a in "$@"; do [ "$a" = --cursor ] && return 0; done; return 1; }

@@ -99,7 +99,7 @@ RowLayout {
                 label: "Terminal"; labelWidth: 140
                 Dropdown {
                     h: 32
-                    model: ["kitty", "ghostty", "foot", "alacritty", "wezterm", "gnome-console", "ptyxis", "konsole"].map(t => [t, t])
+                    model: [["kitty", "kitty"], ["ghostty", "ghostty"], ["foot", "foot"], ["alacritty", "alacritty"], ["wezterm", "wezterm"], ["kgx", "GNOME Console"], ["ptyxis", "ptyxis"], ["konsole", "konsole"]]
                     current: Settings.get("terminal", Pkg.terminal)
                     onPicked: k => Settings.set("terminal", k)
                 }

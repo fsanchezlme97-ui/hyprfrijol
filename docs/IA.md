@@ -164,8 +164,7 @@ cerrar, pausa (MPRIS) y volver. `pip: false` lo desactiva.
 ```sh
 qs -p "$HF_ROOT/config/quickshell" ipc call shell openWith ia wa      # pestaña
 qs -p "$HF_ROOT/config/quickshell" ipc call sidepanel ask "Resume el portapapeles"
-qs -p "$HF_ROOT/config/quickshell" ipc call sidepanel pip              # YouTube a PiP
-qs -p "$HF_ROOT/config/quickshell" ipc call sidepanel pipBack
+qs -p "$HF_ROOT/config/quickshell" ipc call sidepanel askImage "¿Qué pone aquí?" /ruta/captura.png
 ```
 
 `Shell.open("ia", { ask: "…" })` (o el texto `{"ask":"…"}` por IPC) abre la pestaña IA y pregunta directamente.

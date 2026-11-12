@@ -155,7 +155,7 @@ ColumnLayout {
                     Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
                     text: Settings.get("wallpaperMotionKind", "video") === "video"
                         ? "Vídeos (.mp4, .webm, .mkv, .mov) y GIF en bucle con mpvpaper, sin sonido. El color del tema se toma del primer cuadro."
-                        : "Escenas de Wallpaper Engine (carpetas con project.json) con linux-wallpaperengine (instálalo desde Herramientas)."
+                        : "Escenas de Wallpaper Engine (carpetas con project.json) con linux-wallpaperengine (instálalo desde el Centro de aplicaciones)."
                 }
                 // Reproductor: instalado o botón para instalarlo
                 RowLayout {

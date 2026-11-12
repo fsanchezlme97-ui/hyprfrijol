@@ -69,7 +69,7 @@ ColumnLayout {
             }
             SwRow {
                 label: "Fijar el panel"
-                sub: "parte del mosaico: ocupa un tercio de la pantalla y las demás ventanas se reparten el resto; sigue abierto en todos los espacios (pantalla principal)"
+                sub: "parte del mosaico: ocupa el ancho elegido arriba y las demás ventanas se reparten el resto; sigue abierto en todos los espacios (pantalla principal)"
                 key: "sidePanelPinned"
                 onToggled: v => { if (v) Shell.sideHidden = false; }
             }
@@ -128,8 +128,6 @@ ColumnLayout {
                 LabeledRow { Layout.preferredWidth: 1; label: "Margen"; labelWidth: 56; Pills { model: [[4, "4 px"], [12, "12 px"], [24, "24 px"], [48, "48 px"]]; current: root.margin; onPicked: v => Settings.set("pipMargin", v) } }
                 LabeledRow { Layout.preferredWidth: 1; label: "Opacidad"; labelWidth: 60; Pills { model: [[1, "100 %"], [0.85, "85 %"], [0.7, "70 %"]]; current: Settings.get("pipOpacity", 1); onPicked: v => Settings.set("pipOpacity", v) } }
             }
-            SwRow { label: "Botón PiP en todos los vídeos"; sub: "en el navegador y las web apps"; key: "pipButton"; def: true }
-            SwRow { label: "PiP automático"; sub: "al cambiar de espacio con un vídeo sonando"; key: "pipAuto"; def: true }
             SwRow { label: "Visible en todos los espacios"; sub: "pin = true"; mono: true; key: "pipAllWs"; def: true }
             SwRow { label: "Controles solo al pasar el cursor"; key: "pipHoverControls"; def: true }
             SwRow { label: "Transparente si el cursor se acerca"; sub: "para ver lo que hay debajo"; key: "pipFadeNear"; def: false }

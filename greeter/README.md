@@ -40,7 +40,7 @@ sudo systemctl enable greetd
 ```bash
 sudo install -Dm644 greeter/hyprland-greeter.lua /etc/greetd/hyprland-greeter.lua
 sudo mkdir -p /etc/greetd/quickshell
-sudo cp greeter/quickshell/{shell.qml,Landscape.qml,palettes.json} /etc/greetd/quickshell/
+sudo cp greeter/quickshell/{shell.qml,Landscape.qml,VideoBackdrop.qml,palettes.json} /etc/greetd/quickshell/
 scripts/hf-greeter-sync     # tu tema y tu fondo (o a mano: un greeter.json con "palette" y "wallpaper")
 ```
 En `/etc/greetd/config.toml` cambia el `command` por la línea comentada de la fase 2 (`start-hyprland -- --config /etc/greetd/hyprland-greeter.lua`).

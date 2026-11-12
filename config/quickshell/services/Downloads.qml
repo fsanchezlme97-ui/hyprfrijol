@@ -64,8 +64,10 @@ Singleton {
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
-        onLoaded: { try { root.items = JSON.parse(text()).items ?? []; } catch (e) {} }
-        onLoadFailed: root.items = []
+        // Solo si el archivo cambió: asignar una lista nueva cada vez recalculaba la pastilla de la barra sin motivo
+        property string raw: ""
+        onLoaded: { const t = text(); if (t === raw) return; raw = t; try { root.items = JSON.parse(t).items ?? []; } catch (e) {} }
+        onLoadFailed: { raw = ""; if (root.items.length) root.items = []; }
     }
     // El archivo se reescribe entero (rename atómico): si inotify pierde la pista, se vuelve a leer mientras haya activas
     Timer { interval: 1500; repeat: true; running: root.active.length > 0; onTriggered: fv.reload() }

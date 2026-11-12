@@ -153,7 +153,7 @@ def plugin_info(d, s, shipped):
     kinds = [k for k in (raw.get("kinds") or []) if isinstance(k, str)] if isinstance(raw, dict) else []
     eps = raw.get("entryPoints") if isinstance(raw, dict) and isinstance(raw.get("entryPoints"), dict) else {}
     sup = [k for k in kinds if k in SUPPORTED]
-    bw = raw.get("barWidget") if isinstance(raw.get("barWidget"), dict) else None
+    bw = raw.get("barWidget") if isinstance(raw, dict) and isinstance(raw.get("barWidget"), dict) else None
     defaults = (bw or {}).get("defaults") if isinstance((bw or {}).get("defaults"), dict) else {}
     settings = dict(defaults); settings.update(s["settings"].get(pid, {}) or {})
     mark = s["tested"].get(pid)

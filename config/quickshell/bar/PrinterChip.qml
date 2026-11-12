@@ -15,7 +15,7 @@ BarChip {
                                : Printer.state === "paused" ? Theme.ter : Printer.busy ? Theme.p : Theme.tv
     implicitHeight: vertical ? vcol.implicitHeight + 10 : 22
     implicitWidth: vertical ? 26 : r.implicitWidth + 14
-    Behavior on implicitWidth { enabled: !Theme.reduceMotion && !chip.vertical; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+    Behavior on implicitWidth { enabled: !Theme.still && !chip.vertical; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
     Component.onCompleted: Printer.users++
     Component.onDestruction: Printer.users--
     RowLayout {

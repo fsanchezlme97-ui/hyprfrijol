@@ -14,7 +14,7 @@ set -uo pipefail
 for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 have() { command -v "$1" >/dev/null 2>&1; }
 family() {
-  local like=""; [ -r /etc/os-release ] && like="$(. /etc/os-release; echo "$ID $ID_LIKE" | tr A-Z a-z)"
+  local like=""; [ -r /etc/os-release ] && like="$(. /etc/os-release; echo "${ID:-} ${ID_LIKE:-}" | tr A-Z a-z)"
   case "$like" in *arch*) echo arch;; *debian*|*ubuntu*) echo debian;; *fedora*|*rhel*) echo fedora;; *suse*) echo suse;; *) echo arch;; esac
 }
 FAM="$(family)"

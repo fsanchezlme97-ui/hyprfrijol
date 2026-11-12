@@ -3,7 +3,7 @@
 // act: lo ejecuta Spotlight.runAct(). top: aparece con la búsqueda vacía.
 
 var ACTIONS = [
-    { key: "act:pomo", cat: "Acciones", g: "⏱", name: "Iniciar pomodoro", sub: "25 min de foco", kw: "pomodoro tiempo foco timer temporizador", top: true, act: "pomo",
+    { key: "act:pomo", cat: "Acciones", g: "◷", name: "Iniciar pomodoro", sub: "25 min de foco", kw: "pomodoro tiempo foco timer temporizador", top: true, act: "pomo",
       det: [["Foco / descanso", "25 / 5 min"], ["En la barra", "Clic para pausar · clic derecho reinicia"]] },
     { key: "act:snap", cat: "Acciones", g: "▥", name: "Organizar ventanas", sub: "diseños de acople", kw: "snap layouts mosaico zonas organizar", hint: "Super Alt W", top: true, act: "view:snap",
       det: [["Diseños", "6 + personalizados"], ["Grupos", "Restaura combinaciones recientes"]] },

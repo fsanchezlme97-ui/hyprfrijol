@@ -113,7 +113,7 @@ Singleton {
         if (sound)
             Quickshell.execDetached(["sh", "-c",
                 "canberra-gtk-play -i alarm-clock-elapsed 2>/dev/null || pw-play /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga 2>/dev/null || pw-play /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || true"]);
-        const title = "⏰ " + (activity || "Se acabó el tiempo");
+        const title = (activity || "Se acabó el tiempo");
         const body = "Temporizador de " + mins + " min";
         const qs = "qs -p '" + Paths.root + "/config/quickshell' ipc call pomodoro";
         Quickshell.execDetached(["sh", "-c", 'a=$(notify-send -u critical -a Temporizador -i alarm-clock -A again=Repetir "$1" "$2"); [ "$a" = again ] && ' + qs + ' resume',

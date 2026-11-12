@@ -10,7 +10,7 @@ Item {
     id: root
     property real radius: 0
     property color color: Theme.t
-    readonly property bool on: !Theme.reduceMotion && Settings.get("ripple", true) !== false
+    readonly property bool on: !Theme.still && Settings.get("ripple", true) !== false
     visible: on && anim.running
     clip: true
     layer.enabled: visible && radius > 0

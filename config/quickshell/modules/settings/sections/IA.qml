@@ -277,9 +277,10 @@ ColumnLayout {
         Layout.fillWidth: true
         title: "Personalidad"
         headerRight: Button {
-            visible: Settings.get("aiName", "") !== "" || Settings.get("aiPersona", "") !== ""
+            visible: Settings.user.aiName !== undefined || Settings.user.aiPersona !== undefined     // solo si los cambiaste
             text: "Restablecer"; h: 26
-            onClicked: { Settings.set("aiName", ""); Settings.set("aiPersona", ""); persona.text = ""; nameField.text = ""; }
+            // vuelven el nombre y la personalidad de fábrica (no se quedan vacíos)
+            onClicked: { Settings.reset(["aiName", "aiPersona"]); persona.text = Settings.get("aiPersona", ""); nameField.text = Settings.get("aiName", ""); }
         }
         LabeledRow {
             label: "Nombre"

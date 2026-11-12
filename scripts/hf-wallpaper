@@ -38,7 +38,7 @@ SCALED="$HOME/.cache/hyprfrijol/wallpapers-scaled"
 ASSETS="$ROOT/assets/wallpapers"
 mkdir -p "$STATE"
 
-PICS="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
+PICS="$(xdg-user-dir PICTURES 2>/dev/null)"; { [ -z "$PICS" ] || [ "$PICS" = "$HOME" ]; } && PICS="$HOME/Pictures"   # sin carpetas XDG, xdg-user-dir da $HOME
 if [ -n "${HF_WALL_DIR:-}" ]; then DIR="$HF_WALL_DIR"
 elif [ -d "$PICS/Fondos" ]; then DIR="$PICS/Fondos"
 elif [ -d "$PICS/Wallpapers" ]; then DIR="$PICS/Wallpapers"
@@ -288,7 +288,8 @@ own_players() {
   while IFS=$'\t' read -r o f; do
     [ -n "$o" ] || continue
     if [ "$NO_MOTION" = 1 ] || ! command -v mpvpaper >/dev/null; then
-      MK="-$o" stop_motion; write_json --arg o "$o" 'del(.motionOn[$o]) | .changed = now'; continue
+      OLD_WATCH="$(cat "$STATE/motion-$o.watch" 2>/dev/null || true)" OLD_PID="$(cat "$STATE/motion-$o.pid" 2>/dev/null || true)" MK="-$o" stop_motion
+      write_json --arg o "$o" 'del(.motionOn[$o]) | .changed = now'; continue
     fi
     w="$(cat "$STATE/motion-$o.watch" 2>/dev/null || true)"
     [ -n "$w" ] && ours "$w" 'hf-wallpaper _motion' && continue

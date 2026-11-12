@@ -74,7 +74,7 @@ ColumnLayout {
             LinkRow {
                 visible: Theme.reduceMotion
                 label: "Reducir movimiento está activado"; value: "Sin animaciones"
-                section: "accesibilidad"; sectionLabel: "Accesibilidad"
+                section: "accesibilidad"; sectionLabel: "Accesibilidad"; target: "Reducir movimiento"
             }
         }
         Section {

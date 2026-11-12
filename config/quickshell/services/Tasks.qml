@@ -27,24 +27,53 @@ Singleton {
                                 : isToday && (t.done ? !t.due && doneToday(t) : !t.due || t.due < today))
                    .sort((a, b) => rank(a) - rank(b) || a.created - b.created);
     }
+    // Una fecha escrita a mano → "AAAA-MM-DD"; "" si está vacía; null si no se entiende.
+    // Vale: hoy, mañana, pasado mañana, un día de la semana (lun, viernes…: el próximo), «12 nov», «12/11», «12/11/2027»
+    // y AAAA-MM-DD. Las fechas imposibles (2026-13-45, 31 de febrero) no pasan.
+    readonly property var _months: ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+    readonly property var _days: ["dom", "lun", "mar", "mie", "jue", "vie", "sab"]
+    function parseDue(s): var {
+        s = String(s ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+        if (s === "" || s === "sin fecha" || s === "sin") return "";
+        const now = new Date(), at = n => { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + n); return Events.key(d); };
+        if (s === "hoy") return at(0);
+        if (s === "manana") return at(1);
+        if (s === "pasado manana" || s === "pasado") return at(2);
+        const real = (y, m, d) => { const x = new Date(y, m - 1, d); return x.getFullYear() === y && x.getMonth() === m - 1 && x.getDate() === d ? Events.key(x) : null; };
+        let m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
+        if (m) return real(+m[1], +m[2], +m[3]);
+        const wd = _days.indexOf(s.slice(0, 3));
+        if (wd >= 0 && /^[a-z]+$/.test(s) && (s.length === 3 || /^(domingo|lunes|martes|miercoles|jueves|viernes|sabado)$/.test(s)))
+            return at(((wd - now.getDay() + 7) % 7) || 7);
+        // día y mes: sin año es la próxima vez que caiga esa fecha
+        const next = (mo, d, y) => {
+            if (y) return real(y < 100 ? 2000 + y : y, mo, d);
+            const k = real(now.getFullYear(), mo, d);
+            return k !== null && k < at(0) ? real(now.getFullYear() + 1, mo, d) : k;
+        };
+        m = /^(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?$/.exec(s);
+        if (m) return next(+m[2], +m[1], m[3] ? +m[3] : 0);
+        m = /^(\d{1,2})(?: de)? ([a-z]{3})[a-z]*(?: (?:de )?(\d{4}))?$/.exec(s);
+        if (m && _months.indexOf(m[2]) >= 0) return next(_months.indexOf(m[2]) + 1, +m[1], m[3] ? +m[3] : 0);
+        return null;
+    }
     function add(text: string, due: string): string {
         text = String(text ?? "").trim().slice(0, 200);
         if (!text) return "";
-        const id = Date.now().toString(36);
-        save(list.concat([Object.assign({ id: id, text: text, done: false, created: Date.now() },
-                                        /^\d{4}-\d{2}-\d{2}$/.test(due ?? "") ? { due: due } : {})]));
+        const id = Date.now().toString(36), d = parseDue(due);
+        save(list.concat([Object.assign({ id: id, text: text, done: false, created: Date.now() }, d ? { due: d } : {})]));
         return id;
     }
     // Cambia el texto y la fecha («» = sin fecha; una fecha mal escrita deja la que tenía)
     function edit(id: string, text: string, due: string): void {
         text = String(text ?? "").trim().slice(0, 200);
         if (!text) return;
-        due = String(due ?? "").trim();
+        const d = parseDue(due);
         save(list.map(t => {
             if (t.id !== id) return t;
             const n = Object.assign({}, t, { text: text });
-            if (due === "") delete n.due;
-            else if (/^\d{4}-\d{2}-\d{2}$/.test(due)) n.due = due;
+            if (d === "") delete n.due;
+            else if (d !== null) n.due = d;
             return n;
         }));
     }

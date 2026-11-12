@@ -112,9 +112,20 @@ def detect(url, want="auto"):
     """(herramienta, tipo). herramienta: yt-dlp | gallery-dl | aria2c | probe (preguntar al servidor al empezar)."""
     u = url.lower()
     host_path = re.sub(r"^[a-z]+://(www\.|m\.)?", "", u)
+    host = (urllib.parse.urlparse(u).hostname or "")
+
+    def on(hosts):
+        # «x.com» no es «dropbox.com»: se compara el dominio entero (o un subdominio); lo que lleva ruta, como texto
+        for h in hosts:
+            if "/" in h:
+                if h in host_path:
+                    return True
+            elif host == h or host.endswith("." + h):
+                return True
+        return False
     ext = _ext(url)
     if want in ("video", "audio"):
-        if ext in (VID_EXT | AUD_EXT) and not any(h in host_path for h in YTDLP_HOSTS + AUDIO_HOSTS):
+        if ext in (VID_EXT | AUD_EXT) and not on(YTDLP_HOSTS + AUDIO_HOSTS):
             return "aria2c", want
         return "yt-dlp", want
     if want == "image":
@@ -127,11 +138,11 @@ def detect(url, want="auto"):
         return "aria2c", "video"
     if ext in AUD_EXT:
         return "aria2c", "audio"
-    if any(h in host_path for h in AUDIO_HOSTS):
+    if on(AUDIO_HOSTS):
         return "yt-dlp", "audio"
-    if any(h in host_path for h in YTDLP_HOSTS):
+    if on(YTDLP_HOSTS):
         return "yt-dlp", "video"
-    if any(h in host_path for h in GALLERY_HOSTS):
+    if on(GALLERY_HOSTS):
         return "gallery-dl", "image"
     if ext and ext not in PAGE_EXT:
         return "aria2c", "file"
@@ -231,8 +242,17 @@ def select(q, which):
     return list(q.items) if which == "all" else [x for x in q.items if x["id"] == which or x["id"].startswith(which)]
 
 
+def _ours(pid):
+    """¿Ese pid sigue siendo una descarga nuestra? (tras reiniciar, el número puede ser de otro programa)"""
+    try:
+        cmd = pathlib.Path("/proc/%d/cmdline" % pid).read_bytes().replace(b"\0", b" ").decode("utf-8", "replace")
+    except Exception:
+        return False
+    return any(w in cmd for w in ("yt-dlp", "yt_dlp", "aria2c", "gallery-dl", "gallery_dl", "hf-download"))
+
+
 def kill_pid(pid):
-    if pid and pid > 1:
+    if pid and pid > 1 and _ours(pid):
         try:
             os.killpg(pid, signal.SIGTERM)
         except Exception:

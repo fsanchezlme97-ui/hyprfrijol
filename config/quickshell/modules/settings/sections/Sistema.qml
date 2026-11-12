@@ -155,13 +155,10 @@ RowLayout {
             Layout.fillWidth: true
             title: "Kernel"
             headerRight: Mono { text: "uname -r → " + root.running }
-            Seg {
-                Layout.fillWidth: true
-                model: root.kernels.map(k => [k, k])
-                current: root.kernels.find(k => root.running.endsWith(k.replace(/^linux-?/, "") || "arch")) ?? root.kernels[0]
-                onPicked: {}
-            }
+            // Solo informa: el kernel se elige en el menú de arranque, no aquí
+            Txt { visible: root.kernels.length > 0; text: "Instalados: " + root.kernels.join(" · "); muted: true; size: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
             SwRow {
+                visible: Pkg.family === "arch"
                 label: "Mantener un kernel LTS de respaldo"; sub: "aparece como opción en el arranque"
                 checked: root.kernels.some(k => /lts/.test(k))
                 enabled: !root.kernels.some(k => /lts/.test(k))
@@ -178,7 +175,8 @@ RowLayout {
                 onPicked: k => Settings.set("updatesMode", k)
             }
             SwRow {
-                label: "Punto de restauración antes"; sub: root.has["snap-pac"] ? "snap-pac instalado" : "instala snap-pac"; mono: true
+                visible: Pkg.family === "arch"
+                label: "Punto de restauración en cada instalación"; sub: root.has["snap-pac"] ? "snap-pac instalado" : "instala snap-pac (también al instalar o quitar paquetes a mano)"
                 checked: !!root.has["snap-pac"]; enabled: !root.has["snap-pac"]
                 onToggled: v => { if (v) Pkg.runInTerminal("sudo pacman -S --needed snap-pac", "snap-pac"); }
             }

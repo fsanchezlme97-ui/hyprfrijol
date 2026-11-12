@@ -75,7 +75,7 @@ Singleton {
                 + "|| pw-play /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || break; done"]);
         const qs = "qs -p '" + Paths.root + "/config/quickshell' ipc call alarms";
         Quickshell.execDetached(["sh", "-c", 'a=$(notify-send -u critical -a Alarma -i alarm-clock -A snooze="Posponer 5 min" -A stop=Detener "$1" "$2"); '
-            + '[ "$a" = snooze ] && ' + qs + ' snooze "$3"', "sh", "⏰ " + (label || "Alarma"), Qt.formatTime(new Date(), "HH:mm"), id]);
+            + '[ "$a" = snooze ] && ' + qs + ' snooze "$3"', "sh", label || "Alarma", Qt.formatTime(new Date(), "HH:mm"), id]);
     }
     function check(): void {
         const d = new Date();
@@ -97,7 +97,8 @@ Singleton {
         if (due.length) { snoozed = snoozed.filter(s => s.at > now); for (const s of due) ring(s.id, s.label); }
     }
     // Revisa cada pocos segundos (no hace falta más: la alarma suena dentro de su minuto)
-    Timer { interval: 5000; repeat: true; running: true; triggeredOnStart: true; onTriggered: root.check() }
+    // Solo con alguna alarma puesta o pospuesta: sin ninguna no hay nada que mirar
+    Timer { interval: 5000; repeat: true; running: root.snoozed.length > 0 || root.list.some(a => a.on); triggeredOnStart: true; onTriggered: root.check() }
     Component.onCompleted: lastKey = Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm")   // al arrancar no suena lo de este minuto
 
     IpcHandler {

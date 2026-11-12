@@ -3,6 +3,31 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.22] — 2026-11-11
+
+Revisión completa del proyecto: unos 70 fallos corregidos. Lo que se nota:
+
+### Arreglado
+- **Tus ajustes ya no se pueden perder**: si `settings.json` queda roto (una coma de más al editarlo a mano), ni el shell ni `hf-apply set` lo pisan con un archivo casi vacío; se guarda una copia en `settings.json.roto`. Si otro programa (el asistente, `hf-apply set`) escribe a la vez que tú cambias algo, se conservan los dos cambios. Los archivos enlazados desde tus dotfiles siguen siendo enlaces.
+- **«Ciudad del clima» funciona**: al escribir una ciudad en Ajustes › Escritorio se busca y el pronóstico pasa a ser el suyo (antes no hacía nada). Vacía, vuelve a la ubicación por IP. Si no hay red al arrancar, el clima reintenta al minuto.
+- **Tareas**: Esc cancela la edición en vez de cerrar la ventana; los filtros van con Alt + 1, 2, 3; las hechas salen con la última arriba; y la fecha se escribe como quieras: «hoy», «mañana», «vie», «12 nov», «12/11» (una fecha imposible ya no se guarda). En Spotlight, `+tarea hoy`.
+- **Asistente**: las conversaciones largas ya no fallan al enviarse ni dejan de guardarse; abrir una conversación antigua no la sube a «Hoy»; no se pueden aplicar dos planes a la vez (el segundo salía como hecho sin haberse ejecutado).
+- **Contraseña de administrador**: si pulsaste el ojo una vez, las siguientes peticiones vuelven a ocultarla.
+- **Descargas**: tras reiniciar, pausar o cancelar una descarga antigua ya no puede cerrar otro programa; los enlaces de dropbox.com o linux.com no se confunden con x.com.
+- **Unidades**: «Expulsar todo» no toca discos internos en puertos con conexión en caliente; expulsar sin nombre no expulsa la primera unidad sin etiqueta.
+- **Modo seguro**: restaurar la copia más antigua con 12 guardadas ya no la borra a mitad (dejaba la carpeta de ajustes vacía).
+- **Fondo en vídeo por pantalla**: al activar «Reducir movimiento» se paran de verdad los reproductores.
+- **Otras distros**: el centro de actualizaciones funciona con dnf, apt, zypper y xbps (antes solo pacman); `hf-vm` y `hf-vpn` detectan bien Debian y Fedora; el login visual se instala también con doas y copia el fondo en vídeo.
+- **Terminal elegida**: «> comando» de Spotlight y las instalaciones usan la terminal de Ajustes › Predeterminadas; GNOME Console funciona (su programa es `kgx`); si la terminal elegida ya no está, se usa kitty.
+- **Ajustes**: quitados tres interruptores que no hacían nada (botón PiP, PiP automático, sincronizar automáticamente) y el segundo interruptor del título de ventana; «Restaurar valores por defecto» ya no borra tus datos (conexiones remotas, servidores MCP, órdenes de voz, atajos); la velocidad de repetición del teclado marca la opción real; enlaces que abrían la sección equivocada; «Restablecer» la personalidad del asistente vuelve a la de fábrica; la búsqueda encuentra las filas de Usuarios.
+- **Textos**: «1 activa», «1 archivo», «Sin conectar»; la hora respeta el formato de 12 h en el bloqueo, la impresora y el historial del asistente; sin emojis en los avisos de alarma y temporizador.
+- **Temas propios** sin matugen (Debian, Ubuntu) y **Wallhaven** con el servidor caído ya no fallan sin explicación; **Firmar** detecta PyMuPDF antiguo.
+
+### Cambiado
+- **Menos trabajo en segundo plano**: guardar una alarma, un reloj o una orden de voz ya no relanza `hf-apply`; cambiar cualquier ajuste ya no vuelve a bajar los calendarios ni recalcula los relojes del mundo; el reloj de alarmas solo corre si hay alguna; la cola de descargas no se recalcula si no cambió.
+- «Reducir movimiento» y el preajuste «Ninguno» se respetan en más sitios (dock, agenda, bloqueo, barra).
+- Dependencias nuevas en el instalador: PyMuPDF y PyGObject (Firmar, enviar al móvil), `pacman-contrib` (Arch) y QtMultimedia pasa a instalarse por defecto (vídeo en el bloqueo y el selector de fondos).
+
 ## [0.9.21] — 2026-11-11
 
 ### Cambiado

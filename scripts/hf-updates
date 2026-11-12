@@ -34,9 +34,19 @@ have() { command -v "$1" >/dev/null 2>&1; }
 # "nombre ver -> ver" → JSON
 to_json() { awk 'NF>=4 && $3=="->" {printf "%s\t%s\t%s\n",$1,$2,$4}' | jq -R -s -c 'split("\n") | map(select(length>0) | split("\t") | {name: .[0], from: .[1], to: .[2]})'; }
 
+# "nombre<TAB>de<TAB>a" → JSON (dnf, apt, zypper, xbps)
+tsv_json() { jq -R -s -c 'split("\n") | map(select(length>0) | split("\t") | {name: .[0], from: (.[1] // ""), to: (.[2] // "")})'; }
+
 check() {
   local tmp; tmp="$(mktemp -d)"
-  ( checkupdates 2>"$tmp/pacman.err" | to_json > "$tmp/pacman" ) &
+  # Paquetes del sistema, según la distro (la clave del JSON se sigue llamando «pacman»)
+  if have checkupdates; then ( checkupdates 2>"$tmp/pacman.err" | to_json > "$tmp/pacman" ) &
+  elif have pacman; then ( pacman -Qu 2>"$tmp/pacman.err" | grep -v '\[ignored\]' | to_json > "$tmp/pacman" ) &   # sin pacman-contrib: con la última lista bajada
+  elif have dnf; then ( dnf -q check-update 2>"$tmp/pacman.err" | awk '/^Obsoleting/ {exit} NF==3 && $1 ~ /\./ {n=$1; sub(/\.[^.]*$/, "", n); printf "%s\t\t%s\n", n, $2}' | tsv_json > "$tmp/pacman" ) &
+  elif have apt; then ( apt list --upgradable 2>/dev/null | awk -F'[ /]' 'NF>=6 && /upgradable|actualizable/ {f=$NF; sub(/\]$/, "", f); printf "%s\t%s\t%s\n", $1, f, $3}' | tsv_json > "$tmp/pacman" ) &
+  elif have zypper; then ( zypper -q --non-interactive list-updates 2>"$tmp/pacman.err" | awk -F'|' '$1 ~ /^v/ {for (i=3;i<=5;i++) gsub(/^ +| +$/, "", $i); printf "%s\t%s\t%s\n", $3, $4, $5}' | tsv_json > "$tmp/pacman" ) &
+  elif have xbps-install; then ( xbps-install -un 2>"$tmp/pacman.err" | awk '$2=="update" {n=$1; v=n; sub(/-[^-]*$/, "", n); sub(/^.*-/, "", v); printf "%s\t\t%s\n", n, v}' | tsv_json > "$tmp/pacman" ) &
+  fi
   if have paru; then ( paru -Qua 2>"$tmp/aur.err" | grep -v '\[ignored\]' | to_json > "$tmp/aur" ) &
   elif have yay; then ( yay -Qua 2>"$tmp/aur.err" | to_json > "$tmp/aur" ) &
   fi
@@ -75,7 +85,13 @@ run() {
     cmd+=" N=\$(sudo snapper -c root create -c number -p -d 'hyprfrijol: antes de actualizar');"
     cmd+=" echo \"  Punto de restauración #\$N creado. Si algo falla, elígelo en el menú de arranque.\"; echo;"
   fi
-  if have paru; then cmd+=" paru -Syu;"; else cmd+=" sudo pacman -Syu;"; fi
+  if have paru; then cmd+=" paru -Syu;"
+  elif have pacman; then cmd+=" sudo pacman -Syu;"
+  elif have dnf; then cmd+=" sudo dnf upgrade --refresh;"
+  elif have apt; then cmd+=" sudo apt update; sudo apt full-upgrade;"
+  elif have zypper; then if grep -qi tumbleweed /etc/os-release 2>/dev/null; then cmd+=" sudo zypper dup;"; else cmd+=" sudo zypper update;"; fi
+  elif have xbps-install; then cmd+=" sudo xbps-install -Su;"
+  fi
   have flatpak && [ "$USE_FLATPAK" = true ] && cmd+=" flatpak update -y;"
   # Firmware: solo si hay algo y no se va a apagar sin nadie delante (fwupdmgr pregunta)
   if [ "$off" = 0 ] && [ "$USE_FW" = true ] && have fwupdmgr && [ "$(jq -r '.firmware | length' "$OUT" 2>/dev/null || echo 0)" != 0 ]; then

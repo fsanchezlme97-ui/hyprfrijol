@@ -115,7 +115,8 @@ Overlay {
                     Layout.preferredWidth: 34; Layout.preferredHeight: 34; radius: Theme.r(8)
                     color: Theme.p
                     Icon { anchors.centerIn: parent; name: "refresh"; color: Theme.pText; size: 16
-                           RotationAnimator on rotation { running: win.checking; from: 0; to: 360; duration: 1100; loops: Animation.Infinite } }
+                           RotationAnimator on rotation { running: win.checking; from: 0; to: 360; duration: 1100; loops: Animation.Infinite
+                                                          onRunningChanged: if (!running && target) target.rotation = 0 } }   // que no se quede torcido al acabar
                 }
                 ColumnLayout {
                     spacing: 1

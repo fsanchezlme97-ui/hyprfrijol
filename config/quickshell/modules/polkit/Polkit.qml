@@ -64,7 +64,7 @@ Scope {
         if (preview) { console.info("[polkit] (HF_TRY) cancelar"); return; }
         if (flow) flow.cancelAuthenticationRequest();
     }
-    function reset(): void { busy = false; error = ""; details = false; field.text = ""; }
+    function reset(): void { busy = false; error = ""; details = false; field.text = ""; showPw.on = false; }   // la contraseña vuelve a ir oculta en cada petición
 
     Timer { id: previewTimer; interval: 900; onTriggered: { root.busy = false; root.error = "Contraseña incorrecta. Inténtalo de nuevo"; field.text = ""; root.shake(); } }
 
@@ -140,7 +140,7 @@ Scope {
                 NumberAnimation { target: shakeT; property: "x"; to: 4; duration: 60 }
                 NumberAnimation { target: shakeT; property: "x"; to: 0; duration: 60 }
             }
-            Connections { target: root; function onShake() { if (!Theme.reduceMotion) shakeAnim.restart(); } }
+            Connections { target: root; function onShake() { if (!Theme.still) shakeAnim.restart(); } }
             MouseArea { anchors.fill: parent; onClicked: field.forceActiveFocus() }
 
             ColumnLayout {

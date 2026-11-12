@@ -125,8 +125,13 @@ def from_photo(img):
         cfg = pathlib.Path(d) / "m.toml"
         cfg.write_text("[config]\nversion_check = false\n[templates.t]\n"
                        f"input_path = '{ROOT}/config/matugen/templates/colors.json'\noutput_path = '{d}/colors.json'\n")
-        r = subprocess.run(["matugen", "image", str(img), "-c", str(cfg), "-m", "dark", "-t", "scheme-tonal-spot",
-                            "--source-color-index", "0"], capture_output=True, text=True, timeout=60)
+        try:
+            r = subprocess.run(["matugen", "image", str(img), "-c", str(cfg), "-m", "dark", "-t", "scheme-tonal-spot",
+                                "--source-color-index", "0"], capture_output=True, text=True, timeout=60)
+        except FileNotFoundError:
+            die("Para sacar un tema de una imagen hace falta matugen (hf-deps install)")
+        except subprocess.TimeoutExpired:
+            die("matugen tardó demasiado con esa imagen")
         out = load(pathlib.Path(d) / "colors.json", None)
         if r.returncode or not out:
             die("No se pudieron sacar colores de la imagen (matugen): " + (r.stderr.strip()[-200:] or "sin salida"))
@@ -170,8 +175,11 @@ def cmd_make(args):
         img = pathlib.Path(image).expanduser()
         if not img.is_file():
             die(f"No existe {img}")
-        txt = subprocess.run(["tesseract", str(img), "-", "--psm", "11"], capture_output=True, text=True, timeout=60).stdout \
-            if shutil_which("tesseract") else ""
+        try:
+            txt = subprocess.run(["tesseract", str(img), "-", "--psm", "11"], capture_output=True, text=True, timeout=60).stdout \
+                if shutil_which("tesseract") else ""
+        except (OSError, subprocess.TimeoutExpired):
+            txt = ""
         cols = hexes(txt)
         if len(cols) >= 2:
             dk, lt, origen = *from_colors(cols), "paleta"
@@ -189,10 +197,13 @@ def from_photo_seed(h):
         cfg = pathlib.Path(d) / "m.toml"
         cfg.write_text("[config]\nversion_check = false\n[templates.t]\n"
                        f"input_path = '{ROOT}/config/matugen/templates/colors.json'\noutput_path = '{d}/colors.json'\n")
-        r = subprocess.run(["matugen", "color", "hex", h, "-c", str(cfg), "-m", "dark", "-t", "scheme-tonal-spot"],
-                           capture_output=True, text=True, timeout=60)
-        out = load(pathlib.Path(d) / "colors.json", None)
-    if r.returncode or not out:
+        try:
+            r = subprocess.run(["matugen", "color", "hex", h, "-c", str(cfg), "-m", "dark", "-t", "scheme-tonal-spot"],
+                               capture_output=True, text=True, timeout=60)
+            out = None if r.returncode else load(pathlib.Path(d) / "colors.json", None)
+        except (OSError, subprocess.TimeoutExpired):      # sin matugen (Debian, Ubuntu): el tema sale del propio color
+            out = None
+    if not out:
         return from_colors([h])
     dk, lt = dict(out["dark"]), dict(out["light"])
     dk["light"], lt["light"] = False, True

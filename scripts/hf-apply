@@ -64,7 +64,7 @@ def load(p, default=None):
         return default
 
 def write_if_changed(path, text):
-    path = pathlib.Path(path)
+    path = pathlib.Path(os.path.realpath(path))      # si es un enlace (dotfiles), se escribe en su destino
     if path.exists() and path.read_text() == text:
         return False
     tmp = path.with_suffix(path.suffix + ".tmp")
@@ -751,7 +751,17 @@ def real_home():
 
 def cmd_set(pairs):
     USER.mkdir(parents=True, exist_ok=True)
-    cur = load(SETTINGS, {}) or {}
+    cur = load(SETTINGS, None)
+    if not isinstance(cur, dict):
+        if SETTINGS.exists() and SETTINGS.read_text().strip():
+            # Archivo roto (una coma de más…): no se pisa con solo la clave nueva; se guarda copia y se avisa
+            bad = SETTINGS.with_name("settings.json.roto")
+            try:
+                bad.write_text(SETTINGS.read_text())
+            except Exception:
+                pass
+            sys.exit("hf-apply: %s no es JSON válido; no cambio nada (copia en %s)" % (SETTINGS, bad))
+        cur = {}
     for p in pairs:
         k, _, v = p.partition("=")
         try:

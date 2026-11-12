@@ -120,11 +120,15 @@ ColumnLayout {
             Section {
                 Layout.fillWidth: true
                 title: "Audición"
-                SwRow {
-                    separator: false
-                    label: "Subtítulos en vivo"; sub: root.has.livecaptions || root.has["livecaptions-flatpak"] ? "Live Captions · para cualquier audio · local" : "instala Live Captions (Flathub)"
-                    enabled: !!(root.has.livecaptions || root.has["livecaptions-flatpak"])
-                    onToggled: v => { if (v) Quickshell.execDetached(["sh", "-c", root.has.livecaptions ? "livecaptions" : "flatpak run com.github.abb128.LiveCaptions"]); }
+                // Es una app que se abre, no un ajuste que se queda puesto: botón en vez de interruptor
+                LabeledRow {
+                    label: "Subtítulos en vivo"
+                    hint: root.has.livecaptions || root.has["livecaptions-flatpak"] ? "Live Captions · para cualquier audio · local" : "instala Live Captions (Flathub)"
+                    Button {
+                        text: "Abrir"; h: 28
+                        enabled: !!(root.has.livecaptions || root.has["livecaptions-flatpak"])
+                        onClicked: Quickshell.execDetached(["sh", "-c", root.has.livecaptions ? "livecaptions" : "flatpak run com.github.abb128.LiveCaptions"])
+                    }
                 }
                 SwRow { label: "Alertas visuales"; sub: "la barra parpadea en vez de sonar"; key: "visualBell" }
                 SwRow {

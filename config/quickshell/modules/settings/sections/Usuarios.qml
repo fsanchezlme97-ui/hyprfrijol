@@ -89,7 +89,7 @@ RowLayout {
     readonly property string newName: newUser.text.trim()
     readonly property bool newValid: /^[a-z_][a-z0-9_-]{0,31}$/.test(newName) && !users.some(u => u.name === newName)
     function createUser() {
-        const full = newFull.text.trim().replace(/'/g, "");
+        const full = newFull.text.trim().replaceAll("'", "");
         Pkg.runInTerminal("sudo useradd -m" + (newAdmin ? " -G wheel" : "") + (full ? " -c '" + full + "'" : "") + " " + newName + " && echo 'Elige la contraseña de " + newName + ":' && sudo passwd " + newName, "Nuevo usuario");
         adding = false; newUser.text = ""; newFull.text = ""; newAdmin = false;
         later.restart();
@@ -198,8 +198,6 @@ RowLayout {
             RowLayout {
                 Layout.topMargin: 2
                 spacing: 4
-                Button { kind: "link"; text: "Tiempo hasta bloquear (Energía)"; onClicked: Shell.open("ajustesapp", "energia") }
-                Txt { text: "·"; color: Theme.p }
                 Button { kind: "link"; text: "Bloqueo de pantalla (Privacidad)"; onClicked: Shell.open("ajustesapp", "privacidad") }
             }
         }

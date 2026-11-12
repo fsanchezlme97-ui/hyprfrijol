@@ -405,7 +405,7 @@ Overlay {
                                         color: prow.on ? Theme.selText : Theme.p
                                         height: 5
                                         SequentialAnimation on height {
-                                            running: prow.modelData.isPlaying && win.shown
+                                            running: prow.modelData.isPlaying && win.shown && !Theme.still
                                             loops: Animation.Infinite
                                             NumberAnimation { to: 12; duration: 260 + index * 90; easing.type: Easing.InOutSine }
                                             NumberAnimation { to: 4; duration: 300 + index * 70; easing.type: Easing.InOutSine }

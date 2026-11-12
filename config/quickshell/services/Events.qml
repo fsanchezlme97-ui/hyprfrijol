@@ -167,8 +167,10 @@ Singleton {
         }
     }
     Timer { interval: 15 * 60000; repeat: true; running: root.sources.length > 0; onTriggered: root.refresh() }
-    onSourcesChanged: refresh()
-    Component.onCompleted: refresh()
+    // Solo si cambian las direcciones: «sources» se recalcula con cualquier ajuste y volvía a bajar los calendarios
+    property string _srcKey: ""
+    onSourcesChanged: { const k = sources.join("\n"); if (k !== _srcKey) { _srcKey = k; refresh(); } }
+    Component.onCompleted: { _srcKey = sources.join("\n"); refresh(); }
 
     // ── Lectura de .ics (RFC 5545, lo justo) ────────────────────────────
     function icsDate(v: string, params: string): var {

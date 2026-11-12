@@ -186,6 +186,9 @@ def main():
         except Exception:
             out = {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}}
             print(json.dumps(out), flush=True); continue
+        if not isinstance(msg, dict):
+            out = {"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "Invalid Request"}}
+            print(json.dumps(out), flush=True); continue
         if "id" not in msg:          # notificación (initialized, cancelled…)
             continue
         try:

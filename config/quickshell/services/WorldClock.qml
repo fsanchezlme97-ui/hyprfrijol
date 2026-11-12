@@ -55,8 +55,10 @@ Singleton {
         const c = list.slice(); const t = c[i]; c[i] = c[j]; c[j] = t;
         Settings.set("worldClocks", c);
     }
-    function refresh(): void { offProc.running = false; offProc.running = true; }
-    onListChanged: refresh()
+    function refresh(): void { if (!list.length) return; offProc.running = false; offProc.running = true; }
+    // «list» cambia de referencia con cualquier ajuste: solo se recalcula si cambian los relojes
+    property string _listKey: ""
+    onListChanged: { const k = JSON.stringify(list); if (k !== _listKey) { _listKey = k; refresh(); } }
 
     property string tab: ""
     readonly property var zones: {
@@ -85,7 +87,6 @@ Singleton {
 
     Process {
         id: offProc
-        running: root.list.length > 0
         command: ["sh", "-c", 'for z; do printf "%s %s\\n" "$z" "$(TZ="$z" date +%z)"; done', "sh"].concat(root.list.map(z => z[1]))
         stdout: StdioCollector {
             onStreamFinished: {

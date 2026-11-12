@@ -261,12 +261,11 @@ Overlay {
         }
         // + nueva tarea: «mañana» o una fecha AAAA-MM-DD al final le ponen fecha
         if (q.startsWith("+")) {
-            const m = /^(.*?)\s+(mañana|\d{4}-\d{2}-\d{2})$/i.exec(q.slice(1).trim());
+            const m = /^(.*?)\s+(hoy|mañana|\d{4}-\d{2}-\d{2})$/i.exec(q.slice(1).trim());
             let text = q.slice(1).trim(), due = "";
             if (m) {
                 text = m[1];
-                if (/^\d/.test(m[2])) due = m[2];
-                else { const d = new Date(); d.setDate(d.getDate() + 1); due = Events.key(d); }
+                due = Tasks.parseDue(m[2]) || "";
             }
             return [{ key: "task", cat: "Tareas", kind: "task", icon: "check", g: "+", name: text ? "Nueva tarea: " + text : "Escribe la tarea…",
                       sub: (due ? "vence el " + due : "sin fecha") + " · se ve en la agenda", text: text, due: due, hint: "↵",
@@ -283,7 +282,7 @@ Overlay {
             if (!urls.length) return [{ key: "dl-none", cat: "Descargas", kind: "none", g: "↓", icon: "download", name: "Escribe o pega una dirección…",
                                         sub: "vídeo, música, galerías de imágenes o archivos; varias separadas por espacios" },
                                       { key: "dl-queue", cat: "Descargas", kind: "dlqueue", g: "↓", icon: "download", name: "Ver la cola de descargas",
-                                        sub: Downloads.active.length ? Downloads.active.length + " activas" : "" }];
+                                        sub: Downloads.active.length ? Downloads.active.length + (Downloads.active.length === 1 ? " activa" : " activas") : "" }];
             const out2 = [
                 { key: "dl-auto", cat: "Descargas", kind: "download", g: "↓", icon: "download", name: "Descargar " + many, sub: "elige la herramienta sola (yt-dlp, gallery-dl o aria2c)",
                   urls: urls, dlType: "auto", hint: "↵", det: det },
@@ -316,7 +315,7 @@ Overlay {
             const c = q.slice(1).trim();
             return [
                 { key: "cmd", cat: "Comandos", kind: "cmd", g: ">", icon: "terminal", name: c ? "Ejecutar en la terminal: " + c : "Escribe un comando…", sub: "", cmd: c,
-                  hint: "↵", det: [["Terminal", "kitty"], ["Al terminar", "La ventana se queda abierta"]] },
+                  hint: "↵", det: [["Terminal", Pkg.terminal], ["Al terminar", "La ventana se queda abierta"]] },
                 { key: "cmd-bg", cat: "Comandos", kind: "cmdbg", g: "⚙", name: c ? "Ejecutar en segundo plano: " + c : "Ejecutar en segundo plano", sub: "", cmd: c,
                   det: [["Salida", "Se descarta"]] }
             ];
@@ -552,7 +551,7 @@ Overlay {
             break;
         }
         case "web": if (query.replace(/^!/, "").trim()) { Shell.exec(["xdg-open", it.url]); Shell.close(); } break;
-        case "cmd": if (it.cmd) { Shell.exec(["kitty", "--hold", "sh", "-c", it.cmd]); Shell.close(); } break;
+        case "cmd": if (it.cmd) { Pkg.runInTerminal(it.cmd, "Comando"); Shell.close(); } break;   // en la terminal de Ajustes › Predeterminadas
         case "cmdbg": if (it.cmd) { Shell.exec(["sh", "-c", it.cmd]); Shell.close(); } break;
         case "file": Shell.exec(["xdg-open", it.path]); Shell.close(); break;
         case "download": Downloads.add(it.urls, it.dlType, it.dlType === "audio" ? Settings.get("downloadsAudioFormat", "mp3") : ""); Shell.open("w-descargas"); break;

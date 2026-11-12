@@ -299,7 +299,6 @@ ColumnLayout {
                 : "Siempre a la vista; las ventanas no se colocan debajo."
         }
         SwRow { label: "Mostrar en todas las pantallas"; sub: "o solo en la principal"; key: "barAllScreens"; def: true }
-        SwRow { label: "Mostrar el título de la ventana activa"; sub: "hyprland activewindow"; key: "barShowTitle"; def: true }
         SwRow { label: "Transparente en espacios vacíos"; sub: "la barra se funde con el fondo si no hay ventanas"; key: "barTransparentEmpty" }
     }
 }

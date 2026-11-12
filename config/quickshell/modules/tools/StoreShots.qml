@@ -26,7 +26,7 @@ Rectangle {
         orientation: ListView.Horizontal
         snapMode: ListView.SnapOneItem
         highlightRangeMode: ListView.StrictlyEnforceRange
-        highlightMoveDuration: Theme.reduceMotion ? 0 : 320
+        highlightMoveDuration: Theme.still ? 0 : 320
         boundsBehavior: Flickable.StopAtBounds
         model: sh.model
         clip: true

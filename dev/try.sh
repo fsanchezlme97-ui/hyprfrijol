@@ -110,4 +110,5 @@ fi
 if [ "$KEEP" = 1 ]; then
   echo "Sesión abierta: HYPRLAND_INSTANCE_SIGNATURE=$SIG WAYLAND_DISPLAY=$SOCK  (pid $PID)"
   trap - EXIT
+  [ -z "$SETS" ] || echo "Aviso: -k deja puestos los ajustes de -s. Para volver a los tuyos: cp $BAK $SETTINGS && hf-apply"
 fi

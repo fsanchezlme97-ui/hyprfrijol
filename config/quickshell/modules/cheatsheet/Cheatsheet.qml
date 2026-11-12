@@ -28,7 +28,7 @@ Overlay {
         "MOUSE:272": "Clic izquierdo", "MOUSE:273": "Clic derecho", "MOUSE:274": "Clic central", "MOUSE:275": "Botón atrás",
         "MOUSE:276": "Botón adelante", "MOUSE_DOWN": "Rueda ↓", "MOUSE_UP": "Rueda ↑",
         "XF86AUDIORAISEVOLUME": "Vol +", "XF86AUDIOLOWERVOLUME": "Vol −", "XF86AUDIOMUTE": "Silencio", "XF86AUDIOMICMUTE": "Micro",
-        "XF86AUDIOPLAY": "▶", "XF86AUDIOPAUSE": "⏸", "XF86AUDIONEXT": "⏭", "XF86AUDIOPREV": "⏮",
+        "XF86AUDIOPLAY": "▶", "XF86AUDIOPAUSE": "❚❚", "XF86AUDIONEXT": "▶▶", "XF86AUDIOPREV": "◀◀",
         "XF86MONBRIGHTNESSUP": "Brillo +", "XF86MONBRIGHTNESSDOWN": "Brillo −"
     })
     // Teclas por código físico (teclado español)

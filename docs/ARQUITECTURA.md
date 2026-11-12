@@ -48,7 +48,7 @@ Todo vive en `config/quickshell/`. Cada vista del diseño es un módulo en `modu
 | | Arch / CachyOS | Fedora | Ubuntu / Debian | openSUSE | NixOS |
 |---|---|---|---|---|---|
 | Hyprland | repos | COPR | repos recientes | repos | nixpkgs |
-| Quickshell | AUR / repos CachyOS | COPR | compilar | compilar / OBS | nixpkgs |
+| Quickshell | repos | COPR | repos (Debian 14) o PPA | OBS | nixpkgs |
 | matugen | AUR | cargo | cargo | cargo | nixpkgs |
 | Puntos de restauración | Snapper + snap-pac (btrfs) | Snapper (btrfs) | Timeshift o Snapper si btrfs | Snapper (de serie) | generaciones de Nix |
 

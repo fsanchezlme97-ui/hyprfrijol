@@ -6,4 +6,6 @@
 #   xdg-terminal-exec [-e] <orden> [args…]
 [ "${1:-}" = -e ] && shift
 t=$(jq -r '.terminal // empty' "$HOME/.config/hyprfrijol/settings.json" 2>/dev/null)
+[ "$t" = gnome-console ] && t=kgx                 # el paquete se llama gnome-console; el programa, kgx
+command -v "${t:-kitty}" >/dev/null 2>&1 || t=kitty   # la terminal elegida ya no está instalada
 exec "${t:-kitty}" -e "$@"

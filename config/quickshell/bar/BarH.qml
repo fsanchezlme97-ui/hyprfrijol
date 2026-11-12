@@ -55,7 +55,7 @@ Item {
         AppsBtn { id: apps; visible: !root.secondary }   // Aplicaciones (Spotlight): logo de la distribución
         Workspaces { id: ws; visible: Settings.barHas("espacios") || root.secondary; screen: root.barWindow.screen }
         Divider { visible: Settings.barHas("espacios") && title.visible }
-        ActiveTitle { id: title; screenName: root.barWindow.screen?.name ?? ""; visible: Settings.get("barShowTitle", true) && Settings.barHas("titulo") && text !== "" && root.titleMax >= 48; Layout.leftMargin: 2; Layout.maximumWidth: root.titleMax }
+        ActiveTitle { id: title; screenName: root.barWindow.screen?.name ?? ""; visible: Settings.barHas("titulo") && text !== "" && root.titleMax >= 48; Layout.leftMargin: 2; Layout.maximumWidth: root.titleMax }
         OmarchySlot { barWindow: root.barWindow; place: "izquierda"; visible: any && !root.secondary }   // widgets de plugins de Omarchy (omarchyBarSlot)
     }
 

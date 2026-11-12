@@ -57,7 +57,7 @@ def _kde(h):
 
 
 def _write(path, text):
-    path = pathlib.Path(path)
+    path = pathlib.Path(os.path.realpath(path))      # enlace de dotfiles: se escribe en su destino
     try:
         if path.exists() and path.read_text() == text:
             return False

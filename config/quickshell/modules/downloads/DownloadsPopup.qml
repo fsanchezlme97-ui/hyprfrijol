@@ -123,7 +123,7 @@ ChipPopup {
                                             Layout.fillWidth: true
                                             text: row.it.status === "error" ? row.it.error
                                                 : row.live ? [row.it.progress >= 0 && row.it.total ? Math.round(row.it.progress * 100) + " %" : "",
-                                                              row.it.total ? Downloads.human(row.it.done) + " de " + Downloads.human(row.it.total) : row.it.count ? row.it.count + " archivos" : "",
+                                                              row.it.total ? Downloads.human(row.it.done) + " de " + Downloads.human(row.it.total) : row.it.count ? row.it.count + (row.it.count === 1 ? " archivo" : " archivos") : "",
                                                               row.it.speed ? Downloads.human(row.it.speed) + "/s" : "",
                                                               row.it.eta > 0 ? "quedan " + Downloads.eta(row.it.eta) : ""].filter(Boolean).join(" · ") || Downloads.statusText(row.it)
                                                 : Downloads.statusText(row.it) + (row.it.status === "done" && (row.it.files ?? []).length > 1 ? " · " + row.it.files.length + " archivos" : "")

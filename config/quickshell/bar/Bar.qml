@@ -140,15 +140,15 @@ PanelWindow {
             y: bar.vertical ? (parent.height - height) / 2 : (bar.pos === "arriba" ? bar.inner : 0)
             width: bar.vertical ? bar.thickness : length
             height: bar.vertical ? length : bar.thickness
-            Behavior on width { enabled: bar.island && !Theme.reduceMotion; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
-            Behavior on height { enabled: bar.island && !Theme.reduceMotion; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+            Behavior on width { enabled: bar.island && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+            Behavior on height { enabled: bar.island && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
             // Escondida: se desliza hacia el borde
             readonly property real hiddenShift: bar.thickness + bar.off + 2
             transform: Translate {
                 x: bar.revealed || !bar.vertical ? 0 : bar.pos === "derecha" ? body.hiddenShift : -body.hiddenShift
                 y: bar.revealed || bar.vertical ? 0 : bar.pos === "arriba" ? -body.hiddenShift : body.hiddenShift
-                Behavior on x { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.durIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
-                Behavior on y { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.durIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                Behavior on x { enabled: !Theme.still; NumberAnimation { duration: Theme.durIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                Behavior on y { enabled: !Theme.still; NumberAnimation { duration: Theme.durIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
             }
 
             Glass {

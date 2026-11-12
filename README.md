@@ -7,7 +7,7 @@
 
 # HyprFrijol
 
-Rice/shell propio para **Hyprland**, hecho desde cero, con tres estilos: *Material* (Material 3, sólido), *SkySoul* (Material de cristal, transparente y desenfocado) y *Chroma* (al estilo Nothing Phone); tono empresarial y minimalista, y varios agregados: Spotlight, panel lateral con asistente de IA, PiP mínimo, selector de fondos, widgets, centro de actualizaciones con punto de restauración, captura/grabación y login propio.
+Rice/shell propio para **Hyprland**, hecho desde cero, con un estilo propio, *Math* (Material 3, sólido o con transparencia y desenfoque), y temas en pares oscuro y claro; tono empresarial y minimalista, y varios agregados: Spotlight, panel lateral con asistente de IA, PiP mínimo, selector de fondos, widgets, centro de actualizaciones con punto de restauración, captura/grabación y login propio.
 
 Pensado para correr en **cualquier distro que tenga Hyprland 0.57 o posterior** (Arch y derivadas, Fedora, openSUSE Tumbleweed, Debian testing, Ubuntu, Void, Gentoo, NixOS), también en una instalación mínima o de servidor **sin escritorio**: el instalador pone lo que falta. No depende de GNOME, KDE ni de GDM.
 
@@ -101,6 +101,7 @@ cd ~/hyprfrijol
 | `--no-system` | sin tocar servicios ni grupos |
 | `--no-session` | sin la entrada en el gestor de inicio |
 | `--greeter` / `--greeter-off` | login visual propio con greetd / volver al gestor anterior (se guarda cuál era) |
+| `--greeter-sync` | copia tu tema y tu fondo al login visual (`hf-greeter-sync`) |
 | `--uninstall` [`--purge`] | desinstalar [y borrar ajustes, estado y caché] |
 | `--migrate` | pasar una instalación de hypr-liquid (nombre anterior) a hyprfrijol |
 | `--apps=serie,productividad,…` | apps por nivel: `serie` (por defecto), `productividad`, `destacada`, `creativa`, `experimental`, `all`; `--no-apps` ninguna. Sin `--yes` pregunta. Lista: `scripts/hf-apps list` |
@@ -263,7 +264,7 @@ hl.config({ input = { kb_layout = "latam" } })
 Casi todo se cambia desde la aplicación de Ajustes (Super + I; ver `docs/AJUSTES.md`); se guarda en `~/.config/hyprfrijol/settings.json` y `hf-apply` lo aplica. Desde la terminal:
 
 ```bash
-hf-apply set estilo=flat barPos=arriba themeMode=auto
+hf-apply set palette=nord barPos=arriba themeMode=auto
 qs -p ~/src/hyprfrijol/config/quickshell ipc call shell toggle spotlight
 ```
 

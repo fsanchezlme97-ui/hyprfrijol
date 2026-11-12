@@ -144,6 +144,11 @@ def installed_native(names):
     return all(n.removeprefix("aur:") in _installed_native for n in names) if names else False
 
 
+def _bundle_is(a, ref):
+    """¿Ese Flatpak instalado es el de esta app? Compara un trozo entero del id (no «orchard» dentro de otro nombre)."""
+    return a["id"].lower() in re.split(r"[.\-_]", str(ref).lower())
+
+
 def flatpaks():
     """id → "user" | "system" de las apps Flatpak instaladas."""
     global _flatpaks
@@ -178,7 +183,7 @@ def installed_via(a):
         return "flatpak"
     if s.get("appimage") and appimage_path(a).is_file():
         return "appimage"
-    if s.get("flatpakBundle") and any(k.lower().find(a["id"]) >= 0 for k in fp):
+    if s.get("flatpakBundle") and any(_bundle_is(a, k) for k in fp):
         return "flatpakBundle"
     if s.get("build") and a.get("bin") and (have(a["bin"]) or (HOME / ".local/bin" / a["bin"]).exists()):
         return "build"
@@ -535,7 +540,7 @@ def remove_steps(apps):
                     ([HOME / ".local/bin" / a["bin"]] if a.get("bin") else [])
             st.append(step(f"Quitar {a['name']} (AppImage)", ["rm", "-f", *map(str, files)]))
         elif via == "flatpakBundle":
-            ids = [k for k in flatpaks() if a["id"] in k.lower()]
+            ids = [k for k in flatpaks() if _bundle_is(a, k)]
             st.append(step(f"Quitar {a['name']} (Flatpak)", ["flatpak", "uninstall", "--user", "-y", *ids]))
         elif via == "build":
             d = SRCDIR / a["id"]

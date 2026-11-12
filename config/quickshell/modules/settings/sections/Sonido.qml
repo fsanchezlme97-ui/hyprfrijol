@@ -134,7 +134,7 @@ RowLayout {
             }
             SwRow {
                 label: "Supresión de ruido"
-                sub: root.hasEasy ? "EasyEffects · ideal para videollamadas" : "instala EasyEffects desde Herramientas"
+                sub: root.hasEasy ? "EasyEffects · ideal para videollamadas" : "instala EasyEffects desde el Centro de aplicaciones"
                 enabled: root.hasEasy
                 checked: root.easyOn
                 onToggled: v => { Quickshell.execDetached(["sh", "-c", v ? "setsid easyeffects --gapplication-service >/dev/null 2>&1 &" : "easyeffects -q"]); root.easyOn = v; Settings.set("noiseSuppression", v); }

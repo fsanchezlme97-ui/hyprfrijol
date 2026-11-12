@@ -124,13 +124,13 @@ Glass {
             id: daysClip
             Layout.fillWidth: true
             Layout.preferredHeight: (win.collapsed ? 1 : win.rows) * win.cellH
-            Behavior on Layout.preferredHeight { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+            Behavior on Layout.preferredHeight { enabled: !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
             clip: true
             GridLayout {
                 width: parent.width
                 y: win.collapsed ? -win.weekRow * win.cellH : 0
                 // solo al plegar o desplegar (al pasar de semana o de mes la fila cambia sin deslizarse)
-                Behavior on y { enabled: !Theme.reduceMotion && foldAnim.running; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+                Behavior on y { enabled: !Theme.still && foldAnim.running; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
                 columns: 7
                 rowSpacing: 0
                 columnSpacing: 0
@@ -149,7 +149,7 @@ Glass {
                         readonly property bool isSel: win.sameDay(modelData, win.day)
                         readonly property bool busy: { Events.all; return Events.hasDay(modelData); }
                         opacity: !live ? 0 : out ? 0.55 : 1
-                        Behavior on opacity { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                        Behavior on opacity { enabled: !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                         Rectangle {
                             anchors.centerIn: parent
                             width: 27; height: 27; radius: 13.5

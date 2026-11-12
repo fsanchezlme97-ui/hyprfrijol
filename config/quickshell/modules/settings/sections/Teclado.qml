@@ -140,7 +140,7 @@ RowLayout {
             }
             LabeledRow {
                 label: "Velocidad"; labelWidth: 120
-                Seg { model: [[25, "Normal"], [40, "Rápida"], [60, "Muy rápida"]]; current: Settings.get("kbRepeatRate", 25); onPicked: k => Settings.set("kbRepeatRate", k) }
+                Seg { model: [[25, "Lenta"], [35, "Normal"], [45, "Rápida"], [60, "Muy rápida"]]; current: Settings.get("kbRepeatRate", 35); onPicked: k => Settings.set("kbRepeatRate", k) }
             }
             RowLayout {
                 Layout.fillWidth: true

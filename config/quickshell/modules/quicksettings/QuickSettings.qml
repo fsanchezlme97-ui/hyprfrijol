@@ -142,7 +142,7 @@ Overlay {
         function clamp(): void { contentY = Math.max(0, Math.min(contentY, contentHeight - height)); }
         onContentHeightChanged: clamp()
         onHeightChanged: clamp()
-        Behavior on contentY { enabled: !Theme.reduceMotion && !flick.moving; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+        Behavior on contentY { enabled: !Theme.still && !flick.moving; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
 
         ColumnLayout {
             id: col
@@ -316,7 +316,7 @@ Overlay {
                                         active: Bt.enabled
                                         sub: !Bt.available ? "No disponible" : !Bt.enabled ? "Apagado"
                                              : Bt.connected.length === 1 ? (Bt.connected[0].name || "1 dispositivo")
-                                             : Bt.connected.length + " dispositivos"
+                                             : Bt.connected.length ? Bt.connected.length + " dispositivos" : "Sin conectar"
                                         expandable: Bt.available
                                         expanded: win.expanded === "bt"
                                         onClicked: Bt.setEnabled(!Bt.enabled)

@@ -46,7 +46,7 @@ BROWSER_CMD="${HF_VPN_BROWSER:-xdg-open}"           # abre la página del SSO (p
 # ---------- distro ----------
 family_legacy() {
   local like=""
-  [ -r /etc/os-release ] && like="$(. /etc/os-release; echo "$ID $ID_LIKE" | tr A-Z a-z)"
+  [ -r /etc/os-release ] && like="$(. /etc/os-release; echo "${ID:-} ${ID_LIKE:-}" | tr A-Z a-z)"
   case "$like" in *arch*) echo arch;; *debian*|*ubuntu*) echo debian;; *fedora*|*rhel*) echo fedora;; *suse*) echo suse;; *void*) echo void;; *) echo arch;; esac
 }
 FAM="" UBU=0

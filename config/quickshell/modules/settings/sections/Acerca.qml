@@ -109,7 +109,7 @@ RowLayout {
             Layout.topMargin: 6
             spacing: 8
             Button { text: "Copiar información"; onClicked: { Quickshell.execDetached(["wl-copy", root.report]); copied.restart(); } }
-            Button { text: "Informe para soporte"; onClicked: Pkg.runInTerminal("{ echo '" + root.report.replace(/'/g, "") + "'; echo; hyprctl version; echo; journalctl --user -b -p warning -n 60 --no-pager; } | tee ~/hyprfrijol-informe.txt", "Informe para soporte") }
+            Button { text: "Informe para soporte"; onClicked: Pkg.runInTerminal("{ echo '" + root.report.replaceAll("'", "") + "'; echo; hyprctl version; echo; journalctl --user -b -p warning -n 60 --no-pager; } | tee ~/hyprfrijol-informe.txt", "Informe para soporte") }
             Txt { visible: copied.running; text: "Copiado ✓"; color: Theme.p; size: 11.5 }
             Timer { id: copied; interval: 1800 }
         }
@@ -139,7 +139,6 @@ RowLayout {
             label: "Remoto"; labelWidth: 70
             Field { icon: ""; text: root.sys.git ?? ""; placeholder: "git@github.com:tu-usuario/escritorio.git · Enter"; onAccepted: { Quickshell.execDetached(["sh", "-c", "cd ~/.config/hyprfrijol && { [ -d .git ] || git init -q; } && { git remote set-url origin \"$0\" 2>/dev/null || git remote add origin \"$0\"; }", text.trim()]); refresh.restart(); } }
         }
-        SwRow { label: "Sincronizar automáticamente"; sub: "al cambiar un ajuste (cada 10 min como mucho)"; key: "syncAuto" }
         SwRow { label: "Incluir lista de apps instaladas"; sub: "pacman -Qqe y flatpak list"; key: "syncApps"; def: true }
         SwRow { label: "Incluir fondos de pantalla"; key: "syncWallpapers"; def: false }
         RowLayout {

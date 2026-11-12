@@ -14,7 +14,7 @@ BarChip {
     readonly property bool showText: Settings.get("barWeatherText", false) === true || hovered || open
     implicitHeight: vertical ? col.implicitHeight + 10 : 22
     implicitWidth: vertical ? 26 : r.implicitWidth + 14
-    Behavior on implicitWidth { enabled: !Theme.reduceMotion && !chip.vertical; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+    Behavior on implicitWidth { enabled: !Theme.still && !chip.vertical; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
     clip: true
     Component.onCompleted: Weather.users++
     Component.onDestruction: Weather.users--

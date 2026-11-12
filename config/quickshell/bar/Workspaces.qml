@@ -82,7 +82,7 @@ Item {
             height: root.vertical ? (dot ? 14 : 22) : 20
             radius: Theme.r(6)
             color: "transparent"                // el fondo del activo es la píldora de root
-            Behavior on width { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+            Behavior on width { enabled: !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
             Txt {
                 id: lbl
                 visible: !cell.dot
@@ -104,8 +104,8 @@ Item {
                 height: root.vertical ? (cell.active ? 12 : cell.used ? 6 : 5) : (cell.active || cell.used ? 6 : 5)
                 radius: Math.min(width, height) / 2
                 color: cell.active ? Theme.p : cell.used ? Theme.t : Theme.o
-                Behavior on width { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
-                Behavior on height { enabled: !Theme.reduceMotion; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+                Behavior on width { enabled: !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+                Behavior on height { enabled: !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
             }
             MouseArea {
                 anchors.fill: parent

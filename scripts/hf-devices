@@ -91,7 +91,8 @@ def _kind(top, d):
         return "optical"
     if name.startswith("mmcblk") or (top.get("tran") or "") == "mmc":
         return "sd"
-    if (top.get("tran") or "") == "usb" or top.get("rm") or top.get("hotplug"):
+    # «hotplug» solo no basta: los puertos SATA con conexión en caliente lo marcan en discos internos
+    if (top.get("tran") or "") == "usb" or top.get("rm"):
         return "usb"
     return "interno"
 
@@ -134,8 +135,10 @@ def devices(include_internal=False):
 
 def find(dev, include_internal=True):
     dev = str(dev or "").strip()
+    if not dev:
+        return None
     for d in devices(include_internal):
-        if dev in (d["dev"], d["mountpoint"], d["label"]) or (dev and d["dev"].endswith("/" + dev)):
+        if dev in (d["dev"], d["mountpoint"], d["label"]) or d["dev"].endswith("/" + dev):
             return d
     return None
 

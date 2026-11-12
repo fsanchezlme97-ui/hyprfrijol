@@ -67,6 +67,46 @@ reducción automática) se descartó en las decisiones del plan.
 - [ ] **Consumo por programa** (barra secundaria): la memoria suma el RSS de cada proceso (lo compartido cuenta
       varias veces); un programa pequeño que gasta mucha CPU puede quedar escondido tras «+N».
 
+## De la revisión completa (2026-11-11, v0.9.22)
+
+Lo que la revisión encontró y no se arregló en la 0.9.22, por orden de valor:
+
+- [ ] **Sondeos que quedan**: `nvidia-smi` cada 2 s mientras exista la pastilla de recursos (hacerlo solo con el
+      panel abierto), `hyprctl` cada 600 ms con el dock inteligente y ventanas flotantes (usar el socket de Hyprland
+      sin proceso), `hf-caffeine status` cada 30 s (vigilar su archivo), `nmcli` cada 30 s también por cable.
+- [ ] **Contadores de uso reales**: SysStats, Weather, Printer y Cava cuentan la pastilla aunque la barra esté
+      oculta o la sesión bloqueada.
+- [ ] **Ajustes que aún son apps**: cola de impresión (Impresoras), conexiones guardadas (Escritorio remoto),
+      máquinas y contenedores (Virtualización). Candidatas a ventana propia como Tareas.
+- [ ] **Buscador de Ajustes**: no indexa las tarjetas de `settings/ui/` (Wallhaven, Calendarios, Mis temas,
+      Diagnóstico, Modo seguro…) ni sus claves para «Restaurar valores por defecto».
+- [ ] **Sistema en otras distros**: Kernel LTS, snap-pac y OpenTabletDriver siguen siendo solo de Arch (ahora se
+      ocultan fuera de Arch); falta su equivalente. Las órdenes nuevas de `hf-updates` para dnf, apt, zypper y xbps
+      están sin probar en esas distros.
+- [ ] **Claves sin uso** en `defaults/settings.json`: `widgetsOnDesktop`, `dictation`, `floatWorkspace`, `estilo`,
+      `syncMethod`. Y claves usadas sin valor por defecto: `dimInactive`, `workspaceAnim`, `dragSnap`,
+      `floatRemember`, `lazyModules`, `startSplash`.
+- [ ] **Zonas pequeñas de clic** (menos de 24 px): quitar documento o imagen en el chat, puntos de página del
+      centro de control, cerrar en la vista de espacios, flechas del editor de widgets.
+- [ ] **Botones invisibles hasta pasar el cursor** (papelera de tareas y avisos) siguen recibiendo clic y foco.
+- [ ] `hf-apps`: comprobar la suma (sha256) de AppImage y paquetes Flatpak bajados de GitHub.
+- [ ] `hf-fileact`: PDF a PNG pisa archivos con el mismo nombre; el OCR de un PDF grande llena `/tmp`.
+- [ ] `hf-theme`: un tema llamado «Rosa claro» choca con la variante clara de «Rosa».
+- [ ] `hf-shell`: una carpeta del proyecto con espacios o paréntesis impide arrancar el shell.
+- [ ] Eventos diarios que empezaron hace más de 8 años no salen en la agenda (tope de 3000 repeticiones).
+- [ ] El pomodoro cuenta tics y no reloj: una suspensión lo retrasa.
+
+Añadidos sugeridos (sin empezar):
+
+- [ ] **Deshacer** de 5 s para lo que borra con un clic (tareas hechas, historial de avisos, conversaciones).
+- [ ] **Reanudar descargas** al iniciar sesión.
+- [ ] **Un solo motor de paquetes** (`hf-pkg`) para actualizaciones, VPN, máquinas virtuales y apps, en vez de
+      cuatro detecciones de distro distintas.
+- [ ] `dev/lint.sh`: comprobar que cada programa que usa el código está en `install/packages.tsv` y que cada clave
+      de ajustes tiene valor por defecto.
+- [ ] Spotlight: una fila «Nada coincide» con pistas de prefijos; Alt + Tab: pie con las teclas (Q cerrar).
+- [ ] Descargas: botón «Limpiar terminadas». Historial de avisos: «Copiado» al copiar.
+
 ## Ideas propuestas (sin empezar)
 
 - [ ] **Dos pantallas**: abrir ciertas apps en la secundaria, Super + Tab para saltar de pantalla, modo concentración

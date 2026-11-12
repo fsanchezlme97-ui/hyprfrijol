@@ -204,13 +204,19 @@ Singleton {
         history = [e].concat(history.filter(h => h.uid !== uid)).slice(0, 300);
         histSave.restart();
     }
+    // Al cerrarse un aviso se olvidan sus apuntes (hora, repeticiones, entrada del historial): si no, crecen sin fin
+    function pruneId(id) {
+        if (id in arrived) { const a = Object.assign({}, arrived); delete a[id]; arrived = a; }
+        if (id in repeats) { const r = Object.assign({}, repeats); delete r[id]; repeats = r; }
+        if (id in huid) { const h = Object.assign({}, huid); delete h[id]; huid = h; }
+    }
     function clearHistory() { history = []; histSave.restart(); }
     function forget(uid: string) { history = history.filter(h => h.uid !== uid); histSave.restart(); }
     FileView {
         id: histFile
         path: Paths.state + "/notify-history.json"
         printErrors: false
-        onLoaded: { try { const h = JSON.parse(text()); if (Array.isArray(h) && root.history.length === 0) root.history = h; } catch (e) {} }
+        onLoaded: { try { const h = JSON.parse(text()); if (Array.isArray(h)) { const have = root.history.map(x => x.uid); root.history = root.history.concat(h.filter(x => !have.includes(x.uid))).slice(0, 300); } } catch (e) {} }
     }
     Timer { id: histSave; interval: 1200; onTriggered: histFile.setText(JSON.stringify(root.history) + "\n") }
 
@@ -240,7 +246,7 @@ Singleton {
         onNotification: n => {
             n.tracked = true;
             const a = Object.assign({}, root.arrived); a[n.id] = Date.now(); root.arrived = a;
-            n.closed.connect(() => root.hidePopup(n));
+            n.closed.connect(() => { root.hidePopup(n); root.pruneId(n.id); });
             // replace-id: la app actualiza el mismo aviso (no vuelve a llegar por aquí)
             n.summaryChanged.connect(() => bumpT.queue(n));
             n.bodyChanged.connect(() => bumpT.queue(n));
@@ -248,8 +254,8 @@ Singleton {
             const dup = root.list.values.find(o => o !== n && root.keyOf(o) === root.keyOf(n) && o.summary === n.summary && o.body === n.body);
             if (dup) {
                 const r = Object.assign({}, root.repeats); r[n.id] = (r[dup.id] ?? 1) + 1; delete r[dup.id]; root.repeats = r;
-                root.dismiss(dup);
                 if (root.huid[dup.id]) root.forget(root.huid[dup.id]);   // en el historial, también una sola vez
+                root.dismiss(dup);
             }
             root.record(n);
             if (root.canPopup(n)) root.showPopup(n);
