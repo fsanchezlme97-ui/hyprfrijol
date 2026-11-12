@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.15] — 2026-11-11
+
+### Añadido
+- **Mis temas: vista previa de verdad**. Al crear un tema se ve la barra y el centro de control (con un aviso y una ventana detrás) pintados con sus colores, en oscuro y en claro, en vez de dos tarjetas pequeñas.
+- **Editar colores uno a uno**: fondo, superficie, acento, botones, selección, texto, bordes… cada uno con su código. Si un texto no se leería bien se ajusta solo y la nota lo dice; lo que ves es lo que se guarda.
+- **Editar un tema guardado**: «Editar» bajo cada tema propio lo abre en el creador. Si lo guardas con otro nombre, sustituye al anterior.
+- `hf-theme check`: valida un tema editado a mano sin guardarlo.
+
 ## [0.9.14] — 2026-11-11
 
 ### Añadido

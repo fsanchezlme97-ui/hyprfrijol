@@ -14,8 +14,8 @@ entre la 0.9.0 y la 0.9.12 está en el CHANGELOG. Queda, en este orden:
        otro modelo (0.9.13). Los chips de contexto y la lista de conversaciones con búsqueda ya estaban.
 2. [x] [Asistente de IA](planes/asistente-ia.md), resto de la fase 1: la página de Inicio (0.9.14). Sin contador de
        uso: el plan lo deja fuera de esta versión.
-3. [ ] [Temas](planes/temas.md), resto de las fases 4–5: editar los colores de un tema propio uno a uno y la vista
-       previa sobre la barra y el centro de control (hoy, dos tarjetas). Opcional en el plan: que la IA asigne los
+3. [x] [Temas](planes/temas.md), resto de las fases 4–5: editar los colores uno a uno, editar un tema guardado y la
+       vista previa sobre la barra y el centro de control (0.9.15). Queda, opcional en el plan: que la IA asigne los
        papeles de cada color.
 4. [ ] [Temas](planes/temas.md), fase 3 (pulido de Math): sombras, bordes, espaciado y estados en `Ui/` y
        `components/`, y decidir la fuente. El movimiento ya se hizo con Animaciones (0.9.1); lo demás, sin empezar.
