@@ -3,6 +3,17 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.47] — 2026-11-12
+
+### Corregido
+- El asistente se inventaba la hora («¿qué hora es?» por voz): ahora siempre sabe la fecha y la hora local.
+- Voz y Spotlight con Gemini usan el modelo ligero (Flash-Lite) si no eliges otro en «Modelo rápido»: el Flash
+  del plan gratuito tardaba 30-40 s o fallaba por saturación.
+
+### Añadido
+- Pruebas de la conversación por voz sin micrófono: `qs ipc call dictado conversationFiles "a.wav,b.wav"` (cada
+  audio es un turno tuyo; al acabarse, termina).
+
 ## [0.9.46] — 2026-11-12
 
 ### Corregido

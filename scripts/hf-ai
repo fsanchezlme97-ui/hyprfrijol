@@ -2107,7 +2107,11 @@ def ocr_context(msgs, why):
            "describe lo que no es texto; si hace falta, díselo al usuario).\n\n" + "\n\n".join(parts)
 
 def gather(ctx, ocr=True):
-    parts = []
+    # Sin esto el modelo se inventa la hora («¿qué hora es?» por voz contestaba cualquier cosa)
+    t = time.localtime()   # en español sin depender del locale del proceso
+    dia = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][t.tm_wday]
+    mes = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"][t.tm_mon - 1]
+    parts = [f"Ahora (hora local del usuario): {dia} {t.tm_mday} de {mes} de {t.tm_year}, {t.tm_hour:02d}:{t.tm_min:02d} (UTC{time.strftime('%z', t)})"]
     s = settings()
     w = jrun(["hyprctl", "activewindow", "-j"])
     private = is_private(w.get("class"), s) or is_private((ctx.get("windowInfo") or {}).get("class"), s)
@@ -2900,6 +2904,8 @@ def provider_for(s, task=""):
     m = str(s.get({"quick": "aiModelQuick", "vision": "aiModelVision"}.get(task, "_"), "") or "").strip()
     if m:
         s["aiModel"] = m
+    elif task == "quick" and prov == "gemini" and not str(s.get("aiModel") or "").strip():
+        s["aiModel"] = GEMINI_LITE           # voz y Spotlight: el ligero contesta en ~1,5 s; el Flash puede tardar 30 s o más
     return prov, s
 
 def fallback_for(s, prov):

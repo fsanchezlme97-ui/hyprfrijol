@@ -50,7 +50,7 @@ Scope {
     property string convState: ""           // escucha | piensa | habla
     property int convMisses: 0              // turnos seguidos sin oír nada (3 = se da por terminada)
     property bool convProactive: false      // la empezó Helpert (modo compañero): si no contestas, se va sin despedirse
-    onConvChanged: if (!conv) { convState = ""; convProactive = false; convLater.stop(); thinkTimer.stop(); replyTimer.stop(); }
+    onConvChanged: if (!conv) { convTest = false; convFiles = []; convState = ""; convProactive = false; convLater.stop(); thinkTimer.stop(); replyTimer.stop(); }
     // Modo compañero: Helpert ya está pensando qué decir (AiChat.checkIn); al terminar de hablar, escucha una vez
     function companionTalk(): void {
         if (conv || proc.running) return;
@@ -79,11 +79,16 @@ Scope {
         Quickshell.execDetached([Paths.script("hf-ai"), "speak", bye ? "Hasta luego." : "--stop"]);
         phase = "done"; msg = "Conversación terminada"; hider.interval = 1400; hider.restart();
     }
+    // Pruebas (IPC conversationFiles): cada turno lee el siguiente audio en lugar del micrófono; al acabarse, termina
+    property var convFiles: []
+    property bool convTest: false
     function convListen(): void {
         if (!conv || Shell.aiSpeaking) return;
         if (proc.running) { convLater.restart(); return; }
+        if (convTest && !convFiles.length) { convEnd(false); return; }
         convState = "escucha";
-        start("ia");
+        if (convTest) { const f = convFiles[0]; convFiles = convFiles.slice(1); start("ia", ["--file", f, "--simulate-live"]); }
+        else start("ia");
     }
     // Entre turnos, un respiro: que no se oiga el final de la voz de Helpert
     Timer { id: convLater; interval: 600; onTriggered: root.convListen() }
@@ -289,6 +294,8 @@ Scope {
         function toggle(): void { root.toggle("dictado"); }
         function talk(): void { root.talk(); }                // hablar con el asistente (hf-ai talk): según aiTalkMode
         function conversation(): void { root.convToggle(); }  // activar / desactivar la conversación por voz
+        // pruebas: una conversación con estos audios (rutas separadas por comas) como turnos tuyos
+        function conversationFiles(paths: string): void { if (root.conv) return; root.convFiles = paths.split(",").filter(p => p); root.convTest = true; root.convStart(); }
         function checkIn(): void { companion.visit(true); }   // modo compañero: que Helpert pase a saludar ya (pruebas)
         function companionState(): string { return companion.state(); }
         function conversationState(): string { return root.conv ? root.convState || "activa" : "apagada"; }
