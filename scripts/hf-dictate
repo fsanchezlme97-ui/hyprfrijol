@@ -43,7 +43,9 @@ Ajustes (settings.json): dictationModel tiny|base|small|medium|turbo (base) · d
   provisional) · dictationPauseMs (silencio que cierra una frase, 700) · dictationSilenceSec (continuo: para tras
   N s callado, 5) · dictationKeepLoaded (s con el modelo cargado, 600) · dictationWake + dictationWakeWord (decir
   «Distro, …» para dar una orden) · dictationVoskModel ·
-  dictationPrompt (vocabulario) · dictationMaxSec (120 en ptt/toggle; 600 en continuo)
+  dictationPrompt (vocabulario, separado por comas: whisper lo usa al reconocer y todos los motores al corregir) ·
+  dictationAiFix nunca|asistente|siempre (corregir nombres con la IA: al hablar con el asistente, o también al dictar) ·
+  dictationAiFixSec (tiempo máximo de esa corrección, 3) · dictationMaxSec (120 en ptt/toggle; 600 en continuo)
 Modelos: ~/.local/share/hyprfrijol/whisper/ggml-<modelo>.bin · …/whisper/vosk/<modelo>/
 Pruebas: HF_DICTATE_OUTPUT=ninguna no escribe nada · HF_VOICE_DRY=1 no ejecuta las órdenes (hf-voice --dry-run) ·
   HF_WHISPER_SERVER / HF_WHISPER_CLI eligen los binarios · HF_DICTATE_DATA cambia la carpeta de modelos.
@@ -723,6 +725,80 @@ SPOKEN = {"nueva linea": "\n", "salto de linea": "\n", "punto y aparte": ".\n", 
           "punto": ".", "coma": ",", "dos puntos": ":", "punto y coma": ";", "abre interrogacion": "¿",
           "cierra interrogacion": "?", "signo de interrogacion": "?", "puntos suspensivos": "…"}
 
+# ---------------------------------------------------------------- corregir nombres
+# Parakeet y Vosk no admiten vocabulario y whisper solo lo toma como pista: lo que suena como una palabra del vocabulario
+# (dictationPrompt) se cambia por ella al final de cada frase. Clave fonética para español e inglés: «mi du dev» y
+# «midudev», «fu faiters» y «Foo Fighters» dan lo mismo.
+PHON = (("igh", "ai"), ("ph", "f"), ("th", "t"), ("sh", "ch"), ("ck", "k"), ("oo", "u"), ("ee", "i"), ("ea", "i"),
+        ("qu", "k"), ("ll", "y"), ("w", "u"), ("v", "b"), ("z", "s"), ("x", "ks"), ("y", "i"), ("h", ""))
+
+def phon(s):
+    s = re.sub(r"[^a-z0-9]", "", fold(s))
+    for a, b in PHON:
+        s = s.replace(a, b)
+    s = re.sub(r"c(?=[ei])", "s", s).replace("c", "k")
+    s = re.sub(r"g(?=[ei])", "j", s)
+    return re.sub(r"(.)\1+", r"\1", s)
+
+def vocab_terms(vocab):
+    out = []
+    for t in re.split(r"[,;\n]+", vocab or ""):
+        t = t.strip()
+        k = phon(t)
+        if len(k) >= 4 and len(t) <= 40:
+            out.append((t, k, len(t.split())))
+    return out
+
+def vocab_fix(text, vocab):
+    """Cambia los trozos de «text» que suenan como una palabra del vocabulario por ella."""
+    import difflib
+    terms = vocab_terms(vocab)
+    if not terms or not text.strip():
+        return text
+    toks = re.findall(r"\S+", text)
+    out, i = [], 0
+    while i < len(toks):
+        best = None
+        for t, k, nw in terms:
+            for n in range(max(1, nw - 1), nw + 3):
+                if i + n > len(toks):
+                    break
+                span = toks[i:i + n]
+                core = " ".join(span)
+                kg = phon(core)
+                if not kg or kg[0] != k[0] or abs(len(kg) - len(k)) > max(2, len(k) // 4):
+                    continue
+                r = 1.0 if kg == k else difflib.SequenceMatcher(None, kg, k).ratio()
+                if r >= (0.8 if len(k) >= 6 else 0.92) and (best is None or r > best[0]):
+                    best = (r, n, t)
+        if best:
+            r, n, t = best
+            last = toks[i + n - 1]
+            tail = re.search(r"[.,;:!?…»)\]]+$", last)
+            head = re.match(r"^[¿¡«(\[]+", toks[i])
+            out.append((head.group(0) if head else "") + t + (tail.group(0) if tail else ""))
+            i += n
+        else:
+            out.append(toks[i]); i += 1
+    return " ".join(out)
+
+def ai_fix_wanted(s, kind):
+    mode = s.get("dictationAiFix") or "asistente"
+    if mode == "siempre":
+        return True
+    return mode == "asistente" and os.environ.get("HF_DICTATE_FOR") == "ia"
+
+def ai_fix(text, s, before=""):
+    """Corrige los nombres mal oídos con la IA (hf-ai dictfix). Si tarda más de dictationAiFixSec o falla, el texto
+    queda como estaba: el dictado no se para nunca por esto."""
+    try:
+        r = subprocess.run([str(ROOT / "scripts/hf-ai"), "dictfix", json.dumps({"vocab": s.get("dictationPrompt") or "", "before": before})],
+                           input=text, capture_output=True, text=True, timeout=max(1.0, float(s.get("dictationAiFixSec") or 3)))
+        out = r.stdout.strip()
+        return out if r.returncode == 0 and out else text
+    except (subprocess.TimeoutExpired, OSError, ValueError):
+        return text
+
 def spoken_cmd(text):
     f = re.sub(r"[¡!¿?.,…]+", "", fold(text)).strip()
     return SPOKEN.get(f)
@@ -1104,15 +1180,27 @@ class Session:
             return
         return self.handle_text(text, speech_s, end_wall)
 
+    def fix(self, text):
+        """Nombres mal oídos: primero el vocabulario (al momento, sin red); luego, si se pidió, la IA."""
+        raw = text
+        text = vocab_fix(text, self.vocab)
+        if ai_fix_wanted(self.s, self.kind) and len(text) >= 3:
+            text = ai_fix(text, self.s, self.typed[-300:] if self.kind == "dictado" else "")
+        if text != raw:
+            emit("fixed", raw=raw, text=text)
+        return text
+
     def handle_text(self, text, speech_s, end_wall):
         if self.cancel.is_set() or not text.strip():
             self.settle(); return
-        lat = round(time.time() - end_wall, 2)
         is_cmd = self.kind == "comando"
         if not is_cmd and self.wake:
             is_cmd, rest = wake_split(text, self.s)
             if is_cmd:
                 text = rest
+        if spoken_cmd(text) is None:
+            text = self.fix(text)
+        lat = round(time.time() - end_wall, 2)
         if is_cmd:
             self.settle()
             self.run_command(text, lat)

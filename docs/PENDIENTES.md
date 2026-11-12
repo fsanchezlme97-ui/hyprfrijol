@@ -55,7 +55,8 @@ reducción automática) se descartó en las decisiones del plan.
 
 - [ ] **Rendimiento**: arranque del shell, carga diferida de más módulos, menos procesos de `hyprctl` y `nmcli`.
 - [ ] **Productividad**: revisar Spotlight, portapapeles, ventanas y atajos con uso real; quitar pasos.
-- [ ] **Dictado por voz**: precisión, latencia, puntuación, idioma y que funcione en todas las apps.
+- [ ] **Dictado por voz**: precisión, latencia, puntuación, idioma y que funcione en todas las apps. Nombres propios
+      e internet: vocabulario con todos los motores y corrección con la IA (0.9.20); falta probarlo con voz real.
 - [ ] **Chat en vivo con el asistente** (hablar y que responda en voz): conversación fluida, interrumpirlo,
       latencia baja.
 - [ ] **Comandos por voz**: más órdenes, entender frases naturales, confirmar antes de lo peligroso.

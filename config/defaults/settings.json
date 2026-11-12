@@ -275,6 +275,8 @@
   "dictationEngine": "auto",
   "dictationOutput": "escribir",
   "dictationPrompt": "",
+  "dictationAiFix": "asistente",
+  "dictationAiFixSec": 3,
   "dictationMaxSec": 120,
   "dictationLive": true,
   "dictationPunct": true,

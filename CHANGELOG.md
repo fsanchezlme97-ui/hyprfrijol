@@ -3,7 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
-## [0.9.19] — 2026-11-11
+## [0.9.20] — 2026-11-11
+
+### Añadido
+- **Dictado: nombres bien escritos**. El reconocedor oye bien el español pero confunde nombres propios, grupos, creadores, marcas y términos de internet con palabras que suenan parecido («mi dev», «Fo Fitters»). Ahora se corrigen al acabar cada frase:
+  - **Vocabulario con cualquier motor**: lo que suene como una palabra de tu vocabulario (Ajustes › Dictado, separadas por comas) se escribe así, también con Parakeet y Vosk, que antes lo ignoraban. Sin conexión y al momento: «midu dev» → midudev, «fu faiters» → Foo Fighters, «iper land» → Hyprland.
+  - **Corregir con la IA** (Nunca · Al hablar con el asistente · Siempre): cada frase pasa por el modelo rápido de tu asistente, que sabe de grupos, streamers, programas e internet («Busca en Show to el último y tetro de Guy en The Witch» → «Busca en YouTube el último directo de Ibai en Twitch»). Con Gemini usa Flash-Lite (~1–2 s). No responde ni traduce lo que dictas, y si tarda más de 3 s se escribe lo que se oyó. Por defecto solo al hablar con el asistente, porque al dictar en otras apps el texto saldría de tu equipo.
+- `hf-ai dictfix` para probar la corrección desde la terminal.
+
 
 ### Seguridad
 - **Servidores MCP: la conversación no olvida lo que ya leyó**. «Consultar sin preguntar» deja de valer en toda la conversación (no solo en esa respuesta) si alguna respuesta anterior consultó algo o si hay imágenes o documentos adjuntos: a partir de ahí también esas consultas te piden confirmación.

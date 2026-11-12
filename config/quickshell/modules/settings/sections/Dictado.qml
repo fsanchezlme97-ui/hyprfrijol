@@ -449,11 +449,32 @@ ColumnLayout {
                 hint: "dictationPrompt"
                 Field {
                     icon: ""
-                    placeholder: "Nombres o términos: Hyprland, Quickshell…"
+                    placeholder: "Separados por comas: midudev, Foo Fighters, Hyprland…"
                     text: Settings.get("dictationPrompt", "")
                     onAccepted: Settings.set("dictationPrompt", text.trim())
                     input.onActiveFocusChanged: if (!input.activeFocus && text.trim() !== Settings.get("dictationPrompt", "")) Settings.set("dictationPrompt", text.trim())
                 }
+            }
+            Txt {
+                Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
+                text: "Lo que suene como una de estas palabras se escribe así al acabar cada frase, con cualquier motor y sin conexión. whisper además las usa al reconocer."
+            }
+            LabeledRow {
+                label: "Corregir con la IA"
+                labelWidth: 110
+                hint: "dictationAiFix"
+                Seg {
+                    model: [["nunca", "Nunca"], ["asistente", "Al hablar con el asistente"], ["siempre", "Siempre"]]
+                    current: Settings.get("dictationAiFix", "asistente")
+                    onPicked: k => Settings.set("dictationAiFix", k)
+                }
+            }
+            Txt {
+                Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
+                text: (Settings.get("dictationAiFix", "asistente") === "siempre"
+                       ? "Cada frase pasa por el modelo rápido de tu asistente antes de escribirse (~1–2 s más): arregla nombres de grupos, creadores, marcas, programas y términos de internet que el reconocedor oye mal. Lo que dictas sale de tu equipo salvo con «Solo en este equipo»."
+                       : "Con «Siempre», cada frase dictada pasa por el modelo rápido de tu asistente (~1–2 s más) y arregla nombres de grupos, creadores, marcas, programas y términos de internet que el reconocedor oye mal. Al hablar con el asistente, lo que dices ya va a la IA.")
+                    + " Si no responde en " + (Settings.get("dictationAiFixSec", 3)) + " s, se escribe lo que se oyó."
             }
             SwRow { label: "Puntuación y mayúsculas automáticas"; sub: "comas, puntos y mayúscula al empezar frase; di «nueva línea» o «punto y aparte»"; key: "dictationPunct"; def: true }
             SwRow { label: "Ver el texto mientras hablas"; sub: "lo provisional aparece en la píldora antes de escribirse"; key: "dictationLive"; def: true }

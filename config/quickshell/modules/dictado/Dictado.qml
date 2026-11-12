@@ -116,7 +116,7 @@ Scope {
     Process {
         id: proc
         command: root.args
-        environment: root.kind === "ia" ? { HF_DICTATE_OUTPUT: "ninguna" } : ({})   // «ia»: no escribir en la ventana
+        environment: root.kind === "ia" ? { HF_DICTATE_OUTPUT: "ninguna", HF_DICTATE_FOR: "ia" } : ({})   // «ia»: no escribir en la ventana (y dictationAiFix)
         stdinEnabled: true
         stdout: SplitParser { onRead: l => { try { root.onEvent(JSON.parse(l)); } catch (e) {} } }
         onExited: if (["rec", "trans", "cmd"].includes(root.phase)) { root.phase = "idle"; }
