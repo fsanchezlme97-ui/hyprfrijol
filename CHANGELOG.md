@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.19] — 2026-11-11
+
+### Seguridad
+- **Servidores MCP: la conversación no olvida lo que ya leyó**. «Consultar sin preguntar» deja de valer en toda la conversación (no solo en esa respuesta) si alguna respuesta anterior consultó algo o si hay imágenes o documentos adjuntos: a partir de ahí también esas consultas te piden confirmación.
+
+### Corregido
+- `hf-ai chat -` leía la entrada dos veces y llegaba vacía.
+
 ## [0.9.18] — 2026-11-11
 
 ### Seguridad

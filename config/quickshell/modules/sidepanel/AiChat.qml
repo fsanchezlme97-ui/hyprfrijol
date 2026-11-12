@@ -81,7 +81,8 @@ Item {
         return JSON.stringify(Object.assign({ task: task, messages: messages.filter(m => !m.error && !m.local)
                                     .map(m => Object.assign({ role: m.role, text: String(m.text).slice(0, 6000) },
                                                             m.images?.length ? { images: m.images } : {},
-                                                            m.files?.length ? { files: m.files } : {})),
+                                                            m.files?.length ? { files: m.files } : {},
+                                                            m.steps?.length ? { queried: true } : {})),   // ver mcp_auto en hf-ai
                                 context: context() }, extra ?? {}));
     }
 

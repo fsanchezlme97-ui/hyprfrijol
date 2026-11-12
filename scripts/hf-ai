@@ -3015,7 +3015,10 @@ def do_chat(req, print_request=False):
     msgs = msgs0
     steps = []
     raw = ""
-    if nimg or cap or ctx.get("capture") or ctx.get("captureText"):   # capturas e imágenes: texto de fuera desde el principio
+    # Datos de fuera desde el principio: capturas, imágenes o documentos en cualquier mensaje, o una respuesta anterior
+    # que consultó algo (queried: la marca el panel). Así una conversación larga no «olvida» lo que ya leyó.
+    if nimg or cap or ctx.get("capture") or ctx.get("captureText") \
+            or any(m.get("images") or m.get("files") or m.get("queried") for m in msgs0):
         ctx = {**ctx, "_untrusted": True}
     try:
         # Bucle de consultas: el modelo pide datos (hf-query), se los damos y vuelve a responder (máx. MAX_ROUNDS)
@@ -3414,14 +3417,15 @@ def main(argv):
         print(__doc__); return
     cmd, rest = argv[0], argv[1:]
     arg = rest[0] if rest else ""
+    stdin_text = None
     if arg == "-" and cmd != "attach":
-        arg = sys.stdin.read()
+        arg = stdin_text = sys.stdin.read()
     if cmd == "chat":
         pr = "--print-request" in rest or "--dry-run" in rest
         rest = [r for r in rest if r not in ("--print-request", "--dry-run")]
         arg = rest[0] if rest else ""
-        if arg == "-":
-            arg = sys.stdin.read()
+        if arg == "-":                       # «hf-ai chat --dry-run -»: la entrada ya se leyó arriba si iba primero
+            arg = stdin_text if stdin_text is not None else sys.stdin.read()
         req = json.loads(arg or "{}")
         if req.get("stream") and not pr:
             global LIVE
