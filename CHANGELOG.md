@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.57] — 2026-11-12
+
+### Documentación
+- Pendientes al día: cerrados rendimiento, dictado, productividad (los recorridos del plan en tres pasos o menos) y
+  las animaciones entre paneles. Quedan tus pruebas con uso real y, en los planes, el espaciado de Math.
+
 ## [0.9.56] — 2026-11-12
 
 ### Mejorado

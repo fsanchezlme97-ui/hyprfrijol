@@ -21,7 +21,7 @@ Estado a 2026-11-11 (v0.9.18). Lo hecho está en el CHANGELOG. Lo que queda de l
        sombra en dos capas y filo de luz arriba; la fuente se queda en Inter. Falta: la escala de espaciado
        (4/8/12/16/24) y los radios concéntricos, que tocan casi todas las vistas. `Ui/` es la capa de compatibilidad
        con Omarchy y sigue su propio estilo.
-5. [ ] [Productividad](planes/productividad.md), fase 5: revisión con uso real (la hace el autor usando el
+5. [x] [Productividad](planes/productividad.md), fase 5 (0.9.57: los cuatro recorridos de la sección 4 en tres pasos o menos): revisión con uso real (la hace el autor usando el
        escritorio; lo que se mide está en la sección 4 del plan). Los relojes del mundo siguen en Fecha, con un
        enlace desde Agenda y alarmas.
 6. [x] [Asistente de IA](planes/asistente-ia.md), fase 7: servidores MCP del usuario, con aprobación por servidor
@@ -74,9 +74,10 @@ reducción automática) se descartó en las decisiones del plan.
       abrir y cerrar todas las vistas no fuga (`dev/perf.sh -c 3`: se queda en ~330 MB y baja a ~300 al descargarse);
       el chat del asistente recreaba todas las burbujas en cada mensaje y retenía ~2,6 MB por mensaje (ahora ~1,6,
       que es lo que crece la conversación). Limitar los arenas de malloc no cambia nada.
-- [ ] **Productividad**: revisar Spotlight, portapapeles, ventanas y atajos con uso real; quitar pasos. Hecho
-      (0.9.25): deshacer al borrar tareas o vaciar el historial de avisos, «Copiado» al copiar un aviso, las teclas de
-      Alt + Tab a la vista, botones pequeños más fáciles de acertar. Queda lo que pide uso real.
+- [x] **Productividad** (revisado en 0.9.57 con los atajos de verdad; ninguno pasa de tres pasos): abrir una app que
+      no está en el dock, 3 (Super + Espacio, unas letras, Intro); pegar algo copiado hace 10 minutos, 3 (Super + V,
+      elegir, Intro, que ya pega); una ventana a la otra pantalla y vuelta, 2 (Super + Ctrl + Mayús + flecha); entrar y
+      salir del modo sin distracciones, 2 (Super + Z). Lo que salga usándolo a diario va a tus pruebas.
 - [x] **Ajustes es para ajustes**: Tareas ya es app, las alarmas van en su ventana y las instaladas en el Centro de
       aplicaciones (0.9.21); Conexiones remotas, Máquinas virtuales y Cola de impresión son apps (0.9.24); Puntos de
       restauración es app y las unidades extraíbles se ven en el icono de la barra (0.9.30).
