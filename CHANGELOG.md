@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.71] — 2026-11-13
+
+### Corregido
+- Al iniciar sesión, la barra a veces arrancaba dibujando en la gráfica de nouveau, se caía y el vigilante la
+  reabría 20 s después. `hf-shell` elige ya la otra gráfica (y sin vídeo por hardware) antes de lanzar Quickshell,
+  aunque el entorno de Hyprland aún no lo traiga.
+- RustDesk colgaba un canal de la gráfica de nouveau cada vez que arrancaba su servidor (al bloquear, al conectar):
+  probaba el códec por hardware con VA-API en esa gráfica. `hf-remote rustdesk gpu` también apaga ese códec
+  (`enable-hwcodec`); por CPU (VP9/AV1) va de sobra para el escritorio remoto.
+
 ## [0.9.70] — 2026-11-13
 
 ### Corregido

@@ -12,6 +12,18 @@
 set -u
 for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
+# Con una gráfica en nouveau, Quickshell siempre dibuja en la otra y sin vídeo por hardware, aunque el entorno aún no
+# lo traiga (config/hypr/frijol/env.lua): en nouveau se cuelga («nouveau … gr: TRAP … qs») y arrastra la sesión.
+if [ -e /sys/module/nouveau/initstate ]; then
+  export QT_FFMPEG_DECODING_HW_DEVICE_TYPES=none
+  if [ -z "${DRI_PRIME:-}" ]; then
+    for _r in /sys/class/drm/renderD*; do
+      [ "$(basename "$(readlink -f "$_r/device/driver")")" != nouveau ] || continue
+      _pci="$(basename "$(readlink -f "$_r/device")")"; export DRI_PRIME="pci-${_pci//[:.]/_}"; break
+    done
+    unset _r _pci
+  fi
+fi
 SIG="${HYPRLAND_INSTANCE_SIGNATURE:-sin-hyprland}"
 RUN="${XDG_RUNTIME_DIR:-/tmp}/hf-shell-$SIG"
 LOCK="$RUN.lock"

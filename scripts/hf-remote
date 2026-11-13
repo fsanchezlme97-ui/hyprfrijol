@@ -412,6 +412,18 @@ rd_gpu() {
   [[ "$pci" =~ ^[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]$ ]] || return 1
   printf '[Service]\n# hf-remote rustdesk gpu: dibujar en la gráfica que no es nouveau\nEnvironment=DRI_PRIME=pci-%s\n' "${pci//[:.]/_}" \
     | sudo install -D -m 644 /dev/stdin /etc/systemd/system/rustdesk.service.d/hyprfrijol-gpu.conf
+  # y sin códec por hardware: al arrancar prueba VA-API, que abre la primera gráfica (la de nouveau) aunque haya
+  # DRI_PRIME, y cada prueba cuelga un canal («nouveau … gr: TRAP … rustdesk»). Por CPU (VP9/AV1) va de sobra.
+  rd_option enable-hwcodec N
+}
+
+# Opción de RustDesk en tu configuración (~/.config/rustdesk/RustDesk2.toml, [options]); la lee al arrancar
+rd_option() {
+  local cfg="$HOME/.config/rustdesk/RustDesk2.toml" key="$1" val="$2"
+  [ -f "$cfg" ] || return 0
+  if grep -q "^$key = " "$cfg"; then sed -i "s|^$key = .*|$key = '$val'|" "$cfg"
+  elif grep -q '^\[options\]' "$cfg"; then sed -i "/^\[options\]/a $key = '$val'" "$cfg"
+  else printf "\n[options]\n%s = '%s'\n" "$key" "$val" >> "$cfg"; fi
 }
 
 # ---------- acceso: SSH + cortafuegos + Tailscale (lo que deja el equipo accesible desde fuera, y solo por donde toca)
