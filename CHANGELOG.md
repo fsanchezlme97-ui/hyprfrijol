@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.84] — 2026-11-13
+
+### Corregido
+- El escritorio remoto ya no se corta por inactividad: con alguien dentro por RDP (hypr-rdp) o VNC (wayvnc), la
+  pantalla no se apaga ni el equipo se suspende. Al apagarse, el monitor sin señal se desconectaba, la salida que se
+  estaba capturando desaparecía y la conexión se caía. El bloqueo por inactividad sigue haciéndose.
+
 ## [0.9.83] — 2026-11-13
 
 ### Añadido

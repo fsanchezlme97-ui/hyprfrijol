@@ -12,6 +12,9 @@ HOME = pathlib.Path.home()
 STATE = HOME / ".local/state/hyprfrijol"
 DPMS_OFF = "hyprctl dispatch 'hl.dsp.dpms({ action = \"disable\" })'"
 DPMS_ON = "hyprctl dispatch 'hl.dsp.dpms({ action = \"enable\" })'"
+# Con alguien dentro por escritorio remoto (hypr-rdp, wayvnc) la pantalla no se apaga: un monitor sin señal se
+# desconecta, la salida que se captura desaparece y la conexión se corta; tampoco se suspende. El bloqueo sí se hace.
+REMOTE_IN = "ss -tnpH state established 2>/dev/null | grep -qE '\"(hypr-rdp|wayvnc)\"'"
 
 def _min(s, key, default):
     try:
@@ -39,9 +42,9 @@ def render(s):
     if lock:
         listener(lock, "loginctl lock-session")
     if off:
-        listener(off, DPMS_OFF, DPMS_ON)
+        listener(off, f"{REMOTE_IN} || {DPMS_OFF}", DPMS_ON)
     if susp:
-        listener(susp, "systemctl suspend || loginctl suspend")
+        listener(susp, f"{REMOTE_IN} || systemctl suspend || loginctl suspend")
     return "\n".join(out) + "\n"
 
 def hypr_lua(s, c):
