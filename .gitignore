@@ -19,3 +19,4 @@ venv/
 # Nix (nix-build)
 result
 result-*
+respaldo-hyprfrijol-*.tar.gz

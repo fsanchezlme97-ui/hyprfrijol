@@ -5,10 +5,14 @@ tus ajustes) y lo vuelve a dejar igual en otro equipo, o en este tras reinstalar
   hf-perfil guardar [archivo]            ~/.config/hyprfrijol/perfil.json por defecto (solo tuyo: 600). hf-update lo
                                          guarda solo antes de cada actualización.
   hf-perfil ver [archivo]                qué hay en el perfil y qué le falta a este equipo
-  hf-perfil aplicar [archivo] [--dry-run] [--acceso-remoto]   lo instala y activa todo (pide la contraseña de
+  hf-perfil aplicar [archivo] [--dry-run] [--yes] [--acceso-remoto]   lo instala y activa todo (pide la contraseña de
                                          administrador; mejor en una terminal). --dry-run solo enseña las órdenes.
                                          El acceso remoto (SSH, Tailscale, RustDesk) se pregunta antes de abrirlo; sin
                                          terminal solo se activa con --acceso-remoto.
+  hf-perfil respaldo [archivo.tar.gz]    todo en un archivo para reinstalar y quedar igual: el perfil, tus datos (notas,
+                                         tareas, calendario, conversaciones del asistente, avisos, firmas, apps por
+                                         defecto…), tus fondos y el idioma, teclado y hora del sistema. Sin contraseñas
+                                         ni claves. ./install.sh --perfil=ARCHIVO.tar.gz (o hf-perfil aplicar) lo repone.
   hf-perfil publicar                     la versión SIN datos personales en perfil/perfil.json del repo, para que viaje
                                          con el proyecto: paquetes, apps, servicios, modelos y ajustes de aspecto (sin
                                          tu foto, el nombre del equipo, el tiempo de tu ciudad, rutas ni la IA personal).
@@ -16,10 +20,10 @@ tus ajustes) y lo vuelve a dejar igual en otro equipo, o en este tras reinstalar
 
 En el perfil NO van claves ni contraseñas (las de la IA y RDP siguen en el llavero o en sus archivos): tras aplicarlo,
 vuelve a ponerlas en Ajustes (IA, RDP, RustDesk) y entra en Tailscale con el enlace que da «tailscale up».
-Tampoco van tus fondos (solo la ruta de la carpeta): cópialos aparte. El repo de GitHub es público: el perfil
+Tampoco van tus fondos ni tus datos (solo en el respaldo). El repo de GitHub es público: el perfil
 guárdalo tú (un USB, tu nube), nunca en el repo.
 """
-import base64, json, os, pathlib, re, shlex, shutil, subprocess, sys, time
+import base64, io, json, os, pathlib, re, shlex, shutil, subprocess, sys, tarfile, time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 HOME = pathlib.Path.home()
@@ -28,13 +32,30 @@ DEFAULT = CFG / "perfil.json"
 SCRIPTS = ROOT / "scripts"
 FILES = ["settings.json", "local.lua", "palettes-user.json", "omarchy-plugins.json"]   # de ~/.config/hyprfrijol
 SERVICES = ["sshd", "ssh", "ufw", "firewalld", "tailscaled", "rustdesk", "cups.socket", "ollama", "bluetooth",
-            "libvirtd", "greetd", "power-profiles-daemon"]
+            "libvirtd", "greetd", "power-profiles-daemon", "avahi-daemon", "zerotier-one", "cockpit.socket"]
+USER_SERVICES = ["ydotool"]
+# Grupos que dan acceso a hardware (teclas de Bongo, impresoras, brillo i2c…). Nunca wheel (eso lo decide quien
+# instala) ni nopasswdlogin (entrar sin contraseña)
+GROUPS = ["video", "audio", "input", "lp", "storage", "i2c", "rfkill", "uucp", "scanner", "libvirt", "kvm", "docker",
+          "realtime", "gamemode"]
+# Lo tuyo que no es un ajuste, relativo a tu carpeta personal: va en el respaldo (hf-perfil respaldo), no en el perfil.
+# Sin claves: ni secrets/, ni la contraseña de RDP, ni el historial del portapapeles (puede tener contraseñas copiadas)
+DATA = [".local/share/hyprfrijol/" + n for n in ("tasks.json", "events.json", "clipboard-pins.json", "clipboard-pins",
+                                                  "ai", "ai-recetas.json", "firmas", "plugins")] \
+     + [".local/state/hyprfrijol/" + n for n in ("notas.txt", "notify-history.json", "notify-apps.json", "snap-groups.json",
+                                                  "ws-modes.json", "float-geometry.json", "wallpaper.json", "wallpaper-path",
+                                                  "ai-activity.jsonl", "hf-update-history")] \
+     + [".config/mimeapps.list", ".config/autostart", ".config/hypr-rdp/config.toml"]
+SECRET_KEYS = re.compile(r"(ApiKey|Token|Secret|Password|Passwd)$")      # printerApiKey…; powerKey es el botón
+LOCALE_RX = re.compile(r"(C|POSIX|[a-z]{2,3}(_[A-Z]{2})?)(\.[A-Za-z0-9-]+)?(@[a-z]+)?")
+WORD_RX = re.compile(r"[A-Za-z0-9_.,+-]{1,64}")                         # distribución de teclado, variante…
 SKIP_LEVELS = {"base", "required"}           # esos los pone siempre install.sh
 PUBLIC = ROOT / "perfil" / "perfil.json"     # el que viaja en el repo (público): sin datos personales
 # Ajustes que no salen al repo: tuyos (IA, ciudad), de este equipo (pantallas, escritorio) o del acceso remoto
 PRIVATE_KEYS = re.compile(r"^(ai(Name|Persona|Endpoint|KeyEnv|McpServers)|weather(City|Lat|Lon)|monitors|primaryMonitor"
                           r"|deskOrder|greeterWallpaper|privateApps|barCustom|barActions|aiHandoffCmd|(rdp|vnc|remote|vpn|tailscale|unsplash|wallhaven)[A-Z].*"
-                          r"|rdpServer)$|(Path|Dir|Folder|Url|User|Email)$")
+                          r"|rdpServer)$|(Path|Dir|Folder|Url|User|Email)$"
+                          r"|(ApiKey|Token|Secret|Password|Passwd)$")
 
 
 def out(cmd, timeout=60):
@@ -51,8 +72,30 @@ def jout(cmd, default=None, timeout=60):
         return default
 
 
-def enabled(unit):
-    return out(["systemctl", "is-enabled", unit]).strip() == "enabled"
+def enabled(unit, user=False):
+    return out(["systemctl", *(["--user"] if user else []), "is-enabled", unit]).strip() == "enabled"
+
+
+def system_snapshot():
+    """Idioma, teclado y hora del sistema (no el nombre del equipo: el de la instalación nueva se queda)."""
+    loc = {}
+    try:
+        for l in pathlib.Path("/etc/locale.conf").read_text().splitlines():
+            k, _, v = l.partition("=")
+            if re.fullmatch(r"LANG|LC_[A-Z]+", k.strip()) and v.strip():
+                loc[k.strip()] = v.strip().strip('"')
+    except OSError:
+        pass
+    kb = {}
+    for l in out(["localectl", "status"]).splitlines():
+        k, _, v = l.strip().partition(":")
+        kb[k.strip()] = v.strip()
+    tz = out(["timedatectl", "show", "-p", "Timezone", "--value"]).strip()
+    if not tz and os.path.islink("/etc/localtime"):
+        tz = os.readlink("/etc/localtime").split("zoneinfo/")[-1]
+    ntp = out(["timedatectl", "show", "-p", "NTP", "--value"]).strip()
+    return {"locale": loc, "keymap": kb.get("VC Keymap", ""), "x11Layout": kb.get("X11 Layout", ""),
+            "x11Variant": kb.get("X11 Variant", ""), "timezone": tz, "ntp": None if ntp == "" else ntp == "yes"}
 
 
 def snapshot():
@@ -71,6 +114,13 @@ def snapshot():
         p = CFG / n
         if p.is_file():
             files[n] = p.read_text()
+    try:   # sin claves (printerApiKey…): tampoco en tu perfil, se vuelven a poner a mano
+        st = json.loads(files.get("settings.json") or "{}")
+        if any(SECRET_KEYS.search(k) for k in st):
+            files["settings.json"] = json.dumps({k: v for k, v in st.items() if not SECRET_KEYS.search(k)},
+                                                ensure_ascii=False, indent=2) + "\n"
+    except ValueError:
+        pass
     face = HOME / ".face"
     greeter = "hyprland-greeter" in (pathlib.Path("/etc/greetd/config.toml").read_text(errors="ignore")
                                      if pathlib.Path("/etc/greetd/config.toml").is_file() else "")
@@ -80,6 +130,9 @@ def snapshot():
         "deps": ids,
         "apps": apps,
         "services": [u for u in SERVICES if enabled(u)],
+        "userServices": [u for u in USER_SERVICES if enabled(u, user=True)],
+        "groups": sorted(set(GROUPS) & set(out(["id", "-nG"]).split())),
+        "system": system_snapshot(),
         "remote": {"acceso": bool(acc.get("ssh")) and bool(acc.get("firewall")), "lan": bool(acc.get("lan")),
                    "rustdesk": bool(rd.get("service")), "rustdeskPortal": bool(rd.get("package"))},
         "voice": {"helpert": bool(ai.get("voiceLocal", ai.get("piper", (HOME / ".local/share/hyprfrijol/tts/piper-venv").is_dir())))},
@@ -118,7 +171,7 @@ def public(d):
     except ValueError:
         st = {}
     keep = {k: v for k, v in st.items() if not PRIVATE_KEYS.search(k) and not personal(v)}
-    out = {k: v for k, v in d.items() if k not in ("host", "face", "files", "wallpapers")}
+    out = {k: v for k, v in d.items() if k not in ("host", "face", "files", "wallpapers", "system")}   # la zona horaria dice dónde vives
     return dict(out, settings=keep)
 
 
@@ -176,17 +229,24 @@ def remote_ok(flags):
     return a.strip().lower() in ("s", "si", "sí", "y", "yes")
 
 
-def plan(p):
+def plan(p, yes=False):
     """Las órdenes que dejan este equipo como el perfil (cada una hace solo lo que falta)."""
     sh = lambda *a: [str(x) for x in a]
-    steps = []
+    steps = system_steps(p.get("system") or {})
     if p.get("deps"):
         steps.append(("Paquetes", sh(SCRIPTS / "hf-deps", "install", *p["deps"], "--yes")))
     if p.get("apps"):
-        steps.append(("Apps del centro de aplicaciones", sh(SCRIPTS / "hf-apps", "install", *p["apps"])))
+        steps.append(("Apps del centro de aplicaciones", sh(SCRIPTS / "hf-apps", "install", *p["apps"], *(["--yes"] if yes else []))))
     for u in p.get("services", []):
         if u not in ("sshd", "ssh", "ufw", "firewalld", "tailscaled", "rustdesk", "greetd"):   # esos, con su paso
             steps.append((f"Servicio {u}", sh("sudo", "systemctl", "enable", "--now", u)))
+    for u in p.get("userServices", []):
+        if u in USER_SERVICES and not enabled(u, user=True):
+            steps.append((f"Servicio de usuario {u}", sh("systemctl", "--user", "enable", "--now", u)))
+    have = set(out(["id", "-nG"]).split())
+    grp = [g for g in p.get("groups", []) if g in GROUPS and g not in have and out(["getent", "group", g]).strip()]
+    if grp:
+        steps.append(("Grupos (" + ", ".join(grp) + ")", sh("sudo", "usermod", "-aG", ",".join(grp), os.environ.get("USER") or HOME.name)))
     r = p.get("remote", {})
     if r.get("acceso"):
         steps.append(("Acceso remoto (SSH, cortafuegos, Tailscale)", sh(SCRIPTS / "hf-remote", "acceso", "on", *([] if r.get("lan") else ["--sin-lan"]))))
@@ -204,9 +264,45 @@ def plan(p):
     for m in p.get("ollama", []):
         steps.append((f"Modelo local {m}", sh("ollama", "pull", m)))
     if p.get("greeter"):
-        steps.append(("Login de HyprFrijol", sh(ROOT / "install.sh", "--greeter")))
+        steps.append(("Login de HyprFrijol", sh(ROOT / "install.sh", "--greeter", *(["--yes"] if yes else []))))
         steps.append(("Tu tema en el login", sh(SCRIPTS / "hf-greeter-sync")))
     steps.append(("Aplicar los ajustes", sh(SCRIPTS / "hf-apply")))
+    return steps
+
+
+# Idioma: activa cada uno en /etc/locale.gen (Arch, Debian, Void…) y lo genera; luego localectl. Los valores llegan
+# como argumentos ya validados (LOCALE_RX), nunca dentro del guion
+LOCALE_SH = r"""set -e
+if [ -f /etc/locale.gen ] && command -v locale-gen >/dev/null; then
+  for kv in "$@"; do v=${kv#*=}; case $v in *.UTF-8) c=$(printf '%s' "$v" | sed 's/[.]/[.]/g'); sed -i "s/^# *\($c UTF-8\)/\1/" /etc/locale.gen;; esac; done
+  locale-gen
+fi
+localectl set-locale "$@"
+"""
+
+
+def system_steps(sy):
+    """Idioma, teclado y hora como en el perfil: solo lo que cambia y solo valores con forma válida."""
+    sh = lambda *a: [str(x) for x in a]
+    steps, cur = [], system_snapshot()
+    if not shutil.which("localectl"):          # sin systemd (runit, OpenRC): se dice, no se inventa
+        if sy:
+            print("  Idioma, teclado y hora: sin localectl en este sistema; ponlos a mano.")
+        return steps
+    loc = {k: v for k, v in (sy.get("locale") or {}).items() if re.fullmatch(r"LANG|LC_[A-Z]+", k) and LOCALE_RX.fullmatch(v)}
+    if loc and loc != cur["locale"]:
+        steps.append(("Idioma del sistema", sh("sudo", "sh", "-c", LOCALE_SH, "sh", *[f"{k}={v}" for k, v in sorted(loc.items())])))
+    lay, var, vc = sy.get("x11Layout") or "", sy.get("x11Variant") or "", sy.get("keymap") or ""
+    if lay and WORD_RX.fullmatch(lay) and (not var or WORD_RX.fullmatch(var)) and (lay, var) != (cur["x11Layout"], cur["x11Variant"]):
+        steps.append(("Teclado", sh("sudo", "localectl", "set-x11-keymap", lay, "", var)))
+    if vc and WORD_RX.fullmatch(vc) and vc != cur["keymap"]:
+        steps.append(("Teclado de la consola", sh("sudo", "localectl", "set-keymap", "--no-convert", vc)))
+    tz = sy.get("timezone") or ""
+    if (tz and tz != cur["timezone"] and re.fullmatch(r"[A-Za-z0-9_+/-]{1,64}", tz) and ".." not in tz
+            and pathlib.Path("/usr/share/zoneinfo", tz).is_file()):
+        steps.append(("Zona horaria", sh("sudo", "timedatectl", "set-timezone", tz)))
+    if isinstance(sy.get("ntp"), bool) and sy["ntp"] != cur["ntp"]:
+        steps.append(("Hora por internet", sh("sudo", "timedatectl", "set-ntp", "true" if sy["ntp"] else "false")))
     return steps
 
 
@@ -230,6 +326,113 @@ def restore_files(p, dry):
             (HOME / ".face").write_bytes(base64.b64decode(p["face"]))
 
 
+def pictures():
+    pics = out(["xdg-user-dir", "PICTURES"]).strip()
+    return pathlib.Path(pics if pics and pics != str(HOME) else HOME / "Pictures")   # como hf-wallpaper
+
+
+def respaldo(path):
+    """Un archivo con todo: el perfil, tus datos (DATA) y tus fondos. Solo archivos y carpetas, nunca enlaces."""
+    d = snapshot()
+    d["home"] = str(HOME)
+    wall = pathlib.Path(d["wallpapers"])
+    keep = lambda t: t if (t.isfile() or t.isdir()) else None          # fuera enlaces, dispositivos…
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)     # tus datos: solo tuyos desde el principio
+    n = 0
+    with os.fdopen(fd, "wb") as f, tarfile.open(fileobj=f, mode="w:gz", compresslevel=1) as tar:  # fotos y vídeos ya van comprimidos
+        raw = json.dumps(d, ensure_ascii=False, indent=1, sort_keys=True).encode()
+        info = tarfile.TarInfo("perfil.json"); info.size = len(raw); info.mode = 0o600; info.mtime = int(time.time())
+        tar.addfile(info, io.BytesIO(raw))
+        for rel in DATA:
+            src = HOME / rel
+            if src.exists() and not src.is_symlink():
+                tar.add(src, arcname="home/" + rel, filter=keep); n += 1
+        if wall.is_dir() and not wall.is_symlink():
+            tar.add(wall, arcname="wallpapers", filter=keep)
+    os.replace(tmp, path)
+    return d, n, sum(1 for _ in wall.rglob("*") if _.is_file()) if wall.is_dir() else 0
+
+
+def relocate(text, p, new_wall):
+    """Las rutas del equipo de origen (fondos, carpeta personal) pasan a las de este."""
+    old_wall, old_home = p.get("wallpapers") or "", p.get("home") or ""
+    if old_wall and old_wall != str(new_wall):
+        text = text.replace(old_wall, str(new_wall))
+    if old_home and old_home != str(HOME):
+        text = text.replace(old_home + "/", str(HOME) + "/")
+    return text
+
+
+def restore_data(tar, p, dry):
+    """Del respaldo, solo lo de DATA (bajo tu carpeta personal) y los fondos; cualquier otra cosa se ignora."""
+    new_wall = pictures() / (pathlib.PurePosixPath(p.get("wallpapers") or "Wallpapers").name or "Wallpapers")
+    allowed = ["home/" + r for r in DATA]
+    stamp, files, walls = time.strftime("%Y%m%d-%H%M"), 0, 0
+    for m in tar.getmembers():
+        parts = pathlib.PurePosixPath(m.name).parts
+        if m.name == "perfil.json":
+            continue
+        if m.name.startswith("/") or ".." in parts or not (m.isfile() or m.isdir()):
+            print(f"  ignorado (no es un archivo normal o se sale de su sitio): {m.name}")
+            continue
+        if parts[0] == "home" and any(m.name == a or m.name.startswith(a + "/") for a in allowed):
+            dst = HOME.joinpath(*parts[1:])
+        elif parts[0] == "wallpapers":
+            dst = new_wall.joinpath(*parts[1:])
+        else:
+            print(f"  ignorado (no es de los datos que guarda el respaldo): {m.name}")
+            continue
+        if dry:
+            files += parts[0] == "home" and m.isfile(); walls += parts[0] == "wallpapers" and m.isfile()
+            continue
+        if m.isdir():
+            dst.mkdir(parents=True, exist_ok=True)
+            continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        src = tar.extractfile(m)
+        if parts[0] == "home" and m.size < 5_000_000:      # texto: las rutas del otro equipo pasan a las de este
+            data = src.read()
+            try:
+                data = relocate(data.decode(), p, new_wall).encode()
+            except UnicodeDecodeError:
+                pass
+            if dst.is_file() and dst.read_bytes() == data:
+                continue
+            if dst.is_file():
+                shutil.copy2(dst, dst.with_name(f"{dst.name}.antes-perfil-{stamp}"))
+            dst.write_bytes(data)
+            files += 1
+        else:
+            if dst.is_file() and dst.stat().st_size == m.size:
+                continue
+            with open(dst, "wb") as f:
+                shutil.copyfileobj(src, f)
+            walls += parts[0] == "wallpapers"; files += parts[0] == "home"
+        os.chmod(dst, m.mode & 0o755 or 0o644)
+    st = CFG / "settings.json"
+    if not dry and st.is_file():
+        t = st.read_text(); r = relocate(t, p, new_wall)
+        if r != t:
+            st.write_text(r)
+    print(f"  {'[dry-run] ' if dry else ''}{files} archivos de tus datos y {walls} fondos (en {new_wall})")
+
+
+def open_backup(path):
+    """(perfil, tar) de un respaldo .tar.gz; (perfil, None) de un perfil .json."""
+    if not tarfile.is_tarfile(path):
+        return load(path), None
+    tar = tarfile.open(path, "r:gz")
+    try:
+        d = json.loads(tar.extractfile("perfil.json").read())
+    except (KeyError, AttributeError, ValueError) as e:
+        sys.exit(f"{path} no es un respaldo de hf-perfil ({e})")
+    if not isinstance(d, dict) or d.get("version") != 1:
+        sys.exit(f"{path} no es un respaldo de hf-perfil")
+    return d, tar
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     flags = {a for a in sys.argv[1:] if a.startswith("--")}
@@ -243,6 +446,13 @@ def main():
             print(f"Perfil guardado en {path}: {len(d['deps'])} paquetes opcionales, {len(d['services'])} servicios, "
                   f"{len(d['files'])} archivos de ajustes. Guárdalo también fuera de este equipo.")
         return 0
+    if cmd == "respaldo":
+        dst = pathlib.Path(args[1]).expanduser() if len(args) > 1 else HOME / f"respaldo-hyprfrijol-{time.strftime('%Y%m%d-%H%M')}.tar.gz"
+        d, n, w = respaldo(dst)
+        print(f"Respaldo en {dst} ({dst.stat().st_size // 1048576} MB): perfil, {n} elementos de tus datos y {w} fondos. "
+              "Sin contraseñas ni claves. Cópialo fuera de este equipo (USB, tu nube) y, tras reinstalar:\n"
+              f"  ./install.sh --perfil={dst.resolve()}")
+        return 0
     if cmd == "publicar":
         d = public(snapshot())
         write(PUBLIC, d)
@@ -252,7 +462,7 @@ def main():
                   "(sin datos personales). Súbelo con el repo.")
         return 0
     if cmd == "ver":
-        p = load(path)
+        p, _ = open_backup(path)
         here = snapshot()
         print(f"Perfil de {p.get('host')} ({p.get('saved')}, hyprfrijol {p.get('hyprfrijol')})")
         miss = [i for i in p.get("deps", []) if i not in here["deps"]]
@@ -268,13 +478,16 @@ def main():
               "· Fondos en", p.get("wallpapers") or "(no van en el perfil público)")
         return 0
     if cmd == "aplicar":
-        p = load(path)
+        p, tar = open_backup(path)
         dry = "--dry-run" in flags
         print("Tus ajustes:")
         restore_files(p, dry)
         merge_settings(p, dry)
+        if tar:
+            print("Tus datos y tus fondos:")
+            restore_data(tar, p, dry)
         failed = []
-        steps = plan(p)
+        steps = plan(p, yes="--yes" in flags)
         if any(l in REMOTE_STEPS for l, _ in steps) and not dry and not remote_ok(flags):
             steps = [(l, c) for l, c in steps if l not in REMOTE_STEPS]
         for label, c in steps:

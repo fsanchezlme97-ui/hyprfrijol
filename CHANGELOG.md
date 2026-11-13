@@ -3,6 +3,28 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.80] — 2026-11-13
+
+### Añadido
+- `hf-perfil respaldo`: un solo archivo para reinstalar y quedar igual. Lleva el perfil (paquetes, apps, servicios,
+  acceso remoto, voz, dictado, modelos, login y ajustes) y además tus datos (notas, tareas, calendario local,
+  conversaciones del asistente, historial de avisos, firmas, fijados del portapapeles, apps por defecto y de inicio,
+  la configuración del escritorio remoto sin su contraseña), tus fondos, los grupos de hardware, el servicio
+  `ydotool` y el idioma, teclado y hora del sistema (no el nombre del equipo). `./install.sh --perfil=RESPALDO.tar.gz`
+  (también por `bootstrap.sh`, en una distro con escritorio o sin él) lo repone; las rutas del equipo de origen pasan
+  a las del nuevo (otro usuario u otro idioma de carpetas). Sin contraseñas ni claves, ni el historial del
+  portapapeles. Al restaurar solo se aceptan archivos normales de la lista de datos, nunca enlaces ni rutas que se
+  salgan, y lo del sistema solo con valores de forma válida.
+- El cursor Bibata Modern Classic entra en el instalador (AUR en Arch, Debian/Ubuntu); antes solo estaba si otro
+  paquete lo traía.
+- `install.sh --acceso-remoto` y `--yes` llegan a la restauración del perfil (sin `--yes`, el gestor de paquetes
+  preguntaba aunque la instalación fuera desatendida).
+
+### Corregido
+- `./install.sh --perfil` (sin archivo) fallaba al empezar (usaba la carpeta del repo antes de calcularla). Un perfil
+  que no existe se detecta antes de instalar nada, no al final.
+- Las claves de los ajustes (`printerApiKey`) podían ir al perfil público del repo y al tuyo; ahora no van en ninguno.
+
 ## [0.9.79] — 2026-11-13
 
 ### Corregido

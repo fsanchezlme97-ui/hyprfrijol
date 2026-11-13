@@ -114,7 +114,16 @@
   ]
  },
  "greeter": true,
- "hyprfrijol": "v0.9.78",
+ "groups": [
+  "audio",
+  "i2c",
+  "input",
+  "lp",
+  "rfkill",
+  "storage",
+  "video"
+ ],
+ "hyprfrijol": "v0.9.79",
  "ollama": [
   "gemma4:e4b"
  ],
@@ -124,7 +133,7 @@
   "rustdesk": true,
   "rustdeskPortal": true
  },
- "saved": "2026-11-13 13:30",
+ "saved": "2026-11-13 14:02",
  "services": [
   "sshd",
   "ufw",
@@ -133,7 +142,8 @@
   "cups.socket",
   "ollama",
   "bluetooth",
-  "greetd"
+  "greetd",
+  "avahi-daemon"
  ],
  "settings": {
   "accent": "#FFFFFF",
@@ -321,6 +331,9 @@
   "wsBarNames": false,
   "wsNumerals": "japonesa"
  },
+ "userServices": [
+  "ydotool"
+ ],
  "version": 1,
  "voice": {
   "helpert": true

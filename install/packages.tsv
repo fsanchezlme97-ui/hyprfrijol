@@ -92,6 +92,7 @@ fonts-noto	recommended	noto-fonts	google-noto-sans-fonts	google-noto-sans-fonts	
 fonts-emoji	recommended	noto-fonts-emoji	google-noto-color-emoji-fonts	google-noto-coloremoji-fonts	fonts-noto-color-emoji	noto-fonts-emoji	emojis (Spotlight «;»)	apariencia	
 fonts-mono	recommended	ttf-jetbrains-mono	jetbrains-mono-fonts	jetbrains-mono-fonts	fonts-jetbrains-mono	-	monoespaciada (Ajustes, terminal)	apariencia	
 icons	recommended	papirus-icon-theme	papirus-icon-theme	papirus-icon-theme	papirus-icon-theme	papirus-icon-theme	iconos de apps (con carpetas del acento)	apariencia	
+cursor	recommended	aur:bibata-cursor-theme-bin	-	-	bibata-cursor-theme	-	cursor Bibata Modern Classic (el del escritorio; sin él, el del sistema)	apariencia	
 gtk-settings	recommended	gsettings-desktop-schemas,adw-gtk-theme	gsettings-desktop-schemas,adw-gtk3-theme	gsettings-desktop-schemas	gsettings-desktop-schemas	gsettings-desktop-schemas	tema claro/oscuro de las apps GTK	apariencia	
 qt6ct	recommended	qt6ct	qt6ct	qt6ct	qt6ct	qt6ct	tema y colores de las apps Qt	apariencia	qt6ct
 # — Ajustes › Fondos de pantalla

@@ -28,7 +28,8 @@ if miss:
 # del sistema base, gestores de paquetes y apps alternativas que solo se usan si ya están
 SISTEMA = {"sudo", "doas", "logger", "dbus-send", "fc-list", "systemd-inhibit", "pacman", "paru", "yay", "dnf", "rpm",
            "dpkg", "dpkg-query", "uv", "nvidia-smi", "paplay", "pandoc", "spotify", "claude", "claude-desktop",
-           "claude-desktop-bin", "forticlient", "globalprotect", "kdeconnect-cli"}
+           "claude-desktop-bin", "forticlient", "globalprotect", "kdeconnect-cli",
+           "localectl", "locale-gen"}   # systemd y glibc; hf-perfil comprueba que estén
 known = set()
 for line in (root / "install/packages.tsv").read_text().splitlines():
     c = line.split("\t")

@@ -160,12 +160,21 @@ Además de los paquetes, el instalador deja lista una sesión que arranca sin es
   O instala el login visual: `./install.sh --greeter`.
 - **Probarlo sin cerrar sesión:** `hf-session --nested` lo abre en una ventana dentro de tu sesión actual (ciérralo con Super+Shift+Esc).
 
-- **Dejarlo como tu otro equipo:** `hf-perfil guardar` guarda en `~/.config/hyprfrijol/perfil.json` (solo tuyo) lo que
-  tienes: paquetes y apps, servicios, acceso remoto (SSH, cortafuegos, Tailscale, RustDesk), voz de Helpert, modelos de
-  dictado y de Ollama, el login y tus ajustes. `hf-update` lo guarda solo antes de cada actualización. En el equipo
-  nuevo: `./install.sh --perfil=perfil.json` (o `hf-perfil aplicar perfil.json`; `hf-perfil ver` dice qué falta). No
-  lleva claves ni contraseñas ni tus fondos: guárdalo tú (USB, tu nube), nunca en el repo. El proyecto trae además
-  [`perfil/perfil.json`](perfil/README.md), el equipo de referencia sin datos personales: `./install.sh --perfil`.
+- **Reinstalar y quedar igual:** `hf-perfil respaldo` deja en tu carpeta personal un solo archivo
+  (`respaldo-hyprfrijol-FECHA.tar.gz`, solo tuyo) con todo lo que tienes: paquetes y apps, servicios, acceso remoto,
+  voz y dictado, modelos de Ollama, el login, tus ajustes, tus datos (notas, tareas, calendario local, conversaciones
+  del asistente, historial de avisos, firmas, apps por defecto y de inicio), tus fondos, los grupos y el idioma,
+  teclado y hora del sistema. Cópialo fuera del equipo (USB, tu nube; nunca al repo). En la distro recién instalada,
+  con escritorio o sin él:
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/fsanchezlme97-ui/hyprfrijol/main/install/bootstrap.sh | bash -s -- --perfil=$HOME/respaldo-hyprfrijol-FECHA.tar.gz
+  ```
+  (o, con el repo ya clonado, `./install.sh --perfil=…`; `hf-perfil ver ARCHIVO` dice qué falta). Deja la sesión
+  «Hyprland (HyprFrijol)» con tu login, tal cual. No lleva contraseñas ni claves (IA, RDP, RustDesk, Unsplash,
+  Wallhaven, impresora): al terminar se dice cuáles volver a poner. Tampoco el nombre del equipo ni las apps que
+  instalaste fuera de HyprFrijol. `hf-perfil guardar` es la versión ligera (sin datos ni fondos) que `hf-update`
+  guarda solo antes de cada actualización. El proyecto trae además [`perfil/perfil.json`](perfil/README.md), el
+  equipo de referencia sin datos personales: `./install.sh --perfil`.
 
 Si mueves la carpeta del repo, ejecuta desde la nueva ubicación `./install.sh --no-deps --no-system --no-session` para rehacer los enlaces de `~/.local/bin`.
 

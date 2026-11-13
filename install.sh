@@ -17,7 +17,10 @@
 #   ./install.sh --migrate        pasa una instalación de hypr-liquid (nombre anterior) a hyprfrijol
 #   ./install.sh --perfil=ARCHIVO al terminar, deja el equipo como ese perfil (scripts/hf-perfil: paquetes, apps,
 #                                 servicios, acceso remoto, voz, dictado, modelos locales, login y tus ajustes)
+#   ./install.sh --perfil=RESPALDO.tar.gz   igual, desde el respaldo de hf-perfil respaldo: además tus datos, tus fondos
+#                                 y el idioma, teclado y hora del sistema (todo menos contraseñas y claves)
 #   ./install.sh --perfil         lo mismo con el perfil público del repo (perfil/perfil.json, sin datos personales)
+#   ./install.sh --acceso-remoto  con --perfil: activa el acceso remoto del perfil sin preguntar (si no, se pregunta)
 #   ./install.sh --apps=serie,productividad   apps por nivel (install/apps.json, scripts/hf-apps): serie (por defecto),
 #                                 productividad, destacada, creativa, experimental, all; --apps=none o --no-apps: ninguna
 #
@@ -29,7 +32,7 @@
 # ~/.config/matugen: hyprfrijol se ejecuta desde esta carpeta como una sesión aparte.
 set -euo pipefail
 
-DRY=0 YES=0 FULL=0 DEPS=1 SYSTEM=1 SESSION=1 UNINSTALL=0 PURGE=0 GREETER="" MIGRATE=0 PERFIL=""
+DRY=0 YES=0 FULL=0 DEPS=1 SYSTEM=1 SESSION=1 UNINSTALL=0 PURGE=0 GREETER="" MIGRATE=0 PERFIL="" REMOTO=0
 APPS=""   # niveles de install/apps.json (--apps=…); vacío = preguntar (o «serie» con --yes/--dry-run)
 for a in "$@"; do
   case "$a" in
@@ -48,7 +51,8 @@ for a in "$@"; do
     --no-apps)      APPS=none ;;
     --migrate)      MIGRATE=1 ;;
     --perfil=*)     PERFIL="${a#--perfil=}" ;;
-    --perfil)       PERFIL="$HERE/perfil/perfil.json" ;;
+    --perfil)       PERFIL=publico ;;   # el del repo: HERE aún no está definido aquí
+    --acceso-remoto) REMOTO=1 ;;
     -h|--help)      sed -n '2,/^set -euo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
     *) echo "Opción desconocida: $a (usa --help)" >&2; exit 1 ;;
   esac
@@ -58,6 +62,12 @@ done
 # La carpeta del repo, esté donde esté clonado (~/hyprfrijol, ~/.local/src/hyprfrijol…), aunque se llame por un enlace
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 PKG_TABLE="$HERE/install/packages.tsv"
+[ "$PERFIL" = publico ] && PERFIL="$HERE/perfil/perfil.json"
+# Antes de instalar nada: un perfil que no existe se ve ya, no al final de la instalación
+if [ -n "$PERFIL" ]; then
+  PERFIL="$(readlink -f "$PERFIL" 2>/dev/null || echo "$PERFIL")"
+  [ -f "$PERFIL" ] || { echo "No existe el perfil o respaldo $PERFIL" >&2; exit 1; }
+fi
 BIN="$HOME/.local/bin"
 USERCFG="$HOME/.config/hyprfrijol"
 STATE="$HOME/.local/state/hyprfrijol"
@@ -925,6 +935,6 @@ summary
 if [ -n "$PERFIL" ]; then
   [ -f "$PERFIL" ] || { warn "No existe el perfil $PERFIL"; exit 1; }
   hdr "Tu perfil ($PERFIL)"
-  pf=(aplicar "$PERFIL"); [ "$DRY" = 1 ] && pf+=(--dry-run)
+  pf=(aplicar "$PERFIL"); [ "$DRY" = 1 ] && pf+=(--dry-run); [ "$YES" = 1 ] && pf+=(--yes); [ "$REMOTO" = 1 ] && pf+=(--acceso-remoto)
   HF_ROOT="$HERE" "$HERE/scripts/hf-perfil" "${pf[@]}"
 fi

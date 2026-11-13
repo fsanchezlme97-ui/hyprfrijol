@@ -37,6 +37,7 @@ pkgbase = hyprfrijol-git
 	optdepends = noto-fonts-emoji: emojis (Spotlight «;»)
 	optdepends = ttf-jetbrains-mono: monoespaciada (Ajustes, terminal)
 	optdepends = papirus-icon-theme: iconos de apps (con carpetas del acento)
+	optdepends = bibata-cursor-theme-bin: cursor Bibata Modern Classic (el del escritorio; sin él, el del sistema)
 	optdepends = gsettings-desktop-schemas: tema claro/oscuro de las apps GTK
 	optdepends = adw-gtk-theme: tema claro/oscuro de las apps GTK
 	optdepends = qt6ct: tema y colores de las apps Qt
