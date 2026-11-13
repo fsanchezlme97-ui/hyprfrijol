@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.82] — 2026-11-13
+
+### Corregido
+- Al desbloquear, la pantalla de bloqueo no avisaba de que se había soltado: la marca de «bloqueado» se quedaba puesta
+  (el siguiente arranque del shell volvía a bloquear la pantalla) y el shell seguía creyéndose bloqueado, con el
+  clima, los chips propios, los contadores de uso y el fondo en vídeo parados hasta reiniciarlo. Ahora el desbloqueo
+  lo refleja él mismo.
+
 ## [0.9.81] — 2026-11-13
 
 ### Añadido

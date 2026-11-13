@@ -87,7 +87,12 @@ Scope {
         state = "ok";
         unlockTimer.restart();
     }
-    Timer { id: unlockTimer; interval: Theme.still ? 0 : 260; onTriggered: { sessionLock.locked = false; root.password = ""; root.state = ""; root.message = ""; } }
+    Timer { id: unlockTimer; interval: Theme.still ? 0 : 260; onTriggered: {
+            sessionLock.locked = false;
+            // Al soltar el bloqueo WlSessionLock no avisa de lockedChanged (solo al tomarlo): se refleja aquí a mano
+            Shell.locked = false; lockMark.setText("");
+            root.password = ""; root.state = ""; root.message = "";
+        } }
 
     PamContext {
         id: pam

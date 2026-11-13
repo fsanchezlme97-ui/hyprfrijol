@@ -123,7 +123,7 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.9.80",
+ "hyprfrijol": "v0.9.81",
  "ollama": [
   "gemma4:e4b"
  ],
@@ -133,7 +133,7 @@
   "rustdesk": true,
   "rustdeskPortal": true
  },
- "saved": "2026-11-13 14:16",
+ "saved": "2026-11-13 14:23",
  "services": [
   "sshd",
   "ufw",
