@@ -432,6 +432,14 @@ Scope {
                             tooltip: win.maxed ? "Restaurar (F11)" : "Maximizar (F11)"
                             onClicked: win.toggleMax()
                         }
+                        IconBtn {
+                            Layout.alignment: Qt.AlignVCenter
+                            Layout.leftMargin: 4
+                            implicitWidth: 30; implicitHeight: 26
+                            icon: "x"; iconSize: 15; fg: Theme.tv
+                            tooltip: "Cerrar"
+                            onClicked: root.open = false
+                        }
                     }
                     Flickable {
                         id: flick

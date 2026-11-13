@@ -3,6 +3,11 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.83] — 2026-11-13
+
+### Añadido
+- Botón de cerrar en la cabecera de Ajustes, junto a maximizar.
+
 ## [0.9.82] — 2026-11-13
 
 ### Corregido
