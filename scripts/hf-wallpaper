@@ -397,7 +397,9 @@ case "${1:-next}" in
                [ "$ok" = 1 ] && break; sleep 0.2
              done
              echo "$PIDS" > "$MSTATE/motion$MK.pid"; started=$SECONDS
-             [ -e "$MSTATE/paused" ] && kill -STOP $PIDS 2>/dev/null
+             # Sin reproductor (ninguna pantalla le toca: la suya se desconectó) no hay nada que parar; con set -e, el
+             # kill sin pids cerraba el vigilante y, al volver la pantalla, el escritorio se quedaba sin fondo
+             [ -n "$PIDS" ] && [ -e "$MSTATE/paused" ] && kill -STOP $PIDS 2>/dev/null || true
              gone=0
              while sleep 3; do
                [ "$(cat "$MSTATE/motion$MK.pid" 2>/dev/null)" = "$PIDS" ] || { mlog "lo cerró hf-wallpaper"; exit 0; }   # otro fondo, sin movimiento

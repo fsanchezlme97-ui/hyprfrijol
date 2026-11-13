@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.85] — 2026-11-13
+
+### Corregido
+- El fondo en vídeo ya no desaparece tras apagarse la pantalla con el equipo bloqueado: si al desconectarse el monitor
+  no quedaba ninguna pantalla para el vídeo (las demás con fondo propio), el vigilante intentaba pausar un reproductor
+  que no existía, fallaba y se cerraba, y al volver la pantalla nadie relanzaba el vídeo (escritorio sin fondo).
+
 ## [0.9.84] — 2026-11-13
 
 ### Corregido
