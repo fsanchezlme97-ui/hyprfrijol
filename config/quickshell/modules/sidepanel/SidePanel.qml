@@ -101,6 +101,14 @@ PanelWindow {
     readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, toggleHistory: () => {}, showHistory: false, toggleLog: () => {}, showLog: false, handoffTo: null, handoff: () => {}, setWindow: () => {} })
 
     readonly property string aiLabel: String(Settings.get("aiName", "") ?? "").trim() || "IA"
+    // Bajo el nombre: quién responde y su respaldo («Gemini · respaldo Ollama»)
+    readonly property var provNames: ({ "claude-code": "Claude Code", claude: "Claude", gemini: "Gemini", ollama: "Ollama", openai: "OpenAI",
+                                        openrouter: "OpenRouter", lmstudio: "LM Studio", mistral: "Mistral", groq: "Groq", deepseek: "DeepSeek" })
+    function provName(k): string { k = String(k ?? ""); return provNames[k] ?? (k ? k.charAt(0).toUpperCase() + k.slice(1) : ""); }
+    readonly property string aiSub: {
+        const p = provName(Settings.get("aiProvider", "")), f = provName(Settings.get("aiFallbackProvider", ""));
+        return p + (f && f !== p ? " · respaldo " + f : "");
+    }
 
     // ---- márgenes como Overlay (respetan la barra)
     readonly property string barPos: Settings.get("barPos", "abajo")
@@ -211,11 +219,23 @@ PanelWindow {
                         Layout.leftMargin: 6
                         spacing: 6
                         Rectangle {
-                            implicitWidth: 16; implicitHeight: 16; radius: Theme.r(4)
-                            color: Theme.p
-                            Icon { anchors.centerIn: parent; name: "ai"; size: 12; stroke: 2; color: Theme.pText }
+                            implicitWidth: 26; implicitHeight: 26; radius: Theme.r(8)
+                            color: Theme.pc
+                            Icon { anchors.centerIn: parent; name: "ai"; size: 14; stroke: 2; color: Theme.pcText }
+                            // respondiendo: un punto que late
+                            Rectangle {
+                                visible: chat.busy ?? false
+                                anchors { right: parent.right; bottom: parent.bottom; margins: -2 }
+                                width: 9; height: 9; radius: 4.5; color: Theme.p; border.width: 2; border.color: Theme.glassPanel
+                                SequentialAnimation on opacity { running: (chat.busy ?? false) && !Theme.still; loops: Animation.Infinite
+                                    NumberAnimation { to: 0.35; duration: 600 } NumberAnimation { to: 1; duration: 600 } }
+                            }
                         }
-                        Txt { text: win.aiLabel; weight: Font.DemiBold }
+                        ColumnLayout {
+                            spacing: -1
+                            Txt { text: win.aiLabel; weight: Font.DemiBold; size: 13 }
+                            Txt { visible: win.aiSub !== ""; text: win.aiSub; size: 10.5; muted: true }
+                        }
                     }
                     IconBtn {
                         icon: "plus"; iconSize: 13; fg: Theme.tv

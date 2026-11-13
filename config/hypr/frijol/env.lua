@@ -29,6 +29,15 @@ end
 -- bloqueo: Hyprland enseña su pantalla de «Oops» por el bloqueo caído).
 -- shortcut: apaga el hardware aunque nouveau no sea la primera gráfica; afinar si el vídeo por CPU pesa.
 if exists("/sys/module/nouveau/initstate") then hl.env("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "none") end
+-- Apps (Mesa: GL, EGL y Vulkan) en la otra gráfica si una va con nouveau: sin esto eligen la primera (renderD128, aquí
+-- la GT 710) y RustDesk se caía varias veces al día (SIGABRT/SIGILL; el kernel: «nouveau … gr: TRAP … rustdesk»).
+if exists("/sys/module/nouveau/initstate") and not os.getenv("DRI_PRIME") then
+    local p = io.popen([[for r in /sys/class/drm/renderD*; do d=$(basename "$(readlink -f "$r/device/driver")"); ]]
+        .. [[[ "$d" != nouveau ] && basename "$(readlink -f "$r/device")" && break; done 2>/dev/null]])
+    local pci = p and p:read("*l") or nil
+    if p then p:close() end
+    if pci and pci:match("^%x+:%x+:%x+%.%x$") then hl.env("DRI_PRIME", "pci-" .. pci:gsub("[:.]", "_")) end
+end
 -- Cursor: Bibata si está instalado
 for _, dir in ipairs({ "/usr/share/icons/Bibata-Modern-Classic", (os.getenv("HOME") or "") .. "/.local/share/icons/Bibata-Modern-Classic" }) do
     if exists(dir .. "/index.theme") then hl.env("XCURSOR_THEME", "Bibata-Modern-Classic"); HF.cursor = "Bibata-Modern-Classic"; break end

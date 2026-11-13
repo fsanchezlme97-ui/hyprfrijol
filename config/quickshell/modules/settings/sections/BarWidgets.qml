@@ -27,13 +27,27 @@ ColumnLayout {
         ajustes: ["Ajustes", "gear", "la tuerca: abre esta ventana"]
     })
     function name(id: string): string {
+        if (id.startsWith("sep:")) return "Separador";
         if (id.startsWith("propio:")) return Settings.barCustomList.find(c => "propio:" + c.id === id)?.name || "Widget propio";
         return info[id]?.[0] ?? id;
     }
     function icon(id: string): string {
+        if (id.startsWith("sep:")) return "minus";
         if (id.startsWith("propio:")) return Settings.barCustomList.find(c => "propio:" + c.id === id)?.icon || "code";
         return info[id]?.[1] ?? "puzzle";
     }
+    // Separadores: se añaden al final de la isla del elegido (o de la derecha) y se quitan sin más
+    function addSep(): void {
+        const id = "sep:" + Date.now().toString(36);
+        moveTo(id, sel ? zoneOf(sel) : "derecha", "");
+        sel = id;
+    }
+    function removeSep(id: string): void {
+        const o = Settings.barOrder;
+        Settings.set("barOrder", { izquierda: o.izquierda.filter(x => x !== id), derecha: o.derecha.filter(x => x !== id) });
+        if (sel === id) sel = "";
+    }
+    readonly property bool movable: sel !== "" && (sel.startsWith("sep:") || Settings.barHas(sel))
     function setOn(id: string, v: bool): void {
         Settings.set("barModules", Settings.barModuleList.filter(m => m !== id).concat(v ? [id] : []));
     }
@@ -71,7 +85,7 @@ ColumnLayout {
         Txt {
             Layout.fillWidth: true
             text: "Arrastra un widget para cambiarlo de orden o de isla. Con el teclado: Tab hasta él, ← → para moverlo y ↑ ↓ para "
-                + "pasarlo a la otra isla."
+                + "pasarlo a la otra isla. Los separadores se añaden abajo y se quitan con Supr."
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }
         Item {
@@ -139,6 +153,7 @@ ColumnLayout {
                                         Keys.onPressed: e => {
                                             if (e.key === Qt.Key_Left || e.key === Qt.Key_Right) root.nudge(wid, e.key === Qt.Key_Left ? -1 : 1);
                                             else if (e.key === Qt.Key_Up || e.key === Qt.Key_Down) root.swapSide(wid);
+                                            else if ((e.key === Qt.Key_Delete || e.key === Qt.Key_Backspace) && wid.startsWith("sep:")) root.removeSep(wid);
                                             else return;
                                             e.accepted = true;
                                         }
@@ -221,10 +236,12 @@ ColumnLayout {
         RowLayout {
             spacing: 6
             Txt { text: root.sel ? root.name(root.sel) + ":" : "Elige un widget para moverlo con los botones"; muted: !root.sel; size: 11.5 }
-            Button { text: "‹ Antes"; h: 26; enabled: root.sel !== "" && Settings.barHas(root.sel); onClicked: root.nudge(root.sel, -1) }
-            Button { text: "Después ›"; h: 26; enabled: root.sel !== "" && Settings.barHas(root.sel); onClicked: root.nudge(root.sel, 1) }
-            Button { text: "A la otra isla"; h: 26; enabled: root.sel !== "" && Settings.barHas(root.sel); onClicked: root.swapSide(root.sel) }
+            Button { text: "‹ Antes"; h: 26; enabled: root.movable; onClicked: root.nudge(root.sel, -1) }
+            Button { text: "Después ›"; h: 26; enabled: root.movable; onClicked: root.nudge(root.sel, 1) }
+            Button { text: "A la otra isla"; h: 26; enabled: root.movable; onClicked: root.swapSide(root.sel) }
+            Button { visible: root.sel.startsWith("sep:"); text: "Quitar"; h: 26; onClicked: root.removeSep(root.sel) }
             Item { Layout.fillWidth: true }
+            Button { text: "Añadir separador"; h: 26; onClicked: root.addSep() }
             Button { text: "Orden de fábrica"; kind: "link"; h: 26; onClicked: { Settings.set("barOrder", null); root.sel = ""; } }
         }
     }

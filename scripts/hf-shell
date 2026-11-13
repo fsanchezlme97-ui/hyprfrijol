@@ -31,8 +31,14 @@ command -v python3 >/dev/null && NOTHP=(python3 -Ic 'import ctypes,os,sys
 try: ctypes.CDLL(None).prctl(41, 1, 0, 0, 0)
 except Exception: pass
 os.execvp(sys.argv[1], sys.argv[1:])')
-# Marca de arranque: refresh compara con ella si el código del shell cambió después (actualización)
-start() { running || { touch "$RUN.started"; rm -f "$RUN.pending"; setsid -f flock -n -o "$LOCK" "${NOTHP[@]}" "${CMD[@]}" >/dev/null 2>&1; }; }
+# Versión del código del shell: el árbol de git de config/quickshell (solo cambia con un commit, un git pull o
+# hf-update; no al editar ni al cambiar de fondo o de ajustes). Sin git (paquete), la fecha del archivo más nuevo.
+code_rev() {
+  git -C "$ROOT" rev-parse -q HEAD:config/quickshell 2>/dev/null \
+    || find "$ROOT/config/quickshell" -type f -printf '%T@\n' 2>/dev/null | sort -n | tail -n1
+}
+# Marca de arranque: refresh la compara con la versión de ahora (¿hubo una actualización desde entonces?)
+start() { running || { code_rev > "$RUN.started"; rm -f "$RUN.pending"; setsid -f flock -n -o "$LOCK" "${NOTHP[@]}" "${CMD[@]}" >/dev/null 2>&1; }; }
 
 # Solo los Quickshell de ESTA sesión (no los de una sesión de prueba anidada con el mismo repo)
 mine() {
@@ -49,11 +55,11 @@ case "${1:-}" in
     start
     ;;
   refresh)
-    # Tras actualizar (hf-apply): si el código del shell cambió desde que arrancó, reiniciarlo limpio. En la sesión
+    # Tras actualizar (hf-apply): si el código publicado del shell cambió desde que arrancó, reiniciarlo limpio. En la sesión
     # real no hay recarga en caliente (shell.qml: watchFiles solo en las anidadas): cada recarga dejaba memoria sin
     # liberar (~20 MB) y tras decenas el shell iba lento (1,2 GB, medio segundo en abrir un panel). Con la pantalla
     # bloqueada o un panel abierto se espera: el vigilante lo vuelve a intentar cada 2 min.
-    [ -e "$RUN.started" ] && [ -z "$(find "$ROOT/config/quickshell" -type f -newer "$RUN.started" -print -quit 2>/dev/null)" ] && exit 0
+    [ -e "$RUN.started" ] && [ "$(cat "$RUN.started")" = "$(code_rev)" ] && exit 0
     p="$(mine | head -n1)"
     [ -n "$p" ] || exit 0
     if [ "$(qs ipc --pid "$p" call lock isLocked 2>/dev/null)" = true ] || [ -n "$(qs ipc --pid "$p" call shell current 2>/dev/null)" ]; then
@@ -74,7 +80,7 @@ case "${1:-}" in
     # Wayland se ha ido y se queda parado para siempre: se reanuda para que termine solo. Solo el de esta sesión.
     wake_player() {
       local p
-      for p in $(cat "${XDG_RUNTIME_DIR:-/tmp}/hf-motion-$SIG/"motion*.pid 2>/dev/null); do
+      for p in $(cat "${XDG_RUNTIME_DIR:-$HOME/.local/state/hyprfrijol}/hf-motion-$SIG/"motion*.pid 2>/dev/null); do
         tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null | grep -qx "HYPRLAND_INSTANCE_SIGNATURE=$SIG" && kill -CONT "$p" 2>/dev/null
       done
     }

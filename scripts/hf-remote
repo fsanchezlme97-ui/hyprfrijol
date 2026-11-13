@@ -12,8 +12,9 @@
 #   hf-remote rdp status|start|stop|restart   compartir ESTA sesión por RDP (hypr-rdp): desde Windows con mstsc
 #   hf-remote rdp password               pide la contraseña de RDP (usuario = el tuyo) y la guarda en ~/.config/hypr-rdp
 #   hf-remote rdp boot                   al iniciar sesión: lo arranca si rdpServer está activo
-#   hf-remote rustdesk status|portal|instalar   entrar a ESTA sesión con RustDesk (status: JSON; portal: instala el
+#   hf-remote rustdesk status|portal|instalar|gpu entrar a ESTA sesión con RustDesk (status: JSON; portal: instala el
 #                                        portal RemoteDesktop; instalar: rustdesk-bin + su servicio)
+#                                        gpu: con una gráfica en nouveau, su servicio dibuja en la otra
 #   hf-remote acceso status|on|off [--sin-lan]   entrar a este equipo desde fuera: SSH (sshd), cortafuegos (ufw o
 #                                        firewalld: SSH y RDP solo por Tailscale, SSH también desde tu red local) y
 #                                        Tailscale (si no está conectado, «tailscale up» da el enlace para entrar)
@@ -386,14 +387,31 @@ rustdesk() {
       rm -rf "$b"
       systemctl --user restart xdg-desktop-portal-hyprland xdg-desktop-portal 2>/dev/null
       portal_rd && echo "Listo: el portal ya ofrece RemoteDesktop. Reinicia RustDesk para que lo use.";;
+    gpu)   # con una gráfica en nouveau, la ventana de RustDesk (--cm, la lanza su servicio de sistema y no hereda el
+           # entorno de Hyprland) dibujaba en ella y se caía (SIGABRT/SIGILL): el servicio pasa DRI_PRIME a la otra
+      rd_gpu && sudo systemctl daemon-reload && sudo systemctl restart rustdesk && echo "RustDesk ya dibuja en la otra gráfica.";;
     instalar)   # rustdesk-bin (AUR) y su servicio de sistema (sin él no hay conexiones entrantes desatendidas)
       if ! have rustdesk; then
         local aur; aur="$(command -v paru || command -v yay)" || { echo "Falta paru o yay (rustdesk-bin está en AUR)" >&2; exit 1; }
         "$aur" -S --needed rustdesk-bin || exit 1
       fi
+      rd_gpu; sudo systemctl daemon-reload
       sudo systemctl enable --now rustdesk && echo "RustDesk listo. Pon una contraseña permanente en su ventana.";;
-    *) echo "rustdesk status|portal|instalar" >&2; exit 1;;
+    *) echo "rustdesk status|portal|instalar|gpu" >&2; exit 1;;
   esac
+}
+
+# Drop-in del servicio de RustDesk con DRI_PRIME en la gráfica que no es nouveau (si hay nouveau y otra); 1 si no hace falta
+rd_gpu() {
+  [ -e /sys/module/nouveau/initstate ] || return 1
+  local r d pci=""
+  for r in /sys/class/drm/renderD*; do
+    d="$(basename "$(readlink -f "$r/device/driver")")"
+    [ "$d" != nouveau ] && { pci="$(basename "$(readlink -f "$r/device")")"; break; }
+  done
+  [[ "$pci" =~ ^[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]$ ]] || return 1
+  printf '[Service]\n# hf-remote rustdesk gpu: dibujar en la gráfica que no es nouveau\nEnvironment=DRI_PRIME=pci-%s\n' "${pci//[:.]/_}" \
+    | sudo install -D -m 644 /dev/stdin /etc/systemd/system/rustdesk.service.d/hyprfrijol-gpu.conf
 }
 
 # ---------- acceso: SSH + cortafuegos + Tailscale (lo que deja el equipo accesible desde fuera, y solo por donde toca)

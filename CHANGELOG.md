@@ -3,6 +3,29 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.64] — 2026-11-12
+
+### Nuevo
+- Separadores en la barra: Ajustes › Widgets de la barra › «Añadir separador» pone una raya fina en la isla del
+  widget elegido; se mueve como cualquier widget y se quita con «Quitar» o Supr. Junto a uno puesto a mano no se
+  dibuja el separador automático entre información y utilidades.
+- Panel del asistente renovado: cabecera con avatar y el proveedor debajo («Gemini · respaldo Ollama»), burbujas
+  más limpias, campo de texto más alto con botón de dictado y sugerencias en una sola fila que se desplaza con la
+  rueda. «Seguir en …» pasa a ser un botón con borde.
+- `hf-remote rustdesk gpu`: el servicio de RustDesk usa la gráfica buena (lo hace también `hf-remote rustdesk instalar`).
+
+### Corregido
+- El clima no salía en la barra en una instalación nueva (desde la 0.9.62): sin datos el widget estaba oculto y,
+  oculto, no pedía los datos.
+- Iconos de la bandeja que salían como una tuerca o borrosos (RustDesk, Epic Games Launcher): si la app manda una
+  imagen suelta de `/run` o `/tmp`, o un nombre de icono que el tema no tiene, se busca el del tema por el nombre o el
+  título de la app (`RustDesk` → `rustdesk`, `Epic Games Launcher` → `epic-games`).
+- Cambiar de fondo ya no reinicia el shell: `hf-apply` solo lo reinicia si cambió el código de `config/quickshell`
+  en git (antes miraba la fecha de los archivos y cualquier edición sin guardar en git contaba).
+- Con una gráfica `nouveau` además de la buena (p. ej. GT 710 + RX 6600), las apps abiertas desde la sesión usan la
+  buena (`DRI_PRIME`): la ventana de conexión de RustDesk se cerraba al pintar con `nouveau`.
+- Los pids del fondo en movimiento van en una carpeta privada (`$XDG_RUNTIME_DIR`, permisos 700).
+
 ## [0.9.63] — 2026-11-12
 
 ### Mejorado

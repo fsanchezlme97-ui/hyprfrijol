@@ -16,7 +16,8 @@ BarChip {
     implicitWidth: vertical ? 26 : r.implicitWidth + 14
     Behavior on implicitWidth { enabled: !Theme.still && !chip.vertical; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
     clip: true
-    UseCounter { target: Weather; active: chip.visible }
+    // Sin datos la barra lo esconde (want): pedirlos igualmente, si no nunca llegarían a enseñarse
+    UseCounter { target: Weather; active: chip.visible || !chip.want }
     RowLayout {
         id: r
         visible: !chip.vertical

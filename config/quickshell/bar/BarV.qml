@@ -30,6 +30,7 @@ Item {
     readonly property var zoneL: Settings.barZone("izquierda")
     readonly property var zoneR: Settings.barZone("derecha")
     function zoneOf(m: string): var { return zoneL.includes(m) ? zoneL : zoneR; }
+    function autoSep(m: string, prev: string): bool { const g = Settings.barGroup(m), h = Settings.barGroup(prev); return g !== "sep" && h !== "sep" && g !== h; }
     // Un widget de una isla, con un separador delante si cambia de grupo (información → utilidades)
     Component {
         id: zoneItem
@@ -40,7 +41,7 @@ Item {
             visible: w.shown
             spacing: 4
             Layout.alignment: Qt.AlignHCenter
-            Divider { vertical: false; implicitWidth: 14; visible: zi.index > 0 && Settings.barGroup(zi.modelData) !== Settings.barGroup(root.zoneOf(zi.modelData)[zi.index - 1] ?? zi.modelData); Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 2; Layout.bottomMargin: 2 }
+            Divider { vertical: false; implicitWidth: 14; visible: zi.index > 0 && root.autoSep(zi.modelData, root.zoneOf(zi.modelData)[zi.index - 1] ?? zi.modelData); Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 2; Layout.bottomMargin: 2 }
             BarWidget { id: w; wid: zi.modelData; vertical: true }
         }
     }

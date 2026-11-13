@@ -92,11 +92,12 @@ Item {
             required property int index
             visible: w.shown
             spacing: 2
-            Divider { visible: zi.index > 0 && Settings.barGroup(zi.modelData) !== Settings.barGroup(root.zoneOf(zi.modelData)[zi.index - 1] ?? zi.modelData); Layout.leftMargin: 4; Layout.rightMargin: 4 }
+            Divider { visible: zi.index > 0 && root.autoSep(zi.modelData, root.zoneOf(zi.modelData)[zi.index - 1] ?? zi.modelData); Layout.leftMargin: 4; Layout.rightMargin: 4 }
             BarWidget { id: w; wid: zi.modelData }
         }
     }
     function zoneOf(m: string): var { return zoneL.includes(m) ? zoneL : zoneR; }
+    function autoSep(m: string, prev: string): bool { const g = Settings.barGroup(m), h = Settings.barGroup(prev); return g !== "sep" && h !== "sep" && g !== h; }
     // Pantalla secundaria: a la derecha, todos los programas abiertos con lo que gastan
     Loader {
         id: usage

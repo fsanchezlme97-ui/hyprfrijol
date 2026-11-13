@@ -114,7 +114,7 @@
   ]
  },
  "greeter": true,
- "hyprfrijol": "v0.9.62",
+ "hyprfrijol": "v0.9.64",
  "ollama": [
   "gemma4:e4b"
  ],
@@ -124,7 +124,7 @@
   "rustdesk": true,
   "rustdeskPortal": true
  },
- "saved": "2026-11-12 18:53",
+ "saved": "2026-11-12 19:28",
  "services": [
   "sshd",
   "ufw",
@@ -173,16 +173,16 @@
   ],
   "barOrder": {
    "derecha": [
-    "clima",
     "recursos",
     "impresora",
     "bongo",
-    "pomodoro",
+    "clima",
     "portapapeles",
     "dictado",
     "ia",
     "ajustes",
-    "cafeina"
+    "cafeina",
+    "pomodoro"
    ],
    "izquierda": []
   },
@@ -302,6 +302,7 @@
   ],
   "wallpaperRandom": false,
   "wallpaperRotateMin": 0,
+  "wallpaperSource": "unsplash",
   "waveStyle": "barras",
   "welcomeDone": true,
   "widgets": [

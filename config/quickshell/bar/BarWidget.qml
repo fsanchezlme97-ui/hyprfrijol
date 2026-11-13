@@ -15,7 +15,7 @@ Loader {
     readonly property var acts: (Settings.get("barActions", {}) ?? {})[wid] ?? {}
     readonly property var custom: wid.startsWith("propio:") ? (Settings.barCustomList.find(c => "propio:" + c.id === wid) ?? null) : null
     Layout.alignment: vertical ? Qt.AlignHCenter : Qt.AlignVCenter
-    sourceComponent: custom ? cPropio : ({ clima: cClima, recursos: cRecursos, impresora: cImpresora, bongo: cBongo, pomodoro: cPomo,
+    sourceComponent: wid.startsWith("sep:") ? cSep : custom ? cPropio : ({ clima: cClima, recursos: cRecursos, impresora: cImpresora, bongo: cBongo, pomodoro: cPomo,
                        cafeina: cCafe, portapapeles: cClip, dictado: cDict, ia: cIa, ajustes: cGear })[wid] ?? null
 
     Component { id: cClima; WeatherChip { vertical: root.vertical } }
@@ -28,6 +28,9 @@ Loader {
     Component { id: cDict; MicBtn { implicitHeight: root.vertical ? 26 : 22 } }
     Component { id: cIa; IconBtn { implicitHeight: root.vertical ? 26 : 22; icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") } }
     Component { id: cGear; IconBtn { implicitHeight: root.vertical ? 26 : 22; icon: "gear"; onClicked: Shell.open("ajustesapp") } }
+    // Separador puesto a mano: una raya fina con aire a los lados
+    Component { id: cSep; Item { implicitWidth: root.vertical ? 26 : 9; implicitHeight: root.vertical ? 9 : 22
+        Divider { anchors.centerIn: parent; vertical: !root.vertical; implicitWidth: root.vertical ? 14 : 1 } } }
     Component { id: cPropio; CustomChip { vertical: root.vertical; conf: root.custom } }
 
     // Clic derecho y rueda propios: lo demás (clic, pasar el cursor) sigue llegando al widget

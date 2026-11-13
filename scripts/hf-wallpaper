@@ -37,8 +37,9 @@ ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
 STATE="$HOME/.local/state/hyprfrijol"
 # Pids de los reproductores, por sesión de Hyprland: una de prueba (dev/try.sh, mismo HOME) pisaba los de la tuya y la
 # pausa (Wallpaper.qml, wallpaperPauseOn) iba a un proceso que ya no existía: el vídeo no se paraba nunca
-MSTATE="${XDG_RUNTIME_DIR:-/tmp}/hf-motion-${HYPRLAND_INSTANCE_SIGNATURE:-sin-hyprland}"
-mkdir -p "$MSTATE"
+# (sin XDG_RUNTIME_DIR, en tu carpeta de estado: nunca en /tmp, donde otro usuario podría dejar pids)
+MSTATE="${XDG_RUNTIME_DIR:-$STATE}/hf-motion-${HYPRLAND_INSTANCE_SIGNATURE:-sin-hyprland}"
+mkdir -p -m 700 "$MSTATE"
 THUMBS="$HOME/.cache/hyprfrijol/thumbs"
 SCALED="$HOME/.cache/hyprfrijol/wallpapers-scaled"
 ASSETS="$ROOT/assets/wallpapers"

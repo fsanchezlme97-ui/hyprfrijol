@@ -52,7 +52,7 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 
 ## Capturas
 
-Capturas reales a 1920×1080 de una sesión de HyprFrijol 0.8.6 con la configuración por defecto (paleta Oxocarbon, estilo Material, barra arriba en archipiélago), ventanas de verdad abiertas y un fondo de [Wallhaven](https://wallhaven.cc/w/3q23od) (no incluido en el repo).
+Capturas reales a 1920×1080 de una sesión de HyprFrijol 0.9.64 con la configuración por defecto (paleta Oxocarbon, barra arriba en archipiélago) y ventanas de verdad abiertas. Fondos de [Unsplash](https://unsplash.com/?utm_source=hyprfrijol&utm_medium=referral) (no incluidos en el repo; `hf-unsplash` los busca y descarga con su crédito): aurora de [Vincent Guth](https://unsplash.com/@vingtcent?utm_source=hyprfrijol&utm_medium=referral) y lago Moraine en el bloqueo de [John Lee](https://unsplash.com/@john_artifexfilm?utm_source=hyprfrijol&utm_medium=referral); en el selector, también fotos de [Lightscape](https://unsplash.com/@lightscape?utm_source=hyprfrijol&utm_medium=referral), [Wolfgang Hasselmann](https://unsplash.com/@wolfgang_hasselmann?utm_source=hyprfrijol&utm_medium=referral), [Mark Koch](https://unsplash.com/@markk92?utm_source=hyprfrijol&utm_medium=referral) y [Adam Vradenburg](https://unsplash.com/@vradenburg?utm_source=hyprfrijol&utm_medium=referral).
 
 | | |
 |---|---|
@@ -61,15 +61,15 @@ Capturas reales a 1920×1080 de una sesión de HyprFrijol 0.8.6 con la configura
 | ![Centro de control](docs/capturas/centro-de-control.webp) | ![Spotlight con resultados](docs/capturas/spotlight.webp) |
 | **Centro de control** · ajustes rápidos, avisos, agenda y relojes del mundo en un solo panel | **Spotlight** · apps, ajustes, acciones, archivos, calculadora, IA y web desde un buscador |
 | ![Asistente de IA en el panel lateral](docs/capturas/asistente-ia.webp) | ![Vista general de los espacios](docs/capturas/vista-general.webp) |
-| **Asistente de IA** · panel lateral que cambia el escritorio con tu aprobación | **Vista general** · espacios de trabajo con sus ventanas y buscador |
+| **Asistente de IA** · panel lateral con dictado y sugerencias; cambia el escritorio con tu aprobación | **Vista general** · espacios de trabajo con sus ventanas y buscador |
 | ![Selector de fondos](docs/capturas/selector-de-fondos.webp) | ![Pantalla de bloqueo](docs/capturas/bloqueo.webp) |
 | **Selector de fondos** · vista previa al instante (también vídeo), por pantalla o según la hora | **Bloqueo** · reloj, tu foto y tu fondo, con contraseña o huella |
 | ![Ajustes › Apariencia](docs/capturas/ajustes-apariencia.webp) | ![Ajustes › Aplicaciones](docs/capturas/ajustes-aplicaciones.webp) |
 | **Ajustes › Apariencia** · estilo Math, temas en pares oscuro y claro (aquí Oxocarbon) y acento | **Ajustes › Aplicaciones** · centro de aplicaciones por categorías y origen |
 | ![Ajustes › Barra](docs/capturas/ajustes-barra.webp) | ![Ajustes › Sistema y recuperación](docs/capturas/ajustes-sistema.webp) |
 | **Ajustes › Barra** · posición, forma, tamaño y módulos visibles | **Ajustes › Sistema** · puntos de restauración, diagnóstico, actualizaciones y modo seguro |
-| ![Ajustes › Plugins de Omarchy](docs/capturas/ajustes-plugins-omarchy.webp) | |
-| **Ajustes › Plugins de Omarchy** · widgets, paneles y temas de Omarchy | |
+| ![Ajustes › Widgets de la barra](docs/capturas/ajustes-widgets-barra.webp) | ![Ajustes › Plugins de Omarchy](docs/capturas/ajustes-plugins-omarchy.webp) |
+| **Ajustes › Widgets de la barra** · arrastra cada widget entre islas, separadores y widgets propios | **Ajustes › Plugins de Omarchy** · widgets, paneles y temas de Omarchy |
 
 ## Instalación
 

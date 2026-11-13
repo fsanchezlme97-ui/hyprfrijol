@@ -199,6 +199,9 @@
   "barScreens": {},
   "musicLyrics": false,
   "barSecondaryClock": true,
+  "barOrder": {},
+  "barActions": {},
+  "barCustom": [],
   "barWeatherText": false,
   "barStatsStyle": "texto",
   "barStatsShow": [

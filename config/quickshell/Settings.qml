@@ -107,14 +107,16 @@ Singleton {
         const o = get("barOrder", null) || {};
         const all = barWidgetIds.concat(barCustomList.map(c => "propio:" + c.id));
         const seen = {};
-        const take = l => (Array.isArray(l) ? l : []).filter(x => all.includes(x) && !seen[x] && (seen[x] = true));
+        // separadores («sep:<id>»): solo existen en barOrder, siempre encendidos
+        const take = l => (Array.isArray(l) ? l : []).filter(x => (all.includes(x) || /^sep:\w+$/.test(x)) && !seen[x] && (seen[x] = true));
         const izq = take(o.izquierda), der = take(o.derecha);
         return { izquierda: izq, derecha: der.concat(all.filter(x => !seen[x])) };
     }
     // Los encendidos de una isla, en su orden
-    function barZone(z: string): var { return (barOrder[z] ?? []).filter(m => barHas(m)); }
+    function barZone(z: string): var { return (barOrder[z] ?? []).filter(m => m.startsWith("sep:") || barHas(m)); }
     // Información (clima, sistema, impresora, propios) y utilidades: entre un grupo y otro, un separador
-    function barGroup(m: string): string { return ["clima", "recursos", "impresora"].includes(m) || m.startsWith("propio:") ? "info" : "util"; }
+    // (los separadores puestos a mano quitan el automático de al lado: ver BarH/BarV)
+    function barGroup(m: string): string { if (m.startsWith("sep:")) return "sep"; return ["clima", "recursos", "impresora"].includes(m) || m.startsWith("propio:") ? "info" : "util"; }
 
     // Si hf-apply está a medias no se corta (podía saltarse la recarga de Hyprland): se repite al acabar
     property bool _again: false

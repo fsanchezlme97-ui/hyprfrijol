@@ -736,15 +736,11 @@ print(json.dumps(out[:300]))
                 outline: true
                 onClicked: root.toggleCapture()
             }
-            Rectangle {
+            Chip {
                 visible: !!root.handoffTo
-                implicitHeight: 24
-                implicitWidth: hoTxt.implicitWidth + 20
-                radius: Theme.r(6)
-                color: Theme.p
-                Rectangle { anchors.fill: parent; radius: parent.radius; color: "#FFF"; opacity: hoMouse.containsMouse ? 0.08 : 0 }
-                Txt { id: hoTxt; anchors.centerIn: parent; text: "Seguir en " + (root.handoffTo?.label ?? "") + " ↗"; size: 11.5; weight: Font.DemiBold; color: Theme.pText }
-                MouseArea { id: hoMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.handoff() }
+                text: "Seguir en " + (root.handoffTo?.label ?? "") + " ↗"
+                outline: true
+                onClicked: root.handoff()
             }
         }
         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.ov }
@@ -967,7 +963,8 @@ print(json.dumps(out[:300]))
                             anchors.right: msg.mine ? parent.right : undefined
                             width: Math.min(msg.width * (msg.mine ? 0.85 : 0.92), Math.max(body.implicitWidth, rich.visible && rich.wide ? 10000 : 0, extra.implicitWidth, stepsCol.implicitWidth, imgFlow.wantW) + 24)
                             height: inner.implicitHeight + 20
-                            color: msg.mine ? Theme.pc : Theme.fill2
+                            // las respuestas, sin burbuja (texto a todo lo ancho, como un documento); las tuyas, en tu color
+                            color: msg.mine ? Theme.pc : msg.modelData.error ? Qt.alpha(Theme.danger, 0.08) : "transparent"
                             border.width: msg.modelData.error ? 1 : 0
                             border.color: Theme.danger
                             // esquinas "7 14 4 14" (mías) / "7 14 14 4" (IA)
@@ -1297,25 +1294,47 @@ print(json.dumps(out[:300]))
         }
 
         // ---------------------------------------------------- sugerencias
-        Flow {
-            visible: !root.busy && !onboard.visible && !root.showHistory && !root.showLog
+        // Una sola fila que se desliza (rueda o arrastre): antes, en dos o tres filas, se comían la conversación
+        Flickable {
+            id: sugg
+            visible: !root.busy && !onboard.visible && !root.showHistory && !root.showLog && root.suggestions.length > 0
             Layout.fillWidth: true
-            Layout.preferredWidth: root.width - 24
             Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.bottomMargin: 8; Layout.topMargin: 4
-            spacing: 6
-            Repeater {
-                model: root.suggestions
-                delegate: Rectangle {
-                    required property string modelData
-                    implicitHeight: 24
-                    implicitWidth: sTxt.implicitWidth + 16
-                    radius: Theme.r(7)
-                    color: "transparent"
-                    border.width: 1; border.color: Theme.ov
-                    Rectangle { anchors.fill: parent; radius: parent.radius; color: Theme.light ? "#000" : "#FFF"; opacity: sMouse.containsMouse ? 0.06 : 0 }
-                    Txt { id: sTxt; anchors.centerIn: parent; text: parent.modelData; size: 11.5 }
-                    MouseArea { id: sMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.ask(parent.modelData) }
+            implicitHeight: 28
+            contentWidth: suggRow.implicitWidth
+            flickableDirection: Flickable.HorizontalFlick
+            boundsBehavior: Flickable.StopAtBounds
+            clip: true
+            WheelHandler { onWheel: e => sugg.contentX = Math.max(0, Math.min(sugg.contentWidth - sugg.width, sugg.contentX - e.angleDelta.y)) }
+            Row {
+                id: suggRow
+                spacing: 6
+                Repeater {
+                    model: root.suggestions
+                    delegate: Rectangle {
+                        required property string modelData
+                        height: 28
+                        width: sRow.implicitWidth + 20
+                        radius: 14
+                        color: sMouse.containsMouse ? Theme.pc : Theme.fill2
+                        Behavior on color { ColorAnimation { duration: Theme.durShort } }
+                        Row {
+                            id: sRow
+                            anchors.centerIn: parent
+                            spacing: 6
+                            Icon { anchors.verticalCenter: parent.verticalCenter; name: "sparkle"; size: 11; color: sMouse.containsMouse ? Theme.pcText : Theme.p }
+                            Txt { anchors.verticalCenter: parent.verticalCenter; text: parent.parent.modelData; size: 11.5; color: sMouse.containsMouse ? Theme.pcText : Theme.t }
+                        }
+                        MouseArea { id: sMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.ask(parent.modelData) }
+                    }
                 }
+            }
+            // se ve que hay más a la derecha
+            Rectangle {
+                visible: sugg.contentWidth > sugg.width && sugg.contentX < sugg.contentWidth - sugg.width - 2
+                x: sugg.contentX + sugg.width - width; width: 28; height: parent.height
+                gradient: Gradient { orientation: Gradient.Horizontal
+                    GradientStop { position: 0; color: Qt.alpha(Theme.glassPanel, 0) } GradientStop { position: 1; color: Theme.glassPanel } }
             }
         }
 
@@ -1524,9 +1543,11 @@ print(json.dumps(out[:300]))
         Rectangle {
             Layout.fillWidth: true
             Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.bottomMargin: 12
-            implicitHeight: 38
-            radius: Theme.r(6)
+            implicitHeight: 46
+            radius: Theme.r(14)
             color: Theme.fill2
+            border.width: input.activeFocus ? 2 : 1
+            border.color: input.activeFocus ? Theme.p : Theme.ov
             Rectangle {
                 id: clipBtn
                 visible: root.allowCapture
@@ -1541,7 +1562,7 @@ print(json.dumps(out[:300]))
             }
             TextInput {
                 id: input
-                anchors { left: clipBtn.visible ? clipBtn.right : parent.left; right: sendBtn.left; verticalCenter: parent.verticalCenter; leftMargin: clipBtn.visible ? 4 : 14; rightMargin: 8 }
+                anchors { left: clipBtn.visible ? clipBtn.right : parent.left; right: micBtn.left; verticalCenter: parent.verticalCenter; leftMargin: clipBtn.visible ? 4 : 14; rightMargin: 8 }
                 color: Theme.t
                 selectionColor: Theme.pc
                 selectedTextColor: Theme.pcText
@@ -1558,10 +1579,20 @@ print(json.dumps(out[:300]))
                     muted: true
                 }
             }
+            // Dictar: el dictado global escribe en la entrada (siempre dictado, sea cual sea el modo del micrófono de la barra)
+            Rectangle {
+                id: micBtn
+                anchors { right: sendBtn.left; rightMargin: 2; verticalCenter: parent.verticalCenter }
+                width: 30; height: 30; radius: Theme.r(9)
+                readonly property bool rec: Shell.dictPhase === "rec"
+                color: rec ? Theme.ter : micMa.containsMouse ? Qt.alpha(Theme.t, 0.08) : "transparent"
+                Icon { anchors.centerIn: parent; name: "mic"; size: 15; color: micBtn.rec ? Theme.bg : Theme.tv }
+                MouseArea { id: micMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { input.forceActiveFocus(); Quickshell.execDetached(["qs", "-p", Paths.root + "/config/quickshell", "ipc", "call", "dictado", "toggle"]); } }
+            }
             Rectangle {
                 id: sendBtn
-                anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
-                width: 30; height: 30; radius: Theme.r(7)
+                anchors { right: parent.right; rightMargin: 7; verticalCenter: parent.verticalCenter }
+                width: 32; height: 32; radius: Theme.r(10)
                 color: Theme.p
                 opacity: root.busy || input.text.trim() !== "" || root.pending.length || root.pendingDocs.length ? 1 : 0.55
                 // respondiendo: «Detener» (un cuadrado) corta la respuesta y deja lo que llegó

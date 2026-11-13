@@ -26,22 +26,44 @@ Item {
         return m ? { name: decodeURIComponent(m[1]), path: m[2] ? decodeURIComponent(m[2]) : "" } : null;
     }
     property string found: ""            // archivo encontrado en el IconThemePath
+    // Nombres de estado largos («cachy-update_updates-available-blue»): se acortan por el final, con y sin el último
+    // trozo («cachy-update-blue», «cachy-update»…), por si el tema solo trae el de la app
+    // Icono del tema para un título de app («EpicGamesLauncher» → epic-games-launcher, epic-games…); "" si no hay
+    function themed(t: string): string {
+        const k = t.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase().replace(/[\s_]+/g, "-");
+        for (const n of [k].concat(trims(k)))
+            if (n && Quickshell.hasThemeIcon(n)) return Quickshell.iconPath(n);
+        return "";
+    }
+    function trims(n: string): var {
+        const t = n.split(/[-_]+/).filter(x => x), out = [];
+        for (let k = t.length - 1; k >= 1; k--) {
+            const pre = t.slice(0, k).join("-");
+            if (k < t.length - 1) out.push(pre + "-" + t[t.length - 1]);
+            out.push(pre);
+        }
+        return out;
+    }
     readonly property string source: {
         const raw = String(item?.icon ?? "");
         const p = parts;
         if (!p) return raw;                                            // pixmap de la app (image://qspixmap/…)
-        if (p.name.startsWith("/")) return "file://" + p.name;          // ruta absoluta como nombre
+        // Ruta absoluta como nombre. Si es un PNG que la app genera al vuelo (/run, /tmp: el crate tray-icon de Epic o
+        // RustDesk, 32 px que a 16 quedaban borrosos) y el tema trae el icono de esa app, mejor el del tema
+        if (p.name.startsWith("/")) return (/^\/(run|tmp)\//.test(p.name) ? themed(String(item?.title ?? "")) : "") || "file://" + p.name;
         if (p.name && Quickshell.hasThemeIcon(p.name)) return Quickshell.iconPath(p.name);
         if (found) return "file://" + found;
         const id = String(item?.id ?? "").toLowerCase(), title = String(item?.title ?? "").toLowerCase();
         const base = p.name.replace(/([-_](tray|panel|indicator|status|symbolic|mono|dark|light|active|passive|attention))+$/i, "");
-        for (const n of [base, base.toLowerCase(), id, id.replace(/[\s_]+/g, "-"), title, title.replace(/\s+/g, "-")])
+        for (const n of [base, base.toLowerCase(), id, id.replace(/[\s_]+/g, "-"), title, title.replace(/\s+/g, "-")].concat(trims(p.name)))
             if (n && Quickshell.hasThemeIcon(n)) return Quickshell.iconPath(n);
         return p.path ? "" : Quickshell.iconPath("application-x-executable");
     }
     Process {
-        running: !!root.parts && root.parts.path !== "" && !Quickshell.hasThemeIcon(root.parts.name)
-        command: ["sh", "-c", 'find -L "$1" -maxdepth 5 -type f \\( -name "$2.svg" -o -name "$2.png" -o -name "$2.xpm" \\) 2>/dev/null | sort | tail -n1', "sh",
+        // (no con una ruta absoluta por nombre, p. ej. RustDesk: esa ya vale tal cual; antes la buscaba aquí, no la
+        // encontraba y ponía el genérico, una tuerca en Papirus)
+        running: !!root.parts && root.parts.path !== "" && !root.parts.name.startsWith("/") && !Quickshell.hasThemeIcon(root.parts.name)
+        command: ["sh", "-c", 'find -L "$1" -maxdepth 5 -type f \\( -name "$2" -o -name "$2.svg" -o -name "$2.png" -o -name "$2.xpm" \\) 2>/dev/null | sort | tail -n1', "sh",
                   root.parts?.path ?? "", root.parts?.name ?? ""]
         stdout: StdioCollector { onStreamFinished: root.found = text.trim() || "-" }
     }
