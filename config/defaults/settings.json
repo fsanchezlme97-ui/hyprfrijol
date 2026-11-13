@@ -355,6 +355,7 @@
   "notifySoundName": "message-new-instant",
   "notifyApps": {},
   "notifyHistory": true,
+  "notifDigestAuto": true,
   "notifyMaxPopups": 4,
   "notifyDndDays": [0, 1, 2, 3, 4, 5, 6],
   "autostartApps": true,

@@ -143,7 +143,7 @@ ChipPopup {
                 implicitWidth: 156; implicitHeight: 156
                 ProgressRing {
                     anchors.fill: parent
-                    value: Pomodoro.progress
+                    value: 1 - Pomodoro.progress          // lo que queda: se vacía, como el de la barra
                     color: pop.modeColor
                     lineWidth: 7
                 }

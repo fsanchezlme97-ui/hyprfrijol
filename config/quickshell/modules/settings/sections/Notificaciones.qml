@@ -165,6 +165,10 @@ RowLayout {
             SwRow { label: "Sonido al recibir un aviso"; sub: "canberra-gtk-play · " + Settings.get("notifySoundName", "message-new-instant"); key: "notifySound"; def: false }
             SwRow { label: "En la pantalla de bloqueo"; sub: "cuántos avisos hay, nunca su contenido"; key: "notifyLock"; def: true }
             SwRow { label: "Guardar historial"; sub: "los últimos 300 avisos, con búsqueda, en el centro de notificaciones"; key: "notifyHistory"; def: true }
+            SwRow {
+                label: "Resumen automático"; key: "notifDigestAuto"; def: true
+                sub: "con 3 avisos o más, al abrir el centro el modelo local (Ollama) resume en una frase lo que pasó. Sin modelo local, el resumen se pide con «Resumir»"
+            }
             RowLayout {
                 Layout.topMargin: 2
                 spacing: 8

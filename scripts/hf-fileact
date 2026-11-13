@@ -12,10 +12,13 @@ sirven también en la terminal y para la IA).
                                          (ffmpeg) · audio → mp3|ogg|opus|flac|wav · PDF → png (una por página).
                                          Deja el resultado al lado («foto.webp», «foto (1).webp» si ya existe)
   hf-fileact wallpaper <archivo>         lo pone de fondo (hf-wallpaper <archivo>)
+  hf-fileact preview <archivo|carpeta>   JSON para la vista previa de Spotlight: {kind, image (miniatura), text (el
+                                         principio: texto, código, CSV, Word, Excel, LibreOffice), mono, rows [[clave,
+                                         valor]], actions}. Miniaturas en ~/.cache/hyprfrijol/preview
 
   --print   no ejecuta: imprime los comandos que usaría (pruebas)
 """
-import json, mimetypes, os, pathlib, shlex, shutil, subprocess, sys, tempfile
+import hashlib, json, mimetypes, os, pathlib, re, shlex, shutil, subprocess, sys, tempfile, time, zipfile
 for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
     if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
@@ -101,6 +104,8 @@ def do_ai(f):
         try: txt = f.read_text(errors="replace")[:6000]
         except Exception: txt = ""
         arg = {"ask": f"Explícame este archivo «{f.name}»:\n\n```\n{txt}\n```"}
+    elif f.suffix.lower().lstrip(".") in OFFICE and (txt := office_text(f, f.suffix.lower().lstrip("."))[:6000]):
+        arg = {"ask": f"Resúmeme este documento «{f.name}»:\n\n```\n{txt}\n```"}
     else:
         size = f.stat().st_size if f.exists() else 0
         arg = {"ask": f"¿Qué es el archivo «{f.name}» ({mimetypes.guess_type(str(f))[0] or 'tipo desconocido'}, {size // 1024} KB) y con qué lo abro en Linux?"}
@@ -211,6 +216,160 @@ def do_wallpaper(f):
     return run([str(SCRIPTS / "hf-wallpaper"), str(pathlib.Path(f).resolve())], detach=True)
 
 
+# ---------------------------------------------------------------- vista previa (Spotlight)
+OFFICE = {"docx", "odt", "odp", "pptx", "xlsx", "ods"}
+DIRECT = {"png", "jpg", "jpeg", "webp", "gif", "bmp", "svg"}     # Qt los pinta tal cual
+
+
+def human(n):
+    for u in ("B", "KB", "MB", "GB"):
+        if n < 1024 or u == "GB":
+            return f"{n:.0f} {u}" if u == "B" else f"{n:.1f} {u}".replace(".", ",")
+        n /= 1024
+
+
+def out_of(cmd, timeout=6):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def zip_xml(z, name, limit=4 << 20):
+    """Un XML de dentro del zip, como mucho «limit» bytes (un zip bomba no se descomprime entero)."""
+    try:
+        with z.open(name) as fh:
+            return fh.read(limit).decode("utf-8", "replace")
+    except (KeyError, OSError, zipfile.BadZipFile):
+        return ""
+
+
+def xml_text(x):
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", x)).replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">") \
+        .replace("&quot;", '"').replace("&apos;", "'").strip()
+
+
+def office_text(p, ext):
+    """El principio de un documento de oficina, sin LibreOffice: párrafos (Word, Writer, presentaciones) o las primeras
+    filas de la primera hoja (Excel, Calc) separadas por tabuladores."""
+    try:
+        z = zipfile.ZipFile(p)
+    except (OSError, zipfile.BadZipFile):
+        return ""
+    with z:
+        if ext == "docx":
+            x = zip_xml(z, "word/document.xml")
+            return "\n".join(t for t in (xml_text(par) for par in re.findall(r"<w:p[ >].*?</w:p>", x, re.S)) if t)
+        if ext == "pptx":
+            slides = sorted((n for n in z.namelist() if re.match(r"ppt/slides/slide\d+\.xml$", n)), key=lambda n: int(re.sub(r"\D", "", n)))
+            return "\n".join(xml_text(" ".join(re.findall(r"<a:t>(.*?)</a:t>", zip_xml(z, n), re.S))) for n in slides[:8])
+        if ext == "xlsx":
+            shared = [xml_text(si) for si in re.findall(r"<si>(.*?)</si>", zip_xml(z, "xl/sharedStrings.xml"), re.S)]
+            rows = []
+            for row in re.findall(r"<row[^>]*>(.*?)</row>", zip_xml(z, "xl/worksheets/sheet1.xml"), re.S)[:20]:
+                cells = []
+                for attrs, body in re.findall(r"<c([^>]*?)(?:/>|>(.*?)</c>)", row, re.S)[:10]:
+                    v = re.search(r"<v>(.*?)</v>", body or "", re.S)
+                    t = re.search(r'\bt="(\w+)"', attrs)
+                    val = v.group(1) if v else xml_text(body or "")
+                    if t and t.group(1) == "s" and val.isdigit() and int(val) < len(shared):
+                        val = shared[int(val)]
+                    cells.append(xml_text(val))
+                rows.append("\t".join(cells))
+            return "\n".join(rows)
+        x = zip_xml(z, "content.xml")             # LibreOffice: odt, odp, ods
+        if ext == "ods":
+            rows = []
+            for row in re.findall(r"<table:table-row[^>]*>(.*?)</table:table-row>", x, re.S)[:20]:
+                cells = [xml_text(c) for c in re.findall(r"<table:table-cell[^>]*?(?:/>|>(.*?)</table:table-cell>)", row, re.S)[:10]]
+                if any(cells):
+                    rows.append("\t".join(cells))
+            return "\n".join(rows)
+        return "\n".join(t for t in (xml_text(par) for par in re.findall(r"<text:[ph][ >].*?</text:[ph]>", x, re.S)) if t)
+
+
+def thumb_path(p, st):
+    d = CACHE / "preview"
+    d.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha1(f"{p}|{st.st_mtime_ns}|{st.st_size}".encode()).hexdigest()[:20]
+    return d / f"{key}.png"
+
+
+def preview(f):
+    p = pathlib.Path(f).expanduser()
+    try:
+        st = p.stat()
+    except OSError:
+        return {"kind": "missing", "image": "", "text": "", "mono": False, "rows": [["Estado", "Ya no existe"]], "actions": {}}
+    when = time.strftime("%d/%m/%Y %H:%M", time.localtime(st.st_mtime))
+    if p.is_dir():
+        try:
+            names = sorted((e.name + ("/" if e.is_dir() else "") for e in os.scandir(p) if not e.name.startswith(".")), key=str.lower)
+        except OSError:
+            names = []
+        return {"kind": "dir", "image": "", "text": "\n".join(names[:14]) + ("\n…" if len(names) > 14 else ""), "mono": False,
+                "rows": [["Contiene", f"{len(names)} elementos"], ["Modificada", when]], "actions": {}}
+    ext = p.suffix.lower().lstrip(".")
+    k = "office" if ext in OFFICE else kind(p)
+    rows = [["Tamaño", human(st.st_size)], ["Modificado", when]]
+    res = {"kind": k, "image": "", "text": "", "mono": False, "rows": rows, "actions": actions([str(p)])}
+    th = thumb_path(p, st)
+    if k == "image":
+        ident = ["magick", "identify"] if magick() == ["magick"] else ["identify"]
+        dims = out_of(ident + ["-ping", "-format", "%w × %h", str(p) + "[0]"])
+        if dims: rows.insert(0, ["Medidas", dims + " px"])
+        if ext in DIRECT:
+            res["image"] = str(p)
+        else:
+            if not th.exists():
+                out_of([*magick(), str(p) + "[0]", "-thumbnail", "640x640>", str(th)], 10)
+            if th.exists(): res["image"] = str(th)
+    elif k == "pdf":
+        pages = re.search(r"^Pages:\s+(\d+)", out_of(["pdfinfo", str(p)]), re.M)
+        if pages: rows.insert(0, ["Páginas", pages.group(1)])
+        if not th.exists() and shutil.which("pdftoppm"):
+            out_of(["pdftoppm", "-png", "-singlefile", "-f", "1", "-l", "1", "-scale-to", "640", str(p), str(th.with_suffix(""))], 10)
+        if th.exists(): res["image"] = str(th)
+        else: res["text"] = out_of(["pdftotext", "-l", "1", str(p), "-"])[:3000]
+    elif k == "video":
+        dur = out_of(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(p)])
+        if dur: rows.insert(0, ["Duración", time.strftime("%H:%M:%S" if float(dur) >= 3600 else "%M:%S", time.gmtime(float(dur)))])
+        if not th.exists():
+            if shutil.which("ffmpegthumbnailer"):
+                out_of(["ffmpegthumbnailer", "-s", "640", "-i", str(p), "-o", str(th)], 10)
+            else:
+                out_of(["ffmpeg", "-v", "error", "-ss", "2", "-i", str(p), "-frames:v", "1", "-vf", "scale=640:-2", "-y", str(th)], 10)
+        if th.exists(): res["image"] = str(th)
+    elif k == "audio":
+        tags = out_of(["ffprobe", "-v", "error", "-show_entries", "format=duration:format_tags=title,artist,album", "-of", "json", str(p)])
+        try:
+            fm = json.loads(tags).get("format", {})
+            tg = {k2.lower(): v for k2, v in (fm.get("tags") or {}).items()}
+            if fm.get("duration"): rows.insert(0, ["Duración", time.strftime("%M:%S", time.gmtime(float(fm["duration"])))])
+            res["text"] = "\n".join(x for x in (tg.get("title"), tg.get("artist"), tg.get("album")) if x)
+        except (ValueError, AttributeError):
+            pass
+    elif k == "office":
+        res["text"] = office_text(p, ext)[:3000]
+        res["mono"] = ext in ("xlsx", "ods")
+    elif k == "text":
+        try:
+            with open(p, "rb") as fh:
+                raw = fh.read(16384)
+            if b"\0" in raw[:4096]:
+                res["kind"] = "other"
+            else:
+                t = raw.decode("utf-8", "replace")
+                res["text"] = "\n".join(t.splitlines()[:60])[:4000]
+                res["mono"] = ext not in ("txt", "md", "markdown")
+                rows.insert(0, ["Líneas", str(t.count("\n") + (not t.endswith("\n"))) + ("+" if len(raw) == 16384 else "")])
+        except OSError:
+            pass
+    if not res["image"] and not res["text"]:
+        rows.insert(0, ["Tipo", mimetypes.guess_type(str(p))[0] or "desconocido"])
+    return res
+
+
 def main():
     if not ARGV or ARGV[0] in ("-h", "--help"):
         print(__doc__); return 0
@@ -221,6 +380,7 @@ def main():
     if c == "ocr" and rest: return do_ocr(rest)
     if c == "convert" and len(rest) >= 2: return do_convert(rest[0], rest[1:])
     if c == "wallpaper" and len(rest) == 1: return do_wallpaper(rest[0])
+    if c == "preview" and len(rest) == 1: print(json.dumps(preview(rest[0]), ensure_ascii=False)); return 0
     print(f"hf-fileact: orden no válida: {' '.join(ARGV)} (hf-fileact --help)", file=sys.stderr)
     return 2
 

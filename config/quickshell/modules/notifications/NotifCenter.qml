@@ -2,11 +2,15 @@
 //  Recientes: agrupadas por aplicación (cabecera con icono, cuántas, desplegar/agrupar y descartar el grupo);
 //             un grupo de 3 o más se ve apilado («+N») hasta que lo despliegas. «No molestar», borrar todo,
 //             respuesta en línea, acciones e imágenes; arrastrar a un lado descarta.
+//  Resumen: con 3 avisos o más, una tarjeta arriba resume en una o dos frases lo que pasó (hf-ai digest). Con el
+//             modelo local (Ollama de proveedor o de respaldo) se hace sola al abrir el centro si llegó algo nuevo
+//             (notifDigestAuto); si no, con «Resumir», porque los avisos irían a la nube.
 //  Historial: lo que ha llegado (Notifs.history, también lo ya descartado), con búsqueda y filtro por app.
 // Shell.open("notificaciones", "historial") abre el historial; con { app: "whatsapp" } ya filtrado.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import "../.."
 import "../../components"
 
@@ -29,6 +33,29 @@ Glass {
         win.query = "";
         search.text = "";
         win.recentFilter = "";
+        if (digestAuto && digestStale && Notifs.count >= 3) digestRun();
+    }
+
+    // ---------- resumen de los avisos (hf-ai digest)
+    readonly property var digestItems: Notifs.list.values.slice().reverse().slice(0, 30)
+        .map(n => ({ app: Notifs.appOf(n), summary: Notifs.plain(n.summary), body: Notifs.plain(n.body) }))
+    readonly property string digestKey: digestItems.map(n => n.app + n.summary + n.body).join("\n")
+    property string digestFor: ""            // la lista de avisos que se resumió
+    property var digest: null                // { text, local, error }
+    readonly property bool digestStale: digestKey !== digestFor
+    readonly property bool localAi: Settings.get("aiProvider", "") === "ollama" || Settings.get("aiFallbackProvider", "") === "ollama"
+    readonly property bool digestAuto: localAi && Settings.get("notifDigestAuto", true) !== false && Settings.get("aiProvider", "") !== "off"
+    function digestRun(): void {
+        if (digestProc.running) return;
+        digestFor = digestKey;
+        digestProc.command = [Paths.script("hf-ai"), "digest", JSON.stringify(digestItems)];
+        digestProc.running = true;
+    }
+    Process {
+        id: digestProc
+        stdout: StdioCollector {
+            onStreamFinished: { try { win.digest = JSON.parse(text); } catch (e) { win.digest = { text: "", error: "No se pudo resumir" }; } }
+        }
     }
     function isOpen(g): bool { return win.open[g.key] !== undefined ? win.open[g.key] : g.items.length < 3; }
     function toggle(g) { const o = Object.assign({}, open); o[g.key] = !isOpen(g); open = o; }
@@ -136,6 +163,59 @@ Glass {
                 }
             }
 
+            // Resumen: una o dos frases con lo que pasó (y lo que pide atención primero)
+            Rectangle {
+                visible: Notifs.count >= 3 && Settings.get("aiProvider", "") !== "off"
+                Layout.fillWidth: true
+                implicitHeight: dcol.implicitHeight + 18
+                radius: Theme.r(10)
+                color: Qt.alpha(Theme.p, 0.08)
+                border.width: 1; border.color: Qt.alpha(Theme.p, 0.22)
+                ColumnLayout {
+                    id: dcol
+                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 9; leftMargin: 11 }
+                    spacing: 4
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        Icon { name: "sparkle"; size: 13; color: Theme.p
+                            SequentialAnimation on opacity { running: digestProc.running && !Theme.still; loops: Animation.Infinite
+                                onRunningChanged: if (!running) parent.opacity = 1
+                                NumberAnimation { to: 0.3; duration: 500 } NumberAnimation { to: 1; duration: 500 } } }
+                        Txt { text: "Resumen"; weight: Font.DemiBold; size: 12.5 }
+                        Txt { text: "· " + Notifs.count + " avisos"; muted: true; size: 11.5; tabular: true }
+                        Item { Layout.fillWidth: true }
+                        Rectangle {
+                            visible: !digestProc.running && (win.digest === null || win.digestStale || !!win.digest.error)
+                            implicitHeight: 22; implicitWidth: dT.implicitWidth + 16; radius: Theme.r(6)
+                            color: dMa.containsMouse ? Theme.fill2 : "transparent"
+                            border.width: 1; border.color: Theme.ov
+                            Txt { id: dT; anchors.centerIn: parent; size: 11; color: Theme.p
+                                text: win.digest === null ? "Resumir" : win.digest.error ? "Reintentar" : "Actualizar" }
+                            MouseArea { id: dMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.digestRun() }
+                        }
+                    }
+                    Txt {
+                        visible: digestProc.running || !!(win.digest?.text || win.digest?.error)
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        size: 12
+                        muted: digestProc.running || !!win.digest?.error
+                        text: digestProc.running ? "Leyendo los avisos…" : win.digest?.error ? win.digest.error : (win.digest?.text ?? "")
+                    }
+                    Txt {
+                        visible: win.digest === null && !digestProc.running
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap; size: 11; muted: true
+                        text: win.localAi ? "Lo resume el modelo local: nada sale del equipo" : "Los avisos se envían a tu asistente de IA para resumirlos"
+                    }
+                    Txt {
+                        visible: !digestProc.running && !!win.digest?.text
+                        size: 10.5; muted: true
+                        text: (win.digest?.local ? "Modelo local" : "Asistente de IA") + (win.digestStale ? " · han llegado avisos nuevos" : "")
+                    }
+                }
+            }
             AppChips {
                 visible: win.groups.length > 1
                 Layout.fillWidth: true

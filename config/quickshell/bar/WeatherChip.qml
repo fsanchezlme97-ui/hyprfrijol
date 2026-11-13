@@ -3,6 +3,7 @@
 // horas y de 3 días). En la barra vertical, icono y grados apilados.
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import ".."
 import "../components"
 import "../services"
@@ -18,13 +19,16 @@ BarChip {
     clip: true
     // Sin datos la barra lo esconde (want): pedirlos igualmente, si no nunca llegarían a enseñarse
     UseCounter { target: Weather; active: chip.visible || !chip.want }
+    // Barra viva: el icono se mueve con el tiempo que hace, salvo en pantalla completa, en modo juego o sin datos
+    readonly property bool live: chip.visible && Weather.ready && !Shell.gameMode
+                                 && !WinMode.hasFullscreen(chip.QsWindow.window?.screen?.name ?? "")
     RowLayout {
         id: r
         visible: !chip.vertical
         anchors.verticalCenter: parent.verticalCenter
         x: 7
         spacing: 5
-        Icon { name: Weather.ready ? Weather.icon : "cloud"; color: Theme.t; opacity: Weather.ready ? 1 : 0.5 }
+        WeatherGlyph { code: Weather.ready ? Weather.code : -1; day: Weather.isDay; live: chip.live; opacity: Weather.ready ? 1 : 0.5 }
         Txt { text: Weather.ready ? Math.round(Weather.temp) + "°" : "—"; weight: Font.DemiBold; tabular: true }
         Txt {
             id: desc
@@ -41,7 +45,7 @@ BarChip {
         visible: chip.vertical
         anchors.centerIn: parent
         spacing: 1
-        Icon { Layout.alignment: Qt.AlignHCenter; name: Weather.ready ? Weather.icon : "cloud"; color: Theme.t }
+        WeatherGlyph { Layout.alignment: Qt.AlignHCenter; code: Weather.ready ? Weather.code : -1; day: Weather.isDay; live: chip.live }
         Txt { Layout.alignment: Qt.AlignHCenter; text: Weather.ready ? Math.round(Weather.temp) + "°" : "—"; size: 11; weight: Font.DemiBold; tabular: true }
     }
 }

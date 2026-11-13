@@ -247,6 +247,7 @@ bloqueadas, quita de los emergentes los de apps sin emergentes y suena con `canb
 | `notifyDndSchedule` / `notifyDndFrom` / `notifyDndTo` | `false` / `"22:00"` / `"07:00"` | «no molestar» automático; solo actúa al cruzar el horario (si lo cambias a mano dentro, se respeta) |
 | `notifyPosition` | `"auto"` | `auto` (según la barra) · `sup-der` · `sup-centro` · `sup-izq` · `inf-der` · `inf-izq` (`NotificationPopups.qml`) |
 | `notifyTimeout` | `6` | segundos de un aviso emergente si la app no pide otro tiempo (cuenta desde que llegó) |
+| `notifDigestAuto` | `true` | resumen de los avisos (tarjeta «Resumen» del centro, `hf-ai digest`): con el modelo local (Ollama de proveedor o de respaldo) se hace solo al abrir el centro con 3 avisos o más; sin él, con el botón «Resumir» |
 | `notifySound` / `notifySoundName` | `false` / `"message-new-instant"` | sonido del tema freedesktop al mostrarse un aviso (no con «no molestar» ni `suppress-sound`) |
 | `notifyLock` | `true` | número de avisos en la pantalla de bloqueo (nunca el contenido) |
 | `notifyApps` | `{}` | `{"<app en minúsculas>": {"allow": false, "popups": false, "sound": false}}` (solo se guardan los `false`); los urgentes siempre salen |

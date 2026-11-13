@@ -3,6 +3,27 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.66] — 2026-11-12
+
+### Nuevo
+- Spotlight con vista previa de archivos (`/nombre`): miniatura de imágenes, PDF (1.ª página) y vídeos, el principio
+  de textos, código, CSV, Word, Excel y LibreOffice, o lo que contiene una carpeta; con sus datos (medidas, páginas,
+  duración, líneas, tamaño, fecha). Debajo, acciones rápidas según el tipo: Resumir (al asistente), convertir a otro
+  formato, sacar el texto (OCR), firmar, enviar por correo y copiar el archivo para pegarlo en otra app; también en
+  Ctrl K. Lo hace `hf-fileact preview` (miniaturas en `~/.cache/hyprfrijol/preview`).
+- Resumen de avisos en el centro de control: con 3 avisos o más, una tarjeta los resume en una o dos frases, primero
+  lo que pide atención. Si Ollama es tu proveedor o tu respaldo lo hace el modelo local y nada sale del equipo, y se
+  rehace solo al abrir el centro (Ajustes › Notificaciones › «Resumen automático», `notifDigestAuto`); si no, con el
+  botón «Resumir». `hf-ai digest` desde la terminal.
+- Barra viva: el icono del clima se mueve según el tiempo (el sol gira despacio, la nube va y viene, cae lluvia o
+  nieve, el rayo destella, la estrella de la luna titila) y el anillo del pomodoro se vacía con el tiempo que queda y
+  late en los 2 últimos minutos. Quietos en pantalla completa, en modo juego y sin animaciones; a ~12 fotogramas por
+  segundo para no repintar la barra a 60.
+
+### Corregido
+- «Preguntar a la IA» sobre un Word, Excel o LibreOffice (menú de Nautilus y Spotlight) enviaba solo el nombre del
+  archivo; ahora manda su texto.
+
 ## [0.9.65] — 2026-11-12
 
 ### Nuevo

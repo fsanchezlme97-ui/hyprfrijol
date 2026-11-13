@@ -62,6 +62,10 @@ Overlay {
                                                : items[Math.max(0, Math.min(sel, items.length - 1))] ?? null
     // Solo se calculan con el menú abierto (buscar la app en el catálogo de la tienda cuesta)
     readonly property var moreActions: moreMode && cur ? actionsOf(cur) : []
+    // Vista previa del archivo elegido (hf-fileact preview): miniatura o el principio del texto, datos y acciones
+    property var prev: ({})
+    readonly property bool prevHere: cur?.kind === "file" && prev.path === cur.path
+    onCurChanged: if (cur?.kind === "file" && prev.path !== cur.path) prevTimer.restart()
     readonly property bool clipMode: mode === "search" && query.trim().startsWith(":")
     readonly property bool emojiMode: mode === "search" && query.startsWith(";")
     property string direct: ""          // "" | ":" | ";" — se abrió directamente en ese modo (Esc cierra)
@@ -437,7 +441,7 @@ Overlay {
             const t = it.win;
             return [["Clase", classOf(t) || "—"], ["Espacio", t.workspace ? String(t.workspace.id) : "—"], ["Monitor", t.monitor?.name ?? "—"]];
         }
-        if (it.kind === "file") return [["Ruta", it.path.replace(Paths.home, "~")], ["Tipo", it.isDir ? "Carpeta" : "Archivo"]];
+        if (it.kind === "file") return prevHere ? prev.rows : [["Ruta", it.path.replace(Paths.home, "~")], ["Tipo", it.isDir ? "Carpeta" : "Archivo"]];   // con vista previa la carpeta ya va en el subtítulo
         if (it.kind === "clip") return [["Tipo", it.clip.meta], ["Estado", it.clip.pinned ? "Fijado" : "En el historial"],
                                         ["Intro", Clip.autoPaste ? "Copia y pega · Mayús ↵ solo copia" : "Copia · Mayús ↵ también pega"]];
         return [["Tipo", it.cat]];
@@ -473,6 +477,7 @@ Overlay {
             a.push({ label: "Abrir", run: () => runItem(it) });
             a.push({ label: "Abrir la carpeta que lo contiene", run: () => { Shell.exec(["xdg-open", it.path.replace(/\/[^\/]*$/, "") || "/"]); Shell.close(); } });
             a.push({ label: "Copiar ruta", run: () => copy(it.path) });
+            for (const q of fileActs(it)) a.push(q);
         } else if (it.kind === "clip") {
             a.push({ label: "Copiar y pegar en la ventana anterior", run: () => Clip.copy(it.clip, true) });
             a.push({ label: "Solo copiar", run: () => Clip.copy(it.clip, false) });
@@ -485,6 +490,20 @@ Overlay {
         }
         if (canPin(it) && it.kind !== "clip")
             a.push({ label: isPinned(it.key) ? "Quitar de fijados de Spotlight" : mode === "apps" ? "Fijar en Spotlight" : "Fijar arriba", run: () => { togglePin(it); moreMode = false; } });
+        return a;
+    }
+    // Acciones rápidas de un archivo según su tipo (las de la vista previa; también en Ctrl K)
+    function fileActs(it) {
+        if (!prevHere || it.isDir) return [];
+        const x = prev.actions ?? {}, f = it.path, fa = Paths.script("hf-fileact");
+        const go = cmd => () => { Shell.exec(cmd); Shell.close(); };
+        const a = [];
+        if (x.ai) a.push({ short: "Resumir", icon: "sparkle", label: "Preguntar a la IA por el archivo", run: go([fa, "ai", f]) });
+        for (const c of (x.convert ?? []).slice(0, 3)) a.push({ short: c.fmt.toUpperCase(), icon: "refresh", label: "Convertir a " + c.label, run: go([fa, "convert", c.fmt, f]) });
+        if (x.ocr) a.push({ short: "Texto", icon: "file", label: "Sacar el texto (OCR) al portapapeles", run: go([fa, "ocr", f]) });
+        if (x.sign) a.push({ short: "Firmar", icon: "edit", label: "Firmar el documento", run: go([fa, "sign", f]) });
+        a.push({ short: "Enviar", icon: "send", label: "Enviar por correo", run: go(["xdg-email", "--attach", f]) });
+        a.push({ short: "Copiar", icon: "copy", label: "Copiar el archivo (para pegarlo en otra app)", run: go(["wl-copy", "-t", "text/uri-list", "file://" + encodeURI(f)]) });
         return a;
     }
     function canPin(it) { return it && (it.kind === "app" || it.kind === "static" || it.kind === "clip"); }
@@ -610,6 +629,21 @@ Overlay {
             calcProc.expr = expr;
             calcProc.command = ["sh", "-c", 'LC_ALL=C timeout 3 qalc -t -- "$1" 2>/dev/null | head -1', "sh", expr];
             calcProc.running = true;
+        }
+    }
+    Timer {
+        id: prevTimer; interval: 120
+        onTriggered: if (spot.cur?.kind === "file") { prevProc.path = spot.cur.path; prevProc.command = [Paths.script("hf-fileact"), "preview", spot.cur.path]; prevProc.running = true; }
+    }
+    Process {
+        id: prevProc
+        property string path: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let r = null;
+                try { r = JSON.parse(text); } catch (e) {}
+                if (r) { r.path = prevProc.path; spot.prev = r; }
+            }
         }
     }
     Process {
@@ -817,7 +851,7 @@ Overlay {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     Layout.margins: 20
-                    spacing: 14
+                    spacing: spot.prevHere ? 10 : 14
 
                     RowLayout {
                         spacing: 14
@@ -860,6 +894,55 @@ Overlay {
                             color: Theme.t
                             textFormat: Text.PlainText
                             renderType: Text.NativeRendering
+                        }
+                    }
+
+                    // Vista previa del archivo (miniatura, o el principio del texto o de la carpeta)
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: spot.prev.image ? 130 : Math.min(130, prevTxt.contentHeight + 20)
+                        visible: spot.prevHere && !spot.moreMode && (spot.prev.image !== "" || spot.prev.text !== "")
+                        radius: Theme.r(6)
+                        color: Theme.fill2
+                        clip: true
+                        Image {
+                            anchors.fill: parent; anchors.margins: 6
+                            visible: spot.prevHere && spot.prev.image !== ""
+                            source: visible ? "file://" + encodeURI(spot.prev.image) : ""
+                            fillMode: Image.PreserveAspectFit
+                            sourceSize: Qt.size(720, 360)
+                            asynchronous: true
+                            cache: false
+                        }
+                        Text {
+                            id: prevTxt
+                            anchors.fill: parent; anchors.margins: 10
+                            visible: spot.prevHere && spot.prev.image === ""
+                            text: visible ? spot.prev.text : ""
+                            wrapMode: spot.prev.mono ? Text.NoWrap : Text.Wrap
+                            elide: Text.ElideRight
+                            maximumLineCount: 7
+                            font.family: spot.prev.mono ? Theme.mono : Theme.font
+                            font.pixelSize: Theme.px(spot.prev.mono ? 11 : 12)
+                            color: Theme.t
+                            textFormat: Text.PlainText
+                            renderType: Text.NativeRendering
+                        }
+                    }
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        visible: spot.cur?.kind === "file" && !spot.moreMode && acts.count > 0
+                        Repeater {
+                            id: acts
+                            model: spot.cur?.kind === "file" ? spot.fileActs(spot.cur) : []
+                            Btn {
+                                required property var modelData
+                                h: 26; padX: 10; textSize: 11.5
+                                icon: modelData.icon; text: modelData.short
+                                focusable: false
+                                onClicked: modelData.run()
+                            }
                         }
                     }
 
@@ -941,7 +1024,7 @@ Overlay {
                     // Sugerencias (clic = se escriben en la búsqueda)
                     Flow {
                         Layout.fillWidth: true
-                        visible: !spot.clipMode
+                        visible: !spot.clipMode && spot.cur?.kind !== "file"
                         spacing: 0
                         Txt { text: "Prueba: "; size: 11.5; muted: true }
                         Repeater {
