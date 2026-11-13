@@ -333,16 +333,20 @@ Item {
                         // filtro de secretos de hf-ai: se avisa cuántos datos sensibles no salieron del equipo
                         steps: (r.steps ?? []).concat(r.redacted ? [(r.redacted === 1 ? "Se ocultó 1 dato sensible" : "Se ocultaron " + r.redacted + " datos sensibles") + " del contexto"] : []),
                         code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto, model: r.model ?? "" });
-            const waits = Shell.aiConversation && (r.actions?.length ?? 0) > 0 && !(((!root.confirmChanges && !r.confirm) || r.auto));
+            // Se aplica ya, con Deshacer: sin confirmación (Ajustes › IA), todo «aprobado siempre» (aiAlwaysApprove) o, en la
+            // conversación por voz, si todo se puede deshacer (abrir apps y webs, música, ajustes…). Lo que no tiene vuelta
+            // atrás (cerrar ventanas, borrar avisos, comandos) pregunta «¿Lo hago?» y se contesta hablando (Dictado.qml);
+            // solo lo que lleva sudo va al panel: pide tu contraseña en la terminal y hay que verlo.
+            const conv = Shell.aiConversation, n = r.actions?.length ?? 0;
+            const sudo = (r.actions ?? []).some(a => a.type === "run" && /(^|[\s;&|(`])(sudo|pkexec|doas|su|run0)(\s|$)/.test(String(a.command ?? "")));
+            const auto = n > 0 && ((!root.confirmChanges && !r.confirm) || r.auto || (conv && !r.confirm && !sudo));
+            const waits = conv && n > 0 && !auto && !sudo;
             if (waits) { root.planIdx = root.messages.length - 1; Shell.aiPlanPending = true; }
-            if (Settings.get("aiVoice", false) || Shell.aiConversation) Quickshell.execDetached([Paths.script("hf-ai"), "speak",
-                (r.text || (waits ? (r.labels ?? []).map(l => String(l).split(":")[0]).join(". ") + "." : "")) + (waits ? " ¿Lo hago?" : "")]);
-            // Sin confirmación (Ajustes › IA) o todo «aprobado siempre» (aiAlwaysApprove): se aplica ya y queda
-            // el botón Deshacer (salvo pasos sin vuelta atrás, que siempre preguntan)
-            const auto = ((!root.confirmChanges && !r.confirm) || r.auto) && (r.actions?.length ?? 0) > 0;
+            const said = (r.labels ?? []).map(l => String(l).split(":")[0]).join(". ") + ".";
+            if (Settings.get("aiVoice", false) || conv) Quickshell.execDetached([Paths.script("hf-ai"), "speak",
+                (r.text || (n ? said : "")) + (waits ? " ¿Lo hago?" : conv && sudo ? " Eso necesita tu contraseña: te lo dejo en el panel." : "")]);
             if (auto) root.apply(root.messages.length - 1);
-            // con el panel cerrado (conversación por voz) hay que verlo para aprobar los cambios
-            else if ((r.actions?.length ?? 0) > 0 && !root.active) Shell.open("ia");
+            else if (n > 0 && !root.active && (!conv || sudo)) Shell.open("ia");
         }
     }
     Process {

@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.69] — 2026-11-13
+
+### Cambiado
+- Conversación por voz sin clics: lo que se puede deshacer (abrir apps y webs, música, volumen, ajustes, fondos…) se
+  hace al momento, sin preguntar. Lo que no tiene vuelta atrás (cerrar una ventana, borrar avisos, un comando)
+  pregunta «¿Lo hago?» y se contesta hablando; el panel ya no se abre para aprobarlo. Solo lo que lleva sudo va al
+  panel, porque pide tu contraseña.
+- El «sí» se entiende mejor: sin tildes, con muletillas delante («Mm, de acuerdo») y como lo transcribe a veces el
+  reconocedor («Proceed», «A probar y aplicar»). Antes esas respuestas iban al asistente como una pregunta nueva y
+  volvía a proponer el plan.
+- «Abre el navegador» abre tu navegador predeterminado (antes podía elegir Firefox teniendo Chrome por defecto), y
+  «cierra el navegador» encuentra su ventana.
+
 ## [0.9.68] — 2026-11-12
 
 ### Seguridad

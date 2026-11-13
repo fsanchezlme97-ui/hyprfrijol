@@ -193,7 +193,8 @@ SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden
 - {"type":"window","op":OP,"target":T,"workspace":N}   OP: focus|close|fullscreen|maximize|float|tile|pin|move|minimize|restore;
                                               T: "active" o parte de la clase/título («firefox», «kitty»); workspace solo con move
 - {"type":"winmode","value":"mosaico"|"desplazamiento"|"flotante"}   modo de ventanas (de todo el escritorio)
-- {"type":"launch","app":"firefox"}         abrir una app instalada (nombre, id .desktop o clase)
+- {"type":"launch","app":"navegador"}       abrir una app instalada (nombre, id .desktop o clase; "navegador" abre el
+                                              predeterminado: úsalo si no nombra uno)
 - {"type":"url","value":"https://…"}         abrir una web en el navegador
 - {"type":"media","value":"play"|"pause"|"play-pause"|"next"|"previous"|"stop"}
 - {"type":"volume","value":0-100|"+5"|"-5"|"mute"|"unmute"}
@@ -570,6 +571,8 @@ def validate(actions):
                 a["value"] = int(a.get("value")); ok.append(a)
             elif t == "window" and a.get("op") in WINDOW_OPS:
                 a["target"] = str(a.get("target") or "active")[:80]
+                if a["target"].lower() in BROWSER_WORDS and (e := find_app("navegador")):
+                    a["target"] = e.get("StartupWMClass") or e["id"].split(".")[-1]
                 if a["op"] == "move":
                     a["workspace"] = int(a.get("workspace"))
                 ok.append(a)
@@ -739,7 +742,7 @@ def desktop_entries():
                         continue
                     k, v = line.split("=", 1)
                     if k in ("Name", "Name[es]", "GenericName[es]", "GenericName", "Exec", "NoDisplay", "Hidden",
-                             "StartupWMClass", "Keywords", "Keywords[es]", "Type"):
+                             "StartupWMClass", "Keywords", "Keywords[es]", "Type", "Categories"):
                         e.setdefault(k, v.strip())
             except Exception:
                 continue
@@ -749,10 +752,16 @@ def desktop_entries():
             out.append(e)
     return out
 
+BROWSER_WORDS = ("navegador", "el navegador", "navegador web", "browser", "web browser")
+
 def find_app(q, many=False):
     q = str(q).strip().lower()
     if not q:
         return [] if many else None
+    if q in BROWSER_WORDS:   # el predeterminado (xdg-settings) o, si no aparece, el primer navegador instalado
+        d = re.sub(r"\.desktop$", "", run(["xdg-settings", "get", "default-web-browser"]).strip().lower())
+        e = (find_app(d) if d else None) or next((x for x in desktop_entries() if "WebBrowser" in x.get("Categories", "")), None)
+        return ([e] if e else []) if many else e
     res = []
     for e in desktop_entries():
         name, idl = e["name"].lower(), e["id"].lower()

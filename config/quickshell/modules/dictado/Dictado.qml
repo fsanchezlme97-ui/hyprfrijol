@@ -131,9 +131,17 @@ Scope {
             if (Shell.aiSpeaking) root.convListen();
         }
     }
-    // Sin \b: en JS (sin /u) «í» no es letra y «Sí, hazlo» no casaba
-    readonly property var yesRe: /^(s[ií]|vale|ok|okey|claro|adelante|hazlo|h[aá]galo|dale|de acuerdo|perfecto|venga|por favor)(?=[\s,.;:!?¡¿]|$)/i
-    readonly property var noRe: /^(no|cancela|cancelar|d[eé]jalo|mejor no|ni hablar|olv[ií]dalo)(?=[\s,.;:!?¡¿]|$)/i
+    // «¿Lo hago?» contestado hablando: true (sí), false (no) o null (otra cosa: va al asistente como pregunta nueva).
+    // Sin tildes ni muletillas delante («Mm, de acuerdo»); el reconocedor a veces lo oye en inglés («Proceed.») o partido
+    // («A probar y aplicar»).
+    readonly property var yesRe: /^(si|vale|ok|okay|okey|claro|adelante|hazlo|hagalo|dale|de acuerdo|perfecto|venga|por favor|procede|proceda|proced|proceed|yes|sure|aprobar|apruebo|aprobado|apruebalo|a probar|aplica|aplicalo|confirmo|confirmado|confirma|correcto|afirmativo|exacto|ejecuta|ejecutalo|abrelo|abrela|eso es)( |$)/
+    readonly property var noRe: /^(no|nope|cancela|cancelar|cancelalo|dejalo|mejor no|ni hablar|olvidalo|espera)( |$)/
+    function planAnswer(t: string): var {
+        const w = t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z0-9ñ]+/).filter(x => x);
+        while (w.length && /^(m+h*m*|h?m+|e+h*|a+h+|u+m+|bueno|pues|este|oye|mira)$/.test(w[0])) w.shift();
+        const s = w.join(" ");
+        return noRe.test(s) ? false : yesRe.test(s) ? true : null;
+    }
     readonly property var noiseRe: /^[\s.,…!?¡¿-]*(m+-?h?m+|mhm+|hmm+|e+h+|a+h+|u+m+|o+h+|gracias|subt[ií]tulos.*|amara\.org.*|\[.*\]|\(.*\)|m[uú]sica)?[\s.,…!?¡¿-]*$/i
     readonly property var byeRe: /^(adi[oó]s|hasta luego|chao|terminar|termina|para ya|eso es todo|ya est[aá]|gracias,? eso es todo|fin de la conversaci[oó]n)[\s.!¡]*$/i
 
@@ -201,8 +209,8 @@ Scope {
                 if (byeRe.test(t)) { convEnd(true); break; }
                 convMisses = 0; convProactive = false;
                 // Un plan esperando (las herramientas del asistente): «sí» lo aplica, «no» lo descarta
-                if (Shell.aiPlanPending && (yesRe.test(t) || noRe.test(t))) {
-                    Shell.aiPlanAnswer(yesRe.test(t));
+                if (Shell.aiPlanPending && planAnswer(t) !== null) {
+                    Shell.aiPlanAnswer(planAnswer(t));
                     convState = "habla";
                     replyTimer.restart();
                     break;

@@ -114,7 +114,7 @@
   ]
  },
  "greeter": true,
- "hyprfrijol": "v0.9.68",
+ "hyprfrijol": "v0.9.69",
  "ollama": [
   "gemma4:e4b"
  ],
@@ -124,7 +124,7 @@
   "rustdesk": true,
   "rustdeskPortal": true
  },
- "saved": "2026-11-12 23:39",
+ "saved": "2026-11-13 08:00",
  "services": [
   "sshd",
   "ufw",
