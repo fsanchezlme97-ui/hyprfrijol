@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.74] — 2026-11-13
+
+### Corregido
+- RustDesk seguía colgando canales de la gráfica de nouveau al arrancar su servidor: la opción que apaga el códec
+  por hardware se escribía en tu configuración (`~/.config/rustdesk/RustDesk2.toml`) y el servicio de root la
+  borraba al sincronizar la suya. `hf-remote rustdesk gpu` y `hf-remote rustdesk hwcodec-off` la ponen ahora en
+  el servicio (`sudo rustdesk --option enable-hwcodec N`). Se quita el paso automático de 0.9.72, que no servía
+  (sin sudo no llega al servicio): con nouveau y RustDesk ya instalado, lanza una vez
+  `hf-remote rustdesk hwcodec-off`.
+
 ## [0.9.73] — 2026-11-13
 
 ### Cambiado

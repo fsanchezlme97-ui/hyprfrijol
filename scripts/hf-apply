@@ -56,17 +56,6 @@ def _profiles_left():
     return any((HOME / ".local/share/applications").glob("hf-webapp-*.desktop"))
 if _profiles_left():
     subprocess.run([str(ROOT / "scripts/hf-migrate"), "--retired-only", "--quiet"], check=False)
-# 0.9.72: con una gráfica en nouveau, RustDesk sin códec por hardware (su prueba de VA-API colgaba canales de esa
-# gráfica). Una sola vez (marca en el estado): si alguien lo vuelve a activar en RustDesk, se respeta.
-_mark = STATE / "migrated-0.9.72-rustdesk"
-if not _mark.exists() and (HOME / ".config/rustdesk/RustDesk2.toml").exists():
-    subprocess.run([str(ROOT / "scripts/hf-remote"), "rustdesk", "hwcodec-off"], check=False,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    try:
-        STATE.mkdir(parents=True, exist_ok=True)
-        _mark.touch()
-    except Exception:
-        pass
 # 0.9.58: el portapapeles y el historial del asistente caducan a los 30 días en las instalaciones nuevas. Quien ya
 # tenía ajustes guardados conserva «nunca»/«siempre» (los de antes): se escriben una sola vez (marca en el estado).
 _mark = STATE / "migrated-0.9.58"
