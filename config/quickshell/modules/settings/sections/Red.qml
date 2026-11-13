@@ -23,7 +23,7 @@ ColumnLayout {
 
     function refresh() { info.running = false; info.running = true; }
     Component.onCompleted: Net.scan()
-    Timer { interval: 5000; running: true; repeat: true; onTriggered: root.refresh() }
+    Timer { interval: 5000; running: Shell.settingsSeen; repeat: true; onRunningChanged: if (running) triggered(); onTriggered: root.refresh() }
     Process {
         id: info
         running: true
@@ -223,7 +223,7 @@ ColumnLayout {
         function run(args, then) { act.command = [cmd].concat(args); act.then = then ?? ""; act.running = true; }
         function shRun(script, args) { act.command = ["sh", "-c", script, "sh"].concat(args); act.then = ""; act.running = true; }
 
-        Timer { interval: vs.anyConnecting ? 1500 : 5000; running: true; repeat: true; onTriggered: vs.refresh() }
+        Timer { interval: vs.anyConnecting ? 1500 : 5000; running: Shell.settingsSeen; repeat: true; onRunningChanged: if (running) triggered(); onTriggered: vs.refresh() }
         // Solo para capturas de prueba: HF_DEV_VPN_ADD="fortinet:saml" abre el formulario de ese tipo
         Component.onCompleted: { const d = Quickshell.env("HF_DEV_VPN_ADD") ?? ""; if (d) { adding = true; addType = d.split(":")[0]; } }
         Timer { id: soon; interval: 1500; onTriggered: { vs.busy = ""; vs.refresh(); } }
@@ -491,7 +491,7 @@ ColumnLayout {
 
         function refresh() { mesh.running = false; mesh.running = true; }
         function term(args, title) { Pkg.runInTerminal(cmd + " " + args, title); later.restart(); }
-        Timer { interval: 8000; running: true; repeat: true; onTriggered: ms.refresh() }
+        Timer { interval: 8000; running: Shell.settingsSeen; repeat: true; onRunningChanged: if (running) triggered(); onTriggered: ms.refresh() }
         Timer { id: later; interval: 6000; repeat: true; property int n: 0; onTriggered: { ms.refresh(); if (++n > 8) { n = 0; stop(); } } }
         Process {
             id: mesh

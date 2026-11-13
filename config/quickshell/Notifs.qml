@@ -147,7 +147,7 @@ Singleton {
     function timeOf(n): date { return new Date(arrived[n?.id] ?? Date.now()); }
     function ago(n): string { return agoT(timeOf(n).getTime()); }
     function agoT(ms: real): string {
-        const t = new Date(ms), now = Time.now;
+        const t = new Date(ms), now = new Date(Time.day);
         const mins = Math.floor((now - t) / 60000);
         if (mins < 1) return "ahora";
         if (mins < 60) return "hace " + mins + " min";

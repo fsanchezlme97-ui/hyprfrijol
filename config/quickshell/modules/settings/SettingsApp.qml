@@ -157,6 +157,17 @@ Scope {
 
     Daemons {}
 
+    // ¿Se ve? En el espacio activo de alguna pantalla (minimizar lo manda a un espacio especial). Si HyprClients aún
+    // no conoce la ventana, cuenta como vista: mejor consultar de más que dejar la página parada
+    readonly property bool seen: {
+        if (!open) return false;
+        HyprClients.refreshes;
+        const c = HyprClients.clients.find(c => c.pid === Quickshell.processId && c.title === "Ajustes");
+        return !c || HyprClients.monitors.some(m => m.activeWorkspace?.id === c.workspace?.id);
+    }
+    onSeenChanged: Shell.settingsSeen = seen
+    Component.onCompleted: Shell.settingsSeen = seen
+
     // Ajustes maximizado o no (estado de la ventana, no un ajuste: no pasa por hf-apply)
     property bool startMax: false
     FileView {

@@ -3,6 +3,25 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.78] — 2026-11-13
+
+### Mejorado
+- Menos trabajo en segundo plano sin cambiar nada de lo que se ve. Medido en reposo (`dev/perf.sh`): el hilo
+  principal del shell pasa del 4,4 % al 2,3 % de un núcleo.
+  - El historial de avisos ya no se rehace cada minuto con el panel cerrado (hasta 150 filas): sus cabeceras «Hoy»
+    y «Ayer» dependen del día (`Time.day`), no de la hora.
+  - El icono animado del clima se para con la sesión bloqueada o la barra escondida (seguía 12 veces por segundo
+    bajo el bloqueo toda la noche).
+  - Cambiar de ventana con el foco ya no lanza `hyprctl` ni relee todas las ventanas: el evento trae la ventana y el
+    orden de uso (Alt + Tab) se lleva como Hyprland. Con el foco siguiendo al ratón eran hasta ~8 por segundo.
+  - La barra de título de las ventanas flotantes pregunta su posición por el socket de Hyprland desde el shell, no
+    con un `hyprctl` cada 100 ms.
+  - Las páginas de Ajustes que se actualizan solas (Red, Escritorio remoto, Privacidad, Impresoras, Máquinas
+    virtuales, Almacenamiento) solo consultan con Ajustes a la vista; al volver a verlo, refrescan al momento.
+  - Con wifi, la señal se lee cada 30 s con un solo `nmcli` y sin pedir una búsqueda de redes (antes sh y cuatro
+    `nmcli`).
+  - Ordenar los iconos del escritorio u ocultar iconos de la bandeja ya no recarga Hyprland.
+
 ## [0.9.77] — 2026-11-13
 
 ### Cambiado

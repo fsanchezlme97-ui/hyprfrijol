@@ -50,7 +50,7 @@ RowLayout {
         command: ["python3", "-c", root.usePy]
         stdout: StdioCollector { onStreamFinished: { try { root.use = JSON.parse(text); } catch (e) {} } }
     }
-    Timer { interval: 3000; running: true; repeat: true; onTriggered: if (!useProc.running) useProc.running = true }
+    Timer { interval: 3000; running: Shell.settingsSeen; repeat: true; onRunningChanged: if (running) triggered(); onTriggered: if (!useProc.running) useProc.running = true }
 
     function probe() { secProc.running = false; secProc.running = true; }
     Process {

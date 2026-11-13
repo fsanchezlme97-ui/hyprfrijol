@@ -1,6 +1,6 @@
 pragma Singleton
-// Red (NetworkManager vía nmcli): estado de Wi-Fi, red actual e intensidad. Se refresca cada 6 s
-// y al instante tras cambiar algo. Para la lista de redes usa Net.scan() → Net.networks.
+// Red (NetworkManager vía nmcli): estado de Wi-Fi, red actual e intensidad. Se refresca con los avisos de
+// `nmcli monitor` y al instante tras cambiar algo; la señal del wifi, cada 30 s. Para la lista de redes usa Net.scan() → Net.networks.
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -33,9 +33,21 @@ Singleton {
     }
 
     // Cambios de conexión al momento por `nmcli monitor` (sin sondear); la intensidad de la señal no avisa, así que
-    // se repasa cada 30 s. Antes eran tres nmcli cada 6 s.
-    // Con cable la señal no cambia: entonces basta con lo que avisa `nmcli monitor`
-    Timer { interval: 30000; running: root.type !== "ethernet"; repeat: true; triggeredOnStart: true; onTriggered: root.refresh() }
+    // con wifi se lee cada 30 s con un solo nmcli (antes el estado entero: sh y cuatro nmcli) y de la última
+    // búsqueda de redes, sin pedir otra. Con cable la señal no cambia: basta con lo que avisa `nmcli monitor`
+    Component.onCompleted: refresh()
+    Timer { interval: 30000; running: root.type === "wifi" && root.connected; repeat: true; onTriggered: sig.running = true }
+    Process {
+        id: sig
+        command: ["nmcli", "-t", "-f", "ACTIVE,SIGNAL", "device", "wifi", "list", "--rescan", "no"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const w = text.split("\n").find(x => x.startsWith("yes:"));
+                const n = w ? parseInt(w.split(":")[1]) : NaN;
+                if (!isNaN(n)) root.signal = n;
+            }
+        }
+    }
     Timer { id: later; interval: 1500; onTriggered: root.refresh() }
     Timer { id: soon; interval: 400; onTriggered: root.refresh() }
     Process {

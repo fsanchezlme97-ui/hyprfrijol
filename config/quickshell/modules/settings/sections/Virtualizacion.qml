@@ -33,7 +33,7 @@ RowLayout {
     function refresh() { stProc.running = false; stProc.running = true; vmProc.running = false; vmProc.running = true; ctProc.running = false; ctProc.running = true; }
     function term(args, title) { Pkg.runInTerminal(cmd + " " + args, title); later.n = 0; later.restart(); }
     function lines(t) { return t.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch (e) { return null; } }).filter(Boolean); }
-    Timer { interval: 6000; running: true; repeat: true; onTriggered: root.refresh() }
+    Timer { interval: 6000; running: Shell.settingsSeen; repeat: true; onRunningChanged: if (running) triggered(); onTriggered: root.refresh() }
     Timer { id: later; interval: 5000; repeat: true; property int n: 0; onTriggered: { root.refresh(); if (++n > 24) { n = 0; stop(); } } }
     Process { id: stProc; running: true; command: [root.cmd, "status"]; stdout: StdioCollector { onStreamFinished: { try { root.st = JSON.parse(text); root.loaded = true; } catch (e) {} } } }
     Process { id: vmProc; running: true; command: [root.cmd, "list"]; stdout: StdioCollector { onStreamFinished: { root.vms = root.lines(text); root.busy = ""; } } }

@@ -29,7 +29,7 @@ RowLayout {
     property var picked: ({})           // paquetes elegidos para instalar
 
     function refresh() { probe.running = false; probe.running = true; }
-    Timer { interval: 4000; running: true; repeat: true; onTriggered: if (!probe.running) root.refresh() }
+    Timer { interval: 4000; running: Shell.settingsSeen; repeat: true; onRunningChanged: if (running) triggered(); onTriggered: if (!probe.running) root.refresh() }
     Timer { id: later; interval: 1200; onTriggered: root.refresh() }
     Process {
         id: probe

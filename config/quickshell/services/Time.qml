@@ -13,6 +13,9 @@ Singleton {
     readonly property string hhmm: h24 ? Qt.formatDateTime(now, "HH:mm") : String(now.getHours() % 12 || 12).padStart(2, "0") + Qt.formatDateTime(now, ":mm")
     readonly property string ampm: h24 ? "" : (now.getHours() < 12 ? "a. m." : "p. m.")
     readonly property string shortDate: Qt.locale("es_ES").toString(now, "ddd d MMM").replace(/\./g, "")
+    // Cambia una vez al día (una propiedad de texto solo avisa si su valor cambia): para lo que depende del día y no
+    // de la hora, como las cabeceras «Hoy» / «Ayer» del historial de avisos, que si no se rehacían cada minuto
+    readonly property string day: now.toDateString()
     readonly property string longDate: Qt.locale("es_ES").toString(now, "dddd, d 'de' MMMM")
     function fmt(d): string { return h24 ? Qt.formatDateTime(d, "HH:mm") : (d.getHours() % 12 || 12) + Qt.formatDateTime(d, ":mm") + (d.getHours() < 12 ? " a. m." : " p. m."); }
     function fmtHM(s: string): string {   // "13:05" (de date +%H:%M) → formato elegido

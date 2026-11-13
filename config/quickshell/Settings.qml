@@ -40,7 +40,8 @@ Singleton {
     }
     // Claves que solo usa el shell: guardarlas no necesita hf-apply (tema, Hyprland, kitty…)
     readonly property var _shellOnly: ["alarms", "timerMin", "worldClocks", "dockApps", "bongoSleep", "calendarCollapsed", "spotlightOrder",
-                                       "storeSources", "welcomeDone", "aiOnboarded", "aiAlwaysApprove", "voiceCommands", "voiceAliases", "remoteHosts"]
+                                       "storeSources", "welcomeDone", "aiOnboarded", "aiAlwaysApprove", "voiceCommands", "voiceAliases", "remoteHosts",
+                                       "deskOrder", "barTrayHidden"]
     property string _written: ""
     // Como setMany, y además borra de settings.json las claves de «remove» (vuelven a su valor por defecto).
     //   Settings.patch({ barPos: "arriba" }, ["barHeight"])

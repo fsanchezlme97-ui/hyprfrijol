@@ -21,7 +21,7 @@ RowLayout {
     property bool hasDisks: false
 
     function refresh(): void { disks.running = false; disks.running = true; }
-    Timer { interval: 10000; running: true; repeat: true; onTriggered: root.refresh() }
+    Timer { interval: 10000; running: Shell.settingsSeen; repeat: true; onRunningChanged: if (running) triggered(); onTriggered: root.refresh() }
     Process {
         id: disks
         running: true

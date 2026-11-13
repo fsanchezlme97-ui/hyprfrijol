@@ -31,6 +31,9 @@ Singleton {
     property bool sideHidden: false
     // Barra escondida a mano en esta sesión (Super + J → hf:barra; IPC shell toggleBar): vuelve al llevar el cursor al borde
     property bool barHidden: false
+    // Ajustes abierto y a la vista (en el espacio activo de una pantalla, sin minimizar; lo pone SettingsApp.qml):
+    // sus páginas solo consultan el sistema cada pocos segundos mientras tanto, y al volver a verse refrescan ya
+    property bool settingsSeen: false
     // Sesión bloqueada (modules/lock): los lectores que solo sirven para la barra se paran (components/UseCounter.qml)
     property bool locked: false
     // Dictado (modules/dictado): fase que pinta el botón de la barra (idle | rec | trans…) y la orden de empezar/terminar

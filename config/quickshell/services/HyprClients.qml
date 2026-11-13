@@ -42,6 +42,22 @@ Singleton {
         refreshes++;
     }
 
+    // Cambio de foco (activewindowv2 trae la dirección): se pone la activa y el orden de uso como lo lleva Hyprland
+    // (la enfocada pasa a 0 y las que iban delante se corren una), sin lanzar hyprctl ni releer todas las ventanas.
+    // El foco sigue al ratón: pasar por encima de varias ventanas lanzaba hasta ~8 hyprctl por segundo
+    function setActive(data: string): void {
+        if (!data || data === ",") { if (activeAddress !== "") { activeAddress = ""; refreshes++; } return; }
+        const addr = norm(data), k = clients.findIndex(c => c.address === addr);
+        if (k < 0) return refresh();                       // aún no la conocemos: lista completa
+        if (addr === activeAddress && clients[k].focusHistoryID === 0) return;
+        const h = clients[k].focusHistoryID;
+        clients = clients.map((c, i) => i === k ? Object.assign({}, c, { focusHistoryID: 0 })
+            : c.focusHistoryID < h ? Object.assign({}, c, { focusHistoryID: c.focusHistoryID + 1 }) : c);
+        activeAddress = addr;
+        lastRaw = "";                                      // la lista ya no es la de la última lectura
+        refreshes++;
+    }
+
     // Solo posiciones y tamaños (el sondeo de WinMode con ventanas flotantes): se pregunta por el socket de Hyprland
     // desde Quickshell, sin lanzar un hyprctl cada 600 ms; monitores y ventana activa siguen llegando por eventos
     property string lastGeo: ""
@@ -116,11 +132,12 @@ Singleton {
             // Título nuevo: llega en el propio evento («dirección,título»), no hace falta preguntar a hyprctl
             if (n === "windowtitlev2") { root.setTitle(ev.data); return; }
             if (n === "windowtitle") return;   // siempre llega junto con windowtitlev2
+            if (n === "activewindowv2") { root.setActive(ev.data); return; }
+            if (n === "activewindow") return;  // siempre llega junto con activewindowv2
             // Un espacio cambia de número (frijol/workspaces.lua lo renumera al cambiar las pantallas): Quickshell no
             // atiende este evento y su lista se quedaría con el número viejo
             if (n === "changeworkspaceid") { Hyprland.refreshWorkspaces(); Hyprland.refreshMonitors(); Hyprland.refreshToplevels(); root.refresh(); return; }
-            if (["openwindow", "closewindow", "movewindow", "movewindowv2", "workspace", "workspacev2", "activewindow",
-                 "activewindowv2", "changefloatingmode", "focusedmon", "focusedmonv2",
+            if (["openwindow", "closewindow", "movewindow", "movewindowv2", "workspace", "workspacev2", "changefloatingmode", "focusedmon", "focusedmonv2",
                  "monitoradded", "monitorremoved", "fullscreen", "createworkspace", "destroyworkspace", "pin",
                  "monitoraddedv2", "monitorremovedv2", "moveworkspace", "moveworkspacev2"].includes(n))
                 root.refresh();

@@ -36,7 +36,7 @@ ColumnLayout {
     readonly property var defPort: ({ rdp: 3389, vnc: 5900, ssh: 22, spice: 5900 })
 
     function refresh() { clProc.running = false; clProc.running = true; srvProc.running = false; srvProc.running = true; secProc.running = false; secProc.running = true; }
-    Timer { interval: 4000; running: true; repeat: true; onTriggered: { srvProc.running = false; srvProc.running = true; rdpProc.running = false; rdpProc.running = true; adProc.running = false; adProc.running = true; } }
+    Timer { interval: 4000; running: Shell.settingsSeen; repeat: true; onRunningChanged: if (running) triggered(); onTriggered: { srvProc.running = false; srvProc.running = true; rdpProc.running = false; rdpProc.running = true; adProc.running = false; adProc.running = true; } }
     Timer { id: later; interval: 5000; repeat: true; property int n: 0; onTriggered: { root.refresh(); if (++n > 10) { n = 0; stop(); } } }
     Process { id: clProc; running: true; command: [root.cmd, "clients"]; stdout: StdioCollector { onStreamFinished: { try { root.cl = JSON.parse(text); } catch (e) {} } } }
     Process { id: srvProc; running: true; command: [root.cmd, "server", "status"]; stdout: StdioCollector { onStreamFinished: { try { root.srv = JSON.parse(text); } catch (e) {} } } }

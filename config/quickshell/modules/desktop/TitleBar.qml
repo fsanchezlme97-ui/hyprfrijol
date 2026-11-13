@@ -6,12 +6,12 @@
 //   - Solo en la ventana activa, que en flotante queda encima: la pastilla no tapa otras ventanas.
 //   - No sale en las apps que ya dibujan su barra ("barsOwnFrame": navegadores, GNOME, VS Code…), ni en las del
 //     propio shell, ni a pantalla completa. Se apaga con "titleBars" = false (Ajustes › Escritorio y gestos).
-//   - La geometría se sondea cada 100 ms mientras se ve (Hyprland no avisa al mover o redimensionar una flotante).
+//   - La geometría se sondea cada 100 ms mientras se ve (Hyprland no avisa al mover o redimensionar una flotante),
+//     por el socket de Hyprland, sin lanzar procesos.
 // Capa "top" a pantalla completa y transparente: solo la pastilla recibe clics (mask); durante un arrastre, toda.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import "../.."
@@ -44,21 +44,19 @@ PanelWindow {
         const g = live && live.address === addr ? live : target;
         return g ? { x: g.at[0], y: g.at[1], w: g.size[0], h: g.size[1], max: (g.fullscreen ?? 0) === 1 } : null;
     }
+    // Por el socket de Hyprland desde Quickshell (refreshToplevels), sin lanzar un hyprctl cada 100 ms: se lee lo
+    // que trajo la consulta anterior y se pide la siguiente
+    property string liveKey: ""
     Timer {
         interval: 100; repeat: true
         running: root.addr !== "" && !drag.active
-        onTriggered: if (!poll.running) poll.running = true
-    }
-    Process {
-        id: poll
-        command: ["hyprctl", "activewindow", "-j"]
-        stdout: StdioCollector {
-            property string last: ""
-            onStreamFinished: {
-                if (text === last) return;
-                last = text;
-                try { const j = JSON.parse(text); if (j?.address) root.live = j; } catch (e) {}
+        onTriggered: {
+            const j = HyprClients.toplevelFor(root.addr)?.lastIpcObject;
+            if (j?.address && j.at && j.size) {
+                const k = JSON.stringify([j.address, j.at, j.size, j.fullscreen]);
+                if (k !== root.liveKey) { root.liveKey = k; root.live = j; }
             }
+            Hyprland.refreshToplevels();
         }
     }
 
