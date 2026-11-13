@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.79] — 2026-11-13
+
+### Corregido
+- La marca de «pantalla bloqueada» de la 0.9.76 podía quedarse puesta con la sesión ya desbloqueada, y entonces
+  cada arranque del shell bloqueaba la pantalla (y reproducía el vídeo del bloqueo, que dejaba ~400 MB retenidos).
+  Se escribía de forma asíncrona y se borraba con un `rm` aparte: un bloqueo que se soltaba al momento la dejaba
+  escrita después del borrado. Ahora se escribe y se vacía por el mismo `FileView` sin esperar, y solo «1» cuenta
+  como bloqueado. Probado en sesión anidada: marca vacía no bloquea; bloquear, matar el shell y relanzarlo sí
+  retoma el bloqueo.
+
 ## [0.9.78] — 2026-11-13
 
 ### Mejorado
