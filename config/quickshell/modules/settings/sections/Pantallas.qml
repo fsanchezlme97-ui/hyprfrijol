@@ -145,7 +145,7 @@ ColumnLayout {
                     Chip { required property var modelData; mark: false; h: 26; text: modelData.name + (modelData.disabled ? " (apagada)" : ""); on: root.sel?.name === modelData.name; onClicked: root.selName = modelData.name }
                 }
             }
-            Mono {
+            Mono { tech: true;
                 Layout.fillWidth: true
                 text: root.sel ? "hl.monitor{ " + root.sel.name + ", " + root.curRes + "@" + Math.round(root.sel.refreshRate) + ", " + root.sel.x + "x" + root.sel.y + ", " + root.sel.scale + " }" : "sin monitores"
             }
@@ -252,7 +252,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Luz nocturna"
-        headerRight: Mono { text: "hyprsunset · nightLight" }
+        headerRight: Mono { tech: true; text: "hyprsunset · nightLight" }
         readonly property string nl: Settings.get("nightLight", "off")
         Seg {
             Layout.fillWidth: true

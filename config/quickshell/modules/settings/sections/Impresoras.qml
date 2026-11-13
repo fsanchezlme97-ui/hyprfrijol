@@ -126,7 +126,7 @@ RowLayout {
                         onClicked: { Quickshell.execDetached(["pkexec", "systemctl", "enable", "--now", "cups.socket", "cups.service"]); later.restart(); }
                     }
                 }
-                Mono { Layout.fillWidth: true; text: "cups.socket / cups.service: " + (root.svc || "…") }
+                Mono { tech: true; Layout.fillWidth: true; text: "cups.socket / cups.service: " + (root.svc || "…") }
             }
             Txt {
                 visible: root.cups && root.svcOn && root.printers.length === 0

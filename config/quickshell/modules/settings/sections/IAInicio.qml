@@ -61,7 +61,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Estado"
-        headerRight: Mono { text: "hf-ai status · hf-ai test" }
+        headerRight: Mono { tech: true; text: "hf-ai status · hf-ai test" }
         RowLayout {
             Layout.fillWidth: true
             spacing: 14

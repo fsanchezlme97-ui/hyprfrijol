@@ -290,7 +290,7 @@ ColumnLayout {
         visible: !root.app
         Layout.fillWidth: true
         title: "Compartir este escritorio"
-        headerRight: Mono { text: "wayvnc" }
+        headerRight: Mono { tech: true; text: "wayvnc" }
         RowLayout {
             Layout.fillWidth: true
             spacing: 24
@@ -424,7 +424,7 @@ ColumnLayout {
         visible: !root.app
         Layout.fillWidth: true
         title: "Entrar desde Windows (RDP)"
-        headerRight: Mono { text: "hypr-rdp" }
+        headerRight: Mono { tech: true; text: "hypr-rdp" }
         RowLayout {
             Layout.fillWidth: true
             spacing: 24
@@ -503,7 +503,7 @@ ColumnLayout {
         visible: !root.app
         Layout.fillWidth: true
         title: "Entrar con RustDesk"
-        headerRight: Mono { text: "RustDesk · portal RemoteDesktop" }
+        headerRight: Mono { tech: true; text: "RustDesk · portal RemoteDesktop" }
         SwRow {
             separator: false
             label: "RustDesk"

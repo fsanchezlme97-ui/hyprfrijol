@@ -97,7 +97,7 @@ ColumnLayout {
             }
             Button { text: "Comprobar de nuevo"; onClicked: root.probe() }
         }
-        Mono { Layout.fillWidth: true; text: "bluetooth.service: " + (root.sys.svc || "…") + " · " + (root.sys.enabled || "…") + " · adaptador: " + (root.sys.hw ? "sí" : "no") }
+        Mono { tech: true; Layout.fillWidth: true; text: "bluetooth.service: " + (root.sys.svc || "…") + " · " + (root.sys.enabled || "…") + " · adaptador: " + (root.sys.hw ? "sí" : "no") }
     }
 
     // ---------- con adaptador ----------
@@ -139,7 +139,7 @@ ColumnLayout {
                     checked: root.ad?.pairable ?? false
                     onToggled: v => { if (root.ad) root.ad.pairable = v; }
                 }
-                Mono { Layout.fillWidth: true; text: (root.ad?.adapterId ?? "") + " · " + (root.ad ? BluetoothAdapterState.toString(root.ad.state) : "") }
+                Mono { tech: true; Layout.fillWidth: true; text: (root.ad?.adapterId ?? "") + " · " + (root.ad ? BluetoothAdapterState.toString(root.ad.state) : "") }
             }
             Section {
                 Layout.fillWidth: true

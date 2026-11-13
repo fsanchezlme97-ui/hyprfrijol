@@ -133,7 +133,7 @@ ColumnLayout {
             SwRow { label: "Transparente si el cursor se acerca"; sub: "para ver lo que hay debajo"; key: "pipFadeNear"; def: false }
             SwRow { label: "Videollamadas (Meet, Teams…)"; sub: "su ventana flotante: cerrar sin colgar y volver a la llamada"; key: "pipCalls"; def: true }
             SwRow { label: "Reproductores (Spotify…)"; sub: "miniventana con pausa, siguiente y volver a la app"; key: "pipPlayers"; def: true }
-            Mono {
+            Mono { tech: true;
                 Layout.fillWidth: true
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere; elide: Text.ElideNone
                 text: 'window_rule { title = Picture-in-Picture, float, pin = ' + Settings.get("pipAllWs", true) + ', size = ' + root.size[0] + ' ' + root.size[1] + ', opacity = ' + Settings.get("pipOpacity", 1) + ' }'

@@ -153,7 +153,7 @@ RowLayout {
             visible: root.app
             Layout.fillWidth: true
             title: "Tus máquinas"
-            headerRight: Mono { text: "virsh list --all" }
+            headerRight: Mono { tech: true; text: "virsh list --all" }
             Txt {
                 visible: root.vms.length === 0
                 Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true
@@ -219,7 +219,7 @@ RowLayout {
         Section {
             Layout.fillWidth: true
             title: "Contenedores"
-            headerRight: Mono { text: "podman · distrobox" }
+            headerRight: Mono { tech: true; text: "podman · distrobox" }
             InfoRow {
                 separator: false
                 label: "Podman + Distrobox"; glyph: "▤"; lit: !!root.st.podman && !!root.st.distrobox

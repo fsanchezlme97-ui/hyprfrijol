@@ -19,7 +19,7 @@ RowLayout {
         spacing: 0
         Txt { Layout.fillWidth: true; text: root.label; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone }
         // letra de código solo para claves («misc:vrr»); una explicación va en la letra normal y en dos líneas si hace falta
-        Txt { Layout.fillWidth: true; visible: root.hint !== ""; text: root.hint; muted: true; size: 10.5; wrapMode: Text.WordWrap; maximumLineCount: 2
+        Txt { Layout.fillWidth: true; visible: root.hint !== "" && (!/^[\w:.\-\/]+$/.test(root.hint) || Settings.get("settingsTech", false) === true); text: root.hint; muted: true; size: 10.5; wrapMode: Text.WordWrap; maximumLineCount: 2
               font.family: /^[\w:.\-\/]+$/.test(root.hint) ? Theme.mono : Theme.font }
     }
     Item {

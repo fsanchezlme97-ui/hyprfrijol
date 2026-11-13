@@ -210,7 +210,7 @@ RowLayout {
             }
         }
         Txt { visible: right.list.length === 0; muted: true; text: root.binds.length ? "Ningún atajo coincide" : "No se pudieron leer los atajos (hyprctl binds)" }
-        Mono {
+        Mono { tech: true;
             Layout.fillWidth: true
             text: right.list.length > 24 && !q.text ? (right.list.length - 24) + " más · busca para verlos · se guarda como hl.bind (config/apply/keybinds.py)" : "Se guarda como hl.unbind + hl.bind (config/apply/keybinds.py) · avisa si una tecla ya está en uso"
         }

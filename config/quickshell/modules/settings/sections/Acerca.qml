@@ -171,7 +171,17 @@ RowLayout {
                     : text.includes("EXPORT") ? "Exportado: " + text.trim().split(" ").slice(1).join(" ") : (text.trim() || "No se pudo sincronizar")
             }
         }
-        Mono { Layout.fillWidth: true; text: "En otro equipo: git clone <remoto> ~/.config/hyprfrijol && hf-apply"; wrapMode: Text.WrapAtWordBoundaryOrAnywhere; elide: Text.ElideNone }
+        Mono { tech: true; Layout.fillWidth: true; text: "En otro equipo: git clone <remoto> ~/.config/hyprfrijol && hf-apply"; wrapMode: Text.WrapAtWordBoundaryOrAnywhere; elide: Text.ElideNone }
         Txt { Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; text: root.syncMsg || "No incluye contraseñas ni llaves." }
+    }
+    Section {
+        Layout.fillWidth: true
+        title: "Ajustes"
+        SwRow {
+            separator: false
+            label: "Detalles técnicos"
+            sub: "muestra en cada sección los comandos, servicios y claves de configuración que hay detrás (para depurar o tocar los archivos a mano)"
+            key: "settingsTech"; def: false
+        }
     }
 }

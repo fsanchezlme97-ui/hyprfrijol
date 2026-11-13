@@ -1,5 +1,6 @@
-// Icono del clima que se mueve según el tiempo (Barra viva): el sol gira despacio, las nubes van y vienen, cae lluvia
-// o nieve, el rayo destella y la luna tiene una estrella que titila. Lo mueve un Timer a ~12 fotogramas por segundo
+// Icono del clima que se mueve según el tiempo (Barra viva, barLive): el sol gira despacio, con cielo parcial asoma
+// tras una nube que va y viene, con cielo cubierto dos nubes se cruzan, cae lluvia o nieve, el rayo destella y la
+// luna tiene una estrella que titila. Lo mueve un Timer a ~12 fotogramas por segundo
 // (no animaciones a 60 fps: la barra entera se repinta en cada fotograma); quieto si live es false (pantalla
 // completa, modo juego, barra oculta) o sin animaciones (Theme.still).
 //   WeatherGlyph { code: Weather.code; day: Weather.isDay; live: chip.visible }
@@ -19,8 +20,9 @@ Item {
 
     // Códigos WMO de Open-Meteo (services/Weather.qml: describe)
     readonly property string kind: code < 0 ? "nube"
-        : code <= 1 ? (day ? "sol" : "luna")
-        : code <= 3 ? "nube"
+        : code === 0 ? (day ? "sol" : "luna")
+        : code <= 2 ? "parcial"
+        : code === 3 ? "nube"
         : code <= 48 ? "niebla"
         : code <= 67 || (code >= 80 && code <= 82) ? "lluvia"
         : code <= 77 || (code >= 85 && code <= 86) ? "nieve"
@@ -32,13 +34,21 @@ Item {
 
     // sol: los rayos dan una vuelta cada 30 s
     Icon {
-        anchors.centerIn: parent
-        visible: g.kind === "sol"
-        name: "sun"; size: g.size; color: g.color
+        visible: g.kind === "sol" || (g.kind === "parcial" && g.day)
+        name: "sun"; color: g.color
+        size: g.kind === "parcial" ? g.size * 0.72 : g.size
+        x: g.kind === "parcial" ? -g.size * 0.06 : 0
+        y: g.kind === "parcial" ? -g.size * 0.08 : 0
         rotation: (g.t * 1) % 360
     }
-    // luna y una estrella que titila
-    Icon { anchors.centerIn: parent; visible: g.kind === "luna"; name: "moon"; size: g.size; color: g.color }
+    // luna (sola o tras la nube) y una estrella que titila
+    Icon {
+        visible: g.kind === "luna" || (g.kind === "parcial" && !g.day)
+        name: "moon"; color: g.color
+        size: g.kind === "parcial" ? g.size * 0.68 : g.size
+        x: g.kind === "parcial" ? -g.size * 0.04 : 0
+        y: g.kind === "parcial" ? -g.size * 0.06 : 0
+    }
     Rectangle {
         visible: g.kind === "luna"
         x: g.size * 0.78; y: g.size * 0.08
@@ -46,13 +56,23 @@ Item {
         color: g.color
         opacity: 0.25 + 0.75 * Math.abs(Math.sin(g.t / 9))
     }
-    // nube: sola (va y viene un poco) o arriba, con lo que cae debajo
+    // cubierto: una nube pequeña detrás que va al revés que la de delante
+    Icon {
+        visible: g.kind === "nube"
+        name: "cloud"; color: g.color; opacity: 0.55
+        size: g.size * 0.62
+        x: g.size * 0.42 - 1.8 * Math.sin(g.t / 13)
+        y: -g.size * 0.12
+    }
+    // nube: delante del sol o la luna (parcial), la de delante (cubierto) o arriba con lo que cae debajo
     Icon {
         visible: g.kind !== "sol" && g.kind !== "luna"
         name: "cloud"; color: g.color
-        size: g.falling || g.kind === "niebla" ? g.size * 0.86 : g.size
-        x: (g.size - size) / 2 + (g.falling ? 0 : 1.1 * Math.sin(g.t / 11))
-        y: g.falling || g.kind === "niebla" ? -g.size * 0.14 : 0
+        size: g.kind === "parcial" ? g.size * 0.78 : g.kind === "nube" ? g.size * 0.86 : g.size * 0.86
+        x: g.kind === "parcial" ? g.size * 0.26 + 1.6 * Math.sin(g.t / 12)
+            : g.kind === "nube" ? g.size * 0.02 + 1.8 * Math.sin(g.t / 13)
+            : (g.size - size) / 2
+        y: g.kind === "parcial" || g.kind === "nube" ? g.size * 0.2 : -g.size * 0.14
     }
     // niebla: dos rayas que se desplazan
     Repeater {

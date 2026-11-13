@@ -16,7 +16,7 @@ BarChip {
     implicitHeight: vertical ? vcol.implicitHeight + 10 : 22
     implicitWidth: vertical ? 26 : r.implicitWidth + 14
     onRightClicked: Pomodoro.reset()
-    readonly property bool ending: Pomodoro.running && Pomodoro.left <= 120 && Pomodoro.left > 0 && chip.visible && !Theme.still
+    readonly property bool ending: Pomodoro.running && Pomodoro.left <= 120 && Pomodoro.left > 0 && chip.visible && !Theme.still && Settings.get("barLive", true) !== false
     readonly property real ringValue: 1 - Pomodoro.progress
 
     WheelHandler {

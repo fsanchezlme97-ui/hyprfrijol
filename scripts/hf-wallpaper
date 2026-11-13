@@ -146,6 +146,17 @@ list() {
   if [ -n "$u" ]; then printf '%s\n' "$u"; [ "${1:-}" = all ] && findw "$ASSETS"; else findw "$ASSETS"; fi
   return 0
 }
+# Decodificar el vídeo por hardware, pero nunca en una gráfica con nouveau: VA-API abre la primera (renderD128, aquí la
+# GT 710, sin firmware de vídeo) aunque haya DRI_PRIME, y el canal se cuelga (kernel: «nouveau … SCHED_ERROR …
+# av:h264») hasta congelar la sesión. Con nouveau: VA-API en la otra gráfica o, si no hay otra, por CPU.
+hwdec() {
+  [ -e /sys/module/nouveau/initstate ] || { echo "hwdec=auto-safe"; return; }
+  local r
+  for r in /sys/class/drm/renderD*; do
+    [ "$(basename "$(readlink -f "$r/device/driver")")" != nouveau ] && { echo "hwdec=vaapi vaapi-device=/dev/dri/${r##*/}"; return; }
+  done
+  echo "hwdec=no"
+}
 current() { cat "$STATE/wallpaper-path" 2>/dev/null || true; }
 # Ajuste de settings.json (el del usuario manda sobre config/defaults); setting <clave> <por defecto>
 setting() {
@@ -364,7 +375,7 @@ case "${1:-next}" in
              else T="$(targets)"; fi
              PIDS=""; s="$SOCK"; read -ra TA <<< "$T"   # (sin expandir el '*' a nombres de archivo)
              for o in "${TA[@]}"; do
-               setsid mpvpaper -o "no-audio loop panscan=1.0 hwdec=auto-safe vf=fps=$FPS${s:+ input-ipc-server=$s}" "$o" "$PLAY" >/dev/null 2>&1 &
+               setsid mpvpaper -o "no-audio loop panscan=1.0 $(hwdec) vf=fps=$FPS${s:+ input-ipc-server=$s}" "$o" "$PLAY" >/dev/null 2>&1 &
                PIDS+="$! "; s=""
              done
              PIDS="${PIDS% }"; echo "$PIDS" > "$MSTATE/motion$MK.pid"; started=$SECONDS

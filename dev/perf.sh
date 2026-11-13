@@ -14,7 +14,7 @@ ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 T=20; VIEW=""; CYC=0
 while getopts "t:v:c:" o; do case $o in t) T=$OPTARG;; v) VIEW=$OPTARG;; c) CYC=$OPTARG;; *) exit 1;; esac; done
 VIEWS="spotlight ajustes energia fondos actualizaciones vista widgets w-clima w-sistema bienvenida atajos musica captura color tareas remoto maquinas impresion restauracion"
-SECTIONS="$(grep -oE '\{ key: "[a-z]+"' "$ROOT/config/quickshell/modules/settings/SettingsApp.qml" | sed -E 's/.*"([a-z]+)"/\1/' | tr '\n' ' ')"
+SECTIONS="$(grep -oE '\{ (grp: "[^"]*", )?key: "[a-z]+"' "$ROOT/config/quickshell/modules/settings/SettingsApp.qml" | sed -E 's/.*"([a-z]+)"/\1/' | tr '\n' ' ')"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/hf-perf.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
 FH="$TMP/home"

@@ -87,7 +87,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Servidores MCP para el asistente"
-        headerRight: Mono { text: "hf-ai mcp" }
+        headerRight: Mono { tech: true; text: "hf-ai mcp" }
         Txt {
             Layout.fillWidth: true
             text: "Conecta herramientas de fuera (calendario, GitHub, notas, archivos…) con servidores MCP. Cada uno se aprueba aparte: "
@@ -227,7 +227,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Usar HyprFrijol desde Claude"
-        headerRight: Mono { text: "hf-mcp" }
+        headerRight: Mono { tech: true; text: "hf-mcp" }
         Txt {
             Layout.fillWidth: true
             text: "El servidor MCP de HyprFrijol deja que Claude Code, Claude Desktop u otro cliente MCP use tu escritorio con las mismas "

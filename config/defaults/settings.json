@@ -214,6 +214,7 @@
   "barTrayMax": 6,
   "barTrayHidden": [],
   "barTransparentEmpty": false,
+  "barLive": true,
   "hotCorners": {
     "tl": "vista",
     "tr": "ninguna",
@@ -424,5 +425,6 @@
   "startSplash": true,
   "timerMin": 10,
   "welcomeDone": false,
-  "workspaceAnim": "auto"
+  "workspaceAnim": "auto",
+  "settingsTech": false
 }

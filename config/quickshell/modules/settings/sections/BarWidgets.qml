@@ -13,6 +13,8 @@ ColumnLayout {
     id: root
     spacing: 12
 
+    BarTabs { current: "barwidgets" }   // Barra | Widgets
+
     // id → [nombre, icono, qué hace]
     readonly property var info: ({
         clima: ["Clima", "cloud", "temperatura · clic: próximas horas y 3 días"],

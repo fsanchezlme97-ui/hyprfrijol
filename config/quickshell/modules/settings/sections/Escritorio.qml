@@ -72,7 +72,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Apps en ventana flotante"
-        headerRight: Mono { text: "hl.window_rule · float + center" }
+        headerRight: Mono { tech: true; text: "hl.window_rule · float + center" }
         FloatApps {
             id: floatApps
             Layout.fillWidth: true
@@ -303,7 +303,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Diseño de mosaico"
-        headerRight: Mono { text: "general:layout = " + WinMode.layoutFor(root.winMode) }
+        headerRight: Mono { tech: true; text: "general:layout = " + WinMode.layoutFor(root.winMode) }
         RowLayout {
             Layout.fillWidth: true
             spacing: 10
@@ -374,7 +374,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Desplazamiento"
-        headerRight: Mono { text: "scrolling:column_width = " + Settings.get("scrollColumnWidth", 0.5) }
+        headerRight: Mono { tech: true; text: "scrolling:column_width = " + Settings.get("scrollColumnWidth", 0.5) }
         LabeledRow {
             label: "Ancho de una columna nueva"
             labelWidth: 190

@@ -70,7 +70,7 @@ RowLayout {
         Section {
             Layout.fillWidth: true
             title: "Apps predeterminadas"
-            headerRight: Mono { text: "xdg-mime · xdg-settings" }
+            headerRight: Mono { tech: true; text: "xdg-mime · xdg-settings" }
             Txt {
                 Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
                 text: "Con qué app se abre cada cosa al hacer doble clic o seguir un enlace. Solo aparecen las apps instaladas que saben abrirlo."
@@ -144,7 +144,7 @@ RowLayout {
         Section {
             Layout.fillWidth: true
             title: "Al iniciar sesión"
-            headerRight: Mono { text: "~/.config/autostart" }
+            headerRight: Mono { tech: true; text: "~/.config/autostart" }
             SwRow {
                 separator: false
                 label: "Abrir las apps de inicio"

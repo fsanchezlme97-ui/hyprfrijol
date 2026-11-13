@@ -15,6 +15,8 @@ ColumnLayout {
     readonly property string pos: Settings.get("barPos", "abajo")
     readonly property string mode: Settings.get("barMode", "fija")
 
+    BarTabs { current: "barra" }   // Barra | Widgets (una sola entrada en la lista)
+
     Section {
         Layout.fillWidth: true
         title: "Posición"
@@ -184,7 +186,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Bandeja del sistema"
-        headerRight: Mono { text: "OBS, Steam, Discord… · StatusNotifierItem" }
+        headerRight: Mono { tech: true; text: "OBS, Steam, Discord… · StatusNotifierItem" }
         SwRow { separator: false; label: "Mostrar la bandeja"; sub: "iconos de las apps en segundo plano · clic derecho: su menú"; key: "barTray"; def: true }
         LabeledRow {
             label: "Iconos a la vista"; labelWidth: 150
@@ -265,5 +267,6 @@ ColumnLayout {
         SwRow { visible: Quickshell.screens.length > 1; label: "Reloj en la barra sencilla"; sub: "la hora también en las otras pantallas"; key: "barSecondaryClock"; def: true }
         SwRow { label: "Barra en las pantallas nuevas"; sub: "sencilla al conectar otra pantalla; si no, sin barra hasta que la elijas"; key: "barAllScreens"; def: true }
         SwRow { label: "Transparente en espacios vacíos"; sub: "la barra se funde con el fondo si no hay ventanas"; key: "barTransparentEmpty" }
+        SwRow { label: "Barra viva"; sub: "el icono del clima se mueve con el tiempo que hace y el anillo del pomodoro late al final; quietos en pantalla completa y en modo juego"; key: "barLive"; def: true }
     }
 }

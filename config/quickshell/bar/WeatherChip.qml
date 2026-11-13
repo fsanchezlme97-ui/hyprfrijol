@@ -20,7 +20,7 @@ BarChip {
     // Sin datos la barra lo esconde (want): pedirlos igualmente, si no nunca llegarían a enseñarse
     UseCounter { target: Weather; active: chip.visible || !chip.want }
     // Barra viva: el icono se mueve con el tiempo que hace, salvo en pantalla completa, en modo juego o sin datos
-    readonly property bool live: chip.visible && Weather.ready && !Shell.gameMode
+    readonly property bool live: chip.visible && Weather.ready && Settings.get("barLive", true) !== false && !Shell.gameMode
                                  && !WinMode.hasFullscreen(chip.QsWindow.window?.screen?.name ?? "")
     RowLayout {
         id: r

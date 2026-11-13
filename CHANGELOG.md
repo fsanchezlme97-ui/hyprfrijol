@@ -3,6 +3,24 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.70] — 2026-11-13
+
+### Corregido
+- El equipo se podía congelar al iniciar sesión (cursor enorme, había que reiniciar). Con una gráfica NVIDIA en
+  nouveau (sin firmware de vídeo) el login dibujaba en ella y el fondo en vídeo se decodificaba en ella; el canal
+  de la GPU se colgaba («nouveau … SCHED_ERROR / gr: TRAP»). Ahora el login dibuja en la otra gráfica
+  (`greeter/hyprland-greeter.lua`, se instala en /etc/greetd con la actualización) y el fondo animado decodifica
+  por hardware en la otra gráfica, o por CPU si solo hay nouveau (`hf-wallpaper`).
+- El clima de la barra apenas se movía con el cielo cubierto (la nube iba y venía 1 px): ahora dos nubes se cruzan,
+  y con cielo parcial el sol o la luna asoman tras una nube que pasa.
+
+### Cambiado
+- Ajustes más ordenado: la lista va por grupos (Personalización, Escritorio, Herramientas, Dispositivos,
+  Conexiones, Aplicaciones, Sistema) y «Widgets de la barra» es una pestaña de Barra. Los detalles técnicos
+  (comandos, servicios y claves de configuración junto a cada título) se ocultan; se ven con Ajustes › Acerca ›
+  «Detalles técnicos» (`settingsTech`).
+- «Barra viva» se puede apagar: Ajustes › Barra › Comportamiento (`barLive`).
+
 ## [0.9.69] — 2026-11-13
 
 ### Cambiado

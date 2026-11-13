@@ -25,7 +25,7 @@ ColumnLayout {
             Layout.fillHeight: true
             title: "Movimiento"
             readonly property string preset: Settings.get("animado", true) === false ? "ninguno" : Settings.get("animPreset", "fluido")
-            headerRight: Mono { text: "hl.animation · hl.curve" }
+            headerRight: Mono { tech: true; text: "hl.animation · hl.curve" }
             MotionDemo { Layout.fillWidth: true }
             LabeledRow {
                 label: "Animaciones"; labelWidth: 80
@@ -83,7 +83,7 @@ ColumnLayout {
             Layout.alignment: Qt.AlignTop
             Layout.fillHeight: true
             title: "Ventanas"
-            headerRight: Mono { text: "decoration.shadow · col.active_border" }
+            headerRight: Mono { tech: true; text: "decoration.shadow · col.active_border" }
             WindowLookPreview { Layout.fillWidth: true }
             LabeledRow {
                 label: "Sombras"; labelWidth: 80
@@ -130,7 +130,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: Settings.get("inactiveOpacity", 0) !== 1
         title: "Siempre opacas"
-        headerRight: Mono { text: "opacity override" }
+        headerRight: Mono { tech: true; text: "opacity override" }
         FloatApps {
             Layout.fillWidth: true
             settingKey: "inactiveOpacityExclude"
@@ -157,7 +157,7 @@ ColumnLayout {
             Card { title: "Equilibrada"; sub: "Menos GPU"; selected: glass.q === "equilibrada"; onClicked: Settings.set("blurQuality", "equilibrada") }
             Card { title: "Ahorro"; sub: "Sin desenfoque"; selected: glass.q === "ahorro"; onClicked: Settings.set("blurQuality", "ahorro") }
         }
-        Mono {
+        Mono { tech: true;
             Layout.fillWidth: true
             text: glass.q === "alta" ? "decoration:blur → size 10 · passes 3 · vibrancy 0.25"
                 : glass.q === "equilibrada" ? "decoration:blur → size 7 · passes 2 · vibrancy 0.17"

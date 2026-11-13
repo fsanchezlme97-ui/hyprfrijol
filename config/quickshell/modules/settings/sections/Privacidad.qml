@@ -148,7 +148,7 @@ RowLayout {
         Section {
             Layout.fillWidth: true
             title: "Ahora mismo"
-            headerRight: Mono { text: "PipeWire · se actualiza solo" }
+            headerRight: Mono { tech: true; text: "PipeWire · se actualiza solo" }
             UseRow { icon: "mic"; label: "Micrófono"; apps: root.use.mic ?? []; idle: "Ninguna app lo está usando" }
             UseRow { icon: "camera"; label: "Cámara"; apps: root.use.cam ?? []; idle: "Ninguna app la está usando" }
             UseRow { icon: "monitor"; label: "Compartir pantalla"; apps: root.use.screen ?? []; idle: "No se está compartiendo ni grabando la pantalla" }

@@ -139,7 +139,7 @@ ColumnLayout {
                 }
                 SwRow { label: "Según la hora del día"; sub: "fondos claros de día y oscuros de noche"; key: "wallpaperHora" }
                 SwRow { label: "No cambiar con pantalla completa"; sub: "espera a que salgas del juego o del vídeo"; key: "wallpaperNoFullscreen"; def: true }
-                Mono { Layout.fillWidth: true; text: root.auto ? "hf-wallpaper " + (Settings.get("wallpaperRandom", false) ? "random" : "next") + (root.rot > 0 ? " · cada " + root.rot + " min" : " · al iniciar") : "hf-wallpaper restore · al iniciar sesión" }
+                Mono { tech: true; Layout.fillWidth: true; text: root.auto ? "hf-wallpaper " + (Settings.get("wallpaperRandom", false) ? "random" : "next") + (root.rot > 0 ? " · cada " + root.rot + " min" : " · al iniciar") : "hf-wallpaper restore · al iniciar sesión" }
             }
             Section {
                 Layout.fillWidth: true

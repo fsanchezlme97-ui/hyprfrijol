@@ -239,7 +239,7 @@ RowLayout {
     Section {
         Layout.fillWidth: true
         title: "Tapa y botón de encendido"
-        headerRight: Mono { text: "logind.conf.d" }
+        headerRight: Mono { tech: true; text: "logind.conf.d" }
         LabeledRow {
             label: "Al cerrar la tapa"; labelWidth: 150
             hint: root.lid ? "con batería" : "sin tapa"

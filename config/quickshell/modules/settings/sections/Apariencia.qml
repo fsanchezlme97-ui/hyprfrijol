@@ -131,7 +131,7 @@ ColumnLayout {
                     + (Settings.get("wallpaperHora", false) ? " · según la hora" : Settings.get("wallpaperRandom", false) && (m > 0 || Settings.get("wallpaperOnStart", false)) ? " · al azar" : "")
                 section: "fondos"; sectionLabel: "Fondos de pantalla"
             }
-            Mono {
+            Mono { tech: true;
                 Layout.fillWidth: true
                 text: "hf-wallpaper " + (wp.current ? wp.name(wp.current) : "—") + " → matugen → hf-apply"
             }
@@ -269,7 +269,7 @@ ColumnLayout {
         visible: root.colorMode === "elegir"
         Layout.fillWidth: true
         title: "Paleta de colores"
-        headerRight: Mono { text: "palette = " + root.paletteKey }
+        headerRight: Mono { tech: true; text: "palette = " + root.paletteKey }
         RowLayout {
             Layout.fillWidth: true
             spacing: 10
@@ -345,7 +345,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Tipografía"
-        headerRight: Mono { text: "fontFamily · fontScale = " + Settings.get("fontScale", 1) + " · appFontPx = " + Settings.get("appFontPx", 12) + " · termFontPx = " + Settings.get("termFontPx", 13) }
+        headerRight: Mono { tech: true; text: "fontFamily · fontScale = " + Settings.get("fontScale", 1) + " · appFontPx = " + Settings.get("appFontPx", 12) + " · termFontPx = " + Settings.get("termFontPx", 13) }
         RowLayout {
             Layout.fillWidth: true
             spacing: 22
@@ -433,7 +433,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Redondeo"
-        headerRight: Mono { text: "rounding = " + (Settings.get("rounding", null) ?? Theme.winRadius) + " · rounding_power" }
+        headerRight: Mono { tech: true; text: "rounding = " + (Settings.get("rounding", null) ?? Theme.winRadius) + " · rounding_power" }
         RowLayout {
             Layout.fillWidth: true
             spacing: 22
@@ -484,15 +484,15 @@ ColumnLayout {
             ColumnLayout {
                 Layout.fillWidth: true; Layout.preferredWidth: 1
                 spacing: 8
-                RowLayout { Txt { text: "Espacio entre ventanas"; weight: Font.DemiBold; Layout.fillWidth: true } Mono { text: "gaps_in = " + Settings.get("gapsIn", 4) } }
+                RowLayout { Txt { text: "Espacio entre ventanas"; weight: Font.DemiBold; Layout.fillWidth: true } Mono { tech: true; text: "gaps_in = " + Settings.get("gapsIn", 4) } }
                 Pills { Layout.fillWidth: true; model: [0, 1, 2, 4, 6, 8, 12]; current: Settings.get("gapsIn", 4); onPicked: v => Settings.set("gapsIn", v) }
-                RowLayout { Txt { text: "Espacio con el borde y la barra"; weight: Font.DemiBold; Layout.fillWidth: true } Mono { text: "gaps_out = " + Settings.get("gapsOut", 4) } }
+                RowLayout { Txt { text: "Espacio con el borde y la barra"; weight: Font.DemiBold; Layout.fillWidth: true } Mono { tech: true; text: "gaps_out = " + Settings.get("gapsOut", 4) } }
                 Pills { Layout.fillWidth: true; model: [0, 1, 2, 4, 6, 8, 12, 20]; current: Settings.get("gapsOut", 4); onPicked: v => Settings.set("gapsOut", v) }
             }
             ColumnLayout {
                 Layout.fillWidth: true; Layout.preferredWidth: 1
                 spacing: 8
-                RowLayout { Txt { text: "Escala de la interfaz"; weight: Font.DemiBold; Layout.fillWidth: true } Mono { text: "monitor scale" } }
+                RowLayout { Txt { text: "Escala de la interfaz"; weight: Font.DemiBold; Layout.fillWidth: true } Mono { tech: true; text: "monitor scale" } }
                 Pills { Layout.fillWidth: true; model: [[1, "1×"], [1.25, "1.25×"], [1.5, "1.5×"], [2, "2×"]]; current: Settings.get("uiScale", 1); onPicked: v => Confirm.change("Escala de la interfaz", { uiScale: v }) }
             }
         }

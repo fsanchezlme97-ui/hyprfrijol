@@ -483,7 +483,7 @@ ColumnLayout {
     component MeshSection: Section {
         id: ms
         title: "VPN en malla"
-        headerRight: Mono { text: "tailscale · zerotier-cli" }
+        headerRight: Mono { tech: true; text: "tailscale · zerotier-cli" }
         readonly property string cmd: Paths.script("hf-vpn")
         property var ts: ({ installed: false })
         property var zt: ({ installed: false, networks: [] })

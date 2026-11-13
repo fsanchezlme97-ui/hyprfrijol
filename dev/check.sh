@@ -23,7 +23,7 @@ cp -rL "$HOME/.local/state/hyprfrijol" "$FH/.local/state/" 2>/dev/null || true
 
 VIEWS="spotlight ajustes energia fondos actualizaciones vista widgets w-clima w-sistema w-impresora w-pomodoro bienvenida atajos musica w-dispositivos w-descargas captura color tareas remoto maquinas impresion restauracion"
 # Las secciones de Ajustes, de la lista de SettingsApp.qml (así una nueva entra sola)
-SECTIONS="$(grep -oE '\{ key: "[a-z]+"' "$ROOT/config/quickshell/modules/settings/SettingsApp.qml" | sed -E 's/.*"([a-z]+)"/\1/' | tr '\n' ' ')"
+SECTIONS="$(grep -oE '\{ (grp: "[^"]*", )?key: "[a-z]+"' "$ROOT/config/quickshell/modules/settings/SettingsApp.qml" | sed -E 's/.*"([a-z]+)"/\1/' | tr '\n' ' ')"
 
 cat > "$TMP/probe.sh" <<EOF
 #!/bin/bash

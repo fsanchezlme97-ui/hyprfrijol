@@ -12,7 +12,16 @@ hl.config({
 })
 -- Vídeo de fondo sin decodificar por hardware si hay nouveau (ver config/hypr/frijol/env.lua: Quickshell muere con SIGBUS)
 local nv = io.open("/sys/module/nouveau/initstate", "r")
-if nv then nv:close(); hl.env("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "none") end
+if nv then
+    nv:close(); hl.env("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "none")
+    -- y dibujar en la otra gráfica: en la de nouveau el login se colgaba («nouveau … gr: TRAP … quickshell») y al
+    -- entrar la sesión quedaba congelada
+    local p = io.popen([[for r in /sys/class/drm/renderD*; do d=$(basename "$(readlink -f "$r/device/driver")"); ]]
+        .. [[[ "$d" != nouveau ] && basename "$(readlink -f "$r/device")" && break; done 2>/dev/null]])
+    local pci = p and p:read("*l") or nil
+    if p then p:close() end
+    if pci and pci:match("^%x+:%x+:%x+%.%x$") then hl.env("DRI_PRIME", "pci-" .. pci:gsub("[:.]", "_")) end
+end
 hl.on("hyprland.start", function()
     -- Al iniciar la sesión elegida, Quickshell termina y cerramos este Hyprland
     hl.exec_cmd("qs -p /etc/greetd/quickshell; hyprctl dispatch 'hl.dsp.exit()'")
