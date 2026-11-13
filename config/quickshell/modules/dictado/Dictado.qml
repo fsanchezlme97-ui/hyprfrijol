@@ -1,8 +1,9 @@
 // Dictado y comandos de voz (local, como SuperWhisper): atajos globales hf:dictado (Super + Alt + D), hf:comando
 // (Super + Alt + V) y hf:hablar (Super + Alt + H). Hablar con el asistente (aiTalkMode): «conversacion» (por defecto)
 // la activa y la desactiva: escucha, al callarte (aiConvSilence s) se lo pasa al asistente, Helpert contesta en voz
-// alta y vuelve a escuchar, hasta que la desactivas (o dices «adiós» / «eso es todo»); mientras Helpert habla no
-// escucha, para no oírse a sí mismo. «pulsar»: una sola pregunta por pulsación (contesta con voz si aiVoice). Modo «ptt»: hablar mientras se mantiene (un toque corto deja el micrófono abierto hasta volver a
+// alta y vuelve a escuchar, hasta que la desactivas (o dices «adiós» / «eso es todo»). Mientras Helpert habla sigue
+// escuchando (aiConvInterrupt): si le hablas, se calla y tu frase es el turno siguiente; para no oírse a sí mismo,
+// durante la conversación su voz y el micrófono pasan por el cancelador de eco de PipeWire (hf-dictate aec). «pulsar»: una sola pregunta por pulsación (contesta con voz si aiVoice). Modo «ptt»: hablar mientras se mantiene (un toque corto deja el micrófono abierto hasta volver a
 // pulsar); «toggle»: cada pulsación empieza/termina; «continuo»: empieza al pulsar y para solo tras unos segundos
 // callado. Mientras hablas el texto se va escribiendo en la ventana y lo provisional se corrige al terminar cada frase
 // (scripts/hf-dictate: VAD + whisper-server residente). Al dictar, «Distro, …» al principio de una frase es una orden (dictationWake);
@@ -50,7 +51,14 @@ Scope {
     property string convState: ""           // escucha | piensa | habla
     property int convMisses: 0              // turnos seguidos sin oír nada (3 = se da por terminada)
     property bool convProactive: false      // la empezó Helpert (modo compañero): si no contestas, se va sin despedirse
-    onConvChanged: if (!conv) { convTest = false; convFiles = []; convState = ""; convProactive = false; convLater.stop(); thinkTimer.stop(); replyTimer.stop(); }
+    onConvChanged: {
+        if (conv) { aecOff.stop(); if (convBarge) Quickshell.execDetached([Paths.script("hf-dictate"), "aec", "on"]); }
+        else { convTest = false; convFiles = []; convState = ""; convProactive = false; convLater.stop(); thinkTimer.stop(); replyTimer.stop(); aecOff.restart(); }
+    }
+    // Interrumpir a Helpert hablando (Ajustes › Asistente de IA › Conversación)
+    readonly property bool convBarge: Settings.get("aiConvInterrupt", true) !== false
+    // El cancelador de eco se quita al acabar, cuando ya no suena el «Hasta luego»
+    Timer { id: aecOff; interval: 4000; onTriggered: if (root.conv) return; else if (Shell.aiSpeaking) restart(); else Quickshell.execDetached([Paths.script("hf-dictate"), "aec", "off"]) }
     // Modo compañero: Helpert ya está pensando qué decir (AiChat.checkIn); al terminar de hablar, escucha una vez
     function companionTalk(): void {
         if (conv || proc.running) return;
@@ -82,13 +90,20 @@ Scope {
     // Pruebas (IPC conversationFiles): cada turno lee el siguiente audio en lugar del micrófono; al acabarse, termina
     property var convFiles: []
     property bool convTest: false
+    // Con Helpert hablando (y convBarge) se escucha igual con --tts: hf-dictate solo avisa («barge») si le hablas
     function convListen(): void {
-        if (!conv || Shell.aiSpeaking) return;
-        if (proc.running) { convLater.restart(); return; }
+        const talking = Shell.aiSpeaking;
+        if (!conv || (talking && !convBarge)) return;
+        if (proc.running) {
+            if (kind !== "ia") convLater.restart();                        // un dictado a medias: esperar
+            else if (!talking && convState === "habla") { send("tts off"); convState = "escucha"; }
+            return;
+        }
         if (convTest && !convFiles.length) { convEnd(false); return; }
-        convState = "escucha";
-        if (convTest) { const f = convFiles[0]; convFiles = convFiles.slice(1); start("ia", ["--file", f, "--simulate-live"]); }
-        else start("ia");
+        convState = talking ? "habla" : "escucha";
+        const tts = talking ? ["--tts"] : [];
+        if (convTest) { const f = convFiles[0]; convFiles = convFiles.slice(1); start("ia", ["--file", f, "--simulate-live"].concat(tts)); }
+        else start("ia", tts);
     }
     // Entre turnos, un respiro: que no se oiga el final de la voz de Helpert
     Timer { id: convLater; interval: 600; onTriggered: root.convListen() }
@@ -101,14 +116,19 @@ Scope {
         function onAiSpeakingChanged() {
             if (!root.conv) return;
             if (Shell.aiSpeaking) {
-                if (root.convState === "escucha") { if (proc.running) root.send("cancel"); root.convState = "habla"; }
-            } else if (root.convState === "habla") convLater.restart();
+                if (root.convState === "escucha") { if (proc.running) root.send(root.convBarge ? "tts on" : "cancel"); root.convState = "habla"; }
+                else if (root.convState === "habla" && !proc.running) root.convListen();
+            } else if (root.convState === "habla") {
+                if (proc.running) { root.send("tts off"); root.convState = "escucha"; }   // acabó: tu turno ya está abierto
+                else convLater.restart();
+            }
         }
         function onAiReplied(ok) {
             if (!root.conv || root.convState !== "piensa") return;
             thinkTimer.stop();
             root.convState = "habla";
             replyTimer.restart();
+            if (Shell.aiSpeaking) root.convListen();
         }
     }
     // Sin \b: en JS (sin /u) «í» no es letra y «Sí, hazlo» no casaba
@@ -145,6 +165,12 @@ Scope {
             secs = j.t ?? secs;
             break;
         case "speech": speaking = j.on; break;
+        case "barge":                           // le hablaste mientras contestaba: se calla y es tu turno
+            if (conv && convState === "habla") {
+                Quickshell.execDetached([Paths.script("hf-ai"), "speak", "--stop"]);
+                convState = "escucha"; replyTimer.stop();
+            }
+            break;
         case "partial": partial = j.text; break;
         case "phrase":
             partial = "";
@@ -223,7 +249,8 @@ Scope {
         command: root.args
         // «ia»: no escribir en la ventana (y dictationAiFix); en conversación, el turno acaba tras un silencio corto
         environment: root.kind !== "ia" ? ({}) : Object.assign({ HF_DICTATE_OUTPUT: "ninguna", HF_DICTATE_FOR: "ia" },
-            root.conv ? { HF_DICTATE_SILENCE: String(Settings.get("aiConvSilence", 1.2)), HF_DICTATE_WAIT: "20", HF_DICTATE_MAX: "40" } : {})
+            root.conv ? { HF_DICTATE_SILENCE: String(Settings.get("aiConvSilence", 1.2)), HF_DICTATE_WAIT: "20", HF_DICTATE_MAX: "40",
+                          HF_DICTATE_AEC: root.convBarge ? "1" : "0", HF_DICTATE_AIFIX: "0" } : {})
         stdinEnabled: true
         stdout: SplitParser { onRead: l => { try { root.onEvent(JSON.parse(l)); } catch (e) {} } }
         onExited: {
@@ -341,14 +368,15 @@ Scope {
 
         readonly property bool isCmd: root.kind === "comando" || root.cmdText !== ""
         readonly property color accent: root.phase === "error" || (root.cmdText && root.cmdMsg && !root.cmdOk) ? Theme.danger
-                                      : root.phase === "rec" && !isCmd ? Theme.danger : Theme.p
+                                      : root.phase === "rec" && !isCmd && !convIdle ? Theme.danger : Theme.p
         readonly property string iconName: win.convIdle ? (root.convState === "habla" ? "volume" : "ai")
                                          : root.cmdMsg ? (root.cmdOk ? "check" : "alert")
                                          : root.phase === "done" ? "check" : root.phase === "error" ? "alert"
                                          : isCmd ? "command" : "mic"
         readonly property string mmss: Math.floor(root.secs / 60) + ":" + String(Math.floor(root.secs % 60)).padStart(2, "0")
         // texto principal y secundario de la píldora
-        readonly property bool convIdle: root.conv && root.phase === "idle"
+        // en conversación sin tu voz en curso (también mientras Helpert habla y se le escucha por si le interrumpes)
+        readonly property bool convIdle: root.conv && (root.phase === "idle" || (root.phase === "rec" && root.convState === "habla"))
         readonly property string mainText: convIdle ? (root.convState === "piensa" ? "Pensando…" : root.convState === "habla" ? (Settings.get("aiName", "") || "Helpert") + " te responde…" : "")
             : root.cmdText !== "" && root.phase !== "error" ? root.cmdText
             : root.phase === "rec" ? (root.partial || (root.committed ? root.committed.trim().slice(-120) : ""))
@@ -361,7 +389,7 @@ Scope {
             : root.conv ? "Te escucho…"
             : Settings.get("dictationWake", true) ? "Habla… · «" + (String(Settings.get("dictationWakeWord", "Distro")).trim() || "Distro") + ", …» para una orden"
             : "Habla…"
-        readonly property string sub: root.conv && root.cmdMsg === "" ? "Conversación · Super + Alt + H para terminar"
+        readonly property string sub: root.conv && root.cmdMsg === "" ? (root.convState === "habla" && root.phase === "rec" ? "Háblale para interrumpirle · Super + Alt + H para terminar" : "Conversación · Super + Alt + H para terminar")
             : root.cmdMsg !== "" ? root.cmdMsg
             : root.phase === "cmd" ? "Haciéndolo…"
             : root.phase === "rec" && !root.partial && !root.committed && (root.latched || root.mode !== "ptt") ? (root.mode === "continuo" ? "para solo al callarte" : "pulsa otra vez para terminar")

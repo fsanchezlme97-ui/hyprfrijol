@@ -154,7 +154,9 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
     anchors { top: true; bottom: true; right: !onLeft; left: onLeft }
     implicitWidth: panelW + mR + 48          // margen para la sombra; el ratón lo atraviesa (mask)
-    mask: Region { item: panel }
+    // Por geometría y no por «item»: la Region se calculaba con el panel aún desplazado por la animación de entrada
+    // (24 px hacia el borde) y no se actualiza con el Translate; con el panel a la izquierda, la X quedaba fuera
+    mask: Region { x: panel.x; y: panel.y; width: panel.width; height: panel.height }
 
     // ======================================================================= apertura
     property var pendingArg: null

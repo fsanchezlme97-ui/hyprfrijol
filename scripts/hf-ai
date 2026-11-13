@@ -2592,9 +2592,18 @@ def speak_piper(t, player):
     """Piper → reproductor por una tubería: Piper suelta el audio frase a frase y suena según llega (sin archivos)."""
     sr = json.loads(PIPER_MODEL.with_suffix(".onnx.json").read_text())["audio"]["sample_rate"]
     tag = "hf-ai-voice-piper"                       # en la línea de órdenes: speak_stop solo mata a nuestro reproductor
-    play = ([player, "-a", "--rate", str(sr), "--channels", "1", "--format", "s16", "-P", f'{{ media.name = "{tag}" }}', "-"]
+    # En conversación (hf-dictate aec on) suena por el cancelador de eco: el micrófono no se oye a Helpert y puedes
+    # interrumpirle hablando
+    try:
+        aec = "hf-aec-sink" if "\thf-aec-sink\t" in subprocess.run(
+            ["pactl", "list", "short", "sinks"], capture_output=True, text=True, timeout=3).stdout else ""
+    except (OSError, subprocess.SubprocessError):
+        aec = ""
+    play = ([player, "-a", "--rate", str(sr), "--channels", "1", "--format", "s16", "-P", f'{{ media.name = "{tag}" }}',
+             *(["--target", aec] if aec else []), "-"]
             if player.endswith("pw-play") else
-            [player, "--raw", f"--rate={sr}", "--channels=1", "--format=s16le", f"--client-name={tag}"])
+            [player, "--raw", f"--rate={sr}", "--channels=1", "--format=s16le", f"--client-name={tag}",
+             *([f"--device={aec}"] if aec else [])])
     gen = subprocess.Popen([str(PIPER_VENV / "bin/python"), "-I", "-m", "piper", "-m", str(PIPER_MODEL),
                             "-s", str(PIPER_SPEAKER), "--output-raw"],
                            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)

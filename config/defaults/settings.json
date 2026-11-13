@@ -36,6 +36,7 @@
   "aiVoice": false,
   "aiTalkMode": "conversacion",
   "aiConvSilence": 1.2,
+  "aiConvInterrupt": true,
   "aiCompanion": false,
   "aiCompanionFreq": "normal",
   "aiCompanionLook": true,

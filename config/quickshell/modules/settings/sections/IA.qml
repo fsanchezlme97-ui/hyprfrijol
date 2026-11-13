@@ -371,10 +371,15 @@ ColumnLayout {
                 onPicked: k => Settings.set("aiConvSilence", parseFloat(k))
             }
         }
+        SwRow {
+            visible: Settings.get("aiTalkMode", "conversacion") === "conversacion"
+            label: "Interrumpir hablando"; key: "aiConvInterrupt"; def: true
+            sub: "mientras " + (Settings.get("aiName", "") || "Helpert") + " contesta te sigue escuchando: si le hablas, se calla y te atiende. Su voz pasa por un cancelador de eco para que no se oiga a sí mismo por los altavoces"
+        }
         Txt {
             Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
             text: Settings.get("aiTalkMode", "conversacion") === "conversacion"
-                ? "Pulsa una vez y habla con naturalidad: al callarte se lo pasa al asistente, Helpert contesta en voz alta y vuelve a escucharte. Para terminar, pulsa otra vez o di «adiós» (también se cierra tras un rato en silencio)."
+                ? "Pulsa una vez y habla con naturalidad: al callarte se lo pasa al asistente, Helpert contesta en voz alta y vuelve a escucharte (puedes cortarle hablando). Para terminar, pulsa otra vez o di «adiós» (también se cierra tras un rato en silencio)."
                 : "Cada pulsación es una pregunta; la respuesta sale en el panel (y en voz si «Hablar con voz» está activo)."
         }
         // Modo compañero (modules/dictado/Companion.qml): Helpert empieza él la conversación de vez en cuando

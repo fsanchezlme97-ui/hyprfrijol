@@ -3,6 +3,22 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.65] — 2026-11-12
+
+### Nuevo
+- Conversación por voz: puedes interrumpir a Helpert. Mientras contesta te sigue escuchando y, si le hablas, se calla
+  y lo que dices es tu siguiente turno (también la frase con la que le cortaste). Durante la conversación su voz y el
+  micrófono pasan por el cancelador de eco de PipeWire (`hf-dictate aec`), para que no se oiga a sí mismo por los
+  altavoces; sin él, hay que hablarle claramente más alto que lo que el micrófono oye de los altavoces. Se puede
+  apagar en Ajustes › Asistente de IA › «Interrumpir hablando» (`aiConvInterrupt`).
+
+### Corregido
+- Al callarte en la conversación, el turno tardaba ~4 s en llegar a Helpert: cada frase pasaba antes por la
+  corrección de nombres con IA (`dictationAiFix`, hasta 3 s). En la conversación ya no (el asistente entiende un
+  nombre mal oído); ahora llega 1,2 s después de que te calles (`aiConvSilence`).
+- La X del panel del asistente no se podía pulsar con el panel a la izquierda: la zona que recibe el ratón se quedaba
+  desplazada 24 px por la animación de entrada.
+
 ## [0.9.64] — 2026-11-12
 
 ### Nuevo
