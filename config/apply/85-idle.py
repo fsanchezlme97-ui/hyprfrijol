@@ -6,7 +6,7 @@
 #   lockOnSuspend (bool, sí)       bloquear antes de suspender (Ajustes › Privacidad)
 # Por defecto, los mismos tiempos que illogical-impulse: bloquear 5, pantalla 10, suspender 15.
 # No devuelve líneas de Hyprland.
-import os, pathlib, subprocess
+import json, os, pathlib, shlex, subprocess
 
 HOME = pathlib.Path.home()
 STATE = HOME / ".local/state/hyprfrijol"
@@ -60,6 +60,11 @@ def hypr_lua(s, c):
         # Solo dentro de la sesión de hyprfrijol real (no en pruebas anidadas ni desde otra sesión)
         if os.environ.get("HF_SESSION") and not os.environ.get("HF_NESTED") and old:
             subprocess.run(["pkill", "-x", "hypridle"], check=False)
-            subprocess.Popen(["setsid", "-f", "hypridle", "-c", str(path)],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # Por Hyprland, como autostart.lua: lanzado desde aquí se quedaba en el grupo de quien corre hf-apply (el
+            # shell, una terminal) y moría con él; sin bloqueo ni apagado por inactividad hasta volver a entrar
+            cmd = "hl.dsp.exec_cmd(" + json.dumps("hypridle -c " + shlex.quote(str(path)), ensure_ascii=False) + ")"
+            r = subprocess.run(["hyprctl", "dispatch", cmd], capture_output=True, text=True, check=False)
+            if r.stdout.strip() != "ok":
+                subprocess.Popen(["setsid", "-f", "hypridle", "-c", str(path)],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return []
