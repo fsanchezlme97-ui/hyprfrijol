@@ -273,12 +273,15 @@ targets() {
 # Esperar (hasta 8 s) a que el reproductor nuevo PINTE de verdad: tener su capa no basta (antes de su primer cuadro
 # no enseña nada y, al volverse transparente el shell, asomaba el vídeo anterior o negro). Con mpv se le pregunta por
 # su socket cuántos cuadros lleva; la escena (linux-wallpaperengine) solo se espera por su capa.
+# Por qué terminó cada vigilante (las últimas 50 líneas, en la carpeta de la sesión)
+mlog() { { tail -n 49 "$MSTATE/motion.log" 2>/dev/null; echo "$(date '+%F %T') ${MK:-global}: $*"; } > "$MSTATE/motion.log.n" 2>/dev/null && mv -f "$MSTATE/motion.log.n" "$MSTATE/motion.log"; }
+mapped() { hyprctl layers -j 2>/dev/null | jq -e --argjson p "$1" '[.[] | .levels[][] | select(.pid == $p)] | length > 0' >/dev/null 2>&1; }
 wait_paint() {   # wait_paint <MK> <pid anterior> [socket]
   local new frames
   for _ in $(seq 80); do
     new="$(cat "$MSTATE/motion$1.pid" 2>/dev/null || true)"; new="${new%% *}"
     if [ -n "$new" ] && [ "$new" != "${2%% *}" ] \
-       && hyprctl layers -j 2>/dev/null | jq -e --argjson p "$new" '[.[] | .levels[][] | select(.pid == $p)] | length > 0' >/dev/null 2>&1; then
+       && mapped "$new"; then
       if [ -S "${3:-}" ]; then
         frames="$(python3 -I -c 'import json,socket,sys
 s=socket.socket(socket.AF_UNIX); s.settimeout(0.4); s.connect(sys.argv[1])
@@ -298,6 +301,9 @@ start_player() {   # start_player <MK> <vídeo> [pantalla]
   old_w="$(cat "$MSTATE/motion$mk.watch" 2>/dev/null || true)"; old_p="$(cat "$MSTATE/motion$mk.pid" 2>/dev/null || true)"
   sock="${XDG_RUNTIME_DIR:-/tmp}/hf-mpv-${HYPRLAND_INSTANCE_SIGNATURE:-x}$mk.sock"; rm -f "$sock"
   play="$(play_file "$2" "$FPS")"
+  # La pantalla de bloqueo reproduce lo mismo: con el original (4K a 60 fps, decodificado por CPU en cada pantalla) el
+  # shell pasaba de 200 MB a más de 1 GB al bloquear
+  [ -n "$mk" ] || printf '%s\t%s\n' "$2" "$play" > "$STATE/wallpaper-play"   # original<TAB>lo que se reproduce
   setsid "$0" _motion "$2" "$FPS" "$sock" "$play" "${3:-}" >/dev/null 2>&1 8>&- &
   w=$!; echo "$w" > "$MSTATE/motion$mk.watch"
   [ -n "$mk" ] || [ -n "$(targets)" ] && wait_paint "$mk" "$old_p" "$sock"
@@ -330,6 +336,9 @@ restart_global() {
 
 OUTPUT=""
 if [ "${1:-}" = -o ]; then OUTPUT="${2:?falta la pantalla}"; shift 2; fi
+# Solo pantallas conectadas (un nombre vacío o «undefined» del shell quedaba guardado como si fuera una); quitar el
+# fondo propio sí vale con una desconectada
+[ -z "$OUTPUT" ] || [ "${1:-}" = reset ] || [[ " $(outs) " == *" $OUTPUT "* ]] || { echo "No hay ninguna pantalla «$OUTPUT»" >&2; exit 1; }
 
 case "${1:-next}" in
   next)    FILE="$(wh_next || step 1)" ;;
@@ -366,10 +375,12 @@ case "${1:-next}" in
              first=0
              if [ -n "$OUT" ]; then                                # ya hay otro fondo
                [ "$(jq -r --arg o "$OUT" '.motions[$o] // ""' "$STATE/wallpaper.json" 2>/dev/null)" = "$F" ] || exit 0
-             else [ "$(current)" = "$F" ] || exit 0; fi
+             else [ "$(current)" = "$F" ] || { mlog "otro fondo"; exit 0; }; fi
              # La sesión se cerró (mpvpaper se va con ella): nada que relanzar, y sin esto a los 5 intentos marcaba el
              # fondo como «sin vídeo»
-             timeout 3 hyprctl version >/dev/null 2>&1 || exit 0
+             # (por su socket: con el monitor apagándose y encendiéndose, hyprctl llegaba a tardar más de 3 s y el
+             # vigilante se iba dejando el escritorio en negro)
+             [ -S "${XDG_RUNTIME_DIR:-/run/user/$UID}/hypr/${HYPRLAND_INSTANCE_SIGNATURE:-}/.socket.sock" ] || { mlog "sesión cerrada"; exit 0; }
              SIG="$(outs)"
              if [ -n "$OUT" ]; then T="$OUT"; [[ " $SIG " == *" $OUT "* ]] || { sleep 3; continue; }   # desconectada: espera
              else T="$(targets)"; fi
@@ -378,14 +389,24 @@ case "${1:-next}" in
                setsid mpvpaper -o "no-audio loop panscan=1.0 $(hwdec) vf=fps=$FPS${s:+ input-ipc-server=$s}" "$o" "$PLAY" >/dev/null 2>&1 &
                PIDS+="$! "; s=""
              done
-             PIDS="${PIDS% }"; echo "$PIDS" > "$MSTATE/motion$MK.pid"; started=$SECONDS
+             PIDS="${PIDS% }"; trap 'kill $PIDS 2>/dev/null; kill -CONT $PIDS 2>/dev/null; exit 0' TERM
+             # El pid se anuncia (motion*.pid, lo que pausa el shell) cuando ya tiene su capa: parado antes de
+             # crearla, el fondo se quedaba negro hasta la siguiente reanudación. Si el shell está en pausa, nace parado.
+             for _ in $(seq 40); do
+               ok=1; for p in $PIDS; do kill -0 "$p" 2>/dev/null && ! mapped "$p" && ok=0; done
+               [ "$ok" = 1 ] && break; sleep 0.2
+             done
+             echo "$PIDS" > "$MSTATE/motion$MK.pid"; started=$SECONDS
+             [ -e "$MSTATE/paused" ] && kill -STOP $PIDS 2>/dev/null
              gone=0
              while sleep 3; do
-               [ "$(cat "$MSTATE/motion$MK.pid" 2>/dev/null)" = "$PIDS" ] || exit 0   # lo cerró hf-wallpaper (otro fondo, sin movimiento)
+               [ "$(cat "$MSTATE/motion$MK.pid" 2>/dev/null)" = "$PIDS" ] || { mlog "lo cerró hf-wallpaper"; exit 0; }   # otro fondo, sin movimiento
                for p in $PIDS; do kill -0 "$p" 2>/dev/null || { gone=1; break 2; }; done
                [ "$T" != '*' ] && [ "$(outs)" != "$SIG" ] && break   # cambiaron las pantallas: repartir de nuevo
              done
              for p in $PIDS; do { kill "$p"; kill -CONT "$p"; } 2>/dev/null || true; done
+             # Se cerró porque su pantalla se fue (el monitor se apaga y se desconecta): no es un fallo
+             [ "$gone" = 1 ] && [ "$(outs)" != "$SIG" ] && gone=0
              [ "$gone" = 1 ] || continue
              [ $((SECONDS - started)) -ge 30 ] && fails=0
              fails=$((fails + 1))
@@ -393,7 +414,7 @@ case "${1:-next}" in
                rm -f "$MSTATE/motion$MK.pid" "$MSTATE/motion$MK.watch"
                if [ -n "$OUT" ]; then write_json --arg o "$OUT" 'del(.motionOn[$o]) | .changed = now'
                else write_json '.video = false | .changed = now'; fi
-               echo "mpvpaper se cerró $fails veces seguidas: queda la imagen fija" >&2
+               echo "mpvpaper se cerró $fails veces seguidas: queda la imagen fija" >&2; mlog "5 cierres seguidos: imagen fija"
                exit 1
              fi
            done ;;

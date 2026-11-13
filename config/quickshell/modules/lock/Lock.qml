@@ -35,9 +35,12 @@ Scope {
         if (!wallJson.video || !/\.(mp4|webm|mkv|mov|gif)$/i.test(p) || Theme.still) return "";
         const on = Settings.get("wallpaperPauseOn", ["fullscreen", "bateria", "juego"]);
         if (Battery.onBattery && Array.isArray(on) && on.includes("bateria")) return "";
-        return p;
+        // la copia a la altura de la pantalla que reproduce el escritorio (hf-wallpaper: wallpaper-play), si es de este
+        const c = (wallPlay.text() || "").trim().split("\t");
+        return c.length === 2 && c[0] === p && c[1] ? c[1] : p;
     }
     FileView { id: wallPath; path: Paths.state + "/wallpaper-path"; watchChanges: true; printErrors: false; onFileChanged: reload() }
+    FileView { id: wallPlay; path: Paths.state + "/wallpaper-play"; watchChanges: true; printErrors: false; onFileChanged: reload() }
     FileView {
         path: Paths.state + "/wallpaper.json"; watchChanges: true; printErrors: false; onFileChanged: reload()
         JsonAdapter { id: wallJson; property bool video: false }

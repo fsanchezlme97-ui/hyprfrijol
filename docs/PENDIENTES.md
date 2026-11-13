@@ -34,12 +34,6 @@ reducción automática) se descartó en las decisiones del plan.
 
 ## Baratos de añadir (primero)
 
-- [ ] **Paquete en el AUR** (`hyprfrijol-git`): el PKGBUILD está en `packaging/aur/hyprfrijol-git/` (se genera con
-      `dev/gen-pkgbuild.py`, `dev/lint.sh` vigila que siga al día con `packages.tsv`; la versión sale de la etiqueta al
-      construir). Comprobado en 0.9.73: `makepkg` construye `hyprfrijol-git 0.9.72.r0`. Falta solo subirlo: hace
-      falta tu cuenta del AUR con una clave SSH (este equipo no tiene `~/.ssh`; instrucciones en la cabecera de
-      `dev/gen-pkgbuild.py`) y, ya publicado, añadir «Arch: `paru -S hyprfrijol-git`» al README.
-
 - [x] **Fondos de Wallhaven y Unsplash**: Wallhaven ya estaba (Ajustes › Fondos); Unsplash en 0.9.36 (`hf-unsplash`)
       y la IA lo busca y pone como Wallhaven (0.9.52; probado con una clave real).
 - [~] **Entrar desde otro equipo o el móvil**: AnyDesk no acepta entrantes en Wayland (solo Xorg; lo dice su
@@ -62,8 +56,10 @@ reducción automática) se descartó en las decisiones del plan.
 - [ ] **Idiomas**: textos de la interfaz traducibles; inglés primero (Omarchy tiene 50 y los cambia en vivo).
 - [ ] **Rendimiento medido**: memoria y CPU del shell en reposo y con paneles abiertos, comparado con Caelestia y
       Noctalia; quitar sondeos (p. ej. la pastilla de ventana pregunta a Hyprland cada 100 ms) y reaccionar a
-      eventos. Hecho (v0.8.48): `dev/perf.sh` y reposo de 4,7 % a ~1 % de un núcleo. Falta: los 450 MB de RSS y
-      la comparación con los otros shells.
+      eventos. Hecho (v0.8.48): `dev/perf.sh` y reposo de 4,7 % a ~1 % de un núcleo. Medido en 0.9.75: recién
+      arrancado ~360 MB (190 propios) con dos pantallas, estable en reposo; lo que lo subía a 600 MB-1 GB era el
+      vídeo de la pantalla de bloqueo en 4K por CPU (ahora usa la copia reducida). Tras desbloquear parte de esa
+      memoria no vuelve al sistema (malloc). Falta: la comparación con los otros shells.
 - [x] **Pulido de animaciones** (0.9.55): los paneles se transforman entre sí (como Caelestia). Desde la 0.9.33 lo
       hacían los chips de la barra y el centro de control; ahora también Spotlight, energía, actualizaciones, fondos,
       widgets, música y atajos (`morphs: true` en su Overlay). Probado en sesión anidada con capturas a mitad del
@@ -130,13 +126,20 @@ Añadidos sugeridos (sin empezar):
 - [ ] Conectar y quitar una pantalla de verdad para comprobar que los espacios se renumeran sin mover ventanas
       (v0.8.40; solo se probó en sesión anidada).
 - [ ] VGA por la GT 710 (`nouveau`): ya da imagen, pero la copia entre GPUs puede hacer las animaciones menos
-      fluidas en esa pantalla. El registro de Hyprland repite `eglCreateSyncKHR … EGL_BAD_ATTRIBUTE` (300 veces
-      en este arranque); ver si viene de esa gráfica.
+      fluidas en esa pantalla. Los `eglCreateSyncKHR … EGL_BAD_ATTRIBUTE` del registro de Hyprland (~4 por segundo
+      con la VGA encendida, unos 6 MB en 3 h, en RAM) vienen de ahí: aquamarine copia cada cuadro a la GT 710 y pide
+      una sincronización que nouveau no tiene, así que espera de la otra forma. No se arregla desde la configuración;
+      es de aquamarine (comprobar la extensión antes de pedirla). Mirarlo si actualizan aquamarine.
 - [ ] Login sin congelarse (0.9.70–0.9.71: el login, el fondo en vídeo, el shell y RustDesk ya no usan la GT 710 para
-      vídeo ni para dibujar): confirmarlo en el próximo arranque (`journalctl -k -b | grep 'nouveau.*TRAP'` vacío).
-- [ ] `gst-plugin-scan` (el buscador de complementos de GStreamer, lo lanza cualquier app que reproduce algo) también
-      prueba VA-API en la GT 710 y cuelga un canal (`gr: TRAP … gst-plugin-scan`, una vez al regenerar su caché). Sin
-      efecto visible; si se repite, `GST_VA_ALL_DRIVERS`/`GST_PLUGIN_FEATURE_RANK` para que no use esa gráfica.
+      vídeo ni para dibujar; RustDesk del todo en 0.9.74). Comprobado en 0.9.75 sin reiniciar: el Hyprland del login
+      pasa `DRI_PRIME` a la otra gráfica y `QT_FFMPEG_DECODING_HW_DEVICE_TYPES=none` al Quickshell que lanza, y lo
+      instalado en `/etc/greetd` es igual al repo. Los TRAP de esta mañana (07:27 login, 07:28 shell) son de antes.
+      Falta: reiniciar y ver `journalctl -k -b | grep 'nouveau.*TRAP'` vacío.
+- [ ] `gst-plugin-scan` (el buscador de complementos de GStreamer, lo lanza cualquier app que reproduce algo) cuelga
+      un canal de la GT 710 al regenerar su caché (tras actualizar GStreamer). Medido en 0.9.75: es el complemento
+      `va` (11 TRAP; vulkan, opengl y nvcodec, ninguno). `LIBVA_DRIVER_NAME=radeonsi` lo baja a 3 (Mesa vuelve a
+      elegir nouveau por el dispositivo) y quitar el acceso a `renderD128` rompería la VGA (Hyprland lo usa). Sin
+      arreglo seguro; sin efecto visible.
 - [x] Lo que avisaba `hf-doctor` (2026-11-11): recomendados instalados el 2026-11-12 (fuente mono, pavucontrol,
       nm-connection-editor, impresión con cups.socket activo, pymupdf). QtMultimedia ya estaba (el aviso de
       `hf-greeter-sync` era falso: 0.9.46). Login al día (0.9.42) y `primaryMonitor` = HDMI-A-2.

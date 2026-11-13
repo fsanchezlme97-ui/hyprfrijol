@@ -172,12 +172,15 @@ PanelWindow {
         sentPause = paused;
         // Solo los reproductores de esta sesión (hf-wallpaper guarda sus pids: el global y los propios de cada
         // pantalla): ni otras sesiones ni otros usuarios
-        Quickshell.execDetached(["sh", "-c", 'for p in $(cat "$1"/motion*.pid 2>/dev/null); do kill "$2" "$p" 2>/dev/null; done',
+        // La marca «paused» es para los reproductores que hf-wallpaper relance mientras tanto: nacen parados
+        Quickshell.execDetached(["sh", "-c", 'if [ "$2" = -STOP ]; then : > "$1/paused"; else rm -f "$1/paused"; fi 2>/dev/null
+for p in $(cat "$1"/motion*.pid 2>/dev/null); do kill "$2" "$p" 2>/dev/null; done',
                                  "sh", Quickshell.env("XDG_RUNTIME_DIR") + "/hf-motion-" + Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE"),
                                  paused ? "-STOP" : "-CONT"]);
     }
     // Un fondo nuevo arranca otro reproductor: volver a aplicar la pausa
-    Timer { id: pauseRe; interval: 1500; onTriggered: if (win.paused) win.syncPause() }
+    // (y si no hay pausa, reanudar y quitar la marca: un shell anterior pudo cerrarse con el fondo parado)
+    Timer { id: pauseRe; interval: 1500; onTriggered: { win.sentPause = !win.paused; win.syncPause(); } }
 
     // ── Rotación automática ───────────────────────────────────────────────
     // wallpaperNoFullscreen: si toca cambiar con algo en pantalla completa, se espera a que salga

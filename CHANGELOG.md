@@ -3,6 +3,22 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.75] — 2026-11-13
+
+### Corregido
+- El fondo en vídeo se quedaba en negro: al relanzarse el reproductor (una recarga de Hyprland, una pantalla que
+  vuelve), el shell podía pausarlo antes de que creara su superficie, y no se veía nada hasta la siguiente
+  reanudación. Ahora el reproductor se anuncia cuando ya tiene su capa y, si el fondo está en pausa, nace pausado.
+- El fondo en vídeo también desaparecía tras el bloqueo por inactividad: el monitor HDMI, al apagarse, se desconecta
+  y se reconecta varias veces, y el vigilante del vídeo se cerraba en medio (comprobaba la sesión con `hyprctl`, que
+  llegaba a tardar más de 3 s). Ahora mira el socket de Hyprland, un reproductor que se cierra porque su pantalla se
+  fue no cuenta como fallo, y cada salida del vigilante queda en `$XDG_RUNTIME_DIR/hf-motion-*/motion.log`.
+- La pantalla de bloqueo reproducía el vídeo original (4K a 60 fps, decodificado por CPU, uno por pantalla) y el
+  shell pasaba de 200 MB a más de 1 GB al bloquear. Usa la copia a la altura de la pantalla que ya reproduce el
+  escritorio (`wallpaper-play`).
+- `hf-wallpaper -o` aceptaba cualquier nombre de pantalla, y el shell llegó a guardar un fondo para «undefined».
+  Ahora solo las conectadas (quitar el fondo propio vale también con una desconectada).
+
 ## [0.9.74] — 2026-11-13
 
 ### Corregido

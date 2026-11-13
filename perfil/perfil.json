@@ -114,7 +114,7 @@
   ]
  },
  "greeter": true,
- "hyprfrijol": "v0.9.73",
+ "hyprfrijol": "v0.9.74",
  "ollama": [
   "gemma4:e4b"
  ],
@@ -124,7 +124,7 @@
   "rustdesk": true,
   "rustdeskPortal": true
  },
- "saved": "2026-11-13 10:16",
+ "saved": "2026-11-13 10:58",
  "services": [
   "sshd",
   "ufw",
@@ -257,6 +257,11 @@
   "naturalScroll": true,
   "nightLight": "off",
   "nightTemp": 5500,
+  "notifyApps": {
+   "samantha": {
+    "allow": false
+   }
+  },
   "notifyPosition": "auto",
   "numlock": true,
   "osdOffset": 4,
@@ -302,7 +307,7 @@
   ],
   "wallpaperRandom": false,
   "wallpaperRotateMin": 0,
-  "wallpaperSource": "unsplash",
+  "wallpaperSource": "carpeta",
   "waveStyle": "barras",
   "welcomeDone": true,
   "widgets": [
