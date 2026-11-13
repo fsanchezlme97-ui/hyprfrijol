@@ -42,7 +42,7 @@ ColumnLayout {
         title: "Preajustes"
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 12
             Card {
                 Layout.preferredWidth: 1
                 title: "Alto contraste" + (root.hcOn ? " · activado" : "")

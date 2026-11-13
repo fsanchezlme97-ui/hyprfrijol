@@ -41,7 +41,7 @@ Flickable {
         // ---------- portada ----------
         Rectangle {
             Layout.fillWidth: true
-            Layout.rightMargin: 6
+            Layout.rightMargin: 8
             implicitHeight: hero.implicitHeight + 36
             radius: Theme.r(8)
             color: Qt.alpha(Theme.p, Theme.light ? 0.08 : 0.12)
@@ -50,7 +50,7 @@ Flickable {
             RowLayout {
                 id: hero
                 x: 20; y: 18; width: parent.width - 40
-                spacing: 18
+                spacing: 16
                 Rectangle {
                     Layout.alignment: Qt.AlignTop
                     implicitWidth: 56; implicitHeight: 56; radius: Theme.r(14)
@@ -59,7 +59,7 @@ Flickable {
                 }
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: 8
                     Txt { text: "Apps de GNOME recomendadas"; size: 18; weight: Font.DemiBold }
                     Txt {
                         Layout.fillWidth: true
@@ -71,7 +71,7 @@ Flickable {
                 }
                 ColumnLayout {
                     Layout.alignment: Qt.AlignVCenter
-                    spacing: 6
+                    spacing: 8
                     Button {
                         Layout.fillWidth: true
                         h: 36; kind: "primary"
@@ -95,12 +95,12 @@ Flickable {
         // ---------- KDE ----------
         RowLayout {
             Layout.fillWidth: true
-            Layout.topMargin: 10
-            Layout.rightMargin: 6
+            Layout.topMargin: 12
+            Layout.rightMargin: 8
             spacing: 12
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 3
+                spacing: 4
                 Txt { text: "Alternativas de KDE"; size: 16; weight: Font.DemiBold }
                 Txt { Layout.fillWidth: true; text: "Si prefieres apps Qt/KDE (más opciones, otro estilo), estas hacen lo mismo. Instala unas u otras, no hace falta tener las dos."; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone }
             }

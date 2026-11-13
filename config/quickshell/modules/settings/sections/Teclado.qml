@@ -176,7 +176,7 @@ RowLayout {
                 Rectangle { width: parent.width; height: 1; color: Theme.ov }
                 RowLayout {
                     anchors.fill: parent
-                    spacing: 10
+                    spacing: 12
                     Txt { Layout.fillWidth: true; text: br.modelData.desc || br.modelData.disp; color: br.modelData.desc ? Theme.t : Theme.tv }
                     KeyCapture {
                         visible: br.canChange

@@ -131,7 +131,7 @@ RowLayout {
             headerRight: Txt { visible: Battery.present; muted: true; size: 11.5; text: Math.round(Battery.percent * 100) + " %" + (Battery.charging ? " · cargando" : Battery.timeText ? " · " + Battery.timeText : "") }
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Card { title: "Ahorro"; sub: "Más batería"; selected: Battery.profile === "ahorro"; onClicked: Battery.setProfile("ahorro") }
                 Card { title: "Equilibrado"; sub: "Recomendado"; selected: Battery.profile === "equilibrado"; onClicked: Battery.setProfile("equilibrado") }
                 Card { title: "Rendimiento"; sub: Battery.hasPerformance ? "Máxima potencia" : "No disponible"; selected: Battery.profile === "rendimiento"; opacity: Battery.hasPerformance ? 1 : 0.5; onClicked: if (Battery.hasPerformance) Battery.setProfile("rendimiento") }

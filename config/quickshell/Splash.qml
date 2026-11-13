@@ -62,7 +62,7 @@ PanelWindow {
         Column {
             anchors.centerIn: parent
             anchors.verticalCenterOffset: -16
-            spacing: 26
+            spacing: 24
             opacity: win.logo ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
             Image {

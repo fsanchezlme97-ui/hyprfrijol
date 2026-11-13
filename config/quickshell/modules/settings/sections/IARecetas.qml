@@ -58,7 +58,7 @@ ColumnLayout {
                 id: rr
                 required property var modelData
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 1
@@ -100,7 +100,7 @@ ColumnLayout {
         }
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 12
             Txt {
                 Layout.fillWidth: true
                 text: root.msg || (root.newOut === "panel" ? "El panel puede proponer acciones (crear una tarea, un evento, un tema…) con su tarjeta para aplicarlas."

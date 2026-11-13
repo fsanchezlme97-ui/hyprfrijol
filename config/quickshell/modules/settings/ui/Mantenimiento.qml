@@ -45,12 +45,12 @@ ColumnLayout {
         RowLayout {
             visible: !!root.doc
             Layout.fillWidth: true
-            spacing: 14
+            spacing: 16
             Repeater {
                 model: [["ok", "bien", Theme.p], ["warn", "avisos", Theme.tv], ["error", "errores", Theme.danger]]
                 RowLayout {
                     required property var modelData
-                    spacing: 5
+                    spacing: 4
                     Txt { text: String(root.doc?.summary?.[modelData[0]] ?? 0); size: 17; weight: Font.DemiBold; tabular: true; color: modelData[2] }
                     Txt { text: modelData[1]; muted: true; size: 11.5 }
                 }

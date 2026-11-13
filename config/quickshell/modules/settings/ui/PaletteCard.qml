@@ -43,7 +43,7 @@ Rectangle {
         }
     }
     ColumnLayout {
-        anchors { fill: parent; leftMargin: 24; rightMargin: 8; topMargin: 7; bottomMargin: 7 }
+        anchors { fill: parent; leftMargin: 24; rightMargin: 8; topMargin: 8; bottomMargin: 8 }
         spacing: 4
         RowLayout {
             Layout.fillWidth: true
@@ -89,7 +89,7 @@ Rectangle {
     }
     Rectangle {
         visible: card.on
-        anchors { right: parent.right; bottom: parent.bottom; margins: 6 }
+        anchors { right: parent.right; bottom: parent.bottom; margins: 8 }
         width: 16; height: 16; radius: 8
         color: Theme.p
         Icon { anchors.centerIn: parent; name: "check"; size: 10; color: Theme.pText }

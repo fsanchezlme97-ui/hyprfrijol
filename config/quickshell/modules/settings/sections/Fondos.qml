@@ -197,7 +197,7 @@ ColumnLayout {
                 Txt { text: "Pausar cuando… (ahorra batería y GPU)"; muted: true }
                 Flow {
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: 8
                     Repeater {
                         model: [["fullscreen", "Pantalla completa"], ["bateria", "Con batería"], ["maximizada", "Ventana maximizada"], ["cubierto", "Tapado por ventanas"], ["juego", "Con un juego abierto"], ["foco", "Sin distracciones"]]
                         Chip {

@@ -79,7 +79,7 @@ Overlay {
 
             RowLayout {
                 Layout.alignment: Qt.AlignHCenter
-                spacing: 14
+                spacing: 16
                 Repeater {
                     model: win.actions
                     delegate: Item {
@@ -123,7 +123,7 @@ Overlay {
                             }
                             Txt {
                                 Layout.alignment: Qt.AlignHCenter
-                                Layout.topMargin: 3
+                                Layout.topMargin: 4
                                 text: cell.modelData.hint
                                 size: 11
                                 muted: true

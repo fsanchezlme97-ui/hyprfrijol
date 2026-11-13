@@ -28,14 +28,14 @@ Rectangle {
     // Barra
     Rectangle {
         id: bar
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 6 }
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
         height: 22
         radius: Theme.r(6)
         color: root.c("s1")
         border.width: 1; border.color: root.c("ov")
         Row {
             anchors.verticalCenter: parent.verticalCenter
-            x: 6; spacing: 3
+            x: 6; spacing: 4
             Rectangle { width: 12; height: 12; radius: Theme.r(3); color: root.c("p") }
             Repeater {
                 model: 4
@@ -59,8 +59,8 @@ Rectangle {
             font.family: Theme.font; font.pixelSize: Theme.px(8.5)
         }
         Row {
-            anchors { right: parent.right; rightMargin: 7; verticalCenter: parent.verticalCenter }
-            spacing: 5
+            anchors { right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
+            spacing: 4
             Repeater { model: 3; Rectangle { width: 6; height: 6; radius: 3; anchors.verticalCenter: parent.verticalCenter; color: root.c("tv") } }
             Text { text: "19:22"; color: root.c("t"); font.family: Theme.font; font.pixelSize: Theme.px(9); font.weight: Font.DemiBold }
         }
@@ -69,14 +69,14 @@ Rectangle {
     // Centro de control
     Rectangle {
         id: cc
-        anchors { right: parent.right; top: bar.bottom; bottom: parent.bottom; margins: 6 }
+        anchors { right: parent.right; top: bar.bottom; bottom: parent.bottom; margins: 8 }
         width: parent.width * 0.6
         radius: Theme.r(8)
         color: root.c("bg")
         border.width: 1; border.color: root.c("ov")
         ColumnLayout {
-            anchors.fill: parent; anchors.margins: 7
-            spacing: 5
+            anchors.fill: parent; anchors.margins: 8
+            spacing: 4
             GridLayout {
                 Layout.fillWidth: true
                 columns: 2; rowSpacing: 4; columnSpacing: 4
@@ -89,7 +89,7 @@ Rectangle {
                         radius: Theme.r(6)
                         color: modelData[1] ? root.c("p") : root.c("s3")
                         Text {
-                            anchors { left: parent.left; leftMargin: 7; verticalCenter: parent.verticalCenter }
+                            anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
                             text: modelData[0]
                             color: modelData[1] ? root.c("onP") : root.c("t")
                             font.family: Theme.font; font.pixelSize: Theme.px(8.5); font.weight: Font.DemiBold
@@ -112,13 +112,13 @@ Rectangle {
                 color: root.c("s1")
                 border.width: 1; border.color: root.c("o")
                 Column {
-                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 6 }
+                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
                     spacing: 2
                     Text { text: "Descarga terminada"; color: root.c("t"); font.family: Theme.font; font.pixelSize: Theme.px(8.5); font.weight: Font.DemiBold }
                     Text { text: "informe.pdf · 2,4 MB"; color: root.c("tv"); font.family: Theme.font; font.pixelSize: Theme.px(8) }
                 }
                 Row {
-                    anchors { right: parent.right; bottom: parent.bottom; margins: 5 }
+                    anchors { right: parent.right; bottom: parent.bottom; margins: 4 }
                     spacing: 4
                     Rectangle {
                         width: abrir.implicitWidth + 12; height: 15; radius: Theme.r(5); color: root.c("pc")
@@ -134,14 +134,14 @@ Rectangle {
 
     // Una ventana detrás
     Rectangle {
-        anchors { left: parent.left; top: bar.bottom; bottom: parent.bottom; right: cc.left; margins: 6 }
+        anchors { left: parent.left; top: bar.bottom; bottom: parent.bottom; right: cc.left; margins: 8 }
         radius: Theme.r(7)
         color: root.c("s1")
         opacity: 0.92
         border.width: 1; border.color: root.c("ov")
         Column {
             anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
-            spacing: 5
+            spacing: 4
             Rectangle { width: parent.width * 0.6; height: 6; radius: 3; color: root.c("t"); opacity: 0.85 }
             Rectangle { width: parent.width; height: 4; radius: 2; color: root.c("tv"); opacity: 0.6 }
             Rectangle { width: parent.width * 0.8; height: 4; radius: 2; color: root.c("tv"); opacity: 0.6 }
@@ -150,7 +150,7 @@ Rectangle {
 
     Rectangle {
         visible: root.label !== ""
-        anchors { left: parent.left; bottom: parent.bottom; margins: 10 }
+        anchors { left: parent.left; bottom: parent.bottom; margins: 12 }
         width: lab.implicitWidth + 12; height: 17; radius: 8.5
         color: Qt.alpha(root.c("bg"), 0.85)
         Text { id: lab; anchors.centerIn: parent; text: root.label; color: root.c("t"); font.family: Theme.font; font.pixelSize: Theme.px(9); font.weight: Font.DemiBold }

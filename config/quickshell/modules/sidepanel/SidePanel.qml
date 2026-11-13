@@ -214,12 +214,12 @@ PanelWindow {
                 Layout.preferredHeight: win.headH
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 6
-                    anchors.rightMargin: 6
+                    anchors.leftMargin: 8
+                    anchors.rightMargin: 8
                     spacing: 2
                     RowLayout {
-                        Layout.leftMargin: 6
-                        spacing: 6
+                        Layout.leftMargin: 8
+                        spacing: 8
                         Rectangle {
                             implicitWidth: 26; implicitHeight: 26; radius: Theme.r(8)
                             color: Theme.pc

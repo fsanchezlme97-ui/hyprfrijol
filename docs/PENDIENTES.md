@@ -17,10 +17,11 @@ Estado a 2026-11-11 (v0.9.18). Lo hecho está en el CHANGELOG. Lo que queda de l
 3. [x] [Temas](planes/temas.md), resto de las fases 4–5: editar los colores uno a uno, editar un tema guardado y la
        vista previa sobre la barra y el centro de control (0.9.15). Queda, opcional en el plan: que la IA asigne los
        papeles de cada color.
-4. [ ] [Temas](planes/temas.md), fase 3 (pulido de Math). Hecho (0.9.16): estados uniformes con foco de teclado,
-       sombra en dos capas y filo de luz arriba; la fuente se queda en Inter. Falta: la escala de espaciado
-       (4/8/12/16/24) y los radios concéntricos, que tocan casi todas las vistas. `Ui/` es la capa de compatibilidad
-       con Omarchy y sigue su propio estilo.
+4. [x] [Temas](planes/temas.md), fase 3 (pulido de Math). 0.9.16: estados uniformes con foco de teclado, sombra en
+       dos capas y filo de luz arriba; la fuente se queda en Inter. 0.9.73: escala de espaciado 4/8/12/16/24 en todo
+       el shell (`dev/spacing.py`, vigilada por `dev/lint.sh`) y radios concéntricos (`Theme.inner`) en lo que va
+       dentro de un panel: baldosas, rellenos, resumen de avisos y tarjetas del asistente. `Ui/` es la capa de
+       compatibilidad con Omarchy y sigue su propio estilo.
 5. [x] [Productividad](planes/productividad.md), fase 5 (0.9.57: los cuatro recorridos de la sección 4 en tres pasos o menos): revisión con uso real (la hace el autor usando el
        escritorio; lo que se mide está en la sección 4 del plan). Los relojes del mundo siguen en Fecha, con un
        enlace desde Agenda y alarmas.
@@ -33,9 +34,11 @@ reducción automática) se descartó en las decisiones del plan.
 
 ## Baratos de añadir (primero)
 
-- [ ] **Paquete en el AUR** (`hyprfrijol-git`): el PKGBUILD está en `packaging/aur/hyprfrijol-git/` (0.9.28, se
-      genera con `dev/gen-pkgbuild.py` y se construye bien con `makepkg`). Falta subirlo con la cuenta del autor
-      (instrucciones en la cabecera de `dev/gen-pkgbuild.py`) y añadir «Arch: `paru -S hyprfrijol-git`» al README.
+- [ ] **Paquete en el AUR** (`hyprfrijol-git`): el PKGBUILD está en `packaging/aur/hyprfrijol-git/` (se genera con
+      `dev/gen-pkgbuild.py`, `dev/lint.sh` vigila que siga al día con `packages.tsv`; la versión sale de la etiqueta al
+      construir). Comprobado en 0.9.73: `makepkg` construye `hyprfrijol-git 0.9.72.r0`. Falta solo subirlo: hace
+      falta tu cuenta del AUR con una clave SSH (este equipo no tiene `~/.ssh`; instrucciones en la cabecera de
+      `dev/gen-pkgbuild.py`) y, ya publicado, añadir «Arch: `paru -S hyprfrijol-git`» al README.
 
 - [x] **Fondos de Wallhaven y Unsplash**: Wallhaven ya estaba (Ajustes › Fondos); Unsplash en 0.9.36 (`hf-unsplash`)
       y la IA lo busca y pone como Wallhaven (0.9.52; probado con una clave real).
@@ -110,11 +113,15 @@ Añadidos sugeridos (sin empezar):
 
 ## Ideas propuestas (sin empezar)
 
-- [ ] **Dos pantallas**: abrir ciertas apps en la secundaria, modo concentración que atenúa la secundaria, imagen en
-      imagen a la secundaria. Hecho (0.9.28–0.9.29): barra por pantalla, Super + Ctrl + Tab salta de pantalla (Super +
-      Tab ya es la vista general), elegir la pantalla de los avisos y reloj en la barra sencilla.
-- [ ] **Transiciones**: minimizar al dock, inercia al cambiar de espacio con gestos, avisos apilados, un preset de
-      animaciones «Cinemático» (los paneles que salen de su botón ya están en «Pulido de animaciones»).
+- [x] **Dos pantallas** (0.9.73, Ajustes › Pantallas › Con varias pantallas): apps que abren en la secundaria
+      (`secondaryApps`), el PiP en la otra pantalla (`pipScreen`) y el modo sin distracciones oscurece las demás
+      (`focusDimOthers`). Antes (0.9.28–0.9.29): barra por pantalla, Super + Ctrl + Tab salta de pantalla, elegir la
+      pantalla de los avisos y reloj en la barra sencilla. Probado con dos salidas en sesión anidada; falta verlo con
+      tu VGA de verdad (va en «Equipo del autor»).
+- [x] **Transiciones** (0.9.73): minimizar al dock (la miniatura vuela hasta su icono, `animMinimize`), inercia en el
+      gesto de 3 dedos (`gestureInertia`: lo que ofrece Hyprland, un deslizamiento rápido termina el cambio aunque sea
+      corto; no hay inercia real con desaceleración), los avisos se deslizan a su sitio (ya se apilaban por app desde
+      antes) y el preset «Cinemático». Falta: probar el gesto en un touchpad de verdad.
 
 ## Equipo del autor
 

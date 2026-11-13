@@ -154,7 +154,7 @@ ColumnLayout {
                 visible: root.needKey
                 Layout.fillWidth: true
                 Layout.leftMargin: 130
-                spacing: 14
+                spacing: 16
                 Button { kind: "link"; text: "Obtener una clave gratis ↗"; onClicked: Qt.openUrlExternally("https://aistudio.google.com/apikey") }
                 Txt {
                     Layout.fillWidth: true
@@ -198,7 +198,7 @@ ColumnLayout {
             RowLayout {
                 visible: root.prov !== "off"
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Button {
                     text: root.testing ? "Probando…" : "Probar conexión"
                     enabled: !root.testing && (root.prov !== "gemini" || root.key.stored)
@@ -315,7 +315,7 @@ ColumnLayout {
             border.color: Theme.p
             TextEdit {
                 id: persona
-                anchors { fill: parent; margins: 9 }
+                anchors { fill: parent; margins: 8 }
                 wrapMode: TextEdit.Wrap
                 color: Theme.t
                 selectionColor: Theme.pc
@@ -340,6 +340,18 @@ ColumnLayout {
             }
             Timer { id: personaSave; interval: 800; onTriggered: persona.save() }
         }
+        Txt {
+            Layout.alignment: Qt.AlignRight
+            visible: persona.text.length > 1500
+            text: persona.text.length + " / 2000"
+            size: 11; color: persona.text.length > 2000 ? Theme.ter : Theme.tv
+        }
+    }
+
+    // Voz y conversación: leer en voz alta, Super + Alt + H, turnos y avisos hablados
+    Section {
+        Layout.fillWidth: true
+        title: "Voz y conversación"
         // Voz (aiVoice): hf-ai speak lee cada respuesta con Helpert, la única voz (local, Piper)
         SwRow {
             label: "Hablar con voz"; key: "aiVoice"; def: false
@@ -382,6 +394,15 @@ ColumnLayout {
                 ? "Pulsa una vez y habla con naturalidad: al callarte se lo pasa al asistente, Helpert contesta en voz alta y vuelve a escucharte (puedes cortarle hablando). Para terminar, pulsa otra vez o di «adiós» (también se cierra tras un rato en silencio)."
                 : "Cada pulsación es una pregunta; la respuesta sale en el panel (y en voz si «Hablar con voz» está activo)."
         }
+        // Avisos (hf-ai announce): también con la voz de Helpert. Nunca en «no molestar».
+        SwRow { label: "Saludo al entrar"; sub: "al iniciar sesión Helpert dice la hora y el tiempo"; key: "aiAnnounceGreet"; def: false }
+        SwRow { label: "Avisos importantes en voz alta"; sub: "lee los recordatorios y las notificaciones urgentes; calla en «no molestar»"; key: "aiAnnounceUrgent"; def: false }
+        Timer { id: voiceLater; interval: 5000; repeat: true; property int n: 0; onTriggered: { stat.running = false; stat.running = true; if (++n > 24 || root.voiceLocal) stop(); } }
+    }
+
+    Section {
+        Layout.fillWidth: true
+        title: "Modo compañero"
         // Modo compañero (modules/dictado/Companion.qml): Helpert empieza él la conversación de vez en cuando
         SwRow {
             label: "Modo compañero"; key: "aiCompanion"; def: false
@@ -412,16 +433,6 @@ ColumnLayout {
             text: "Probar ahora"
             onClicked: Shell.aiCompanionNow()
         }
-        Timer { id: voiceLater; interval: 5000; repeat: true; property int n: 0; onTriggered: { stat.running = false; stat.running = true; if (++n > 24 || root.voiceLocal) stop(); } }
-        // Avisos (hf-ai announce): también con la voz de Helpert. Nunca en «no molestar».
-        SwRow { label: "Saludo al entrar"; sub: "al iniciar sesión Helpert dice la hora y el tiempo"; key: "aiAnnounceGreet"; def: false }
-        SwRow { label: "Avisos importantes en voz alta"; sub: "lee los recordatorios y las notificaciones urgentes; calla en «no molestar»"; key: "aiAnnounceUrgent"; def: false }
-        Txt {
-            Layout.alignment: Qt.AlignRight
-            visible: persona.text.length > 1500
-            text: persona.text.length + " / 2000"
-            size: 11; color: persona.text.length > 2000 ? Theme.ter : Theme.tv
-        }
     }
 
     // «Aprobar siempre esta acción» (tarjeta del plan en el panel): aiAlwaysApprove, con su nombre de `hf-ai approvals`
@@ -450,7 +461,7 @@ ColumnLayout {
             RowLayout {
                 required property string modelData
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Txt { Layout.fillWidth: true; text: root.alwaysLabels[parent.modelData] ?? parent.modelData; weight: Font.DemiBold }
                 Txt { text: parent.modelData; muted: true; size: 11; font.family: Theme.mono }
                 Button { text: "Revocar"; h: 26; onClicked: Settings.set("aiAlwaysApprove", root.always.filter(k => k !== parent.modelData)) }

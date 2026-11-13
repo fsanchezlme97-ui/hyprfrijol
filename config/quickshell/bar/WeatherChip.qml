@@ -27,7 +27,7 @@ BarChip {
         visible: !chip.vertical
         anchors.verticalCenter: parent.verticalCenter
         x: 7
-        spacing: 5
+        spacing: 4
         WeatherGlyph { code: Weather.ready ? Weather.code : -1; day: Weather.isDay; live: chip.live; opacity: Weather.ready ? 1 : 0.5 }
         Txt { text: Weather.ready ? Math.round(Weather.temp) + "°" : "—"; weight: Font.DemiBold; tabular: true }
         Txt {

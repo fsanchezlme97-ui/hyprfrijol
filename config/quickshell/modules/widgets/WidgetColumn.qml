@@ -13,7 +13,7 @@ ColumnLayout {
     property bool editing: false
     property bool showButtons: true
     signal closeRequested()
-    spacing: 10
+    spacing: 12
 
     readonly property var all: [
         { k: "clima", n: "Clima" }, { k: "impresora", n: "Impresora 3D" }, { k: "sistema", n: "Sistema" },
@@ -51,7 +51,7 @@ ColumnLayout {
             Rectangle {
                 readonly property string detail: ({ sistema: "w-sistema", impresora: "w-impresora" })[slot.modelData] ?? ""   // (el clima: clic en la tarjeta)
                 visible: !col.editing && detail !== "" && col.showButtons
-                anchors { top: parent.top; right: parent.right; topMargin: 10; rightMargin: 10 }
+                anchors { top: parent.top; right: parent.right; topMargin: 12; rightMargin: 12 }
                 width: 22; height: 22; radius: Theme.ctl(22)
                 color: dm.containsMouse ? Qt.alpha(Theme.t, 0.14) : "transparent"
                 z: 5
@@ -98,7 +98,7 @@ ColumnLayout {
     RowLayout {
         visible: col.showButtons
         Layout.fillWidth: true
-        spacing: 6
+        spacing: 8
         Glass {
             Layout.fillWidth: true
             Layout.preferredHeight: 30
@@ -124,7 +124,7 @@ ColumnLayout {
         Txt { text: col.all.length === col.keys.length ? "Ya están todos los widgets" : "Añadir widget · ↑ ↓ para mover · ✕ para quitar"; muted: true; size: 11.5 }
         Flow {
             Layout.fillWidth: true
-            spacing: 6
+            spacing: 8
             Repeater {
                 model: col.all.filter(a => !col.keys.includes(a.k))
                 delegate: Rectangle {
@@ -147,7 +147,7 @@ ColumnLayout {
             onClicked: Shell.open("w-clima")
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 14
+                spacing: 16
                 Icon { name: Weather.icon; size: 34; stroke: 1.5; color: Theme.t; Layout.alignment: Qt.AlignVCenter }
                 ColumnLayout {
                     Layout.fillWidth: true
@@ -163,7 +163,7 @@ ColumnLayout {
                     }
                 }
                 Row {
-                    spacing: 10
+                    spacing: 12
                     visible: Weather.days.length > 0
                     Repeater {
                         model: Weather.days
@@ -207,7 +207,7 @@ ColumnLayout {
             RowLayout {
                 visible: Printer.online
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Rectangle {
                     Layout.preferredWidth: 96; Layout.preferredHeight: 72
                     radius: Theme.r(6)
@@ -234,7 +234,7 @@ ColumnLayout {
                 }
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 3
+                    spacing: 4
                     Txt { Layout.fillWidth: true; text: Printer.file || Printer.stateText; weight: Font.Medium }
                     Txt {
                         Layout.fillWidth: true
@@ -266,7 +266,7 @@ ColumnLayout {
             RowLayout {
                 visible: Printer.online
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 WBtn {
                     enabled: Printer.busy
                     opacity: enabled ? 1 : 0.5
@@ -318,7 +318,7 @@ ColumnLayout {
             spacing: 4
             Txt { text: Time.hhmm; size: 28; weight: Font.Medium; tabular: true }
             Txt { text: Time.longDate.charAt(0).toUpperCase() + Time.longDate.slice(1); muted: true }
-            WBtn { Layout.topMargin: 6; text: "Abrir agenda"; icon: "calendar"; onClicked: { col.closeRequested(); Shell.open("agenda"); } }
+            WBtn { Layout.topMargin: 8; text: "Abrir agenda"; icon: "calendar"; onClicked: { col.closeRequested(); Shell.open("agenda"); } }
         }
     }
 
@@ -342,7 +342,7 @@ ColumnLayout {
             }
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 WBtn { text: Pomodoro.running ? "Pausar" : "Empezar"; icon: Pomodoro.running ? "pause" : "play"; onClicked: Pomodoro.toggle() }
                 WBtn { text: "Reiniciar"; icon: "restart"; onClicked: Pomodoro.reset() }
             }
@@ -389,7 +389,7 @@ ColumnLayout {
             editing: col.editing
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Rectangle {
                     Layout.preferredWidth: 48; Layout.preferredHeight: 48; radius: Theme.r(6); color: Theme.s3; clip: true
                     Image { anchors.fill: parent; source: Media.art; fillMode: Image.PreserveAspectCrop; visible: status === Image.Ready; asynchronous: true }
@@ -405,7 +405,7 @@ ColumnLayout {
             RowLayout {
                 visible: !!Media.active
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 WBtn { icon: "chevron_left"; onClicked: Media.previous() }
                 WBtn { icon: Media.playing ? "pause" : "play"; primary: true; onClicked: Media.toggle() }
                 WBtn { icon: "chevron_right"; onClicked: Media.next() }
@@ -419,7 +419,7 @@ ColumnLayout {
             editing: col.editing
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Rectangle {
                     Layout.preferredWidth: 34; Layout.preferredHeight: 34; radius: Theme.r(9)
                     color: Net.connected ? Theme.p : Theme.s4

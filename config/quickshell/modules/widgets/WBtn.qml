@@ -22,7 +22,7 @@ Rectangle {
     Row {
         id: row
         anchors.centerIn: parent
-        spacing: 6
+        spacing: 8
         Icon { visible: b.icon !== ""; name: b.icon; size: 13; color: b.primary ? Theme.pText : b.danger ? Theme.danger : Theme.t; anchors.verticalCenter: parent.verticalCenter }
         Txt { visible: b.text !== ""; text: b.text; color: b.primary ? Theme.pText : b.danger ? Theme.danger : Theme.t; anchors.verticalCenter: parent.verticalCenter }
     }

@@ -188,7 +188,7 @@ ChipPopup {
             RowLayout {
                 visible: pop.tab !== "alarmas"
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 WBtn { icon: "refresh"; text: "Reiniciar"; onClicked: Pomodoro.reset() }
                 WBtn {
                     primary: true
@@ -204,7 +204,7 @@ ChipPopup {
             GridLayout {
                 visible: pop.tab === "temporizador"
                 Layout.fillWidth: true
-                columns: 4; columnSpacing: 6; rowSpacing: 6
+                columns: 4; columnSpacing: 8; rowSpacing: 8
                 Repeater {
                     model: [1, 3, 5, 10, 15, 20, 30, 60]
                     WBtn {
@@ -222,8 +222,8 @@ ChipPopup {
                 visible: pop.tab === "pomodoro"
                 Layout.fillWidth: true
                 columns: 2
-                columnSpacing: 10
-                rowSpacing: 6
+                columnSpacing: 12
+                rowSpacing: 8
                 Repeater {
                     model: [
                         { k: "pomodoroFocus", l: "Foco", v: Pomodoro.focusMin, from: 1, to: 180, u: " min" },
@@ -244,7 +244,7 @@ ChipPopup {
                             Settings.set(d.k, Math.max(d.from, Math.min(d.to, d.v + n)));
                         }
                         ColumnLayout {
-                            anchors { fill: parent; leftMargin: 10; rightMargin: 4; topMargin: 6; bottomMargin: 6 }
+                            anchors { fill: parent; leftMargin: 12; rightMargin: 4; topMargin: 8; bottomMargin: 8 }
                             spacing: 0
                             Txt { Layout.fillWidth: true; text: st.d.l; muted: true; size: 11; elide: Text.ElideRight }
                             RowLayout {
@@ -307,8 +307,8 @@ ChipPopup {
                     radius: Theme.r(8)
                     color: Theme.fill2
                     RowLayout {
-                        anchors { fill: parent; leftMargin: 12; rightMargin: 6 }
-                        spacing: 10
+                        anchors { fill: parent; leftMargin: 12; rightMargin: 8 }
+                        spacing: 12
                         Txt { text: Alarms.hhmm(arow.modelData); size: 22; weight: Font.Medium; tabular: true; opacity: arow.modelData.on ? 1 : 0.45 }
                         ColumnLayout {
                             Layout.fillWidth: true
@@ -385,7 +385,7 @@ ChipPopup {
             RowLayout {
                 visible: pop.tab === "alarmas"
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 Txt { Layout.fillWidth: true; text: pop.newDays.length ? Alarms.daysText({ days: pop.newDays.slice().sort() }) : "Sin días marcados: suena una sola vez"; muted: true; size: 11; elide: Text.ElideRight }
                 WBtn {
                     id: addBtn

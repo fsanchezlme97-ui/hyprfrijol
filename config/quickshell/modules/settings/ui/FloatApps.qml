@@ -14,7 +14,7 @@ import "../../../services"
 
 ColumnLayout {
     id: root
-    spacing: 10
+    spacing: 12
     signal apply(var list)        // nueva lista de clases → Settings.set(settingKey, …) en Escritorio.qml
     // También edita otras listas de clases con el mismo aspecto (Escritorio › «Apps con su propia barra»: barsOwnFrame)
     property string settingKey: "floatApps"
@@ -103,7 +103,7 @@ ColumnLayout {
     GridLayout {
         Layout.fillWidth: true
         columns: 2
-        columnSpacing: 22
+        columnSpacing: 24
         rowSpacing: 0
         Repeater {
             model: root.groups
@@ -133,7 +133,7 @@ ColumnLayout {
     }
     Flow {
         Layout.fillWidth: true
-        spacing: 6
+        spacing: 8
         visible: root.shown.length > 0
         Repeater {
             model: root.shown
@@ -149,7 +149,7 @@ ColumnLayout {
                     id: chipRow
                     anchors.verticalCenter: parent.verticalCenter
                     x: 8
-                    spacing: 6
+                    spacing: 8
                     Image {
                         Layout.preferredWidth: 16; Layout.preferredHeight: 16
                         visible: source != ""
@@ -210,7 +210,7 @@ ColumnLayout {
             color: cma.containsMouse ? Qt.alpha(Theme.t, 0.05) : "transparent"
             RowLayout {
                 anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
-                spacing: 10
+                spacing: 12
                 Image {
                     Layout.preferredWidth: 22; Layout.preferredHeight: 22
                     source: root.iconOf(cand.modelData.e, cand.modelData.cls)

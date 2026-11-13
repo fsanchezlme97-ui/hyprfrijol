@@ -120,7 +120,7 @@ Section {
     LabeledRow {
         label: "Access Key"; labelWidth: 80
         RowLayout {
-            spacing: 6
+            spacing: 8
             Field {
                 id: keyField
                 Layout.fillWidth: true
@@ -166,7 +166,7 @@ Section {
         visible: root.results.length > 0
         Layout.fillWidth: true
         columns: 4
-        columnSpacing: 6; rowSpacing: 6
+        columnSpacing: 8; rowSpacing: 8
         Repeater {
             model: root.results
             Rectangle {
@@ -189,7 +189,7 @@ Section {
                     anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
                     height: 17; color: Qt.rgba(0, 0, 0, 0.55)
                     Txt {
-                        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 5 }
+                        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 4 }
                         text: th.modelData.author ?? ""; size: 9.5; color: "#FFFFFF"
                     }
                     MouseArea {

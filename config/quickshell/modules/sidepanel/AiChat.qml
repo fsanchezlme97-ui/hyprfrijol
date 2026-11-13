@@ -658,7 +658,7 @@ print(json.dumps(out[:300]))
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Qt.openUrlExternally("file://" + th.path) }
         Rectangle {
             visible: th.removable
-            anchors { top: parent.top; right: parent.right; margins: 3 }
+            anchors { top: parent.top; right: parent.right; margins: 4 }
             width: 18; height: 18; radius: 9
             color: Qt.alpha(Theme.bg, xMa.containsMouse ? 0.95 : 0.78)
             Icon { anchors.centerIn: parent; name: "x"; size: 9; color: Theme.t }
@@ -680,7 +680,7 @@ print(json.dumps(out[:300]))
         Row {
             id: dcRow
             anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
-            spacing: 5
+            spacing: 4
             CatIcon { anchors.verticalCenter: parent.verticalCenter; path: dc.path; size: 13 }
             Txt {
                 anchors.verticalCenter: parent.verticalCenter
@@ -692,7 +692,7 @@ print(json.dumps(out[:300]))
         MouseArea { id: dcMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Qt.openUrlExternally("file://" + dc.path) }
         Rectangle {
             visible: dc.removable
-            anchors { right: parent.right; rightMargin: 5; verticalCenter: parent.verticalCenter }
+            anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
             width: 16; height: 16; radius: 8
             color: dxMa.containsMouse ? Qt.alpha(Theme.t, 0.16) : "transparent"
             Icon { anchors.centerIn: parent; name: "x"; size: 8; color: Theme.t }
@@ -724,7 +724,7 @@ print(json.dumps(out[:300]))
             Layout.fillWidth: true
             Layout.preferredWidth: root.width - 24
             Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.topMargin: 8; Layout.bottomMargin: 8
-            spacing: 6
+            spacing: 8
             Txt { height: 22; text: "Contexto"; size: 11.5; muted: true; rightPadding: 2 }
             Chip {
                 text: root.winInfo ? "Ventana: " + String(root.winInfo.title || root.winInfo["class"] || "").slice(0, 26) + (String(root.winInfo.title || "").length > 26 ? "…" : "")
@@ -756,12 +756,12 @@ print(json.dumps(out[:300]))
             Layout.margins: 12
             Layout.bottomMargin: 0
             implicitHeight: noticeRow.implicitHeight + 20
-            radius: Theme.r(10)
+            radius: Theme.inner(Theme.panelRadius, 12)
             color: Theme.fill2
             RowLayout {
                 id: noticeRow
-                anchors.fill: parent; anchors.margins: 10
-                spacing: 10
+                anchors.fill: parent; anchors.margins: 12
+                spacing: 12
                 Rectangle {
                     implicitWidth: 26; implicitHeight: 26; radius: Theme.r(7); color: Theme.ter
                     Text { anchors.centerIn: parent; text: "C"; color: Theme.bg; font.family: Theme.font; font.pixelSize: Theme.px(12); font.weight: Font.Bold }
@@ -796,16 +796,16 @@ print(json.dumps(out[:300]))
                 y: Math.max(12, (flick.height - height) / 2)
                 width: parent.width - 24
                 height: obCol.implicitHeight + 28
-                radius: Theme.r(12)
+                radius: Theme.inner(Theme.panelRadius, 12)
                 color: Theme.fill2
                 border.width: 1; border.color: Theme.ov
                 ColumnLayout {
                     id: obCol
                     x: 14; y: 14
                     width: parent.width - 28
-                    spacing: 10
+                    spacing: 12
                     RowLayout {
-                        spacing: 10
+                        spacing: 12
                         Rectangle {
                             implicitWidth: 34; implicitHeight: 34; radius: Theme.r(10); color: Theme.pc
                             Icon { anchors.centerIn: parent; name: "ai"; size: 16; color: Theme.pcText }
@@ -826,7 +826,7 @@ print(json.dumps(out[:300]))
                         RowLayout {
                             required property var modelData
                             Layout.fillWidth: true
-                            spacing: 9
+                            spacing: 8
                             Icon { Layout.alignment: Qt.AlignTop; Layout.topMargin: 1; name: parent.modelData[0]; size: 13; color: Theme.p }
                             Txt { Layout.fillWidth: true; text: parent.modelData[1]; size: 12; wrapMode: Text.Wrap; elide: Text.ElideNone }
                         }
@@ -848,13 +848,13 @@ print(json.dumps(out[:300]))
                                 text: "«" + ex.modelData[0].replace(/: $/, "…") + "»"
                                 size: 12; wrapMode: Text.Wrap; elide: Text.ElideNone
                             }
-                            Icon { anchors.right: parent.right; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter; name: ex.modelData[1] ? "edit" : "send"; size: 12; color: Theme.tv }
+                            Icon { anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter; name: ex.modelData[1] ? "edit" : "send"; size: 12; color: Theme.tv }
                             MouseArea { id: exMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.useExample(ex.modelData) }
                         }
                     }
                     RowLayout {
                         Layout.topMargin: 2
-                        spacing: 6
+                        spacing: 8
                         SmallBtn { text: "Empezar"; primary: true; onClicked: { root.finishOnboarding(); root.focusInput(); } }
                         SmallBtn { text: "Ajustes de IA"; onClicked: Shell.open("ajustesapp", "ia") }
                     }
@@ -887,7 +887,7 @@ print(json.dumps(out[:300]))
                 width: parent.width - 24
                 x: 12
                 y: Math.max(12, flick.contentHeight - implicitHeight - 12)
-                spacing: 10
+                spacing: 12
 
                 Repeater {
                     model: msgModel
@@ -906,7 +906,7 @@ print(json.dumps(out[:300]))
                         Row {
                             id: actsRow
                             visible: msg.hasActs
-                            anchors { left: parent.left; top: bubble.bottom; topMargin: 3; leftMargin: 2 }
+                            anchors { left: parent.left; top: bubble.bottom; topMargin: 4; leftMargin: 2 }
                             spacing: 2
                             opacity: msgHover.hovered || msg.isLast ? 1 : 0
                             Behavior on opacity { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
@@ -941,7 +941,7 @@ print(json.dumps(out[:300]))
                             id: modelFlow
                             visible: msg.menuOpen
                             anchors { left: parent.left; right: parent.right; top: actsRow.bottom; topMargin: 4; leftMargin: 2 }
-                            spacing: 5
+                            spacing: 4
                             Txt {
                                 height: 22
                                 verticalAlignment: Text.AlignVCenter
@@ -980,18 +980,18 @@ print(json.dumps(out[:300]))
                                 id: inner
                                 x: 12; y: 10
                                 width: bubble.width - 24
-                                spacing: 10
+                                spacing: 12
                                 // Consultas que hizo antes de responder
                                 Column {
                                     id: stepsCol
                                     visible: (msg.modelData.steps?.length ?? 0) > 0
                                     Layout.fillWidth: true
-                                    spacing: 3
+                                    spacing: 4
                                     Repeater {
                                         model: msg.modelData.steps ?? []
                                         Row {
                                             required property string modelData
-                                            spacing: 6
+                                            spacing: 8
                                             Icon { anchors.verticalCenter: parent.verticalCenter; name: parent.modelData.startsWith("Se ocult") ? "shield" : "search"; size: 10; color: Theme.tv }
                                             Txt { text: parent.modelData; size: 11; muted: true }
                                         }
@@ -1005,7 +1005,7 @@ print(json.dumps(out[:300]))
                                     readonly property real wantW: n === 0 ? 0 : n === 1 ? 220 : Math.min(n, 3) * 76 - 6
                                     visible: n > 0
                                     Layout.fillWidth: true
-                                    spacing: 6
+                                    spacing: 8
                                     Repeater {
                                         model: imgFlow.list
                                         ImgThumb {
@@ -1020,7 +1020,7 @@ print(json.dumps(out[:300]))
                                 Flow {
                                     visible: (msg.modelData.files ?? []).length > 0
                                     Layout.fillWidth: true
-                                    spacing: 6
+                                    spacing: 8
                                     Repeater {
                                         model: msg.modelData.files ?? []
                                         DocChip { required property string modelData; path: modelData; fg: msg.mine ? Theme.pcText : Theme.t }
@@ -1051,7 +1051,7 @@ print(json.dumps(out[:300]))
                                     id: extra
                                     visible: (msg.modelData.labels?.length ?? 0) > 0 || (msg.modelData.code ?? "") !== "" || !!msg.modelData.error
                                     Layout.fillWidth: true
-                                    spacing: 10
+                                    spacing: 12
                                     implicitWidth: (msg.modelData.labels?.length ?? 0) > 0 || (msg.modelData.code ?? "") !== "" ? 1000 : 200
 
                                     // Plan propuesto: pasos numerados (✓ al aplicarse; «sin deshacer» si no tiene vuelta atrás)
@@ -1068,7 +1068,7 @@ print(json.dumps(out[:300]))
                                             id: planCol
                                             x: 10; y: 7
                                             width: parent.width - 20
-                                            spacing: 5
+                                            spacing: 4
                                             Txt {
                                                 width: planCol.width
                                                 text: msg.modelData.state === "" && (msg.modelData.labels?.length ?? 0) > 1
@@ -1158,7 +1158,7 @@ print(json.dumps(out[:300]))
                                     }
                                     RowLayout {
                                         visible: (msg.modelData.labels?.length ?? 0) > 0
-                                        spacing: 6
+                                        spacing: 8
                                         SmallBtn {
                                             readonly property int n: msg.modelData.labels?.length ?? 0
                                             readonly property int k: root.selOf(msg.modelData).filter(x => x).length
@@ -1200,7 +1200,7 @@ print(json.dumps(out[:300]))
                                     }
                                     RowLayout {
                                         visible: (msg.modelData.code ?? "") !== ""
-                                        spacing: 6
+                                        spacing: 8
                                         SmallBtn {
                                             visible: !msg.modelData.confirm
                                             text: "Ejecutar (pide confirmación)"; primary: true
@@ -1221,7 +1221,7 @@ print(json.dumps(out[:300]))
                                     // Error: reintentar / ajustes
                                     RowLayout {
                                         visible: !!msg.modelData.error
-                                        spacing: 6
+                                        spacing: 8
                                         SmallBtn { text: "Reintentar"; primary: true; onClicked: root.retry() }
                                         SmallBtn { text: "Ajustes de IA"; onClicked: Shell.open("ajustesapp", "ia") }
                                     }
@@ -1243,17 +1243,17 @@ print(json.dumps(out[:300]))
                         id: liveCol
                         x: 12; y: 10
                         width: liveBubble.width - 24
-                        spacing: 10
+                        spacing: 12
                         Column {
                             id: liveStepsCol
                             visible: root.liveSteps.length > 0
                             Layout.fillWidth: true
-                            spacing: 3
+                            spacing: 4
                             Repeater {
                                 model: root.liveSteps
                                 Row {
                                     required property string modelData
-                                    spacing: 6
+                                    spacing: 8
                                     Icon { anchors.verticalCenter: parent.verticalCenter; name: "search"; size: 10; color: Theme.tv }
                                     Txt { text: parent.modelData; size: 11; muted: true }
                                 }
@@ -1275,7 +1275,7 @@ print(json.dumps(out[:300]))
                     topLeftRadius: 7; topRightRadius: 14; bottomRightRadius: 14; bottomLeftRadius: 4
                     Row {
                         anchors.centerIn: parent
-                        spacing: 5
+                        spacing: 4
                         Repeater {
                             model: 3
                             delegate: Rectangle {
@@ -1312,7 +1312,7 @@ print(json.dumps(out[:300]))
             WheelHandler { onWheel: e => sugg.contentX = Math.max(0, Math.min(sugg.contentWidth - sugg.width, sugg.contentX - e.angleDelta.y)) }
             Row {
                 id: suggRow
-                spacing: 6
+                spacing: 8
                 Repeater {
                     model: root.suggestions
                     delegate: Rectangle {
@@ -1325,7 +1325,7 @@ print(json.dumps(out[:300]))
                         Row {
                             id: sRow
                             anchors.centerIn: parent
-                            spacing: 6
+                            spacing: 8
                             Icon { anchors.verticalCenter: parent.verticalCenter; name: "sparkle"; size: 11; color: sMouse.containsMouse ? Theme.pcText : Theme.p }
                             Txt { anchors.verticalCenter: parent.verticalCenter; text: parent.parent.modelData; size: 11.5; color: sMouse.containsMouse ? Theme.pcText : Theme.t }
                         }
@@ -1350,8 +1350,8 @@ print(json.dumps(out[:300]))
             spacing: 8
             RowLayout {
                 Layout.fillWidth: true
-                Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.topMargin: 10
-                spacing: 6
+                Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.topMargin: 12
+                spacing: 8
                 Txt { text: "Registro"; size: 14; weight: Font.DemiBold }
                 Txt { text: root.logList.length ? String(root.logList.length) : ""; size: 11.5; muted: true }
                 Item { Layout.fillWidth: true }
@@ -1388,7 +1388,7 @@ print(json.dumps(out[:300]))
                     color: bad ? Qt.alpha(Theme.danger, 0.10) : Theme.fill2
                     ColumnLayout {
                         id: lcol
-                        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 10; rightMargin: 10 }
+                        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 12; rightMargin: 12 }
                         spacing: 2
                         // 16:02:27 · Panel · Gemini (gemini-flash-latest) · 3,4 s · respaldo
                         Txt {
@@ -1424,7 +1424,7 @@ print(json.dumps(out[:300]))
             spacing: 8
             RowLayout {
                 Layout.fillWidth: true
-                Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.topMargin: 10
+                Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.topMargin: 12
                 spacing: 8
                 Txt { text: "Conversaciones"; size: 14; weight: Font.DemiBold }
                 Txt { text: root.histList.length ? String(root.histList.length) : ""; size: 11.5; muted: true }
@@ -1438,10 +1438,10 @@ print(json.dumps(out[:300]))
                 implicitHeight: 32
                 radius: Theme.r(6)
                 color: Theme.fill2
-                Icon { id: hsIcon; anchors.left: parent.left; anchors.leftMargin: 10; anchors.verticalCenter: parent.verticalCenter; name: "search"; size: 12; color: Theme.tv }
+                Icon { id: hsIcon; anchors.left: parent.left; anchors.leftMargin: 12; anchors.verticalCenter: parent.verticalCenter; name: "search"; size: 12; color: Theme.tv }
                 TextInput {
                     id: histSearch
-                    anchors { left: hsIcon.right; right: parent.right; leftMargin: 8; rightMargin: 10; verticalCenter: parent.verticalCenter }
+                    anchors { left: hsIcon.right; right: parent.right; leftMargin: 8; rightMargin: 12; verticalCenter: parent.verticalCenter }
                     color: Theme.t; selectionColor: Theme.pc; selectedTextColor: Theme.pcText
                     font.family: Theme.font; font.pixelSize: Theme.px(12.5)
                     clip: true
@@ -1480,7 +1480,7 @@ print(json.dumps(out[:300]))
                     MouseArea { id: hMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openHistory(hrow.modelData) }
                     ColumnLayout {
                         id: hcol
-                        anchors { left: parent.left; right: delBtn.left; verticalCenter: parent.verticalCenter; leftMargin: 10; rightMargin: 6 }
+                        anchors { left: parent.left; right: delBtn.left; verticalCenter: parent.verticalCenter; leftMargin: 12; rightMargin: 8 }
                         spacing: 1
                         Txt { Layout.fillWidth: true; text: hrow.modelData.title; size: 12.5; weight: Font.Medium; color: hrow.current ? Theme.pcText : Theme.t }
                         Txt {
@@ -1502,7 +1502,7 @@ print(json.dumps(out[:300]))
             RowLayout {
                 visible: root.histDeleted !== null
                 Layout.fillWidth: true
-                Layout.leftMargin: 16; Layout.rightMargin: 12; Layout.bottomMargin: 6
+                Layout.leftMargin: 16; Layout.rightMargin: 12; Layout.bottomMargin: 8
                 Txt { Layout.fillWidth: true; text: "Conversación borrada"; size: 12; muted: true; elide: Text.ElideRight }
                 SmallBtn { text: "Deshacer"; onClicked: root.undoDeleteHistory() }
             }
@@ -1514,7 +1514,7 @@ print(json.dumps(out[:300]))
             Layout.fillWidth: true
             Layout.preferredWidth: root.width - 24
             Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.bottomMargin: 8
-            spacing: 6
+            spacing: 8
             Repeater {
                 model: root.pending
                 ImgThumb {
@@ -1595,7 +1595,7 @@ print(json.dumps(out[:300]))
             }
             Rectangle {
                 id: sendBtn
-                anchors { right: parent.right; rightMargin: 7; verticalCenter: parent.verticalCenter }
+                anchors { right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
                 width: 32; height: 32; radius: Theme.r(10)
                 color: Theme.p
                 opacity: root.busy || input.text.trim() !== "" || root.pending.length || root.pendingDocs.length ? 1 : 0.55

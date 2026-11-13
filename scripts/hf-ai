@@ -116,7 +116,7 @@ SET_KEYS = {
     "barPos": ("Barra", {"abajo": "abajo", "arriba": "arriba", "izquierda": "lateral izquierda"}),
     "barMode": ("Barra", {"fija": "fija", "flotante": "flotante"}),
     "animado": ("Animaciones", {True: "activadas", False: "desactivadas"}),
-    "animPreset": ("Movimiento", {"fluido": "fluido", "equilibrado": "equilibrado", "rapido": "rápido",
+    "animPreset": ("Movimiento", {"fluido": "fluido", "equilibrado": "equilibrado", "rapido": "rápido", "cinematico": "cinemático",
                                   "minimo": "mínimo (solo fundidos)", "ninguno": "sin animaciones"}),
     "shadows": ("Sombras", {"ninguna": "ninguna", "suaves": "suaves", "marcadas": "marcadas"}),
     "activeBorder": ("Resaltado de la ventana activa", {"sutil": "sutil", "color": "color", "brillo": "brillo",
@@ -182,7 +182,7 @@ def settable(k, d=None):
 SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden: puedes encadenar varios pasos):
 - {"type":"set","key":K,"value":V}  ajustes del escritorio. Claves principales: transparencia (true|false),
   colorMode (auto|elegir|mono), palette (grafito|oxocarbon|ciruela|rosa|catppuccin-mocha|rose-pine|nord|tokyo-night|gruvbox|everforest|kanagawa|lila;
-  implica colorMode "elegir"), themeMode (oscuro|claro|auto), animPreset (fluido|equilibrado|rapido|minimo|ninguno),
+  implica colorMode "elegir"), themeMode (oscuro|claro|auto), animPreset (fluido|equilibrado|cinematico|rapido|minimo|ninguno),
   shadows (ninguna|suaves|marcadas), activeBorder (sutil|color|brillo|ninguno), barPos (abajo|arriba|izquierda),
   barMode (fija|flotante), animado, reduceTransparency, reduceMotion, nightLight, clock24 (bool), gapsIn (0-30),
   gapsOut (0-40), pipSize (minimo|pequeno|mediano|grande), pipCorner (sup-der|sup-izq|inf-der|inf-izq),

@@ -34,7 +34,7 @@ Rectangle {
         color: Theme.s3
         border.width: root.mode === "ninguno" ? 0 : root.mode === "color" ? 2 : 1
         border.color: Qt.alpha(Theme.ov, root.mode === "color" ? 0.7 : Theme.light ? 0.45 : 0.35)
-        Txt { anchors { left: parent.left; top: parent.top; margins: 9 } text: "Inactiva"; size: 10.5; muted: true }
+        Txt { anchors { left: parent.left; top: parent.top; margins: 8 } text: "Inactiva"; size: 10.5; muted: true }
     }
     // Ventana activa
     RectangularShadow {
@@ -53,8 +53,8 @@ Rectangle {
         border.width: root.mode === "ninguno" ? 0 : root.mode === "color" ? 2 : 1
         border.color: root.mode === "color" ? Theme.p : Qt.alpha(Qt.tint(Theme.p, Qt.alpha(Theme.ov, 0.25)), Theme.light ? 0.55 : 0.45)
         Column {
-            anchors { left: parent.left; top: parent.top; margins: 9 }
-            spacing: 5
+            anchors { left: parent.left; top: parent.top; margins: 8 }
+            spacing: 4
             Txt { text: "Activa"; size: 10.5; weight: Font.DemiBold }
             Rectangle { width: front.width * 0.6; height: 5; radius: 2.5; color: Theme.tv; opacity: 0.45 }
             Rectangle { width: front.width * 0.4; height: 5; radius: 2.5; color: Theme.tv; opacity: 0.45 }

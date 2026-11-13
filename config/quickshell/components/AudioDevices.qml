@@ -94,7 +94,7 @@ ColumnLayout {
                         width: chipTxt.implicitWidth + 30; height: 22; radius: Theme.ctl(22)
                         color: act ? Theme.p : chipMa.containsMouse ? Qt.alpha(Theme.t, 0.10) : Theme.fill2
                         Row {
-                            anchors.centerIn: parent; spacing: 5
+                            anchors.centerIn: parent; spacing: 4
                             Icon { anchors.verticalCenter: parent.verticalCenter; size: 12; color: chip.act ? Theme.pText : Theme.tv
                                    name: chip.modelData.type === "Headphones" ? "headphones" : "speaker" }
                             Txt { id: chipTxt; anchors.verticalCenter: parent.verticalCenter; text: chip.modelData.label; size: 11

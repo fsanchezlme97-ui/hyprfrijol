@@ -76,13 +76,13 @@ Glass {
 
     ColumnLayout {
         id: body
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 13 }
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
         spacing: 4
 
         // Cabecera: fecha de hoy grande (clic = volver a hoy) · mes · ‹ ›
         RowLayout {
             Layout.fillWidth: true
-            Layout.leftMargin: 3
+            Layout.leftMargin: 4
             spacing: 2
             ColumnLayout {
                 Layout.fillWidth: true
@@ -184,7 +184,7 @@ Glass {
         // ── Eventos del día elegido ──────────────────────────────────
         RowLayout {
             Layout.fillWidth: true
-            Layout.leftMargin: 3
+            Layout.leftMargin: 4
             spacing: 4
             Txt {
                 Layout.fillWidth: true
@@ -205,7 +205,7 @@ Glass {
         ColumnLayout {
             visible: win.adding
             Layout.fillWidth: true
-            spacing: 6
+            spacing: 8
             Segmented {
                 h: 28
                 model: [{ key: "evento", label: "Evento" }, { key: "tarea", label: "Tarea" }]
@@ -218,7 +218,7 @@ Glass {
             RowLayout {
                 visible: win.addKind === "evento"
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 Field { id: fFrom; Layout.preferredWidth: 78; h: 30; icon: "clock"; placeholder: "10:00"; onAccepted: addBtn.clicked() }
                 Txt { text: "–"; muted: true }
                 Field { id: fTo; Layout.preferredWidth: 62; h: 30; icon: ""; placeholder: "11:00"; onAccepted: addBtn.clicked() }
@@ -261,7 +261,7 @@ Glass {
             // hasta 3 eventos a la vista; el resto, desplazando
             Layout.preferredHeight: Math.min(contentHeight, 3 * 50 + 8)
             clip: true
-            spacing: 5
+            spacing: 4
             model: win.dayEvents
             boundsBehavior: Flickable.StopAtBounds
             delegate: Rectangle {
@@ -280,7 +280,7 @@ Glass {
                     color: Events.tint(ev.e.color)
                 }
                 RowLayout {
-                    anchors { fill: parent; leftMargin: 20; rightMargin: 8; topMargin: 7; bottomMargin: 7 }
+                    anchors { fill: parent; leftMargin: 24; rightMargin: 8; topMargin: 8; bottomMargin: 8 }
                     spacing: 8
                     ColumnLayout {
                         id: evCol
@@ -319,7 +319,7 @@ Glass {
                 required property var modelData
                 readonly property bool late: !modelData.done && !!modelData.due && modelData.due < Tasks.today
                 Layout.fillWidth: true
-                Layout.leftMargin: 3
+                Layout.leftMargin: 4
                 spacing: 8
                 Rectangle {
                     implicitWidth: 16; implicitHeight: 16; radius: Theme.r(4)
@@ -348,7 +348,7 @@ Glass {
         }
         Txt {
             visible: Tasks.list.length > 0 && !win.adding
-            Layout.leftMargin: 3
+            Layout.leftMargin: 4
             text: "Todas las tareas" + (Tasks.pending.length ? " (" + Tasks.pending.length + ")" : "") + "  ›"
             size: 11.5
             color: allMa.containsMouse ? Theme.t : Theme.p
@@ -356,7 +356,7 @@ Glass {
         }
         Txt {
             visible: Tasks.removed.length > 0
-            Layout.leftMargin: 3
+            Layout.leftMargin: 4
             text: Tasks.removedLabel + " · Deshacer"
             size: 11.5
             color: undoMa.containsMouse ? Theme.t : Theme.p
@@ -365,8 +365,8 @@ Glass {
         RowLayout {
             visible: win.dayEvents.length === 0 && win.dayTasks.length === 0 && !win.adding
             Layout.fillWidth: true
-            Layout.leftMargin: 3
-            spacing: 6
+            Layout.leftMargin: 4
+            spacing: 8
             Txt {
                 Layout.fillWidth: true
                 text: Events.loading ? "Cargando calendarios…" : "Nada en la agenda"
@@ -397,7 +397,7 @@ Glass {
                     Row {
                         id: wclRow
                         anchors.centerIn: parent
-                        spacing: 5
+                        spacing: 4
                         Icon { name: "globe"; size: 11; color: Theme.tv; anchors.verticalCenter: parent.verticalCenter }
                         Txt { text: wcl.modelData.name; size: 11; muted: true }
                         Txt { text: wcl.modelData.time; size: 11; weight: Font.DemiBold; tabular: true }
@@ -410,7 +410,7 @@ Glass {
                 visible: WorldClock.clocks.length === 0
                 width: addRow.implicitWidth + 16; height: 22; radius: Theme.ctl(22)
                 color: addMa.containsMouse ? Theme.fill2 : "transparent"
-                Row { id: addRow; anchors.centerIn: parent; spacing: 5
+                Row { id: addRow; anchors.centerIn: parent; spacing: 4
                     Icon { name: "globe"; size: 11; color: Theme.tv; anchors.verticalCenter: parent.verticalCenter }
                     Txt { text: "Añadir relojes del mundo"; size: 11; muted: true } }
                 MouseArea { id: addMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Shell.open("ajustesapp", "fecha") }

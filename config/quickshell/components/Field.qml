@@ -22,8 +22,8 @@ Rectangle {
     function focusInput() { input.forceActiveFocus(); }
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 10
-        anchors.rightMargin: 10
+        anchors.leftMargin: 12
+        anchors.rightMargin: 12
         spacing: 8
         Icon { visible: root.icon !== ""; name: root.icon; color: Theme.tv }
         TextInput {

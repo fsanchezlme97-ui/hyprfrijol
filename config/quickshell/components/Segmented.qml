@@ -34,7 +34,7 @@ Rectangle {
     RowLayout {
         id: row
         anchors.fill: parent
-        anchors.margins: 3
+        anchors.margins: 4
         spacing: 2
         Repeater {
             id: rep

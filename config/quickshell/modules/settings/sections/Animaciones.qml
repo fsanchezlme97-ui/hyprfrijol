@@ -30,7 +30,7 @@ ColumnLayout {
             LabeledRow {
                 label: "Animaciones"; labelWidth: 80
                 Seg {
-                    model: [["fluido", "Fluido"], ["equilibrado", "Equilibrado"], ["rapido", "Rápido"], ["minimo", "Mínimo"], ["ninguno", "Ninguna"]]
+                    model: [["fluido", "Fluido"], ["equilibrado", "Equilibrado"], ["cinematico", "Cinemático"], ["rapido", "Rápido"], ["minimo", "Mínimo"], ["ninguno", "Ninguna"]]
                     current: mov.preset
                     textSize: 11.5
                     onPicked: k => Settings.setMany({ animPreset: k, animado: k !== "ninguno" })
@@ -43,6 +43,7 @@ ColumnLayout {
                 text: ({
                     fluido: "Movimiento elástico y suave, algo más largo, como en iOS o macOS: las ventanas aparecen con un leve rebote y los espacios se deslizan.",
                     equilibrado: "El de siempre: entrada rápida que frena al final y un rebote corto al abrir ventanas.",
+                    cinematico: "Para lucirlo: más largo y amplio. Las ventanas crecen desde lejos con un rebote marcado y los espacios se deslizan con fundido.",
                     rapido: "Ágil y sin rebotes: casi la mitad de largo. Para quien quiere que todo responda ya.",
                     minimo: "Solo fundidos: nada se desplaza ni cambia de tamaño.",
                     ninguno: "Sin animaciones en ventanas, espacios ni paneles."
@@ -70,6 +71,7 @@ ColumnLayout {
                     onPicked: k => Settings.set("workspaceAnim", k)
                 }
             }
+            SwRow { label: "Minimizar al dock"; sub: "la ventana vuela y se encoge hasta su icono del dock"; key: "animMinimize"; def: true; enabled: mov.preset !== "ninguno" && !Theme.reduceMotion }
             SwRow { label: "Onda al pulsar"; sub: "botones y mosaicos dibujan una onda desde el punto pulsado"; key: "ripple"; def: true; enabled: !Theme.reduceMotion }
             LinkRow {
                 visible: Theme.reduceMotion
@@ -152,7 +154,7 @@ ColumnLayout {
         readonly property string q: Settings.get("blurQuality", "equilibrada")
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 12
             Card { title: "Alta"; sub: "Máximo detalle"; selected: glass.q === "alta"; onClicked: Settings.set("blurQuality", "alta") }
             Card { title: "Equilibrada"; sub: "Menos GPU"; selected: glass.q === "equilibrada"; onClicked: Settings.set("blurQuality", "equilibrada") }
             Card { title: "Ahorro"; sub: "Sin desenfoque"; selected: glass.q === "ahorro"; onClicked: Settings.set("blurQuality", "ahorro") }

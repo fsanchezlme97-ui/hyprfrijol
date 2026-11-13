@@ -105,13 +105,13 @@ Overlay {
 
         ColumnLayout {
             id: col
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 18 }
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 16 }
             spacing: 12
 
             // Cabecera
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Rectangle {
                     Layout.preferredWidth: 34; Layout.preferredHeight: 34; radius: Theme.r(8)
                     color: Theme.p
@@ -144,7 +144,7 @@ Overlay {
                 ColumnLayout {
                     id: groupsCol
                     width: parent.width
-                    spacing: 6
+                    spacing: 8
                     Repeater {
                         model: win.groups
                         delegate: Rectangle {
@@ -163,9 +163,9 @@ Overlay {
 
                             RowLayout {
                                 id: head
-                                anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 10; rightMargin: 10 }
+                                anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 12; rightMargin: 12 }
                                 height: 40
-                                spacing: 10
+                                spacing: 12
                                 Rectangle {
                                     Layout.preferredWidth: 22; Layout.preferredHeight: 22; radius: Theme.r(6)
                                     color: Theme[grp.modelData.tone] ?? Theme.s4
@@ -191,7 +191,7 @@ Overlay {
                             }
                             Column {
                                 id: list
-                                anchors { left: parent.left; right: parent.right; top: head.bottom; leftMargin: 44; rightMargin: 10 }
+                                anchors { left: parent.left; right: parent.right; top: head.bottom; leftMargin: 44; rightMargin: 12 }
                                 spacing: 2
                                 Repeater {
                                     model: grp.expanded ? (grp.all ? grp.items : grp.items.slice(0, grp.limit)) : []
@@ -228,9 +228,9 @@ Overlay {
                 ColumnLayout {
                     id: snapCol
                     anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 12; rightMargin: 12 }
-                    spacing: 6
+                    spacing: 8
                     RowLayout {
-                        spacing: 10
+                        spacing: 12
                         Toggle { implicitWidth: 30; implicitHeight: 18; checked: win.snapshot; onToggled: v => Settings.set("updatesSnapshot", v) }
                         Txt {
                             Layout.fillWidth: true

@@ -51,7 +51,7 @@ Item {
 
         // Sombra barata: un rectángulo desplazado y translúcido (sin desenfoque por miniatura)
         Rectangle {
-            anchors { fill: parent; topMargin: 6; leftMargin: 2; rightMargin: 2; bottomMargin: -6 }
+            anchors { fill: parent; topMargin: 8; leftMargin: 2; rightMargin: 2; bottomMargin: -6 }
             radius: clipR.radius
             color: "#000000"
             opacity: tile.on ? 0.30 : 0.16
@@ -97,7 +97,7 @@ Item {
         }
         // Vídeo / puesto ahora: insignias pequeñas
         Row {
-            anchors { top: parent.top; right: parent.right; margins: 6 }
+            anchors { top: parent.top; right: parent.right; margins: 8 }
             spacing: 4
             Rectangle {
                 visible: tile.isCurrent

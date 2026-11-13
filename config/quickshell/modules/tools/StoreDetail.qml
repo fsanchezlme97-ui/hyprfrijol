@@ -56,7 +56,7 @@ Item {
             // ---------- volver ----------
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Button { h: 30; text: "‹  Volver"; onClicked: dt.back() }
                 Txt { text: dt.catLabel + "  ›  " + (dt.t.name ?? ""); muted: true; Layout.fillWidth: true }
                 BusyIndicator { visible: info.loading; running: visible; implicitWidth: 20; implicitHeight: 20 }
@@ -66,12 +66,12 @@ Item {
             // ---------- cabecera ----------
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 20
+                spacing: 24
                 StoreIcon { Layout.alignment: Qt.AlignTop; tool: dt.t; store: dt.store; size: 96; fallback: info.iconUrl }
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
-                    spacing: 6
+                    spacing: 8
                     RowLayout {
                         spacing: 8
                         Txt { text: dt.t.name ?? ""; size: 26; weight: Font.DemiBold }
@@ -91,7 +91,7 @@ Item {
                     Rectangle {
                         visible: !!dt.t.hint
                         Layout.fillWidth: true
-                        Layout.topMargin: 6
+                        Layout.topMargin: 8
                         implicitHeight: hintTxt.implicitHeight + 16
                         radius: Theme.r(8)
                         color: Qt.alpha(Theme.p, 0.1)
@@ -145,7 +145,7 @@ Item {
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
-                    spacing: 10
+                    spacing: 12
                     Txt { text: "Acerca de " + (dt.t.name ?? ""); size: 16; weight: Font.DemiBold }
                     Txt {
                         Layout.fillWidth: true
@@ -165,8 +165,8 @@ Item {
                     ColumnLayout {
                         visible: !!info.release?.description
                         Layout.fillWidth: true
-                        Layout.topMargin: 6
-                        spacing: 6
+                        Layout.topMargin: 8
+                        spacing: 8
                         Txt { text: "Novedades de la versión " + (info.release?.version ?? ""); size: 14; weight: Font.DemiBold }
                         Txt { Layout.fillWidth: true; text: info.release?.description ?? ""; textFormat: Text.StyledText; wrapMode: Text.WordWrap; elide: Text.ElideNone; muted: true; size: 12.5; lineHeight: 1.1 }
                     }
@@ -191,13 +191,13 @@ Item {
                     }
                     Txt { visible: !dt.catalogApp && !!dt.t.key; Layout.fillWidth: true; text: Pkg.explain[dt.t.key] ?? ""; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone }
                     // Datos
-                    Txt { Layout.topMargin: 10; text: "Información"; size: 14; weight: Font.DemiBold }
+                    Txt { Layout.topMargin: 12; text: "Información"; size: 14; weight: Font.DemiBold }
                     Repeater {
                         model: info.rows(dt.curKey)
                         RowLayout {
                             required property var modelData
                             Layout.fillWidth: true
-                            spacing: 10
+                            spacing: 12
                             Txt { Layout.preferredWidth: 104; Layout.alignment: Qt.AlignTop; text: modelData[0]; muted: true; size: 12 }
                             Txt { Layout.fillWidth: true; text: modelData[1]; size: 12; wrapMode: Text.WordWrap; elide: Text.ElideNone; color: modelData[0] === "Aviso" ? Theme.danger : Theme.t }
                         }
@@ -206,8 +206,8 @@ Item {
                     // Enlaces
                     Flow {
                         Layout.fillWidth: true
-                        Layout.topMargin: 6
-                        spacing: 6
+                        Layout.topMargin: 8
+                        spacing: 8
                         Repeater {
                             model: [
                                 info.homepage ? ["Web del proyecto", info.homepage] : null,
@@ -227,8 +227,8 @@ Item {
             ColumnLayout {
                 visible: dt.alts.length > 0
                 Layout.fillWidth: true
-                Layout.topMargin: 6
-                spacing: 10
+                Layout.topMargin: 8
+                spacing: 12
                 Txt { text: "Alternativas en «" + dt.catLabel + "»"; size: 16; weight: Font.DemiBold }
                 Flow {
                     Layout.fillWidth: true

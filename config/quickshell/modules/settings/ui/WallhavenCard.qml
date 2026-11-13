@@ -138,7 +138,7 @@ Section {
     }
     Flow {
         Layout.fillWidth: true
-        spacing: 6
+        spacing: 8
         Repeater {
             model: [["general", "General"], ["anime", "Anime"], ["people", "Personas"]]
             Chip {
@@ -193,7 +193,7 @@ Section {
         visible: root.results.length > 0
         Layout.fillWidth: true
         columns: 4
-        columnSpacing: 6; rowSpacing: 6
+        columnSpacing: 8; rowSpacing: 8
         Repeater {
             model: root.results
             Rectangle {
@@ -255,7 +255,7 @@ Section {
     LabeledRow {
         label: "Clave de API"; labelWidth: 80
         RowLayout {
-            spacing: 6
+            spacing: 8
             Field {
                 id: keyField
                 Layout.fillWidth: true

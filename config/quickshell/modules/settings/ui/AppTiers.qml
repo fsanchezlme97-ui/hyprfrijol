@@ -84,7 +84,7 @@ Section {
     // ---------- niveles ----------
     RowLayout {
         Layout.fillWidth: true
-        spacing: 10
+        spacing: 12
         Seg {
             fill: false
             model: root.tiers.map(t => [t.key, t.label])
@@ -135,7 +135,7 @@ Section {
             Rectangle { visible: row.index > 0; width: parent.width; height: 1; color: Theme.ov }
             MouseArea { id: rma; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
             RowLayout {
-                anchors.fill: parent; anchors.leftMargin: row.a.alt_of ? 26 : 6; anchors.rightMargin: 6
+                anchors.fill: parent; anchors.leftMargin: row.a.alt_of ? 26 : 6; anchors.rightMargin: 8
                 spacing: 12
                 Item {
                     Layout.preferredWidth: 30; Layout.preferredHeight: 30
@@ -156,7 +156,7 @@ Section {
                     Layout.fillWidth: true
                     spacing: 1
                     RowLayout {
-                        spacing: 6
+                        spacing: 8
                         Layout.fillWidth: true
                         Txt { text: row.a.name; weight: Font.DemiBold }
                         Rectangle {
@@ -215,7 +215,7 @@ Section {
     RowLayout {
         Layout.fillWidth: true
         Layout.topMargin: 4
-        spacing: 10
+        spacing: 12
         Txt { text: "Instalar"; weight: Font.DemiBold }
         Seg {
             fill: false

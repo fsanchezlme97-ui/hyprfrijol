@@ -88,7 +88,7 @@ RowLayout {
             RowLayout {
                 visible: Settings.get("notifyDndSchedule", false)
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Txt { text: "Desde"; muted: true }
                 Dropdown { Layout.preferredWidth: 110; model: root.times; current: Settings.get("notifyDndFrom", "22:00"); onPicked: k => Settings.set("notifyDndFrom", k) }
                 Txt { text: "hasta"; muted: true }
@@ -99,7 +99,7 @@ RowLayout {
             Flow {
                 visible: Settings.get("notifyDndSchedule", false)
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 Repeater {
                     model: [[1, "L"], [2, "M"], [3, "X"], [4, "J"], [5, "V"], [6, "S"], [0, "D"]]
                     Chip {
@@ -219,10 +219,10 @@ RowLayout {
                         anchors.left: parent.left; anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.verticalCenterOffset: 1
-                        spacing: 6
+                        spacing: 8
                         RowLayout {
                             Layout.fillWidth: true
-                            spacing: 10
+                            spacing: 12
                             Rectangle {
                                 implicitWidth: 30; implicitHeight: 30; radius: Theme.r(6)
                                 color: Theme.s4
@@ -251,7 +251,7 @@ RowLayout {
                             visible: ap.allowed
                             Layout.fillWidth: true
                             Layout.leftMargin: 40
-                            spacing: 6
+                            spacing: 8
                             Chip { h: 26; text: "Emergentes"; on: ap.r.popups !== false; onClicked: root.setRule(ap.modelData.key, "popups", !on) }
                             Chip { h: 26; text: "Sonido"; on: ap.r.sound !== false; opacity: Settings.get("notifySound", false) ? 1 : 0.5; onClicked: root.setRule(ap.modelData.key, "sound", !on) }
                             Item { Layout.fillWidth: true }
@@ -264,7 +264,7 @@ RowLayout {
             ColumnLayout {
                 visible: root.apps.length === 0
                 Layout.fillWidth: true
-                Layout.topMargin: 6
+                Layout.topMargin: 8
                 spacing: 4
                 Txt { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: "Aún no ha llegado ningún aviso"; weight: Font.DemiBold }
                 Txt { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; muted: true; size: 11.5; text: "Prueba con «Enviar un aviso de prueba»." }

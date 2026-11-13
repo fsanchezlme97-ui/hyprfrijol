@@ -231,7 +231,7 @@ RowLayout {
                     radius: Theme.r(6)
                     color: zma.containsMouse ? Theme.fill2 : "transparent"
                     RowLayout {
-                        anchors { fill: parent; leftMargin: 10; rightMargin: 10 }
+                        anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
                         spacing: 8
                         Txt { text: zr.modelData.city; weight: Font.Medium }
                         Txt { Layout.fillWidth: true; text: zr.modelData.country; muted: true }

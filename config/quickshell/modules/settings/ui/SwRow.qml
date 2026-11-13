@@ -25,7 +25,7 @@ Item {
     RowLayout {
         anchors.fill: parent
         anchors.topMargin: 1
-        spacing: 10
+        spacing: 12
         ColumnLayout {
             id: col
             Layout.fillWidth: true

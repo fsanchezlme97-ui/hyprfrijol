@@ -32,10 +32,10 @@ Rectangle {
         id: col
         anchors.fill: parent
         anchors.margins: 12
-        spacing: 6
+        spacing: 8
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 12
             Rectangle {
                 implicitWidth: 34; implicitHeight: 34; radius: Theme.r(6)
                 color: root.st === "on" ? Theme.p : Theme.s4
@@ -65,14 +65,14 @@ Rectangle {
         Item { Layout.fillHeight: true }
         RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            spacing: 8
             Rectangle { implicitWidth: 7; implicitHeight: 7; radius: 3.5; color: root.compatColor }
             Txt { Layout.fillWidth: true; text: root.compatText; size: 11; color: root.p.compat === "ok" || root.p.compat === "probable" || root.p.compat === "manual" ? Theme.tv : Theme.danger; weight: Font.Medium }
         }
         RowLayout {
             Layout.fillWidth: true
             Layout.topMargin: 2
-            spacing: 6
+            spacing: 8
             Button {
                 visible: !root.manual
                 h: 26

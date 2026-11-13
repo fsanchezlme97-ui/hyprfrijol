@@ -79,7 +79,7 @@ PopupWindow {
                 implicitHeight: 28
                 Row {
                     anchors { fill: parent; leftMargin: 8 }
-                    spacing: 6
+                    spacing: 8
                     Icon { visible: menu.stack.length > 0; name: "chevron_left"; size: 13; color: Theme.tv; anchors.verticalCenter: parent.verticalCenter }
                     Txt {
                         anchors.verticalCenter: parent.verticalCenter

@@ -36,7 +36,7 @@ ColumnLayout {
         pad: 20
         RowLayout {
             Layout.fillWidth: true
-            spacing: 18
+            spacing: 16
             Rectangle {
                 Layout.alignment: Qt.AlignTop
                 implicitWidth: 64; implicitHeight: 64; radius: Theme.r(14)
@@ -45,7 +45,7 @@ ColumnLayout {
             }
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 Txt { text: "Centro de aplicaciones"; size: 19; weight: Font.DemiBold }
                 Txt {
                     Layout.fillWidth: true

@@ -70,7 +70,9 @@ PanelWindow {
         Column {
             id: column
             width: flick.width
-            spacing: 6
+            spacing: 8
+            // al llegar o irse un aviso, los demás se deslizan a su sitio en vez de saltar
+            move: Transition { NumberAnimation { properties: "y"; duration: Theme.durIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeIn } }
 
             Repeater {
                 // abajo, el más reciente pegado a la barra; arriba, el más reciente arriba
@@ -80,7 +82,8 @@ PanelWindow {
                     required property var modelData
                     readonly property bool open: !!win.expanded[modelData.key] && modelData.items.length > 1
                     width: column.width
-                    spacing: 6
+                    spacing: 8
+                    move: Transition { NumberAnimation { properties: "y"; duration: Theme.durIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
                     // Cabecera del grupo desplegado: app · cuántos · contraer · descartar todos
                     Rectangle {
@@ -92,7 +95,7 @@ PanelWindow {
                         border.width: Theme.borderWidth; border.color: Theme.border
                         RowLayout {
                             anchors { fill: parent; leftMargin: 12; rightMargin: 4 }
-                            spacing: 6
+                            spacing: 8
                             Txt { Layout.fillWidth: true; text: grp.modelData.app + " · " + grp.modelData.items.length; weight: Font.DemiBold; size: 11.5 }
                             IconBtn { implicitWidth: 24; implicitHeight: 22; icon: "chevron_down"; iconSize: 11; fg: Theme.tv; tooltip: "Agrupar"; onClicked: win.toggle(grp.modelData.key) }
                             IconBtn { implicitWidth: 24; implicitHeight: 22; icon: "x"; iconSize: 11; fg: Theme.tv; tooltip: "Descartar todos"; onClicked: Notifs.dismissAll(grp.modelData.items) }

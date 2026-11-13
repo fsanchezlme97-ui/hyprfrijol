@@ -207,7 +207,7 @@ ColumnLayout {
         color: Theme.pc
         RowLayout {
             id: noPm
-            anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 8
+            anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 8
             Txt { Layout.fillWidth: true; color: Theme.pcText; wrapMode: Text.WordWrap; text: "hyprpm no está instalado. Desde Hyprland 0.57 va en su propio paquete «hyprpm» (y para compilar plugins necesita cmake, meson y cpio)." }
             Button { text: "Instalar hyprpm"; onClicked: { Pkg.runInTerminal(Pkg.family === "arch" ? "sudo pacman -S --needed hyprpm hyprland-protocols cmake meson cpio pkgconf git gcc && hyprpm update" : Pkg.family === "fedora" ? "sudo dnf install -y hyprpm cmake meson cpio gcc-c++ git && hyprpm update" : "echo 'Instala el paquete hyprpm (o hyprland-devel) con tu gestor de paquetes'", "hyprpm"); root.polls = 36; } }
         }
@@ -220,7 +220,7 @@ ColumnLayout {
         color: root.msgBad ? Qt.alpha(Theme.danger, 0.14) : Theme.selBg
         RowLayout {
             id: msgRow
-            anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 8
+            anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 8
             Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; text: root.msg; color: root.msgBad ? Theme.danger : Theme.selText; weight: Font.Medium }
             Button { visible: root.msgBad && /Actualizar todos/.test(root.msg); h: 26; kind: "primary"; text: "Actualizar todos"; onClicked: root.updateAll() }
             Button { h: 26; kind: "link"; text: "✕"; onClicked: root.msg = "" }
@@ -250,7 +250,7 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        spacing: 10
+        spacing: 12
         Seg { model: [["todos", "Todos"], ["instalados", "Instalados"], ["disponibles", "Disponibles"]]; current: root.tab; fill: false; pill: true; onPicked: k => root.tab = k }
         Repeater {
             model: root.cats
@@ -282,7 +282,7 @@ ColumnLayout {
                 required property var modelData
                 Layout.fillWidth: true
                 spacing: 8
-                Rectangle { Layout.alignment: Qt.AlignTop; Layout.topMargin: 5; implicitWidth: 6; implicitHeight: 6; radius: 3; color: modelData[1] ? Theme.danger : Theme.p }
+                Rectangle { Layout.alignment: Qt.AlignTop; Layout.topMargin: 4; implicitWidth: 6; implicitHeight: 6; radius: 3; color: modelData[1] ? Theme.danger : Theme.p }
                 Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; size: 11.5; text: modelData[0]; color: modelData[1] ? Theme.danger : Theme.t }
             }
         }
@@ -301,7 +301,7 @@ ColumnLayout {
     GridLayout {
         Layout.fillWidth: true
         columns: root.width > 980 ? 3 : 2
-        columnSpacing: 10; rowSpacing: 10
+        columnSpacing: 12; rowSpacing: 12
         Repeater {
             model: root.shown
             PluginCard {

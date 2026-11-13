@@ -53,7 +53,7 @@ Item {
         id: left
         x: 3
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 6
+        spacing: 8
         AppsBtn { id: apps; visible: !root.secondary }   // Aplicaciones (Spotlight): logo de la distribución
         Workspaces { id: ws; visible: Settings.barHas("espacios") || root.secondary; screen: root.barWindow.screen }
         Divider { visible: Settings.barHas("espacios") && title.visible }
@@ -110,7 +110,7 @@ Item {
             // reloj en la barra sencilla (barSecondaryClock): la hora sin girar la cabeza a la principal
             Txt {
                 visible: Settings.get("barSecondaryClock", true) !== false
-                Layout.rightMargin: 6
+                Layout.rightMargin: 8
                 text: Time.hhmm + (Time.ampm ? " " + Time.ampm : "")
                 size: 12.5; weight: Font.Medium
             }

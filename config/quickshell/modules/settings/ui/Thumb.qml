@@ -76,14 +76,14 @@ Item {
         // Insignia «animado» arriba a la izquierda (no choca con el nombre)
         Rectangle {
             visible: root.video
-            anchors { left: parent.left; top: parent.top; margins: 6 }
+            anchors { left: parent.left; top: parent.top; margins: 8 }
             width: vt.implicitWidth + 12; height: 18; radius: Theme.ctl(18)
             color: Qt.alpha("#000000", 0.55)
             Txt { id: vt; anchors.centerIn: parent; text: /\.gif$/i.test(root.file) ? "▶ GIF" : "▶ animado"; size: 10; color: "#FFFFFF" }
         }
         Txt {
             visible: root.label !== ""
-            anchors { left: parent.left; right: parent.right; bottom: parent.bottom; leftMargin: 8; rightMargin: 8; bottomMargin: 6 }
+            anchors { left: parent.left; right: parent.right; bottom: parent.bottom; leftMargin: 8; rightMargin: 8; bottomMargin: 8 }
             text: root.label
             elide: Text.ElideRight
             maximumLineCount: 1

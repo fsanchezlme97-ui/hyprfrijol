@@ -79,7 +79,7 @@ ColumnLayout {
         visible: root.auth !== "saml"
         label: "Código 2FA"
         RowLayout {
-            spacing: 10
+            spacing: 12
             Chip { text: "Pide código 2FA/OTP"; on: root.otp; onClicked: root.otp = !root.otp }
             Txt {
                 Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
@@ -110,7 +110,7 @@ ColumnLayout {
         visible: !root.ready || root.gpSsoGap
         Layout.fillWidth: true
         Layout.leftMargin: 130
-        spacing: 10
+        spacing: 12
         Txt {
             Layout.fillWidth: true; wrapMode: Text.WordWrap; size: 12
             text: root.gpSsoGap ? "Para el SSO de GlobalProtect hace falta gpclient (globalprotect-openconnect)."
@@ -123,7 +123,7 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         Layout.leftMargin: 130
-        spacing: 10
+        spacing: 12
         Button {
             kind: "primary"; text: "Crear"
             enabled: root.ready && hostF.text.trim() !== "" && (root.auth !== "cert" || certF.text.trim() !== "")

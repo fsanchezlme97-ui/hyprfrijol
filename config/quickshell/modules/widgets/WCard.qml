@@ -26,7 +26,7 @@ Glass {
     ColumnLayout {
         id: inner
         anchors { left: parent.left; right: parent.right; top: parent.top; margins: card.pad }
-        spacing: 10
+        spacing: 12
     }
     Canvas {
         anchors.fill: parent

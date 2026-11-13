@@ -21,7 +21,7 @@ BarChip {
         id: r
         visible: !chip.vertical
         anchors.centerIn: parent
-        spacing: 5
+        spacing: 4
         Item {
             implicitWidth: 15; implicitHeight: 15
             Icon { anchors.centerIn: parent; name: "printer"; color: Theme.t; opacity: Printer.online ? 1 : 0.55 }

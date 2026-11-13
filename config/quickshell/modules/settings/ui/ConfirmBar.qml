@@ -22,8 +22,8 @@ Rectangle {
         id: row
         anchors.fill: parent
         anchors.leftMargin: 16
-        anchors.rightMargin: 10
-        spacing: 10
+        anchors.rightMargin: 12
+        spacing: 12
         Icon { name: "monitor"; size: 16; color: Theme.p }
         ColumnLayout {
             Layout.fillWidth: true

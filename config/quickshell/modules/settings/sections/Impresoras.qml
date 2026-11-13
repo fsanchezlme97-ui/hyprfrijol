@@ -183,7 +183,7 @@ RowLayout {
                         visible: pr.expanded
                         Layout.fillWidth: true
                         Layout.leftMargin: 50
-                        Layout.bottomMargin: 10
+                        Layout.bottomMargin: 12
                         spacing: 8
                         Flow {
                             Layout.fillWidth: true
@@ -315,7 +315,7 @@ RowLayout {
             headerRight: Mono { text: root.missing.length ? root.missing.length + " sin instalar" : "todo instalado" }
             Flow {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 Repeater {
                     model: root.pkgs
                     Chip {

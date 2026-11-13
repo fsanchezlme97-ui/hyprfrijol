@@ -39,7 +39,7 @@ Rectangle {
             Image {
                 id: im
                 anchors.fill: parent
-                anchors.margins: 14
+                anchors.margins: 16
                 anchors.bottomMargin: d.modelData.caption ? 34 : 14
                 source: d.modelData.src
                 asynchronous: true
@@ -59,7 +59,7 @@ Rectangle {
             }
             Txt {
                 visible: !!d.modelData.caption
-                anchors.bottom: parent.bottom; anchors.bottomMargin: 10
+                anchors.bottom: parent.bottom; anchors.bottomMargin: 12
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: parent.width - 120
                 horizontalAlignment: Text.AlignHCenter
@@ -96,8 +96,8 @@ Rectangle {
     Row {
         visible: lv.count > 1
         anchors.bottom: parent.bottom; anchors.bottomMargin: 8
-        anchors.right: parent.right; anchors.rightMargin: 14
-        spacing: 5
+        anchors.right: parent.right; anchors.rightMargin: 16
+        spacing: 4
         Repeater {
             model: lv.count
             Rectangle {

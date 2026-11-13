@@ -81,6 +81,52 @@ PanelWindow {
         menuItem = d; menuIndex = i;
         menuOpen = true;
     }
+    // Minimizar al dock (animMinimize): la ventana (su miniatura, o su icono si no hay captura) vuela y se encoge
+    // hasta su icono; sin dock a la vista, hacia el centro del borde de abajo
+    property var fx: null
+    Connections {
+        target: WinMode
+        function onMinimizing(c) {
+            if (Theme.still || Settings.get("animMinimize", true) === false || !c.at || !c.size) return;
+            const m = HyprClients.monitorById(c.monitor);
+            if (!m || m.name !== dockWin.monName) return;
+            const L = HyprClients.logical(m), sw = dockWin.screen?.width ?? L.w, sh = dockWin.screen?.height ?? L.h;
+            const i = dockWin.desk.dockItems.findIndex(d => (d.wins ?? []).some(w => w.address === c.address));
+            const on = dockWin.revealed && i >= 0, at = 8 + i * dockWin.step + 21;
+            dockWin.fx = { address: c.address, cls: c.class ?? "", title: c.title ?? "",
+                           x: c.at[0] - L.x, y: c.at[1] - L.y, w: c.size[0], h: c.size[1],
+                           tx: !on ? sw / 2 : dockWin.bottom ? dock.x + at : dock.x + 27,
+                           ty: !on ? sh : dockWin.bottom ? sh - dockWin.height + dock.y + 27 : dock.y + at };
+        }
+    }
+    LazyLoader {
+        active: dockWin.fx !== null
+        PanelWindow {
+            screen: dockWin.screen
+            color: "transparent"
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "hf-minimize"
+            exclusionMode: ExclusionMode.Ignore
+            anchors { top: true; bottom: true; left: true; right: true }
+            mask: Region {}
+            WindowThumb {
+                id: ghost
+                readonly property var f: dockWin.fx ?? ({})
+                address: f.address ?? ""; cls: f.cls ?? ""; title: f.title ?? ""
+                live: false; radius: Theme.winRadius
+                x: f.x ?? 0; y: f.y ?? 0; width: f.w ?? 0; height: f.h ?? 0
+                ParallelAnimation {
+                    running: true
+                    onFinished: dockWin.fx = null
+                    NumberAnimation { target: ghost; property: "x"; to: (ghost.f.tx ?? 0) - 21; duration: Theme.durIn; easing.type: Easing.InOutCubic }
+                    NumberAnimation { target: ghost; property: "y"; to: (ghost.f.ty ?? 0) - 21; duration: Theme.durIn; easing.type: Easing.InCubic }
+                    NumberAnimation { target: ghost; property: "width"; to: 42; duration: Theme.durIn; easing.type: Easing.InOutCubic }
+                    NumberAnimation { target: ghost; property: "height"; to: 42; duration: Theme.durIn; easing.type: Easing.InOutCubic }
+                    NumberAnimation { target: ghost; property: "opacity"; from: 0.95; to: 0; duration: Theme.durIn; easing.type: Easing.InQuart }
+                }
+            }
+        }
+    }
     Connections {
         target: dockWin.desk
         function onMenuRequested(i) { if (Hyprland.focusedMonitor?.name === dockWin.monName) dockWin.openMenu(i); }

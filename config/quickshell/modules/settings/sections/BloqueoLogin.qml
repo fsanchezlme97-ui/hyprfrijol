@@ -174,7 +174,7 @@ ColumnLayout {
             label: "Mostrar"; labelWidth: 120
             Flow {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 Repeater {
                     model: [["fecha", "Fecha"], ["clima", "Tiempo"], ["musica", "Música"], ["bateria", "Batería"], ["nomolestar", "No molestar"]]
                     Chip {
@@ -241,7 +241,7 @@ ColumnLayout {
             label: "Mostrar"; labelWidth: 120
             Flow {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 Repeater {
                     model: [["reloj", "Reloj"], ["fecha", "Fecha"], ["equipo", "Nombre del equipo"], ["bateria", "Batería"], ["red", "Red"], ["teclado", "Distribución del teclado"], ["energia", "Apagar y reiniciar"]]
                     Chip {

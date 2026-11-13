@@ -59,14 +59,14 @@ Rectangle {
             border.width: 1
             border.color: Theme.st.winBorder ?? Theme.ov
             ColumnLayout {
-                anchors.fill: parent; anchors.margins: 10
-                spacing: 6
+                anchors.fill: parent; anchors.margins: 12
+                spacing: 8
                 Rectangle { implicitWidth: 70; implicitHeight: 7; radius: Theme.r(3); color: Theme.t; opacity: 0.8 }
                 Rectangle { Layout.fillWidth: true; implicitHeight: 5; radius: 2; color: Theme.tv; opacity: 0.5 }
                 Rectangle { implicitWidth: 90; implicitHeight: 5; radius: 2; color: Theme.tv; opacity: 0.5 }
                 Item { Layout.fillHeight: true }
                 RowLayout {
-                    spacing: 6
+                    spacing: 8
                     Rectangle { implicitWidth: 46; implicitHeight: 16; radius: Theme.r(5); color: Theme.p }
                     Rectangle { implicitWidth: 46; implicitHeight: 16; radius: Theme.r(5); color: Theme.fill2 }
                 }
@@ -80,14 +80,14 @@ Rectangle {
         width: parent.width * 0.26; height: parent.height - 52
         shadow: false
         Column {
-            anchors.fill: parent; anchors.margins: 8; spacing: 6
+            anchors.fill: parent; anchors.margins: 8; spacing: 8
             Repeater { model: 3; Rectangle { width: parent.width; height: 16; radius: Theme.r(5); color: Theme.fill2 } }
         }
     }
     // barra
     Glass {
         kind: "bar"
-        anchors { left: parent.left; right: parent.right; bottom: parent.bottom; margins: 6 }
+        anchors { left: parent.left; right: parent.right; bottom: parent.bottom; margins: 8 }
         height: 22
         shadow: false
         Row {

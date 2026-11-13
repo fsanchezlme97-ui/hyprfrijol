@@ -213,13 +213,13 @@ Scope {
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: 16
-                        spacing: 10
+                        spacing: 12
                         Txt { text: "Firmar documentos"; size: 18; weight: Font.DemiBold }
                         Txt { Layout.fillWidth: true; text: "Pulsa una firma para ponerla en la página; arrástrala y cambia su tamaño desde la esquina."; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone }
 
                         RowLayout {
                             Layout.fillWidth: true
-                            Layout.topMargin: 6
+                            Layout.topMargin: 8
                             Txt { text: "Tus firmas"; weight: Font.DemiBold; Layout.fillWidth: true }
                             Txt { text: win.lib.length ? String(win.lib.length) : ""; muted: true; size: 11.5 }
                         }
@@ -345,7 +345,7 @@ Scope {
                             ColumnLayout {
                                 id: bcol
                                 x: 10; y: 8; width: parent.width - 20
-                                spacing: 6
+                                spacing: 8
                                 Txt {
                                     Layout.fillWidth: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
                                     text: win.st.backend === "poppler" ? "Usando Poppler + cairo: el PDF firmado pierde enlaces y formularios. PyMuPDF lo conserva tal cual."
@@ -412,7 +412,7 @@ Scope {
                         RowLayout {
                             anchors.fill: parent
                             anchors.leftMargin: 12; anchors.rightMargin: 8
-                            spacing: 10
+                            spacing: 12
                             Icon { name: win.outPath ? "check" : "alert"; size: 14; color: win.outPath ? Theme.p : Theme.danger }
                             Txt { Layout.fillWidth: true; text: win.msg }
                             Button { visible: !!win.outPath; kind: "link"; text: "Abrir"; onClicked: Qt.openUrlExternally("file://" + win.outPath) }
@@ -433,11 +433,11 @@ Scope {
                         ColumnLayout {
                             visible: !win.doc
                             anchors.centerIn: parent
-                            spacing: 10
+                            spacing: 12
                             Icon { Layout.alignment: Qt.AlignHCenter; name: "file"; size: 44; color: Theme.tv; stroke: 1.4 }
                             Txt { Layout.alignment: Qt.AlignHCenter; text: "Abre un PDF o una imagen para firmarlo"; size: 15; weight: Font.Medium }
                             Txt { Layout.alignment: Qt.AlignHCenter; text: "o arrástralo aquí · se guarda como «nombre-firmado.pdf» junto al original"; muted: true; size: 12 }
-                            Button { Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 6; kind: "primary"; text: "Abrir documento…"; onClicked: win.pickDoc() }
+                            Button { Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 8; kind: "primary"; text: "Abrir documento…"; onClicked: win.pickDoc() }
                         }
 
                         Flickable {
@@ -567,7 +567,7 @@ Scope {
                     }
                     Txt {
                         visible: !!win.doc
-                        Layout.leftMargin: 14; Layout.bottomMargin: 10
+                        Layout.leftMargin: 16; Layout.bottomMargin: 12
                         muted: true; size: 11
                         text: win.items.length === 0 ? "Elige una firma de la izquierda o añade tu nombre y la fecha."
                             : win.items.length + (win.items.length === 1 ? " elemento" : " elementos") + " · Supr quita el seleccionado · Av Pág / Re Pág cambian de página"
@@ -618,7 +618,7 @@ Scope {
 
                 ColumnLayout {
                     anchors.fill: parent
-                    anchors.margins: 20
+                    anchors.margins: 24
                     spacing: 12
                     Txt { text: "Firma desde una foto"; size: 17; weight: Font.DemiBold }
                     Txt { Layout.fillWidth: true; muted: true; size: 12; wrapMode: Text.WordWrap; text: "Mejor con la firma en un papel blanco, buena luz y sin otras líneas cerca. Se quita el papel y las sombras y queda solo el trazo." }
@@ -696,7 +696,7 @@ Scope {
                 property real lw: 3
                 ColumnLayout {
                     anchors.fill: parent
-                    anchors.margins: 20
+                    anchors.margins: 24
                     spacing: 12
                     Txt { text: "Dibuja tu firma"; size: 17; weight: Font.DemiBold }
                     Rectangle {

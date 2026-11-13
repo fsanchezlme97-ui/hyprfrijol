@@ -96,13 +96,13 @@ Item {
             id: col
             anchors { left: parent.left; right: parent.right; top: parent.top }
             anchors.leftMargin: root.toast ? 12 : 10
-            anchors.rightMargin: 10
-            anchors.topMargin: 10
+            anchors.rightMargin: 12
+            anchors.topMargin: 12
             spacing: 8
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 NotifTile {
                     Layout.alignment: Qt.AlignTop
                     n: root.n
@@ -115,7 +115,7 @@ Item {
                     spacing: 2
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 6
+                        spacing: 8
                         Txt {
                             Layout.fillWidth: true
                             text: {
@@ -202,7 +202,7 @@ Item {
             RowLayout {
                 Layout.fillWidth: true
                 visible: root.extraActions.length > 0
-                spacing: 6
+                spacing: 8
                 Repeater {
                     model: root.extraActions.slice(0, 3)
                     Rectangle {

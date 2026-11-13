@@ -42,7 +42,7 @@ ColumnLayout {
                     Rectangle { visible: row.index > 0; width: parent.width; height: 1; color: Theme.ov }
                     RowLayout {
                         anchors.fill: parent
-                        spacing: 10
+                        spacing: 12
                         Rectangle {
                             implicitWidth: 26; implicitHeight: 26; radius: Theme.r(6)
                             color: row.index === 0 ? Theme.p : rowIcon.status === Image.Ready ? "transparent" : Theme.s4
@@ -82,7 +82,7 @@ ColumnLayout {
             headerRight: Sw { checked: Settings.get("pip", true); onToggled: v => Settings.set("pip", v) }
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 14
+                spacing: 16
                 // selector de esquina sobre una pantalla en miniatura
                 Rectangle {
                     id: scr

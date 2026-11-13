@@ -22,7 +22,7 @@ ColumnLayout {
 
     Flow {
         Layout.fillWidth: true
-        spacing: 6
+        spacing: 4
         // De la paleta
         Rectangle {
             width: 21; height: 21; radius: 10.5
@@ -70,7 +70,7 @@ ColumnLayout {
     ColumnLayout {
         visible: root.editing
         Layout.fillWidth: true
-        spacing: 6
+        spacing: 8
         Rectangle {
             id: hues
             Layout.fillWidth: true

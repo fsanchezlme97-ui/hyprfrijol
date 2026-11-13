@@ -19,7 +19,7 @@ BarChip {
         id: r
         visible: !chip.vertical
         anchors.centerIn: parent
-        spacing: 5
+        spacing: 4
         Icon { svg: chip.usb; size: 15; color: Theme.t }
         Txt { visible: Devices.mounted.length > 1; text: String(Devices.mounted.length); tabular: true }
         Txt {

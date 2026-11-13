@@ -12,7 +12,7 @@ import "../ui"
 RowLayout {
     id: root
     spacing: 12
-    implicitHeight: Math.max(info.implicitHeight, sync.implicitHeight)
+    implicitHeight: Math.max(info.implicitHeight, right.implicitHeight)
     property var sys: ({})
     property bool renaming: false
     property string syncMsg: ""
@@ -71,8 +71,8 @@ RowLayout {
         }
         RowLayout {
             Layout.fillWidth: true
-            Layout.bottomMargin: 6
-            spacing: 14
+            Layout.bottomMargin: 8
+            spacing: 16
             Rectangle {
                 implicitWidth: 52; implicitHeight: 52; radius: Theme.r(10); color: Theme.pc
                 Icon { anchors.centerIn: parent; name: "monitor"; size: 26; color: Theme.pcText }
@@ -106,7 +106,7 @@ RowLayout {
         Kv { k: "Actualizado"; v: root.fmtDate(root.sys.updated) }
         Timer { id: refresh; interval: 1500; onTriggered: { probe.running = false; probe.running = true; } }
         RowLayout {
-            Layout.topMargin: 6
+            Layout.topMargin: 8
             spacing: 8
             Button { text: "Copiar información"; onClicked: { Quickshell.execDetached(["wl-copy", root.report]); copied.restart(); } }
             Button { text: "Informe para soporte"; onClicked: Pkg.runInTerminal("{ echo '" + root.report.replaceAll("'", "") + "'; echo; hyprctl version; echo; journalctl --user -b -p warning -n 60 --no-pager; } | tee ~/hyprfrijol-informe.txt", "Informe para soporte") }
@@ -114,6 +114,13 @@ RowLayout {
             Timer { id: copied; interval: 1800 }
         }
     }
+    // Columna derecha: sincronizar y, debajo, los ajustes de la propia app
+    ColumnLayout {
+        id: right
+        Layout.fillWidth: true
+        Layout.preferredWidth: 1
+        Layout.alignment: Qt.AlignTop
+        spacing: 12
     Section {
         id: sync
         Layout.fillWidth: true
@@ -183,5 +190,6 @@ RowLayout {
             sub: "muestra en cada sección los comandos, servicios y claves de configuración que hay detrás (para depurar o tocar los archivos a mano)"
             key: "settingsTech"; def: false
         }
+    }
     }
 }

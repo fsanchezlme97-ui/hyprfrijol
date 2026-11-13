@@ -422,7 +422,7 @@ Scope {
                 anchors.verticalCenter: parent.verticalCenter
                 x: 16
                 width: pill.width - 32
-                spacing: 10
+                spacing: 12
 
                 // icono (micrófono = dictado · ⌘ = orden) con pulso mientras habla
                 Item {

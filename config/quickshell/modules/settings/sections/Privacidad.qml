@@ -117,7 +117,7 @@ RowLayout {
         signal go()
         Layout.fillWidth: true
         Layout.topMargin: 2
-        spacing: 10
+        spacing: 12
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 1
@@ -132,7 +132,7 @@ RowLayout {
         property string value: ""
         property bool good: true
         Layout.fillWidth: true
-        spacing: 10
+        spacing: 12
         Rectangle { width: 8; height: 8; radius: 4; color: sr.good ? Theme.p : Theme.ter }
         Txt { text: sr.label; muted: true }
         Txt { Layout.fillWidth: true; horizontalAlignment: Text.AlignRight; text: sr.value; weight: Font.DemiBold }

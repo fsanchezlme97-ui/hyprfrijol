@@ -145,11 +145,11 @@ Scope {
                     color: Theme.bg
                     ColumnLayout {
                         anchors.fill: parent
-                        anchors.margins: 10
+                        anchors.margins: 12
                         anchors.topMargin: 16
                         spacing: 2
                         Txt { text: "Aplicaciones"; size: 17; weight: Font.DemiBold; Layout.leftMargin: 12 }
-                        Txt { Layout.fillWidth: true; Layout.leftMargin: 12; Layout.bottomMargin: 10; text: root.all.length + " apps actuales para " + (Pkg.distroName || "Linux") + " + Hyprland"; muted: true; size: 11.5; wrapMode: Text.WordWrap }
+                        Txt { Layout.fillWidth: true; Layout.leftMargin: 12; Layout.bottomMargin: 12; text: root.all.length + " apps actuales para " + (Pkg.distroName || "Linux") + " + Hyprland"; muted: true; size: 11.5; wrapMode: Text.WordWrap }
                         Flickable {
                           Layout.fillWidth: true
                           Layout.fillHeight: true
@@ -193,7 +193,7 @@ Scope {
                             ColumnLayout {
                                 id: srcBox
                                 x: 12; y: 12; width: parent.width - 24
-                                spacing: 6
+                                spacing: 8
                                 Txt { text: "Fuentes"; weight: Font.DemiBold; size: 12 }
                                 // Leyenda: qué es cada fuente (el tooltip de cada insignia lo explica más)
                                 Repeater {
@@ -202,7 +202,7 @@ Scope {
                                     RowLayout {
                                         required property var modelData
                                         Layout.fillWidth: true
-                                        spacing: 6
+                                        spacing: 8
                                         StoreBadge { key: modelData[0] }
                                         Txt { Layout.fillWidth: true; text: modelData[1]; size: 10.5; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone }
                                     }
@@ -225,8 +225,8 @@ Scope {
                     ColumnLayout {
                         visible: !root.detail
                         Layout.fillWidth: true
-                        Layout.margins: 18
-                        Layout.bottomMargin: 10
+                        Layout.margins: 16
+                        Layout.bottomMargin: 12
                         spacing: 12
                         RowLayout {
                             Layout.fillWidth: true
@@ -249,7 +249,7 @@ Scope {
                             visible: !root.instView
                             Layout.fillWidth: true
                             Layout.preferredHeight: 28
-                            spacing: 6
+                            spacing: 8
                             // Buscando: catálogo / repos + AUR + Flathub
                             Seg {
                                 visible: root.query.trim() !== ""
@@ -278,7 +278,7 @@ Scope {
                         RowLayout {
                             visible: root.mode === "cat" && !root.instView
                             Layout.fillWidth: true
-                            spacing: 6
+                            spacing: 8
                             Txt { text: "Fuente:"; muted: true }
                             Repeater {
                                 model: [["all", "Todas"], ["repo", "Repos oficiales"], ["aur", "AUR"], ["flatpak", "Flatpak"], ["other", "Otras"]].filter(m => m[0] !== "aur" || Pkg.family === "arch")
@@ -297,7 +297,7 @@ Scope {
                                     Row {
                                         id: fcRow
                                         anchors.centerIn: parent
-                                        spacing: 6
+                                        spacing: 8
                                         Rectangle { visible: fc.modelData[0] !== "all"; width: 8; height: 8; radius: 4; anchors.verticalCenter: parent.verticalCenter; color: Pkg.hue(fc.modelData[0] === "other" ? "appimage" : fc.modelData[0]) }
                                         Txt { text: fc.modelData[1] + (fc.n >= 0 && !root.query.trim() ? "  " + fc.n : ""); size: 12; weight: Font.DemiBold; color: fc.on ? Theme.selText : Theme.t }
                                     }
@@ -322,8 +322,8 @@ Scope {
                         visible: !root.detail && root.mode === "cat" && root.cat === "gnome" && !root.query.trim()
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        Layout.leftMargin: 18
-                        Layout.rightMargin: 6
+                        Layout.leftMargin: 16
+                        Layout.rightMargin: 8
                         store: root
                     }
                     // ---------- instaladas en este equipo (con «Desinstalar») ----------
@@ -331,8 +331,8 @@ Scope {
                         visible: root.instView
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        Layout.leftMargin: 18
-                        Layout.rightMargin: 18
+                        Layout.leftMargin: 16
+                        Layout.rightMargin: 16
                         clip: true
                         contentHeight: instLoader.implicitHeight + 18
                         boundsBehavior: Flickable.StopAtBounds
@@ -351,8 +351,8 @@ Scope {
                         visible: !root.detail && root.mode === "cat" && !root.instView && (root.cat !== "gnome" || !!root.query.trim())
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        Layout.leftMargin: 18
-                        Layout.rightMargin: 6
+                        Layout.leftMargin: 16
+                        Layout.rightMargin: 8
                         // Filas enteras: el alto de la celda se ajusta y la vista mide justo N filas,
                         // así nunca queda una fila cortada por el pie; la rueda avanza fila a fila
                         readonly property int fitRows: Math.max(1, Math.floor(height / 104))
@@ -390,14 +390,14 @@ Scope {
                         visible: root.mode === "live" && !root.detail
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        Layout.leftMargin: 18
+                        Layout.leftMargin: 16
                         Layout.rightMargin: 12
                         ListView {
                             id: live
                             anchors.fill: parent
                             anchors.bottomMargin: 8
                             clip: true
-                            spacing: 6
+                            spacing: 8
                             boundsBehavior: Flickable.StopAtBounds
                             ScrollBar.vertical: ScrollBar { policy: live.contentHeight > live.height ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff }
                             model: Pkg.resultsFor === root.query.trim() ? Pkg.results : []
@@ -445,7 +445,7 @@ Scope {
                         ColumnLayout {
                             anchors.centerIn: parent
                             visible: live.count === 0
-                            spacing: 10
+                            spacing: 12
                             BusyIndicator { Layout.alignment: Qt.AlignHCenter; visible: Pkg.searching; running: visible; implicitWidth: 32; implicitHeight: 32 }
                             Txt {
                                 Layout.alignment: Qt.AlignHCenter
@@ -467,7 +467,7 @@ Scope {
                             spacing: 12
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                spacing: 3
+                                spacing: 4
                                 Txt {
                                     Layout.fillWidth: true
                                     weight: Font.DemiBold

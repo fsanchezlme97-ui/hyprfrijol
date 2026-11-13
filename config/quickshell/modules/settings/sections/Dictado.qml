@@ -258,7 +258,7 @@ ColumnLayout {
                     RowLayout {
                         anchors.fill: parent
                         anchors.topMargin: 1
-                        spacing: 10
+                        spacing: 12
                         Rectangle {
                             implicitWidth: 16; implicitHeight: 16; radius: 8
                             color: "transparent"
@@ -318,7 +318,7 @@ ColumnLayout {
                     RowLayout {
                         anchors.fill: parent
                         anchors.topMargin: 1
-                        spacing: 10
+                        spacing: 12
                         Rectangle {
                             implicitWidth: 16; implicitHeight: 16; radius: 8; color: "transparent"
                             border.width: vrow.cur ? 5 : 1.5; border.color: vrow.cur ? Theme.p : Theme.o
@@ -622,7 +622,7 @@ ColumnLayout {
         Txt { visible: root.cmdErr !== ""; Layout.fillWidth: true; size: 11; color: Theme.danger; text: root.cmdErr }
 
         // sinónimos de las órdenes de serie
-        Txt { Layout.topMargin: 6; text: "Otras palabras para las órdenes de serie"; weight: Font.DemiBold }
+        Txt { Layout.topMargin: 8; text: "Otras palabras para las órdenes de serie"; weight: Font.DemiBold }
         Txt {
             Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
             text: "Por ejemplo «toca» → «reproduce»: «toca Walk en YouTube» se entiende como «reproduce Walk en YouTube»."

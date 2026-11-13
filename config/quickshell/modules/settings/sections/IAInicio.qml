@@ -64,7 +64,7 @@ ColumnLayout {
         headerRight: Mono { tech: true; text: "hf-ai status · hf-ai test" }
         RowLayout {
             Layout.fillWidth: true
-            spacing: 14
+            spacing: 16
             Rectangle {
                 implicitWidth: 46; implicitHeight: 46; radius: Theme.r(12)
                 color: root.ready ? Theme.pc : Theme.fill2
@@ -178,7 +178,7 @@ ColumnLayout {
                     Rectangle { visible: sc.index > 0; width: parent.width; height: 1; color: Theme.ov }
                     RowLayout {
                         anchors.fill: parent
-                        spacing: 10
+                        spacing: 12
                         Txt { Layout.fillWidth: true; text: sc.modelData[0]; muted: true; elide: Text.ElideRight }
                         Kbd { text: sc.modelData[1] }
                     }

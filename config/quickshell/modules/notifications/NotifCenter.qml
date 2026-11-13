@@ -95,13 +95,13 @@ Glass {
 
     ColumnLayout {
         id: body
-        anchors { fill: parent; margins: 10 }
+        anchors { fill: parent; margins: 12 }
         spacing: 8
 
         RowLayout {
             Layout.fillWidth: true
             Layout.leftMargin: 4
-            spacing: 6
+            spacing: 8
             Segmented {
                 h: 28
                 model: [{ key: "recientes", label: "Recientes" + (Notifs.count ? " · " + Notifs.count : "") }, { key: "historial", label: "Historial" }]
@@ -158,7 +158,7 @@ Glass {
                 ColumnLayout {
                     id: empty
                     anchors.centerIn: parent
-                    spacing: 6
+                    spacing: 8
                     Icon { Layout.alignment: Qt.AlignHCenter; name: "bell"; size: 26; color: Theme.tv; opacity: 0.6 }
                     Txt { Layout.alignment: Qt.AlignHCenter; text: "Sin notificaciones nuevas"; muted: true }
                     Txt {
@@ -175,16 +175,16 @@ Glass {
                 visible: Notifs.count >= 3 && Settings.get("aiProvider", "") !== "off"
                 Layout.fillWidth: true
                 implicitHeight: dcol.implicitHeight + 18
-                radius: Theme.r(10)
+                radius: Theme.inner(Theme.panelRadius, 12)
                 color: Qt.alpha(Theme.p, 0.08)
                 border.width: 1; border.color: Qt.alpha(Theme.p, 0.22)
                 ColumnLayout {
                     id: dcol
-                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 9; leftMargin: 11 }
+                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8; leftMargin: 12 }
                     spacing: 4
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 6
+                        spacing: 8
                         Icon { name: "sparkle"; size: 13; color: Theme.p
                             SequentialAnimation on opacity { running: digestProc.running && !Theme.still; loops: Animation.Infinite
                                 onRunningChanged: if (!running) parent.opacity = 1
@@ -252,12 +252,12 @@ Glass {
                             readonly property bool many: modelData.items.length > 1
                             readonly property bool expanded: win.isOpen(modelData)
                             Layout.fillWidth: true
-                            spacing: 5
+                            spacing: 4
                             // cabecera: icono · APP · n · hora · desplegar · descartar
                             RowLayout {
                                 Layout.fillWidth: true
                                 Layout.leftMargin: 2
-                                spacing: 7
+                                spacing: 8
                                 Txt { size: 11; muted: true; weight: Font.DemiBold; text: grp.modelData.app.toUpperCase() }
                                 Txt { visible: grp.many; size: 11; muted: true; tabular: true; text: "· " + grp.modelData.items.length }
                                 Item { Layout.fillWidth: true }
@@ -346,7 +346,7 @@ Glass {
                 ColumnLayout {
                     id: hempty
                     anchors.centerIn: parent
-                    spacing: 6
+                    spacing: 8
                     Icon { Layout.alignment: Qt.AlignHCenter; name: Notifs.keepHistory ? "clock" : "info"; size: 24; color: Theme.tv; opacity: 0.6 }
                     Txt {
                         Layout.alignment: Qt.AlignHCenter; muted: true
@@ -379,7 +379,7 @@ Glass {
                             HoverHandler { id: hh }
                             Txt {
                                 visible: hr.header
-                                anchors { left: parent.left; leftMargin: 4; bottom: parent.bottom; bottomMargin: 3 }
+                                anchors { left: parent.left; leftMargin: 4; bottom: parent.bottom; bottomMargin: 4 }
                                 text: hr.modelData.header ?? ""; size: 11; muted: true; weight: Font.DemiBold
                             }
                             Rectangle {
@@ -401,8 +401,8 @@ Glass {
                             RowLayout {
                                 id: hcol
                                 visible: !hr.header
-                                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 7; leftMargin: 8 }
-                                spacing: 9
+                                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8; leftMargin: 8 }
+                                spacing: 8
                                 Rectangle {
                                     Layout.alignment: Qt.AlignTop
                                     implicitWidth: 22; implicitHeight: 22; radius: Theme.r(6); color: Theme.s4
@@ -421,7 +421,7 @@ Glass {
                                     spacing: 1
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        spacing: 6
+                                        spacing: 8
                                         Txt { Layout.fillWidth: true; text: (hr.modelData.app ?? "") + (hr.modelData.summary ? " · " + hr.modelData.summary : ""); weight: Font.Medium; size: 12 }
                                         Txt { text: hr.header ? "" : Notifs.agoT(hr.modelData.t); size: 10.5; muted: true; tabular: true }
                                     }

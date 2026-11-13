@@ -59,7 +59,7 @@ Item {
     // Etiqueta pequeña con icono + app sobre la captura (si cabe)
     Rectangle {
         visible: root.showLabel && shot.hasContent && !root.forceLabel && root.width > 90 && root.height > 50
-        anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 6 }
+        anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 8 }
         width: Math.min(root.width - 12, chipRow.implicitWidth + 14)
         height: 20
         radius: Theme.r(10)
@@ -67,7 +67,7 @@ Item {
         Row {
             id: chipRow
             anchors.centerIn: parent
-            spacing: 5
+            spacing: 4
             Image {
                 width: 12; height: 12
                 anchors.verticalCenter: parent.verticalCenter
@@ -88,7 +88,7 @@ Item {
 
     Column {
         anchors.centerIn: parent
-        spacing: 6
+        spacing: 8
         visible: root.showLabel && (!shot.hasContent || root.forceLabel)
         width: parent.width - 12
         Image {

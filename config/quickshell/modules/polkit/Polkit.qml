@@ -145,12 +145,12 @@ Scope {
 
             ColumnLayout {
                 id: col
-                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 22 }
-                spacing: 14
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 24 }
+                spacing: 16
 
                 // Cabecera
                 RowLayout {
-                    spacing: 14
+                    spacing: 16
                     Layout.fillWidth: true
                     Rectangle {
                         Layout.alignment: Qt.AlignTop
@@ -160,7 +160,7 @@ Scope {
                     }
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 3
+                        spacing: 4
                         Txt { text: "Se requiere autenticación"; size: 15; weight: Font.DemiBold }
                         Txt {
                             Layout.fillWidth: true
@@ -182,8 +182,8 @@ Scope {
                     color: Theme.fill2
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 10; anchors.rightMargin: 10
-                        spacing: 10
+                        anchors.leftMargin: 12; anchors.rightMargin: 12
+                        spacing: 12
                         Rectangle {
                             implicitWidth: 28; implicitHeight: 28; radius: 14
                             color: Theme.pc
@@ -208,7 +208,7 @@ Scope {
                     border.color: root.error ? Qt.alpha(Theme.ter, 0.8) : field.activeFocus ? Qt.alpha(Theme.p, 0.6) : Theme.ov
                     Behavior on border.color { ColorAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                     Txt {
-                        anchors.left: parent.left; anchors.leftMargin: 14
+                        anchors.left: parent.left; anchors.leftMargin: 16
                         anchors.verticalCenter: parent.verticalCenter
                         visible: field.text === ""
                         text: root.busy ? "Comprobando…" : root.prompt
@@ -218,7 +218,7 @@ Scope {
                     TextInput {
                         id: field
                         anchors.fill: parent
-                        anchors.leftMargin: 14; anchors.rightMargin: 40
+                        anchors.leftMargin: 16; anchors.rightMargin: 40
                         verticalAlignment: TextInput.AlignVCenter
                         echoMode: (root.flow?.responseVisible ?? false) || showPw.on ? TextInput.Normal : TextInput.Password
                         passwordCharacter: "●"
@@ -236,7 +236,7 @@ Scope {
                     Item {
                         id: showPw
                         property bool on: false
-                        anchors.right: parent.right; anchors.rightMargin: 6
+                        anchors.right: parent.right; anchors.rightMargin: 8
                         anchors.verticalCenter: parent.verticalCenter
                         width: 28; height: 28
                         visible: field.text !== ""
@@ -275,13 +275,13 @@ Scope {
                     color: Theme.fill2
                     ColumnLayout {
                         id: detCol
-                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8; leftMargin: 10; rightMargin: 10 }
-                        spacing: 3
+                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8; leftMargin: 12; rightMargin: 12 }
+                        spacing: 4
                         Repeater {
                             model: [["Acción", root.actionId], ["Identidad", root.identityName], ["Agente", "HyprFrijol (Quickshell)"]]
                             RowLayout {
                                 required property var modelData
-                                spacing: 10
+                                spacing: 12
                                 Layout.fillWidth: true
                                 Text { text: modelData[0]; color: Theme.tv; font.family: Theme.mono; font.pixelSize: 11; Layout.preferredWidth: 70 }
                                 Text { text: modelData[1]; color: Theme.t; font.family: Theme.mono; font.pixelSize: 11; Layout.fillWidth: true; elide: Text.ElideMiddle }

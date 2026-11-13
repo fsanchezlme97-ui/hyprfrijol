@@ -12,7 +12,7 @@ RowLayout {
     property string hint: ""
     default property alias content: slot.data
     Layout.fillWidth: true
-    spacing: 10
+    spacing: 12
     ColumnLayout {
         Layout.preferredWidth: root.labelWidth
         Layout.maximumWidth: root.labelWidth

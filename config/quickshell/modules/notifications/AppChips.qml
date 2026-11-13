@@ -29,7 +29,7 @@ Flickable {
     ScrollHint { flick: root; horizontal: true; inset: 0 }
     Row {
         id: row
-        spacing: 5
+        spacing: 4
         Repeater {
             model: [{ key: "", app: "Todas" }].concat(root.apps)
             Rectangle {

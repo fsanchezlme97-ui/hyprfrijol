@@ -68,12 +68,12 @@ RowLayout {
         property bool removable: false
         readonly property real used: d.size > 0 && d.avail !== null && d.avail !== undefined ? 1 - d.avail / d.size : 0
         Layout.fillWidth: true
-        spacing: 5
+        spacing: 4
         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.ov }
         RowLayout {
             Layout.fillWidth: true
             Layout.topMargin: 4
-            spacing: 10
+            spacing: 12
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 1

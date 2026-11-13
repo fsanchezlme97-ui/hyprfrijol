@@ -21,8 +21,8 @@ Rectangle {
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: root.compact ? 12 : 10
-        anchors.rightMargin: 3
-        spacing: 6
+        anchors.rightMargin: 4
+        spacing: 8
         TextInput {
             id: input
             Layout.fillWidth: true

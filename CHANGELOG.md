@@ -3,6 +3,32 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.73] — 2026-11-13
+
+### Cambiado
+- Estilo Math, fase 3: todos los huecos y márgenes del shell siguen la escala 4 / 8 / 12 / 16 / 24 (668 valores
+  sueltos de 3, 5, 6, 10, 14, 18… llevados al más cercano). `dev/spacing.py` los revisa y `dev/lint.sh` avisa si
+  vuelve a colarse uno. Los radios de lo que va dentro de un panel (baldosas del centro de control, rellenos,
+  resumen de avisos, tarjetas del asistente) son concéntricos: el del panel menos el margen (`Theme.inner`).
+- Ajustes, por dentro: Escritorio y gestos va en tres grupos (Ventanas · Escritorio · Ratón y touchpad) con lo
+  de ventanas junto; en IA, «Personalidad» se separa en Personalidad, Voz y conversación y Modo compañero; en Barra,
+  el comportamiento va tras la posición y «Avisos emergentes» pasa a llamarse «Indicadores de volumen y brillo»
+  (no son las notificaciones).
+
+### Corregido
+- Ajustes › Acerca: el bloque «Ajustes» (Detalles técnicos, 0.9.70) se ponía como tercera columna encima de las otras
+  dos; ahora va debajo de «Sincronizar tu escritorio».
+- Spotlight: con la escala nueva el pie de atajos se salía del panel en el modo portapapeles, y en el Centro de
+  aplicaciones la descripción de cada app perdía su segunda línea; los dos caben de nuevo.
+
+### Añadido
+- Dos pantallas (Ajustes › Pantallas › Con varias pantallas): apps que se abren siempre en la secundaria (chat,
+  música, correo…; la regla sigue a la secundaria al conectar o quitar pantallas), el PiP en la otra pantalla, y el
+  modo sin distracciones oscurece las demás pantallas (Ajustes › Enfoque).
+- Transiciones: preset de animaciones «Cinemático» (más largo y amplio, rebote marcado); al minimizar, la ventana
+  vuela y se encoge hasta su icono del dock; los avisos se deslizan a su sitio cuando llega o se va uno; inercia en
+  el gesto de 3 dedos (un deslizamiento rápido cambia de espacio aunque sea corto).
+
 ## [0.9.72] — 2026-11-13
 
 ### Corregido

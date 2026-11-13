@@ -30,7 +30,7 @@ Rectangle {
         anchors.fill: parent
         anchors.leftMargin: root.flat ? 0 : 10
         anchors.rightMargin: root.flat ? 0 : 8
-        spacing: 6
+        spacing: 8
         Txt { id: lbl; Layout.fillWidth: true; text: root.currentLabel; weight: Font.Medium; font.family: root.fontPreview && root.current ? root.current : Theme.font; horizontalAlignment: root.flat && !root.alignLeft ? Text.AlignRight : Text.AlignLeft }
         Txt { text: "▾"; muted: true; size: 11 }
     }
@@ -41,7 +41,7 @@ Rectangle {
         x: root.flat && !root.alignLeft ? root.width - width : 0
         width: root.popupWidth
         height: Math.min(320, list.contentHeight + (root.searchable ? 44 : 0) + 10)
-        padding: 5
+        padding: 4
         background: Rectangle { color: Theme.s1; radius: Theme.r(8); border.width: 1; border.color: Theme.ov }
         ColumnLayout {
             anchors.fill: parent
@@ -61,7 +61,7 @@ Rectangle {
                     height: 30
                     radius: Theme.r(5)
                     color: root.current === modelData.key ? Theme.selBg : im.containsMouse ? Qt.alpha(Theme.t, 0.06) : "transparent"
-                    Txt { anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10; text: parent.modelData.label; color: root.current === parent.modelData.key ? Theme.selText : Theme.t; font.family: root.fontPreview ? parent.modelData.key : Theme.font }
+                    Txt { anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12; text: parent.modelData.label; color: root.current === parent.modelData.key ? Theme.selText : Theme.t; font.family: root.fontPreview ? parent.modelData.key : Theme.font }
                     MouseArea { id: im; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.picked(parent.modelData.key); pop.close(); } }
                 }
             }

@@ -35,7 +35,7 @@ Rectangle {
     // Iconos de estado (wifi, volumen, batería)
     component StatusIcons: GridLayout {
         flow: root.vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
-        rowSpacing: 6; columnSpacing: 9
+        rowSpacing: 8; columnSpacing: 8
         Icon { visible: Settings.barHas("red"); Layout.alignment: Qt.AlignCenter; name: Net.icon; color: Net.portal ? Theme.danger : Theme.t }   // rojo: la red pide iniciar sesión (portal cautivo)
         Icon { Layout.alignment: Qt.AlignCenter; name: Audio.icon }
         Icon { visible: Battery.present && Settings.barHas("bateria"); Layout.alignment: Qt.AlignCenter; name: Battery.charging ? "battery_charging" : Battery.percent < 0.25 ? "battery_low" : "battery"; color: Battery.percent < 0.15 && !Battery.charging ? Theme.danger : Theme.t }
@@ -56,13 +56,13 @@ Rectangle {
         id: hrow
         visible: !root.vertical
         anchors.centerIn: parent
-        spacing: 11
+        spacing: 12
         StatusIcons { id: hIcons }
         Bell { id: hBell; visible: root.showBell }
         RowLayout {
             id: hClock
             visible: root.showClock
-            spacing: 7
+            spacing: 8
             Txt { text: Time.shortDate; muted: true }
             Txt { text: Time.hhmm; weight: Font.DemiBold; tabular: true; size: 12.5 }
             Txt { visible: Time.ampm !== ""; text: Time.ampm; size: 11; muted: true; Layout.leftMargin: -3 }

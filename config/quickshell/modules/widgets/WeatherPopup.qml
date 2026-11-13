@@ -32,12 +32,12 @@ ChipPopup {
         ColumnLayout {
             id: col
             anchors { left: parent.left; right: parent.right; top: parent.top; margins: 16 }
-            spacing: 14
+            spacing: 16
 
             // ---- ahora
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 14
+                spacing: 16
                 Rectangle {
                     Layout.preferredWidth: 56; Layout.preferredHeight: 56
                     radius: Theme.r(14)
@@ -53,7 +53,7 @@ ChipPopup {
                         Txt {
                             visible: !isNaN(Weather.feels)
                             Layout.alignment: Qt.AlignBottom
-                            Layout.bottomMargin: 6
+                            Layout.bottomMargin: 8
                             text: "sensación " + Math.round(Weather.feels) + "°"
                             muted: true; size: 11.5; tabular: true
                         }
@@ -77,7 +77,7 @@ ChipPopup {
             Flow {
                 visible: Weather.ready
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 Repeater {
                     model: [
                         { i: "drop", t: isNaN(Weather.humidity) ? "" : "Humedad " + Math.round(Weather.humidity) + " %" },
@@ -93,7 +93,7 @@ ChipPopup {
                         Row {
                             id: pr
                             anchors.centerIn: parent
-                            spacing: 5
+                            spacing: 4
                             Icon { name: parent.parent.modelData.i; svg: parent.parent.modelData.s ?? ""; size: 12; color: Theme.tv; anchors.verticalCenter: parent.verticalCenter }
                             Txt { text: parent.parent.modelData.t; size: 11.5; tabular: true; anchors.verticalCenter: parent.verticalCenter }
                         }
@@ -105,7 +105,7 @@ ChipPopup {
             ColumnLayout {
                 visible: Weather.hours.length > 0
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 SectionLabel { text: "Próximas horas" }
                 Flickable {
                     id: hf
@@ -135,8 +135,8 @@ ChipPopup {
                                 color: index === 0 ? Theme.fill2 : "transparent"
                                 Column {
                                     anchors.fill: parent
-                                    anchors.topMargin: 6
-                                    spacing: 3
+                                    anchors.topMargin: 8
+                                    spacing: 4
                                     Txt { anchors.horizontalCenter: parent.horizontalCenter; text: parent.parent.index === 0 ? "Ahora" : parent.parent.modelData.h + " h"; size: 10.5; muted: parent.parent.index !== 0; tabular: true }
                                     Icon { anchors.horizontalCenter: parent.horizontalCenter; name: Weather.iconFor(parent.parent.modelData.code, parent.parent.modelData.day); size: 18; color: Theme.t }
                                     // la temperatura sube y baja con la curva del día
@@ -173,7 +173,7 @@ ChipPopup {
                         required property var modelData
                         Layout.fillWidth: true
                         Layout.preferredHeight: 28
-                        spacing: 10
+                        spacing: 12
                         Txt { text: parent.modelData.d.charAt(0).toUpperCase() + parent.modelData.d.slice(1); Layout.preferredWidth: 36; weight: Font.Medium }
                         Icon { name: Weather.iconFor(parent.modelData.code, true); size: 16; color: Theme.t }
                         Txt { text: Weather.describe(parent.modelData.code); muted: true; size: 11.5; Layout.preferredWidth: 96 }

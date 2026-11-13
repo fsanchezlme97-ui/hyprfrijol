@@ -35,7 +35,7 @@ Section {
         Layout.fillWidth: true
         columns: 2
         columnSpacing: 16
-        rowSpacing: 6
+        rowSpacing: 8
         Repeater {
             model: 10
             RowLayout {

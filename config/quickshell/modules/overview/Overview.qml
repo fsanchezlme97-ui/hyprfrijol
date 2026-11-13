@@ -110,7 +110,7 @@ Overlay {
             // Centrada en la pantalla entera (no en el hueco que deja la barra), sin salirse del panel
             x: Math.max(24, Math.min(parent.width - width - 24, win.width / 2 - win.panel.x - width / 2))
             y: Math.max(24, Math.min(parent.height - implicitHeight - 24, win.height / 2 - win.panel.y - implicitHeight / 2))
-            spacing: 18
+            spacing: 16
 
             // Buscar ventanas abiertas…
             Rectangle {
@@ -152,8 +152,8 @@ Overlay {
                 id: grid
                 Layout.fillWidth: true
                 columns: 3
-                columnSpacing: 20
-                rowSpacing: 20
+                columnSpacing: 24
+                rowSpacing: 24
                 readonly property real cellW: (width - 2 * columnSpacing) / 3
                 readonly property real cellH: Math.min(226, (win.height - 260) / Math.ceil((win.wsIds.length + 1) / 3) - 32)
 
@@ -172,7 +172,7 @@ Overlay {
                             return HyprClients.monitorById(id) ?? HyprClients.focusedMonitor;
                         }
                         Layout.preferredWidth: grid.cellW
-                        spacing: 6
+                        spacing: 8
                         z: win.dragAddress && wins.some(c => c.address === win.dragAddress) ? 10 : 0
                         opacity: anyMatch ? 1 : 0.45
                         Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
@@ -229,7 +229,7 @@ Overlay {
                             Item {
                                 id: screenArea
                                 anchors.fill: parent
-                                anchors.margins: 6
+                                anchors.margins: 8
                                 readonly property var geo: HyprClients.logical(cell.mon)
                                 // Modo «Desplazamiento»: la cinta de columnas sigue fuera de la pantalla por los lados; se
                                 // encoge para que quepa entera y un marco señala la parte que se ve
@@ -344,7 +344,7 @@ Overlay {
                 // Nuevo espacio
                 ColumnLayout {
                     Layout.preferredWidth: grid.cellW
-                    spacing: 6
+                    spacing: 8
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.preferredHeight: grid.cellH

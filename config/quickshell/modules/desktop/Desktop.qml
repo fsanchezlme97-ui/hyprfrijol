@@ -277,7 +277,7 @@ Scope {
 
                 Item {
                     id: deskCol
-                    anchors { fill: parent; margins: 6 }
+                    anchors { fill: parent; margins: 8 }
                     opacity: perScreen.deskOn ? 1 : 0
                     Behavior on opacity { NumberAnimation { id: deskFade; duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
@@ -294,9 +294,9 @@ Scope {
                             shadow: false
                             RowLayout {
                                 anchors.fill: parent
-                                anchors.leftMargin: 10
+                                anchors.leftMargin: 12
                                 anchors.rightMargin: 4
-                                spacing: 6
+                                spacing: 8
                                 Txt { text: "Escritorio · ordenado por"; muted: true; Layout.fillWidth: true }
                                 Repeater {
                                     model: [{ k: "tipo", l: "Tipo" }, { k: "fecha", l: "Fecha" }, { k: "nombre", l: "Nombre" }]
@@ -418,7 +418,7 @@ Scope {
                                                         color: fma.containsMouse ? Theme.fill2 : "transparent"
                                                         readonly property string src: fileItem.modelData.thumb ? root.fileUrl(fileItem.modelData.path) : root.iconFor(fileItem.modelData)
                                                         Column {
-                                                            anchors { top: parent.top; topMargin: 7; horizontalCenter: parent.horizontalCenter }
+                                                            anchors { top: parent.top; topMargin: 8; horizontalCenter: parent.horizontalCenter }
                                                             spacing: 4
                                                             Item {
                                                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -490,7 +490,7 @@ Scope {
                             shadow: false
                             Txt {
                                 id: footTxt
-                                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 10; rightMargin: 10 }
+                                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 12; rightMargin: 12 }
                                 text: "Los archivos nuevos se colocan solos en su grupo · arrastra un grupo para reordenarlo"
                                 wrapMode: Text.WordWrap
                                 elide: Text.ElideNone

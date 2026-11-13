@@ -32,8 +32,8 @@ ColumnLayout {
             // barra de ciclos
             RowLayout {
                 Layout.fillWidth: true
-                Layout.topMargin: 6
-                spacing: 3
+                Layout.topMargin: 8
+                spacing: 4
                 Repeater {
                     model: root.cycles * 2
                     Rectangle {
@@ -57,6 +57,7 @@ ColumnLayout {
             title: "Modo sin distracciones"
             headerRight: Kbd { text: "Super + Ctrl + Z" }
             SwRow { label: "Ocultar la barra"; sub: "vuelve al pasar el cursor por el borde"; key: "focusHideBar"; def: true }
+            SwRow { label: "Oscurecer las otras pantallas"; sub: "con varias pantallas, solo queda clara la que usas"; key: "focusDimOthers"; def: true }
             SwRow { label: "Sin gaps ni bordes"; sub: "gaps_in = 0 · border_size = 0"; mono: true; key: "focusNoGaps"; def: true }
             SwRow { label: "Silenciar notificaciones"; sub: "no molestar mientras dure el foco"; key: "focusMuteNotifs"; def: true }
             SwRow { label: "Iniciar descansos automáticamente"; sub: "y el siguiente bloque de foco"; key: "focusAutoBreak" }

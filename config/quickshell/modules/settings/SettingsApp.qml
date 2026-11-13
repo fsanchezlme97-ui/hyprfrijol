@@ -213,8 +213,8 @@ Scope {
                     color: Theme.glassy ? Qt.alpha(Theme.bg, 0.12) : Theme.bg
                     ColumnLayout {
                         anchors.fill: parent
-                        anchors.margins: 10
-                        anchors.topMargin: 14
+                        anchors.margins: 12
+                        anchors.topMargin: 16
                         spacing: 2
                         Field {
                             id: search
@@ -307,7 +307,7 @@ Scope {
                                     color: on ? Theme.selBg : rma.containsMouse ? Qt.alpha(Theme.t, 0.05) : "transparent"
                                     ColumnLayout {
                                         anchors.fill: parent
-                                        anchors.leftMargin: 12; anchors.rightMargin: 10
+                                        anchors.leftMargin: 12; anchors.rightMargin: 12
                                         spacing: 0
                                         Item { Layout.fillHeight: true }
                                         Txt { Layout.fillWidth: true; text: res.modelData.row.l; color: res.on ? Theme.selText : Theme.t; weight: Font.Medium }
@@ -383,9 +383,9 @@ Scope {
                     spacing: 12
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.topMargin: 18
-                        Layout.leftMargin: 22
-                        Layout.rightMargin: 22
+                        Layout.topMargin: 16
+                        Layout.leftMargin: 24
+                        Layout.rightMargin: 24
                         TapHandler { onDoubleTapped: win.toggleMax() }
                         Txt { text: root.current.label; size: 22; weight: Font.DemiBold; Layout.fillWidth: true }
                         Mono { tech: true; text: root.current.sub; Layout.alignment: Qt.AlignBottom; bottomPadding: 2 }
@@ -394,7 +394,7 @@ Scope {
                         IconBtn {
                             visible: ((root.index.keys ?? {})[root.current.file] ?? []).length > 0 && !resetArm.running
                             Layout.alignment: Qt.AlignVCenter
-                            Layout.leftMargin: 6
+                            Layout.leftMargin: 8
                             implicitWidth: 30; implicitHeight: 26
                             icon: "restart"; iconSize: 15; fg: Theme.tv
                             opacity: root.changedKeys.length ? 1 : 0.45
@@ -405,7 +405,7 @@ Scope {
                             id: resetConfirm
                             visible: resetArm.running
                             Layout.alignment: Qt.AlignVCenter
-                            Layout.leftMargin: 6
+                            Layout.leftMargin: 8
                             h: 26
                             text: "Restaurar valores por defecto"
                             confirmText: "¿Restaurar " + root.changedKeys.length + (root.changedKeys.length === 1 ? " ajuste" : " ajustes") + " por defecto? Sí"
@@ -415,7 +415,7 @@ Scope {
                         Connections { target: root; function onSectionChanged() { resetArm.stop(); resetConfirm.armed = false; } }
                         IconBtn {
                             Layout.alignment: Qt.AlignVCenter
-                            Layout.leftMargin: 6
+                            Layout.leftMargin: 8
                             implicitWidth: 30; implicitHeight: 26
                             icon: "maximize"; iconSize: 15; fg: Theme.tv
                             tooltip: win.maxed ? "Restaurar (F11)" : "Maximizar (F11)"
@@ -527,7 +527,7 @@ Scope {
             ConfirmBar {
                 z: 20
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: 18
+                anchors.bottomMargin: 16
                 x: 252 + (parent.width - 252 - width) / 2
                 width: Math.min(implicitWidth, parent.width - 252 - 44)
             }

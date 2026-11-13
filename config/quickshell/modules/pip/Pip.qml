@@ -127,8 +127,15 @@ Scope {
         return [Math.max(1, sz[0]), Math.max(1, sz[1])];
     }
 
+    // pipScreen = "secundaria": a la pantalla que no es la principal (si hay más de una); si no, la del foco
+    readonly property var pipMon: {
+        const f = HyprClients.focusedMonitor;
+        if (Settings.get("pipScreen", "activa") !== "secundaria") return f;
+        const prim = Shell.primaryScreen?.name ?? "";
+        return HyprClients.monitors.find(m => m.name !== prim && m.name !== (prim ? "" : f?.name)) ?? f;
+    }
     readonly property var target: {
-        const mon = HyprClients.focusedMonitor;
+        const mon = pipMon;
         if (!mon) return null;
         const L = HyprClients.logical(mon);
         const w = Math.min(actual[0], L.w), h = Math.min(actual[1], L.h);
@@ -177,7 +184,7 @@ Scope {
         const c = win, t = target;
         if (!c || !t) return;
         if (String(c.workspace?.name ?? "").startsWith("special"))
-            Shell.dispatch('hl.dsp.window.move({ workspace = ' + (HyprClients.focusedMonitor?.activeWorkspace?.id ?? 1) + ', follow = false, ' + sel(c) + ' })');
+            Shell.dispatch('hl.dsp.window.move({ workspace = ' + (root.pipMon?.activeWorkspace?.id ?? 1) + ', follow = false, ' + sel(c) + ' })');
         if (!c.floating) Shell.dispatch('hl.dsp.window.float({ action = "enable", ' + sel(c) + ' })');
         // Redimensionar una vez por tamaño pedido: si la app no baja de su mínimo, no se insiste (y la posición
         // ya usa su tamaño real)
@@ -422,7 +429,7 @@ Scope {
         Rectangle {
             visible: root.progress > 0 && root.kind === "video"
             x: (root.ctlLeft ? root.gutter : 0) + 4
-            anchors { bottom: parent.bottom; bottomMargin: 3 }
+            anchors { bottom: parent.bottom; bottomMargin: 4 }
             width: ((root.target?.aw ?? root.size[0]) - 8) * root.progress
             height: 2; radius: 1
             color: "#FFFFFF"; opacity: 0.85

@@ -388,7 +388,7 @@ Overlay {
         ColumnLayout {
             id: col
             anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
-            spacing: 10
+            spacing: 12
 
             RowLayout {
                 Layout.fillWidth: true
@@ -469,9 +469,9 @@ Overlay {
                     color: gma.containsMouse ? Qt.alpha(Theme.t, 0.14) : Theme.fill2
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 10
-                        anchors.rightMargin: 10
-                        spacing: 6
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        spacing: 8
                         Txt { text: win.groupName(grp.modelData); weight: Font.DemiBold; Layout.fillWidth: true; Layout.maximumWidth: implicitWidth }
                         Txt { text: "· restaurar"; muted: true; size: 12 }
                         Item { Layout.fillWidth: true }

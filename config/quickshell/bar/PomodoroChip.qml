@@ -29,7 +29,7 @@ BarChip {
         id: r
         visible: !chip.vertical
         anchors.centerIn: parent
-        spacing: 6
+        spacing: 8
         Item {
             implicitWidth: 13; implicitHeight: 13
             ProgressRing {

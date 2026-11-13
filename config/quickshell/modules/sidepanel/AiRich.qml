@@ -216,7 +216,7 @@ ColumnLayout {
                 id: chCol
                 x: 10; y: 8
                 width: parent.width - 20
-                spacing: 6
+                spacing: 8
                 Txt { visible: (cb.c.title ?? "") !== ""; width: parent.width; text: cb.c.title ?? ""; size: 12; weight: Font.DemiBold; wrapMode: Text.Wrap; elide: Text.ElideNone }
                 Canvas {
                     id: cv
@@ -307,13 +307,13 @@ ColumnLayout {
                 Flow {
                     visible: cb.type !== "pie" && cb.series.length > 1
                     width: parent.width
-                    spacing: 10
+                    spacing: 12
                     Repeater {
                         model: cb.series
                         Row {
                             required property var modelData
                             required property int index
-                            spacing: 5
+                            spacing: 4
                             Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 9; height: 9; radius: 2; color: root.seriesColors[index % root.seriesColors.length] }
                             Txt { text: modelData.name; size: 10.5; muted: true }
                         }

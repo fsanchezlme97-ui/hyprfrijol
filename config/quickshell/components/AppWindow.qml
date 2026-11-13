@@ -60,8 +60,8 @@ Scope {
             Flickable {
                 id: fl
                 anchors.fill: parent
-                anchors.leftMargin: 22; anchors.rightMargin: 22
-                topMargin: 20; bottomMargin: 22
+                anchors.leftMargin: 24; anchors.rightMargin: 24
+                topMargin: 24; bottomMargin: 24
                 contentWidth: width
                 contentHeight: col.implicitHeight
                 clip: true
@@ -69,7 +69,7 @@ Scope {
                 ColumnLayout {
                     id: col
                     width: fl.width
-                    spacing: 14
+                    spacing: 16
                     ColumnLayout {
                         spacing: 2
                         Txt { text: root.title; size: 20; weight: Font.DemiBold }

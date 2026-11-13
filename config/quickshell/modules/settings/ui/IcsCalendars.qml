@@ -51,7 +51,7 @@ Section {
             spacing: 4
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 // color: toca para elegir
                 Rectangle {
                     implicitWidth: 18; implicitHeight: 18; radius: 9
@@ -87,13 +87,13 @@ Section {
             }
             Txt {
                 visible: !!cal.st && !cal.st.ok
-                Layout.fillWidth: true; Layout.leftMargin: 28
+                Layout.fillWidth: true; Layout.leftMargin: 24
                 size: 11.5; color: Theme.danger; wrapMode: Text.WordWrap
                 text: cal.st?.error ?? ""
             }
             ColorSwatches {
                 visible: cal.picking
-                Layout.leftMargin: 28
+                Layout.leftMargin: 24
                 colors: root.swatches
                 current: cal.modelData.color
                 onPicked: c => { root.patch(cal.index, { color: c }); cal.picking = false; }

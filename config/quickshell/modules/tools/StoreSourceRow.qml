@@ -30,7 +30,7 @@ Rectangle {
         spacing: 2
         RowLayout {
             Layout.fillWidth: true
-            spacing: 7
+            spacing: 8
             Rectangle { implicitWidth: 8; implicitHeight: 8; radius: 4; color: Pkg.hue(so.src.key) }
             Txt { text: Pkg.longLabels[so.src.key] ?? so.src.label; weight: Font.DemiBold; color: so.on ? Theme.selText : Theme.t }
             Txt { visible: so.first; text: "recomendada"; size: 10.5; color: so.on ? Theme.selText : Theme.tv }

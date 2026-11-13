@@ -641,7 +641,7 @@ Scope {
                 frame: Theme.p
             }
             Rectangle {
-                anchors { horizontalCenter: loupe.horizontalCenter; top: loupe.bottom; topMargin: 6 }
+                anchors { horizontalCenter: loupe.horizontalCenter; top: loupe.bottom; topMargin: 8 }
                 width: coordTxt.implicitWidth + 14; height: 22; radius: Theme.ctl(22)
                 color: Qt.rgba(0, 0, 0, 0.7)
                 Txt {
@@ -928,7 +928,7 @@ Scope {
                     color: Theme.fill2
                     Flickable {
                         id: fl
-                        anchors { fill: parent; margins: 10 }
+                        anchors { fill: parent; margins: 12 }
                         contentHeight: ocrEdit.contentHeight
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
@@ -948,7 +948,7 @@ Scope {
                 }
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: 8
                     Btn {
                         kind: "primary"; h: 30; padX: 12; icon: "copy"
                         text: ocrEdit.selectedText ? "Copiar selección" : "Copiar todo"
@@ -1211,7 +1211,7 @@ Scope {
                 color: Theme.glassPopup
                 border.width: pin.hovered ? 2 : 1; border.color: pin.hovered ? Theme.p : Theme.ov
                 Image {
-                    anchors { fill: parent; margins: 3 }
+                    anchors { fill: parent; margins: 4 }
                     source: "file://" + pin.modelData.file
                     smooth: true; mipmap: true
                     fillMode: Image.Stretch
@@ -1238,7 +1238,7 @@ Scope {
                 id: pinBar
                 property bool hov: pinHov.hovered
                 visible: pin.hovered && pin.width > 110
-                anchors { top: parent.top; right: parent.right; margins: 10 }
+                anchors { top: parent.top; right: parent.right; margins: 12 }
                 width: pinRow.implicitWidth + 8; height: 30; radius: Theme.ctl(30)
                 color: Theme.glassPopup; border.width: 1; border.color: Theme.ov
                 HoverHandler { id: pinHov }

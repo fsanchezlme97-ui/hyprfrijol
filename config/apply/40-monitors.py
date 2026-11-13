@@ -41,6 +41,12 @@ def hypr_lua(s, c):
         out.append(f"HF.wsPrimary = {_q(prim)}")
     known = sorted(n for n in mons if n != prim and re.match(r"^[\w.-]+$", n))
     out.append("HF.wsKnown = { " + ", ".join(_q(n) for n in known) + " }")
+    # Apps que abren en la pantalla secundaria (secondaryApps, clases de ventana): la regla la pone workspaces.lua,
+    # que sabe qué pantalla es la secundaria en cada momento
+    apps = [c for c in (s.get("secondaryApps") or []) if isinstance(c, str) and re.fullmatch(r"[A-Za-z0-9._-]{1,120}", c)]
+    if apps:
+        alt = "|".join(re.escape(c).replace("\\", "\\\\") for c in apps)
+        out.append(f'HF.secondaryApps = "(?i)^({alt})$"')
     ui = float(s.get("uiScale", 1) or 1)
     if ui != 1:
         # resto de pantallas (y las que se conecten): escala de la interfaz

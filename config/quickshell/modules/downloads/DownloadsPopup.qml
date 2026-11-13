@@ -40,8 +40,8 @@ ChipPopup {
 
         ColumnLayout {
             id: col
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 14 }
-            spacing: 10
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 16 }
+            spacing: 12
 
             RowLayout {
                 Layout.fillWidth: true
@@ -65,7 +65,7 @@ ChipPopup {
             }
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 Segmented {
                     Layout.fillWidth: true
                     h: 28
@@ -95,7 +95,7 @@ ChipPopup {
                 ColumnLayout {
                     id: list
                     width: parent.width
-                    spacing: 6
+                    spacing: 8
                     Repeater {
                         model: pop.rows
                         Rectangle {
@@ -109,8 +109,8 @@ ChipPopup {
                             color: Theme.fill2
                             ColumnLayout {
                                 id: rc
-                                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8; leftMargin: 10 }
-                                spacing: 5
+                                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8; leftMargin: 12 }
+                                spacing: 4
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: 8
@@ -178,7 +178,7 @@ ChipPopup {
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 DevBtn {
                     visible: Downloads.active.length > 1
                     icon: "pause"; text: "Pausar todas"

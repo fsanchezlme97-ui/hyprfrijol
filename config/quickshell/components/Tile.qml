@@ -17,7 +17,7 @@ Rectangle {
     activeFocusOnTab: focusable
     Keys.onPressed: e => { if (root.enabled && (e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space)) { root.clicked(); e.accepted = true; } }
     implicitHeight: 44
-    radius: Theme.pill ? Math.min(height / 2, Theme.r(11)) : Theme.r(8)
+    radius: Theme.pill ? Math.min(height / 2, Theme.r(11)) : Theme.inner(Theme.panelRadius, 12)   // en paneles con margen 12
     color: on ? Theme.fillOn : Theme.fill2
     opacity: enabled ? 1 : Theme.stDisabled
     Behavior on scale { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutBack; easing.overshoot: 2 } }
@@ -28,8 +28,8 @@ Rectangle {
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: 12
-        anchors.rightMargin: 10
-        spacing: 10
+        anchors.rightMargin: 12
+        spacing: 12
         Icon { name: root.icon; color: root.fg; size: 15 }
         ColumnLayout {
             Layout.fillWidth: true

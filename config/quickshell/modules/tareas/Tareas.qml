@@ -115,7 +115,7 @@ Scope {
                 Rectangle {
                     z: 10
                     visible: Tasks.removed.length > 0
-                    anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 18 }
+                    anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 16 }
                     implicitWidth: undoRow.implicitWidth + 24; implicitHeight: 42; radius: Theme.r(10)
                     color: Theme.s3; border.width: 1; border.color: Theme.ov
                     RowLayout {
@@ -129,9 +129,9 @@ Scope {
 
                 ColumnLayout {
                     anchors.fill: parent
-                    anchors.margins: 22
-                    anchors.topMargin: 20
-                    spacing: 14
+                    anchors.margins: 24
+                    anchors.topMargin: 24
+                    spacing: 16
 
                     // ---------- cabecera ----------
                     RowLayout {
@@ -174,7 +174,7 @@ Scope {
                         ColumnLayout {
                             id: addCol
                             anchors.fill: parent
-                            anchors.margins: 10
+                            anchors.margins: 12
                             spacing: 8
                             RowLayout {
                                 Layout.fillWidth: true
@@ -241,7 +241,7 @@ Scope {
                         ColumnLayout {
                             id: listCol
                             width: flick.width
-                            spacing: 14
+                            spacing: 16
                             Repeater {
                                 model: win.groups
                                 ColumnLayout {
@@ -252,7 +252,7 @@ Scope {
                                     RowLayout {
                                         Layout.fillWidth: true
                                         Layout.bottomMargin: 4
-                                        spacing: 6
+                                        spacing: 8
                                         Txt { text: grp.modelData.label; weight: Font.DemiBold; size: 12; color: grp.modelData.tone === "danger" ? Theme.danger : Theme.tv }
                                         Txt { text: String(grp.modelData.items.length); size: 11; muted: true; tabular: true }
                                     }
@@ -271,8 +271,8 @@ Scope {
                                             RowLayout {
                                                 anchors.fill: parent
                                                 anchors.leftMargin: 8
-                                                anchors.rightMargin: 6
-                                                spacing: 10
+                                                anchors.rightMargin: 8
+                                                spacing: 12
                                                 // casilla
                                                 Rectangle {
                                                     implicitWidth: 20; implicitHeight: 20; radius: Theme.r(5)
@@ -352,7 +352,7 @@ Scope {
                         ColumnLayout {
                             anchors.centerIn: parent
                             visible: win.groups.length === 0
-                            spacing: 6
+                            spacing: 8
                             Icon { Layout.alignment: Qt.AlignHCenter; name: "check"; size: 28; stroke: 1.6; color: Theme.tv }
                             Txt {
                                 Layout.alignment: Qt.AlignHCenter

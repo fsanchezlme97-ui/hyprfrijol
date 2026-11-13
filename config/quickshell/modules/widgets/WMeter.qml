@@ -13,7 +13,7 @@ RowLayout {
     property real labelWidth: 38
     property real textWidth: 92
     Layout.fillWidth: true
-    spacing: 10
+    spacing: 12
     Txt { text: m.label; muted: true; size: 12; Layout.preferredWidth: m.labelWidth; visible: m.labelWidth > 0 }
     Rectangle {
         Layout.fillWidth: true

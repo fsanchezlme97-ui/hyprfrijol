@@ -251,7 +251,7 @@ ColumnLayout {
                     color: Theme.glassy ? Qt.alpha(Theme.t, 0.03) : Theme.s4
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 10; anchors.rightMargin: 8
+                        anchors.leftMargin: 12; anchors.rightMargin: 8
                         spacing: 12
                         Icon { name: Bt.iconFor(nd.modelData); size: 16; color: Theme.tv }
                         ColumnLayout {

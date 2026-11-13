@@ -129,7 +129,7 @@ ChipPopup {
             RowLayout {
                 visible: Printer.online && !isNaN(Printer.nozzle)
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Repeater {
                     model: [
                         { l: "Boquilla", v: Printer.nozzle, t: Printer.nozzleTarget },
@@ -143,10 +143,10 @@ ChipPopup {
                         radius: Theme.r(8)
                         color: Theme.fill2
                         Column {
-                            anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 10 }
+                            anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 12 }
                             spacing: 1
                             Row {
-                                spacing: 5
+                                spacing: 4
                                 Icon { name: "thermometer"; size: 12; color: Theme.tv; anchors.verticalCenter: parent.verticalCenter }
                                 Txt { text: parent.parent.parent.modelData.l; muted: true; size: 11 }
                             }
@@ -158,7 +158,7 @@ ChipPopup {
                         // calentando: barra hacia el objetivo
                         Rectangle {
                             visible: parent.modelData.t > 0
-                            anchors { left: parent.left; right: parent.right; bottom: parent.bottom; margins: 6 }
+                            anchors { left: parent.left; right: parent.right; bottom: parent.bottom; margins: 8 }
                             height: 3; radius: 2; color: Qt.alpha(Theme.t, 0.1)
                             Rectangle { height: parent.height; radius: 2; color: Theme.ter; width: parent.width * Math.min(1, parent.parent.modelData.v / Math.max(1, parent.parent.modelData.t)) }
                         }
@@ -170,7 +170,7 @@ ChipPopup {
             RowLayout {
                 visible: Printer.online
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 WBtn {
                     enabled: Printer.busy
                     icon: Printer.state === "paused" ? "play" : "pause"
@@ -188,7 +188,7 @@ ChipPopup {
             RowLayout {
                 visible: Printer.configured
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 WBtn { text: "Panel web"; icon: "globe"; onClicked: { Printer.openWeb(); Shell.close(); } }
                 WBtn { visible: !!pop.slicer; text: pop.slicer ? "Abrir " + pop.slicer.name : ""; icon: "external"; onClicked: { pop.slicer.execute(); Shell.close(); } }
             }

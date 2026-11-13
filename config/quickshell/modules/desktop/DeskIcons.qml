@@ -116,7 +116,7 @@ PanelWindow {
                         id: thumbImg
                         visible: cell.thumb && status === Image.Ready
                         anchors.fill: parent
-                        anchors.margins: 3
+                        anchors.margins: 4
                         source: cell.thumb ? win.desk.fileUrl(cell.modelData.path) : ""
                         sourceSize: Qt.size(win.iconSize * 2, win.iconSize * 2)
                         fillMode: Image.PreserveAspectFit

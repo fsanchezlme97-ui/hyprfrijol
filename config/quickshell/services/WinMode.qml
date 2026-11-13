@@ -97,6 +97,7 @@ Singleton {
         Settings.setMany(o);
     }
     signal announced(string m)          // el OSD lo enseña (modules/osd)
+    signal minimizing(var c)            // justo antes de minimizar: el dock hace volar la ventana hasta su icono
     function cycle(): void {
         const next = modes[(modes.indexOf(mode) + 1) % modes.length];
         setMode(next);
@@ -142,6 +143,7 @@ Singleton {
     function minimize(address): void {
         const c = HyprClients.client(address);
         if (!c || isMin(c)) return;
+        minimizing(c);
         if ((c.fullscreen ?? 0) === 2) Shell.dispatch('hl.dsp.window.fullscreen({ mode = "fullscreen", action = "unset", ' + win(c.address) + ' })');
         Shell.dispatch('hl.dsp.window.move({ workspace = "' + minWs + '", follow = false, ' + win(c.address) + ' })');
         minOrder = minOrder.filter(a => a !== c.address).concat([c.address]);

@@ -20,15 +20,15 @@ Rectangle {
     border.color: mm.containsMouse ? Theme.o : Theme.ov
     MouseArea { id: mm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: mi.picked() }
     RowLayout {
-        anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10
-        spacing: 10
+        anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
+        spacing: 12
         StoreIcon { tool: mi.tool; store: mi.store; size: 32 }
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 3
+            spacing: 4
             Txt { Layout.fillWidth: true; text: mi.tool.name; weight: Font.DemiBold; size: 12.5 }
             RowLayout {
-                spacing: 5
+                spacing: 4
                 StoreBadge { tool: mi.tool; tip: false; enabled: false }
                 Txt { visible: mi.inst; text: "instalada"; size: 10.5; weight: Font.DemiBold; color: Theme.p }
             }

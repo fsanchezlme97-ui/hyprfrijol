@@ -23,7 +23,7 @@ Rectangle {
     Row {
         id: ws
         anchors { left: parent.left; bottom: parent.bottom; margins: 12 }
-        spacing: 6
+        spacing: 8
         Repeater {
             model: 3
             Rectangle {
@@ -55,8 +55,8 @@ Rectangle {
         Behavior on opacity { NumberAnimation { duration: card.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: card.shown ? Theme.ease : Theme.easeOut } }
         Behavior on scale { NumberAnimation { duration: card.shown ? Theme.durIn : Theme.durOut; easing.type: Easing.BezierSpline; easing.bezierCurve: card.shown ? Theme.easeIn : Theme.easeOut } }
         Column {
-            anchors { left: parent.left; top: parent.top; margins: 10 }
-            spacing: 6
+            anchors { left: parent.left; top: parent.top; margins: 12 }
+            spacing: 8
             Rectangle { width: 60; height: 6; radius: 3; color: Theme.t; opacity: 0.75 }
             Rectangle { width: card.width - 20; height: 5; radius: 2.5; color: Theme.tv; opacity: 0.45 }
             Rectangle { width: 40; height: 14; radius: Theme.ctl(14); color: Theme.p }

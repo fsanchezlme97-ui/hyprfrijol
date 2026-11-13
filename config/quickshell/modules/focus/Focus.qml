@@ -65,6 +65,31 @@ Scope {
         function onClientsChanged() { root.sweep(); }
     }
 
+    // Con varias pantallas (focusDimOthers): las demás se oscurecen mientras dura el modo; se puede seguir usándolas
+    Variants {
+        model: Quickshell.screens
+        PanelWindow {
+            id: dim
+            required property var modelData
+            screen: modelData
+            readonly property bool on: Shell.focusMode && Settings.get("focusDimOthers", true) !== false && modelData !== Shell.screen
+            visible: on || shade.opacity > 0
+            color: "transparent"
+            WlrLayershell.layer: WlrLayer.Top
+            WlrLayershell.namespace: "hf-enfoque-atenuar"
+            exclusionMode: ExclusionMode.Ignore
+            anchors { top: true; bottom: true; left: true; right: true }
+            mask: Region {}
+            Rectangle {
+                id: shade
+                anchors.fill: parent
+                color: "#000000"
+                opacity: dim.on ? 0.6 : 0
+                Behavior on opacity { NumberAnimation { duration: Theme.durIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+            }
+        }
+    }
+
     PanelWindow {
         id: win
         screen: Shell.screen
@@ -94,9 +119,9 @@ Scope {
 
             RowLayout {
                 id: row
-                anchors.left: parent.left; anchors.leftMargin: 14
+                anchors.left: parent.left; anchors.leftMargin: 16
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 10
+                spacing: 12
 
                 // Pomodoro: punto + tiempo (clic → iniciar/pausar). Sin pomodoro en marcha muestra la hora.
                 Item {
@@ -105,7 +130,7 @@ Scope {
                     RowLayout {
                         id: pomo
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: 10
+                        spacing: 12
                         Rectangle {
                             id: pomoDot
                             width: 7; height: 7; radius: 3.5

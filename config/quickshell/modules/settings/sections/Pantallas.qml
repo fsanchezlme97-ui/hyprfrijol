@@ -72,7 +72,7 @@ ColumnLayout {
             Layout.alignment: Qt.AlignTop
             title: "Disposición"
             headerRight: Row {
-                spacing: 6
+                spacing: 8
                 Button { text: "Identificar"; onClicked: { root.identifying = true; idTimer.restart(); } }
                 Button { text: "Detectar"; onClicked: root.load() }
             }
@@ -139,7 +139,7 @@ ColumnLayout {
             Flow {
                 visible: root.mons.length > 1
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 Repeater {
                     model: root.mons
                     Chip { required property var modelData; mark: false; h: 26; text: modelData.name + (modelData.disabled ? " (apagada)" : ""); on: root.sel?.name === modelData.name; onClicked: root.selName = modelData.name }
@@ -249,6 +249,35 @@ ColumnLayout {
     }
     Component.onDestruction: endPreview()
 
+    // Con varias pantallas: apps que abren en la secundaria (secondaryApps → regla hf-secondary-apps de
+    // frijol/workspaces.lua, que sigue a la secundaria al conectar o quitar pantallas) y dónde va el PiP (pipScreen)
+    Section {
+        Layout.fillWidth: true
+        title: "Con varias pantallas"
+        headerRight: Txt { visible: Quickshell.screens.length < 2; text: "ahora solo hay una"; muted: true; size: 11.5 }
+        LabeledRow {
+            label: "Imagen en imagen"; labelWidth: 150
+            Seg {
+                model: [["activa", "En la pantalla activa"], ["secundaria", "En la otra pantalla"]]
+                current: Settings.get("pipScreen", "activa")
+                onPicked: k => Settings.set("pipScreen", k)
+            }
+        }
+        FloatApps {
+            Layout.fillWidth: true
+            settingKey: "secondaryApps"
+            intro: "Estas apps se abren en la otra pantalla (la que no es la principal), para dejar la principal libre para trabajar. "
+                + "Con una sola pantalla se abren donde siempre."
+            groups: [
+                { key: "chat", label: "Chat", sub: "Discord, Vesktop, Slack, Telegram, Signal", classes: ["discord", "vesktop", "Slack", "org.telegram.desktop", "signal"] },
+                { key: "musica", label: "Música", sub: "Spotify, Amberol, Decibels", classes: ["spotify", "io.bassi.Amberol", "org.gnome.Decibels"] },
+                { key: "correo", label: "Correo y agenda", sub: "Thunderbird, Evolution, Geary, Calendario", classes: ["thunderbird", "org.gnome.Evolution", "org.gnome.Geary", "org.gnome.Calendar"] },
+                { key: "monitor", label: "Monitor del sistema", sub: "Monitor del sistema, Mission Center", classes: ["org.gnome.SystemMonitor", "io.missioncenter.MissionCenter"] }
+            ]
+            onApply: l => Settings.set("secondaryApps", l)
+        }
+    }
+
     Section {
         Layout.fillWidth: true
         title: "Luz nocturna"
@@ -262,7 +291,7 @@ ColumnLayout {
         }
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 12
             Txt { text: "Temperatura"; muted: true; Layout.preferredWidth: Math.max(90, implicitWidth) }
             Txt { text: "fría"; muted: true; size: 11.5 }
             SliderBar {
@@ -297,7 +326,7 @@ ColumnLayout {
             id: nlRow
             visible: Settings.get("nightLight", "off") === "horario"
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 12
             readonly property var hours: Array.from({ length: 48 }, (_, i) => { const s = String(Math.floor(i / 2)).padStart(2, "0") + ":" + (i % 2 ? "30" : "00"); return [s, s]; })
             Txt { text: "Desde"; muted: true; Layout.preferredWidth: Math.max(90, implicitWidth) }
             Dropdown { Layout.preferredWidth: 90; model: nlRow.hours; current: Settings.get("nightFrom", "22:00"); onPicked: k => Settings.set("nightFrom", k) }
@@ -312,7 +341,7 @@ ColumnLayout {
                 || (Settings.get("themeMode", "oscuro") === "auto" && Settings.get("themeSchedule", "horas") === "sol")
             visible: used
             Layout.fillWidth: true
-            spacing: 6
+            spacing: 8
             SwRow {
                 label: "Calcular la salida y la puesta del sol"
                 sub: !sunBox.used ? "" : !Sun.auto ? "a mano: elige las horas abajo"
@@ -324,7 +353,7 @@ ColumnLayout {
                 id: sunRow
                 visible: !sunBox.used ? false : !Sun.computed
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Txt { text: "Atardecer"; muted: true; Layout.preferredWidth: Math.max(90, implicitWidth) }
                 Dropdown { Layout.preferredWidth: 90; model: nlRow.hours; current: Settings.get("sunset", "19:00"); onPicked: k => Settings.set("sunset", k) }
                 Txt { text: "amanecer"; muted: true }

@@ -71,7 +71,7 @@ ColumnLayout {
         color: root.msgBad ? Qt.alpha(Theme.danger, 0.14) : Theme.selBg
         RowLayout {
             id: msgRow
-            anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 8
+            anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 8
             Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; text: root.msg; color: root.msgBad ? Theme.danger : Theme.selText; weight: Font.Medium }
             Button { h: 26; kind: "link"; text: "✕"; onClicked: root.msg = "" }
         }
@@ -129,8 +129,8 @@ ColumnLayout {
             border.width: 1; border.color: Qt.alpha(Theme.danger, 0.4)
             ColumnLayout {
                 id: addBox
-                anchors.fill: parent; anchors.margins: 10
-                spacing: 6
+                anchors.fill: parent; anchors.margins: 12
+                spacing: 8
                 Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; weight: Font.DemiBold; text: root.isGit ? "¿Clonar este repositorio?" : "¿Copiar esta carpeta?" }
                 Mono { Layout.fillWidth: true; text: root.addSrc; wrapMode: Text.WrapAnywhere }
                 Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; size: 11.5; text: "Los plugins son código sin aislar: al activarlos se ejecutan dentro de la shell con todo lo que puede hacer tu usuario. Añadirlo solo copia los archivos; léelo antes de activarlo." }
@@ -158,11 +158,11 @@ ColumnLayout {
                 readonly property string err: OmarchyPlugins.errors[p.id] ?? ""
                 readonly property bool viewKind: OmarchyPlugins.isView(p)
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 Rectangle { visible: row.index > 0; Layout.fillWidth: true; implicitHeight: 1; color: Theme.ov }
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: 12
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 2
@@ -197,8 +197,8 @@ ColumnLayout {
                     border.width: 1; border.color: Qt.alpha(Theme.danger, 0.4)
                     ColumnLayout {
                         id: cBox
-                        anchors.fill: parent; anchors.margins: 10
-                        spacing: 6
+                        anchors.fill: parent; anchors.margins: 12
+                        spacing: 8
                         Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; weight: Font.DemiBold; text: "¿Activar «" + row.p.name + "»?"; textFormat: Text.PlainText }
                         Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; size: 11.5; text: "Es código sin aislar: se ejecutará dentro de la shell con acceso a tus archivos, la red y tus programas. " + (row.p.tested === "probado" ? "Está marcado como probado en HyprFrijol." : "No está probado en HyprFrijol: puede fallar o verse distinto que en Omarchy.") }
                         Mono { Layout.fillWidth: true; wrapMode: Text.WrapAnywhere; text: root.sourceText(row.p) + "\n" + row.p.dir }
@@ -244,7 +244,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 8
                 Row {
-                    spacing: 3
+                    spacing: 4
                     Repeater { model: [t.bg, t.s3, t.p, t.ter, t.t]; Rectangle { required property var modelData; width: 14; height: 14; radius: 7; color: modelData; border.width: 1; border.color: Theme.ov } }
                 }
                 Txt { text: t.name; weight: Font.Medium; textFormat: Text.PlainText }

@@ -112,11 +112,11 @@ ColumnLayout {
                 readonly property var tools: st.tools ?? []
                 readonly property int nRead: tools.filter(t => t.readOnly).length
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 Rectangle { visible: sv.index > 0; Layout.fillWidth: true; implicitHeight: 1; color: Theme.ov }
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: 12
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 1
@@ -152,7 +152,7 @@ ColumnLayout {
                 RowLayout {
                     visible: sv.modelData.enabled === true && sv.nRead > 0
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: 12
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 1
@@ -175,7 +175,7 @@ ColumnLayout {
                 Flow {
                     visible: sv.tools.length > 0
                     Layout.fillWidth: true
-                    spacing: 5
+                    spacing: 4
                     Repeater {
                         model: sv.tools.slice(0, 40)
                         Rectangle {
@@ -242,7 +242,7 @@ ColumnLayout {
                 implicitHeight: 30
                 radius: Theme.r(6)
                 color: Theme.fill2
-                Txt { anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10; text: root.addCmd; font.family: Theme.mono; size: 11.5; elide: Text.ElideMiddle }
+                Txt { anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12; text: root.addCmd; font.family: Theme.mono; size: 11.5; elide: Text.ElideMiddle }
             }
             Button {
                 text: copied.running ? "Copiado" : "Copiar"
@@ -259,7 +259,7 @@ ColumnLayout {
         }
         Flow {
             Layout.fillWidth: true
-            spacing: 5
+            spacing: 4
             Repeater {
                 model: root.ownTools
                 Rectangle {

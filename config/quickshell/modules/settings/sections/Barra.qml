@@ -22,7 +22,7 @@ ColumnLayout {
         title: "Posición"
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 12
             Repeater {
                 model: [["arriba", "Arriba"], ["abajo", "Abajo"], ["izquierda", "Izquierda"], ["derecha", "Derecha"]]
                 ColumnLayout {
@@ -32,7 +32,7 @@ ColumnLayout {
                     readonly property string k: modelData[0]
                     Layout.fillWidth: true
                     Layout.preferredWidth: 1
-                    spacing: 6
+                    spacing: 8
                     Rectangle {
                         Layout.fillWidth: true
                         implicitHeight: 96
@@ -81,7 +81,7 @@ ColumnLayout {
         }
         RowLayout {
             Layout.fillWidth: true
-            spacing: 22
+            spacing: 24
             LabeledRow {
                 Layout.preferredWidth: 1
                 label: "Forma"; labelWidth: 60
@@ -102,126 +102,6 @@ ColumnLayout {
                 current: Settings.get("barRoundExtra", 4)
                 onPicked: k => Settings.set("barRoundExtra", k)
             }
-        }
-    }
-    Section {
-        Layout.fillWidth: true
-        title: "Tamaño"
-        headerRight: Mono { text: Settings.barSize + " px · contenido ×" + Settings.barScale.toFixed(2) }
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 16
-            Pills {
-                Layout.fillWidth: true
-                model: [[26, "Mini"], [30, "Compacta"], [34, "Normal"], [40, "Grande"], [46, "Muy grande"], [54, "Enorme"]]
-                current: Settings.barSize
-                onPicked: v => Confirm.change("Tamaño de la barra", { barHeight: v })
-            }
-            Stepper { label: "Ajuste fino"; unit: " px"; from: 24; to: 56; step: 2; value: Settings.barSize; onStepped: v => Confirm.change("Tamaño de la barra", { barHeight: v }) }
-        }
-        Txt {
-            Layout.fillWidth: true
-            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-            text: "Iconos, textos y la onda de audio crecen con la barra. Los paneles se abren siempre junto a ella."
-        }
-    }
-    Section {
-        Layout.fillWidth: true
-        title: "Avisos emergentes"
-        headerRight: Mono { text: "volumen · brillo · Bloq Mayús · micrófono" }
-        LabeledRow {
-            label: "Posición"; labelWidth: 80
-            Seg {
-                model: [["abajo", "Abajo"], ["arriba", "Arriba"], ["centro", "Centro"], ["izquierda", "Izquierda"], ["derecha", "Derecha"], ["inf-der", "Abajo dcha."], ["sup-der", "Arriba dcha."]]
-                current: Settings.get("osdPos", "abajo")
-                onPicked: k => Settings.set("osdPos", k)
-            }
-        }
-        LabeledRow {
-            label: "Distancia"; labelWidth: 80
-            Pills {
-                model: [[4, "4 px"], [8, "8 px"], [14, "14 px"], [24, "24 px"], [48, "48 px"], [96, "96 px"]]
-                current: Settings.get("osdOffset", 14)
-                onPicked: v => Settings.set("osdOffset", v)
-            }
-        }
-        RowLayout {
-            Item { Layout.fillWidth: true }
-            Button { text: "Probar"; onClicked: Quickshell.execDetached(["qs", "-p", Paths.root + "/config/quickshell", "ipc", "call", "osd", "popup", "volumen"]) }
-        }
-    }
-    Section {
-        Layout.fillWidth: true
-        title: "Onda de audio"
-        headerRight: Sw { checked: Settings.barHas("musica"); onToggled: v => { const l = Settings.barModuleList.filter(m => m !== "musica"); if (v) l.push("musica"); Settings.set("barModules", l); } }
-        LabeledRow {
-            label: "Estilo"; labelWidth: 60
-            Seg {
-                model: [["barras", "Barras"], ["onda", "Onda rellena"], ["linea", "Línea"]]
-                current: Settings.get("waveStyle", "barras")
-                onPicked: k => Settings.set("waveStyle", k)
-            }
-        }
-    }
-    Section {
-        Layout.fillWidth: true
-        title: "Módulos visibles"
-        Flow {
-            Layout.fillWidth: true
-            spacing: 8
-            Repeater {
-                model: [["espacios", "Espacios"], ["titulo", "Título de ventana"], ["musica", "Música"], ["red", "Red"], ["bateria", "Batería"], ["notificaciones", "Notificaciones"], ["reloj", "Reloj"]]
-                Chip {
-                    required property var modelData
-                    readonly property var list: Settings.barModuleList
-                    text: modelData[1]
-                    on: list.includes(modelData[0])
-                    onClicked: Settings.set("barModules", on ? list.filter(x => x !== modelData[0]) : list.concat([modelData[0]]))
-                }
-            }
-        }
-        LinkRow { label: "Clima, sistema, pomodoro, asistente y demás widgets"; section: "barwidgets"; sectionLabel: "Widgets de la barra"; target: "Distribución" }
-    }
-    // Bandeja del sistema (bar/Tray.qml): barTray · barTrayMax · barTrayHidden (ids que van al «›»)
-    Section {
-        Layout.fillWidth: true
-        title: "Bandeja del sistema"
-        headerRight: Mono { tech: true; text: "OBS, Steam, Discord… · StatusNotifierItem" }
-        SwRow { separator: false; label: "Mostrar la bandeja"; sub: "iconos de las apps en segundo plano · clic derecho: su menú"; key: "barTray"; def: true }
-        LabeledRow {
-            label: "Iconos a la vista"; labelWidth: 150
-            opacity: Settings.get("barTray", true) ? 1 : 0.45
-            Pills {
-                Layout.fillWidth: true
-                model: [[0, "Ninguno"], [3, "3"], [4, "4"], [6, "6"], [8, "8"], [12, "12"]]
-                current: Number(Settings.get("barTrayMax", 6))
-                onPicked: v => Settings.set("barTrayMax", v)
-            }
-        }
-        Txt {
-            Layout.fillWidth: true
-            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-            text: "El resto, y los que marques aquí abajo, quedan en el desplegable «›» de la bandeja."
-        }
-        Flow {
-            Layout.fillWidth: true
-            spacing: 6
-            Repeater {
-                // las apps abiertas ahora y las que ya ocultaste aunque no estén
-                model: {
-                    const hid = Settings.get("barTrayHidden", []), ids = SystemTray.items.values.map(i => i.id);
-                    return ids.concat(hid.filter(h => !ids.includes(h)));
-                }
-                Chip {
-                    required property var modelData
-                    readonly property var hid: Settings.get("barTrayHidden", [])
-                    h: 26
-                    text: modelData
-                    on: !hid.includes(modelData)
-                    onClicked: Settings.set("barTrayHidden", on ? hid.concat([modelData]) : hid.filter(x => x !== modelData))
-                }
-            }
-            Txt { visible: SystemTray.items.values.length === 0 && Settings.get("barTrayHidden", []).length === 0; text: "No hay ninguna app en la bandeja ahora mismo."; muted: true; size: 11.5 }
         }
     }
     Section {
@@ -268,5 +148,125 @@ ColumnLayout {
         SwRow { label: "Barra en las pantallas nuevas"; sub: "sencilla al conectar otra pantalla; si no, sin barra hasta que la elijas"; key: "barAllScreens"; def: true }
         SwRow { label: "Transparente en espacios vacíos"; sub: "la barra se funde con el fondo si no hay ventanas"; key: "barTransparentEmpty" }
         SwRow { label: "Barra viva"; sub: "el icono del clima se mueve con el tiempo que hace y el anillo del pomodoro late al final; quietos en pantalla completa y en modo juego"; key: "barLive"; def: true }
+    }
+    Section {
+        Layout.fillWidth: true
+        title: "Tamaño"
+        headerRight: Mono { text: Settings.barSize + " px · contenido ×" + Settings.barScale.toFixed(2) }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 16
+            Pills {
+                Layout.fillWidth: true
+                model: [[26, "Mini"], [30, "Compacta"], [34, "Normal"], [40, "Grande"], [46, "Muy grande"], [54, "Enorme"]]
+                current: Settings.barSize
+                onPicked: v => Confirm.change("Tamaño de la barra", { barHeight: v })
+            }
+            Stepper { label: "Ajuste fino"; unit: " px"; from: 24; to: 56; step: 2; value: Settings.barSize; onStepped: v => Confirm.change("Tamaño de la barra", { barHeight: v }) }
+        }
+        Txt {
+            Layout.fillWidth: true
+            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+            text: "Iconos, textos y la onda de audio crecen con la barra. Los paneles se abren siempre junto a ella."
+        }
+    }
+    Section {
+        Layout.fillWidth: true
+        title: "Módulos visibles"
+        Flow {
+            Layout.fillWidth: true
+            spacing: 8
+            Repeater {
+                model: [["espacios", "Espacios"], ["titulo", "Título de ventana"], ["musica", "Música"], ["red", "Red"], ["bateria", "Batería"], ["notificaciones", "Notificaciones"], ["reloj", "Reloj"]]
+                Chip {
+                    required property var modelData
+                    readonly property var list: Settings.barModuleList
+                    text: modelData[1]
+                    on: list.includes(modelData[0])
+                    onClicked: Settings.set("barModules", on ? list.filter(x => x !== modelData[0]) : list.concat([modelData[0]]))
+                }
+            }
+        }
+        LinkRow { label: "Clima, sistema, pomodoro, asistente y demás widgets"; section: "barwidgets"; sectionLabel: "Widgets de la barra"; target: "Distribución" }
+    }
+    // Bandeja del sistema (bar/Tray.qml): barTray · barTrayMax · barTrayHidden (ids que van al «›»)
+    Section {
+        Layout.fillWidth: true
+        title: "Bandeja del sistema"
+        headerRight: Mono { tech: true; text: "OBS, Steam, Discord… · StatusNotifierItem" }
+        SwRow { separator: false; label: "Mostrar la bandeja"; sub: "iconos de las apps en segundo plano · clic derecho: su menú"; key: "barTray"; def: true }
+        LabeledRow {
+            label: "Iconos a la vista"; labelWidth: 150
+            opacity: Settings.get("barTray", true) ? 1 : 0.45
+            Pills {
+                Layout.fillWidth: true
+                model: [[0, "Ninguno"], [3, "3"], [4, "4"], [6, "6"], [8, "8"], [12, "12"]]
+                current: Number(Settings.get("barTrayMax", 6))
+                onPicked: v => Settings.set("barTrayMax", v)
+            }
+        }
+        Txt {
+            Layout.fillWidth: true
+            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+            text: "El resto, y los que marques aquí abajo, quedan en el desplegable «›» de la bandeja."
+        }
+        Flow {
+            Layout.fillWidth: true
+            spacing: 8
+            Repeater {
+                // las apps abiertas ahora y las que ya ocultaste aunque no estén
+                model: {
+                    const hid = Settings.get("barTrayHidden", []), ids = SystemTray.items.values.map(i => i.id);
+                    return ids.concat(hid.filter(h => !ids.includes(h)));
+                }
+                Chip {
+                    required property var modelData
+                    readonly property var hid: Settings.get("barTrayHidden", [])
+                    h: 26
+                    text: modelData
+                    on: !hid.includes(modelData)
+                    onClicked: Settings.set("barTrayHidden", on ? hid.concat([modelData]) : hid.filter(x => x !== modelData))
+                }
+            }
+            Txt { visible: SystemTray.items.values.length === 0 && Settings.get("barTrayHidden", []).length === 0; text: "No hay ninguna app en la bandeja ahora mismo."; muted: true; size: 11.5 }
+        }
+    }
+    Section {
+        Layout.fillWidth: true
+        title: "Onda de audio"
+        headerRight: Sw { checked: Settings.barHas("musica"); onToggled: v => { const l = Settings.barModuleList.filter(m => m !== "musica"); if (v) l.push("musica"); Settings.set("barModules", l); } }
+        LabeledRow {
+            label: "Estilo"; labelWidth: 60
+            Seg {
+                model: [["barras", "Barras"], ["onda", "Onda rellena"], ["linea", "Línea"]]
+                current: Settings.get("waveStyle", "barras")
+                onPicked: k => Settings.set("waveStyle", k)
+            }
+        }
+    }
+    Section {
+        Layout.fillWidth: true
+        title: "Indicadores de volumen y brillo"
+        headerRight: Mono { tech: true; text: "OSD · volumen · brillo · Bloq Mayús · micrófono" }
+        LabeledRow {
+            label: "Posición"; labelWidth: 80
+            Seg {
+                model: [["abajo", "Abajo"], ["arriba", "Arriba"], ["centro", "Centro"], ["izquierda", "Izquierda"], ["derecha", "Derecha"], ["inf-der", "Abajo dcha."], ["sup-der", "Arriba dcha."]]
+                current: Settings.get("osdPos", "abajo")
+                onPicked: k => Settings.set("osdPos", k)
+            }
+        }
+        LabeledRow {
+            label: "Distancia"; labelWidth: 80
+            Pills {
+                model: [[4, "4 px"], [8, "8 px"], [14, "14 px"], [24, "24 px"], [48, "48 px"], [96, "96 px"]]
+                current: Settings.get("osdOffset", 14)
+                onPicked: v => Settings.set("osdOffset", v)
+            }
+        }
+        RowLayout {
+            Item { Layout.fillWidth: true }
+            Button { text: "Probar"; onClicked: Quickshell.execDetached(["qs", "-p", Paths.root + "/config/quickshell", "ipc", "call", "osd", "popup", "volumen"]) }
+        }
     }
 }

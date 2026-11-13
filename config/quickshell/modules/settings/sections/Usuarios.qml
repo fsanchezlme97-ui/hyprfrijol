@@ -249,7 +249,7 @@ RowLayout {
                 required property int index
                 readonly property bool isMe: modelData.name === root.me.name
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 Rectangle { visible: ur.index > 0; Layout.fillWidth: true; implicitHeight: 1; color: Theme.ov }
                 RowLayout {
                     Layout.fillWidth: true

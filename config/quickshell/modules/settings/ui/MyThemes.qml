@@ -140,7 +140,7 @@ Section {
                     onPicked: (k, mode) => root.picked(k, mode)
                 }
                 RowLayout {
-                    spacing: 10
+                    spacing: 12
                     Button {
                         kind: "link"; text: "Editar"
                         onClicked: root.editSaved(mt.modelData)
@@ -185,7 +185,7 @@ Section {
     ColumnLayout {
         visible: root.preview !== null
         Layout.fillWidth: true
-        spacing: 6
+        spacing: 8
         Txt {
             visible: root.editingKey !== ""
             text: "Editando «" + (root.preview?.name ?? "") + "»"
@@ -193,7 +193,7 @@ Section {
         }
         Flow {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 12
             ThemeMockup { width: 300; pal: root.preview?.dark ?? {}; label: "Oscuro" }
             ThemeMockup { width: 300; pal: root.preview?.light ?? {}; label: "Claro" }
         }
@@ -211,7 +211,7 @@ Section {
             GridLayout {
                 Layout.fillWidth: true
                 columns: Math.max(1, Math.floor(width / 230))
-                rowSpacing: 6; columnSpacing: 14
+                rowSpacing: 8; columnSpacing: 16
                 Repeater {
                     model: root.roles
                     RowLayout {

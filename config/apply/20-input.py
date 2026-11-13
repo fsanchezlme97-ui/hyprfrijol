@@ -71,6 +71,11 @@ def hypr_lua(s, c):
         ]
     if s.get("powerKey") == "menu":
         out.append('hl.bind("XF86PowerOff", function() hl.dispatch(hl.dsp.global("hf:energia")) end, { locked = true })')
+    # Inercia (gestureInertia): un deslizamiento rápido de 3 dedos cambia de espacio aunque sea corto; sin ella hay que
+    # pasar de la mitad (0 = sin velocidad mínima: Hyprland ignora la rapidez)
+    fast = s.get("gestureInertia", True) is not False
+    out.append(f'hl.config({{ gestures = {{ workspace_swipe_min_speed_to_force = {15 if fast else 0}, '
+               f'workspace_swipe_cancel_ratio = {0.3 if fast else 0.5} }} }})')
     for key, fingers, direction, default in (("gesture3Up", 3, "up", "vista"), ("gesture3Down", 3, "down", "escritorio"),
                                              ("gesture4Up", 4, "up", "spotlight"), ("gesture4Down", 4, "down", "ninguna")):
         act = s.get(key, default)

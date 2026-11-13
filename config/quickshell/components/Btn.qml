@@ -38,7 +38,7 @@ Rectangle {
     RowLayout {
         id: row
         anchors.centerIn: parent
-        spacing: 6
+        spacing: 8
         Icon { visible: root.icon !== "" || root.iconSvg !== ""; name: root.icon; svg: root.iconSvg; color: root.fg }
         Txt { visible: root.text !== ""; text: root.text; color: root.fg; size: root.textSize; weight: Font.DemiBold }
         Txt { visible: root.hint !== ""; text: root.hint; color: root.fg; opacity: 0.7; size: 11 }

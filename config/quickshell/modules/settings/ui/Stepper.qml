@@ -14,7 +14,7 @@ RowLayout {
     property string unit: "min"
     signal stepped(int value)
     Layout.fillWidth: true
-    spacing: 10
+    spacing: 12
     Txt { text: root.label; Layout.fillWidth: true; weight: Font.Medium }
     component RoundBtn: Rectangle {
         id: rb

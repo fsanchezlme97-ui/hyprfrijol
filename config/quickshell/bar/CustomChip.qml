@@ -49,7 +49,7 @@ Rectangle {
         id: row
         visible: !chip.vertical
         anchors.centerIn: parent
-        spacing: 5
+        spacing: 4
         Icon { visible: chip.iconName !== ""; name: chip.iconName; size: 14; color: Theme.t }
         Txt { visible: chip.text !== ""; text: chip.text; size: 12; weight: Font.Medium }
     }

@@ -121,9 +121,9 @@ Scope {
                     Layout.maximumWidth: 168
                     Layout.fillHeight: true
                     Layout.margins: 16
-                    Layout.topMargin: 22
+                    Layout.topMargin: 24
                     spacing: 4
-                    Txt { text: "Bienvenido"; size: 17; weight: Font.DemiBold; Layout.leftMargin: 8; Layout.bottomMargin: 14 }
+                    Txt { text: "Bienvenido"; size: 17; weight: Font.DemiBold; Layout.leftMargin: 8; Layout.bottomMargin: 16 }
                     Repeater {
                         model: root.steps
                         Rectangle {
@@ -138,7 +138,7 @@ Scope {
                             color: cur ? Theme.fill2 : "transparent"
                             RowLayout {
                                 anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
-                                spacing: 10
+                                spacing: 12
                                 Rectangle {
                                     implicitWidth: 20; implicitHeight: 20; radius: 10
                                     color: st.done ? Theme.p : "transparent"
@@ -158,8 +158,8 @@ Scope {
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.leftMargin: 26; Layout.rightMargin: 26; Layout.topMargin: 24; Layout.bottomMargin: 18
-                    spacing: 14
+                    Layout.leftMargin: 24; Layout.rightMargin: 24; Layout.topMargin: 24; Layout.bottomMargin: 16
+                    spacing: 16
                     ColumnLayout {
                         spacing: 4
                         Txt { text: root.titles[root.step][0]; size: 19; weight: Font.DemiBold }
@@ -200,7 +200,7 @@ Scope {
         radius: Theme.r(7)
         color: Theme.fill2
         RowLayout {
-            anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 8
+            anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 8
             Txt { text: r44.k; muted: true }
             Item { id: slot; implicitHeight: 32; Layout.fillWidth: true }
         }
@@ -208,7 +208,7 @@ Scope {
     Component {
         id: stepRegion
         ColumnLayout {
-            spacing: 10
+            spacing: 12
             Row44 {
                 k: "Idioma"
                 Dropdown {
@@ -257,8 +257,8 @@ Scope {
             GridLayout {
                 Layout.fillWidth: true
                 columns: 2
-                columnSpacing: 10
-                rowSpacing: 10
+                columnSpacing: 12
+                rowSpacing: 12
                 Repeater {
                     // Estilo Math: sólido o con transparencia (lo que antes era el estilo SkySoul)
                     model: [[true, "Transparente", "Cristal desenfocado sobre el fondo"], [false, "Sólido", "Superficies opacas, lo más ligero"]]
@@ -272,7 +272,7 @@ Scope {
                         border.width: on ? 2 : 1
                         border.color: on ? Theme.p : Theme.ov
                         ColumnLayout {
-                            anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.margins: 11
+                            anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.margins: 12
                             spacing: 2
                             Txt { text: parent.parent.modelData[1]; weight: Font.DemiBold }
                             Txt { text: parent.parent.modelData[2]; size: 11.5; muted: true }
@@ -284,7 +284,7 @@ Scope {
             Txt { text: "Color"; muted: true }
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Repeater {
                     model: [["auto", "Automático", Theme.p, Theme.pc], ["elegir", "Elegir", "#A9C1D9", "#2C3E50"], ["mono", "Monocromo", "#E8E8E8", "#3A3A3A"]]
                     Rectangle {
@@ -298,7 +298,7 @@ Scope {
                         border.color: on ? Theme.p : Theme.ov
                         RowLayout {
                             anchors.fill: parent; anchors.leftMargin: 12
-                            spacing: 10
+                            spacing: 12
                             Row { spacing: 2; Rectangle { width: 12; height: 24; radius: Theme.r(3); color: parent.parent.parent.modelData[2] } Rectangle { width: 12; height: 24; radius: Theme.r(3); color: parent.parent.parent.modelData[3] } }
                             Txt { Layout.fillWidth: true; text: parent.parent.modelData[1]; weight: Font.Medium }
                         }
@@ -322,7 +322,7 @@ Scope {
             GridLayout {
                 Layout.fillWidth: true
                 columns: 3
-                columnSpacing: 10; rowSpacing: 10
+                columnSpacing: 12; rowSpacing: 12
                 Repeater {
                     model: parent.parent.pick
                     ColumnLayout {
@@ -347,7 +347,7 @@ Scope {
                 : Settings.get("barPos", "abajo") === "arriba" && Settings.get("barMode", "fija") !== "fija" ? "arriba" : Settings.get("barPos", "abajo") === "izquierda" ? "izq" : ""
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Repeater {
                     model: [["abajo", "Fija abajo", "abajo", "fija"], ["arriba", "Flotante arriba", "arriba", "flotante"], ["izq", "Lateral", "izquierda", "fija"]]
                     ColumnLayout {
@@ -356,7 +356,7 @@ Scope {
                         readonly property bool on: parent.parent.cur === modelData[0]
                         Layout.fillWidth: true
                         Layout.preferredWidth: 1
-                        spacing: 6
+                        spacing: 8
                         Rectangle {
                             Layout.fillWidth: true
                             implicitHeight: 96
@@ -384,10 +384,10 @@ Scope {
     Component {
         id: stepTools
         ColumnLayout {
-            spacing: 10
+            spacing: 12
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Txt { text: "Gestor de archivos"; muted: true; Layout.preferredWidth: 116 }
                 Segmented {
                     Layout.fillWidth: true
@@ -415,7 +415,7 @@ Scope {
                         border.width: on ? 2 : 1
                         border.color: on ? Theme.p : Theme.ov
                         ColumnLayout {
-                            anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 10
+                            anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
                             spacing: 2
                             Item { Layout.fillHeight: true }
                             Txt { Layout.fillWidth: true; text: (pk.on ? "✓ " : "+ ") + pk.modelData[1]; weight: Font.DemiBold }
@@ -433,7 +433,7 @@ Scope {
     Component {
         id: stepDone
         ColumnLayout {
-            spacing: 6
+            spacing: 8
             Repeater {
                 model: [
                     ["Idioma", root.localeLabel(root.lang)],
@@ -445,7 +445,7 @@ Scope {
                 ]
                 Kv { required property var modelData; h: 34; k: modelData[0]; v: modelData[1]; bold: false }
             }
-            Txt { Layout.fillWidth: true; Layout.topMargin: 6; muted: true; size: 11.5; wrapMode: Text.WordWrap; text: "Todo se puede cambiar después en Ajustes (Super + I)" + (Pkg.snapper ? ". Antes de instalar se crea un punto de restauración." : ".") + " Este asistente vuelve a estar en Ajustes › Aplicaciones." }
+            Txt { Layout.fillWidth: true; Layout.topMargin: 8; muted: true; size: 11.5; wrapMode: Text.WordWrap; text: "Todo se puede cambiar después en Ajustes (Super + I)" + (Pkg.snapper ? ". Antes de instalar se crea un punto de restauración." : ".") + " Este asistente vuelve a estar en Ajustes › Aplicaciones." }
             RowLayout {
                 Layout.topMargin: 4
                 spacing: 8

@@ -112,7 +112,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 4
                         RowLayout {
-                            spacing: 6
+                            spacing: 8
                             Txt { text: zoneBox.modelData[1]; size: 12; weight: Font.Medium }
                             Txt { text: zoneBox.modelData[2]; muted: true; size: 11 }
                         }
@@ -128,7 +128,7 @@ ColumnLayout {
                                 id: flow
                                 x: 8; y: 8
                                 width: parent.width - 16
-                                spacing: 6
+                                spacing: 8
                                 // lo fijo de la isla (no se mueve)
                                 Rectangle {
                                     visible: zoneBox.zone === "izquierda"
@@ -164,7 +164,7 @@ ColumnLayout {
                                         RowLayout {
                                             id: tileRow
                                             anchors.centerIn: parent
-                                            spacing: 6
+                                            spacing: 8
                                             Icon { name: root.icon(tile.wid); size: 13; color: tile.picked ? Theme.pcText : Theme.t }
                                             Txt { text: root.name(tile.wid); size: 12; color: tile.picked ? Theme.pcText : Theme.t }
                                         }
@@ -213,7 +213,7 @@ ColumnLayout {
                 RowLayout {
                     id: ghostRow
                     anchors.centerIn: parent
-                    spacing: 6
+                    spacing: 8
                     Icon { name: root.icon(root.dragId); size: 13; color: Theme.pcText }
                     Txt { text: root.name(root.dragId); size: 12; color: Theme.pcText }
                 }
@@ -236,7 +236,7 @@ ColumnLayout {
             }
         }
         RowLayout {
-            spacing: 6
+            spacing: 8
             Txt { text: root.sel ? root.name(root.sel) + ":" : "Elige un widget para moverlo con los botones"; muted: !root.sel; size: 11.5 }
             Button { text: "‹ Antes"; h: 26; enabled: root.movable; onClicked: root.nudge(root.sel, -1) }
             Button { text: "Después ›"; h: 26; enabled: root.movable; onClicked: root.nudge(root.sel, 1) }
@@ -274,12 +274,12 @@ ColumnLayout {
                     separator: false
                     label: "Mostrar el estado del cielo"; sub: "«18° nublado» siempre, no solo al pasar el cursor"; key: "barWeatherText"
                     enabled: card.on
-                    Layout.leftMargin: 18
+                    Layout.leftMargin: 16
                 }
                 LabeledRow {
                     visible: card.modelData === "recursos"
                     label: "Estilo"; labelWidth: 140
-                    Layout.leftMargin: 18
+                    Layout.leftMargin: 16
                     opacity: card.on ? 1 : 0.45
                     Seg {
                         model: [["barras", "Barritas"], ["grafica", "Gráfica"], ["texto", "Solo números"]]
@@ -291,11 +291,11 @@ ColumnLayout {
                 LabeledRow {
                     visible: card.modelData === "recursos"
                     label: "Medidas"; labelWidth: 140
-                    Layout.leftMargin: 18
+                    Layout.leftMargin: 16
                     opacity: card.on ? 1 : 0.45
                     Flow {
                         Layout.fillWidth: true
-                        spacing: 6
+                        spacing: 8
                         Repeater {
                             model: [["cpu", "CPU"], ["gpu", "GPU"], ["ram", "RAM"], ["disco", "Disco"], ["red", "Red ↓↑"], ["temp", "Temperatura"]]
                             Chip {
@@ -414,7 +414,7 @@ ColumnLayout {
         GridLayout {
             Layout.fillWidth: true
             columns: 2
-            columnSpacing: 8; rowSpacing: 6
+            columnSpacing: 8; rowSpacing: 8
             Field { id: fName; Layout.fillWidth: true; h: 30; icon: ""; placeholder: "Nombre (sale al pasar el cursor)" }
             Field { id: fEvery; Layout.preferredWidth: 160; h: 30; icon: ""; placeholder: "Cada (s) · 10" }
             Field { id: fCmd; Layout.fillWidth: true; Layout.columnSpan: 2; h: 30; icon: ""; placeholder: "Orden: p. ej. curl -s 'wttr.in/?format=%t'"; input.font.family: Theme.mono }

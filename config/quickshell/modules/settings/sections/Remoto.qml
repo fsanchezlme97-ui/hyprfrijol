@@ -179,7 +179,7 @@ ColumnLayout {
                         visible: root.form.proto === "rdp" || root.form.proto === "vnc"
                         label: "Opciones"
                         Flow {
-                            spacing: 6
+                            spacing: 8
                             Repeater {
                                 model: root.form.proto === "rdp"
                                     ? [["fullscreen", "Pantalla completa", false], ["multimon", "Varias pantallas", false], ["dynamicRes", "Ajustar resolución", true], ["sound", "Sonido", true], ["clipboard", "Portapapeles", true], ["drives", "Carpeta personal", false]]
@@ -196,7 +196,7 @@ ColumnLayout {
                     RowLayout {
                         Layout.fillWidth: true
                         Layout.leftMargin: 130
-                        spacing: 10
+                        spacing: 12
                         Button { kind: "primary"; text: "Guardar"; enabled: hostF.text.trim() !== ""; onClicked: root.save() }
                         Button { text: "Cancelar"; onClicked: root.editing = -2 }
                         Item { Layout.fillWidth: true }
@@ -298,7 +298,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 Layout.preferredWidth: 1
                 Layout.alignment: Qt.AlignTop
-                spacing: 10
+                spacing: 12
                 SwRow {
                     separator: false
                     label: "Compartir por VNC"
@@ -393,7 +393,7 @@ ColumnLayout {
                 RowLayout {
                     visible: root.srv.firewall === "ufw" && root.onNet
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: 12
                     Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; size: 11.5; muted: true; text: "El cortafuegos (ufw) bloquea el puerto " + root.srv.port + " si no lo abres." }
                     Button { text: "Abrir el puerto"; onClicked: Pkg.runInTerminal("sudo ufw allow " + root.srv.port + "/tcp comment 'VNC HyprFrijol'", "Cortafuegos") }
                 }
@@ -432,7 +432,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 Layout.preferredWidth: 1
                 Layout.alignment: Qt.AlignTop
-                spacing: 10
+                spacing: 12
                 SwRow {
                     separator: false
                     label: "Compartir por RDP"
@@ -482,7 +482,7 @@ ColumnLayout {
                 RowLayout {
                     visible: root.rdp.firewall === "ufw" && root.rdp.listen !== "local"
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: 12
                     Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; size: 11.5; muted: true; text: "Si no conecta, el cortafuegos (ufw) puede estar cerrando el puerto " + root.rdp.port + "." }
                     Button {
                         text: "Abrir el puerto"

@@ -70,6 +70,9 @@ Singleton {
     // Radios fijos de los módulos (los del diseño) escalados según el estilo y el redondeo elegido
     readonly property real roundK: st.roundK ?? 1
     function r(n: real): real { return Math.round(n * roundK); }
+    // Radios concéntricos (Math): lo que va dentro de otra superficie redondeada, a `pad` px de su borde, lleva el
+    // radio de fuera menos ese margen (y nunca menos de r(4)), para que las curvas vayan paralelas
+    function inner(outer: real, pad: real): real { return Math.max(r(4), Math.round(outer - pad)); }
     // Cristal (transparencia): filo interior de luz (arriba → abajo), filo exterior, esmerilado y resplandor
     readonly property color rimTop: st.rimTop ?? "transparent"
     readonly property color rimBottom: st.rimBottom ?? "transparent"

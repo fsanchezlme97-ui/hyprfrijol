@@ -113,7 +113,7 @@ PanelWindow {
 
         RowLayout {
             id: row
-            anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: 3 }
+            anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: 4 }
             spacing: 0
 
             // Asa para mover (seis puntos)

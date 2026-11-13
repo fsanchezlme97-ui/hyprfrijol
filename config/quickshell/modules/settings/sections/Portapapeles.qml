@@ -31,7 +31,7 @@ ColumnLayout {
         SwRow { label: "Vaciar el portapapeles al iniciar sesión"; sub: "los elementos fijados se conservan"; key: "clipboardClearOnLogin"; def: false }
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 12
             Txt { Layout.fillWidth: true; text: "Borrar ahora todo lo que no esté fijado"; muted: true; size: 11.5 }
             ConfirmButton { h: 28; text: "Vaciar"; confirmText: "¿Vaciar el historial? Sí"; onConfirmed: Clip.wipe() }
         }

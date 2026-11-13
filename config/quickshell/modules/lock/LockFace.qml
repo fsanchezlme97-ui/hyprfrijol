@@ -161,7 +161,7 @@ Item {
                 Layout.topMargin: 30
                 visible: chips.count > 0
                 layoutDirection: face.layout === "derecha" ? Qt.RightToLeft : Qt.LeftToRight
-                spacing: 10
+                spacing: 12
                 Repeater {
                     id: chips
                     model: {
@@ -184,7 +184,7 @@ Item {
                         RowLayout {
                             id: chipRow
                             anchors.centerIn: parent
-                            spacing: 7
+                            spacing: 8
                             Icon { name: modelData.icon; size: 13; color: face.cTv }
                             Txt { text: modelData.text; size: 12.5; color: face.cT }
                         }
@@ -204,7 +204,7 @@ Item {
                 border.width: 1; border.color: face.cBorder
                 RowLayout {
                     anchors.fill: parent
-                    anchors.margins: 10
+                    anchors.margins: 12
                     spacing: 12
                     Rectangle {
                         implicitWidth: 52; implicitHeight: 52; radius: Theme.r(6)
@@ -267,7 +267,7 @@ Item {
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 5; anchors.rightMargin: 5
+                    anchors.leftMargin: 4; anchors.rightMargin: 4
                     spacing: 12
                     Rectangle {
                         implicitWidth: 38; implicitHeight: 38; radius: Theme.r(6)

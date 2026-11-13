@@ -48,8 +48,8 @@ Item {
     ColumnLayout {
         id: colMain
         anchors.fill: parent
-        anchors.topMargin: 6
-        anchors.bottomMargin: 6
+        anchors.topMargin: 8
+        anchors.bottomMargin: 8
         spacing: 4
         AppsBtn { id: appsV; side: 26; visible: !root.secondary; Layout.alignment: Qt.AlignHCenter }   // Aplicaciones: logo de la distribución
         Workspaces { id: wsV; visible: Settings.barHas("espacios") || root.secondary; Layout.alignment: Qt.AlignHCenter; screen: root.barWindow.screen; vertical: true }
@@ -73,7 +73,7 @@ Item {
         Loader { Layout.alignment: Qt.AlignHCenter; visible: !root.secondary && (item?.want ?? false); sourceComponent: DownloadsChip { vertical: true } }
         Loader { Layout.alignment: Qt.AlignHCenter; visible: !root.secondary && (item?.want ?? false); sourceComponent: TestChip { vertical: true } }
         OmarchySlot { barWindow: root.barWindow; visible: any && !root.secondary; vertical: true; place: Settings.get("omarchyBarSlot", "derecha"); Layout.alignment: Qt.AlignHCenter }   // plugins de Omarchy
-        Divider { vertical: false; implicitWidth: 14; visible: !root.secondary && (vTray.visible); Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 3; Layout.bottomMargin: 3 }   // botones propios | bandeja
+        Divider { vertical: false; implicitWidth: 14; visible: !root.secondary && (vTray.visible); Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 4; Layout.bottomMargin: 4 }   // botones propios | bandeja
         Tray { id: vTray; barWindow: root.barWindow; vertical: true; visible: !root.secondary && (Settings.get("barTray", true) && any); Layout.alignment: Qt.AlignHCenter }
         // Estado: privacidad + red, sonido, batería, notificaciones y hora (un solo botón: centro de control)
         Rectangle {

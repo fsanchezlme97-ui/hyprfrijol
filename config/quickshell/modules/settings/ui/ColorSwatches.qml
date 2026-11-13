@@ -12,7 +12,7 @@ Row {
     property string current: ""
     property real size: 18
     signal picked(string color)
-    spacing: 6
+    spacing: 8
     Repeater {
         model: root.colors
         Rectangle {

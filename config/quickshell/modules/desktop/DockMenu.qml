@@ -46,7 +46,7 @@ Glass {
 
     ColumnLayout {
         id: col
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 6 }
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
         spacing: 1
         Txt {
             Layout.fillWidth: true
@@ -69,8 +69,8 @@ Glass {
                     radius: Theme.ctl(30)
                     color: rma.containsMouse ? (row.modelData.danger ? Qt.alpha(Theme.danger, 0.16) : Theme.selBg) : "transparent"
                     RowLayout {
-                        anchors { fill: parent; leftMargin: 9; rightMargin: 9 }
-                        spacing: 9
+                        anchors { fill: parent; leftMargin: 8; rightMargin: 8 }
+                        spacing: 8
                         Icon { name: row.modelData.icon; size: 14; color: row.modelData.danger ? Theme.danger : rma.containsMouse ? Theme.selText : Theme.t }
                         Txt { Layout.fillWidth: true; text: row.modelData.l; color: row.modelData.danger ? Theme.danger : rma.containsMouse ? Theme.selText : Theme.t }
                     }

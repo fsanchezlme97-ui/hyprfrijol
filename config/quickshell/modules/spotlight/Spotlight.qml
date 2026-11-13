@@ -705,8 +705,8 @@ Overlay {
                 Layout.preferredHeight: 52
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 18
-                    anchors.rightMargin: 18
+                    anchors.leftMargin: 16
+                    anchors.rightMargin: 16
                     spacing: 12
                     Icon {
                         name: spot.mode === "apps" ? "chevron_left" : spot.emojiMode ? "smile" : spot.clipMode ? "clipboard" : "search"; size: 19; color: backMa.containsMouse ? Theme.t : Theme.tv
@@ -787,7 +787,7 @@ Overlay {
                         RowLayout {
                             id: allRow
                             anchors.centerIn: parent
-                            spacing: 6
+                            spacing: 8
                             Icon { name: "grid"; size: 13; color: spot.mode === "apps" ? Theme.fillOnText : Theme.t }
                             Txt { text: "Todas las apps"; size: 11.5; weight: Font.Medium; color: spot.mode === "apps" ? Theme.fillOnText : Theme.t }
                         }
@@ -850,16 +850,16 @@ Overlay {
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.margins: 20
-                    spacing: spot.prevHere ? 10 : 14
+                    Layout.margins: 16
+                    spacing: spot.prevHere ? 8 : 12
 
                     RowLayout {
-                        spacing: 14
+                        spacing: 16
                         visible: spot.cur !== null
                         SpotTile { item: spot.cur ?? ({}); size: 48 }
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 3
+                            spacing: 4
                             Txt { Layout.fillWidth: true; text: spot.cur?.name ?? ""; size: 16; weight: Font.DemiBold }
                             Txt { Layout.fillWidth: true; text: spot.catLine(spot.cur); muted: true }
                         }
@@ -874,7 +874,7 @@ Overlay {
                         color: spot.cur?.clip?.kind === "color" ? spot.cur.clip.text.trim() : Theme.fill2
                         clip: true
                         Image {
-                            anchors.fill: parent; anchors.margins: 6
+                            anchors.fill: parent; anchors.margins: 8
                             visible: status === Image.Ready
                             source: spot.cur?.kind === "clip" ? Clip.imgUrl(spot.cur.img) : ""
                             fillMode: Image.PreserveAspectFit
@@ -883,7 +883,7 @@ Overlay {
                             cache: false
                         }
                         Text {
-                            anchors.fill: parent; anchors.margins: 10
+                            anchors.fill: parent; anchors.margins: 12
                             visible: spot.cur?.kind === "clip" && !spot.cur.img && spot.cur.clip.kind !== "color"
                             text: spot.cur?.kind === "clip" ? spot.cur.clip.text.slice(0, 1500) : ""
                             wrapMode: Text.WrapAnywhere
@@ -906,7 +906,7 @@ Overlay {
                         color: Theme.fill2
                         clip: true
                         Image {
-                            anchors.fill: parent; anchors.margins: 6
+                            anchors.fill: parent; anchors.margins: 8
                             visible: spot.prevHere && spot.prev.image !== ""
                             source: visible ? "file://" + encodeURI(spot.prev.image) : ""
                             fillMode: Image.PreserveAspectFit
@@ -916,7 +916,7 @@ Overlay {
                         }
                         Text {
                             id: prevTxt
-                            anchors.fill: parent; anchors.margins: 10
+                            anchors.fill: parent; anchors.margins: 12
                             visible: spot.prevHere && spot.prev.image === ""
                             text: visible ? spot.prev.text : ""
                             wrapMode: spot.prev.mono ? Text.NoWrap : Text.Wrap
@@ -931,7 +931,7 @@ Overlay {
                     }
                     Flow {
                         Layout.fillWidth: true
-                        spacing: 6
+                        spacing: 8
                         visible: spot.cur?.kind === "file" && !spot.moreMode && acts.count > 0
                         Repeater {
                             id: acts
@@ -977,7 +977,7 @@ Overlay {
                                     // modo "más"
                                     Rectangle {
                                         visible: spot.moreMode
-                                        anchors.fill: parent; anchors.topMargin: 2; anchors.bottomMargin: 3
+                                        anchors.fill: parent; anchors.topMargin: 2; anchors.bottomMargin: 4
                                         anchors.leftMargin: -8; anchors.rightMargin: -8
                                         radius: Theme.r(5)
                                         color: spot.moreMode && spot.moreSel === parent.index ? Theme.pc : "transparent"
@@ -1056,15 +1056,15 @@ Overlay {
                 Flickable {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 44
-                    Layout.leftMargin: 14
-                    Layout.rightMargin: 14
+                    Layout.leftMargin: 16
+                    Layout.rightMargin: 16
                     contentWidth: catRow.implicitWidth
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
                     RowLayout {
                         id: catRow
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: 6
+                        spacing: 8
                         Repeater {
                             model: spot.appCats
                             Rectangle {
@@ -1079,7 +1079,7 @@ Overlay {
                                 RowLayout {
                                     id: chipRow
                                     anchors.centerIn: parent
-                                    spacing: 5
+                                    spacing: 4
                                     Txt { text: parent.parent.modelData.label; size: 11.5; weight: Font.Medium; color: parent.parent.on ? Theme.fillOnText : Theme.t; elide: Text.ElideNone }
                                     Txt { text: String(parent.parent.modelData.n); size: 10.5; color: parent.parent.on ? Theme.fillOnText : Theme.tv; opacity: 0.8; elide: Text.ElideNone }
                                 }
@@ -1097,7 +1097,7 @@ Overlay {
                     GridView {
                         id: grid
                         anchors.fill: parent
-                        anchors.leftMargin: 10; anchors.rightMargin: 10; anchors.bottomMargin: 6
+                        anchors.leftMargin: 12; anchors.rightMargin: 12; anchors.bottomMargin: 8
                         clip: true
                         cellWidth: Math.floor(width / spot.gcols)
                         cellHeight: 102
@@ -1111,7 +1111,7 @@ Overlay {
                             width: grid.cellWidth
                             height: grid.cellHeight
                             Rectangle {
-                                anchors.fill: parent; anchors.margins: 3
+                                anchors.fill: parent; anchors.margins: 4
                                 radius: Theme.r(10)
                                 color: cell.on ? Theme.selBg : cellMa.containsMouse ? Theme.fill2 : "transparent"
                                 Behavior on color { ColorAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
@@ -1123,7 +1123,7 @@ Overlay {
                                     item: ({ appIcon: cell.modelData.icon, g: spot.letterOf(cell.modelData.name), cat: "Apps" })
                                 }
                                 Text {
-                                    anchors { top: cellTile.bottom; topMargin: 7; left: parent.left; right: parent.right; leftMargin: 6; rightMargin: 6 }
+                                    anchors { top: cellTile.bottom; topMargin: 8; left: parent.left; right: parent.right; leftMargin: 8; rightMargin: 8 }
                                     horizontalAlignment: Text.AlignHCenter
                                     text: cell.modelData.name ?? ""
                                     wrapMode: Text.Wrap
@@ -1187,7 +1187,7 @@ Overlay {
                                     radius: Theme.r(6)
                                     color: spot.moreSel === index ? Theme.selBg : "transparent"
                                     Txt {
-                                        anchors { left: parent.left; leftMargin: 10; right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
+                                        anchors { left: parent.left; leftMargin: 12; right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
                                         text: parent.modelData.label
                                         color: parent.modelData.label.startsWith("Desinstalar") ? Theme.danger : spot.moreSel === parent.index ? Theme.selText : Theme.t
                                         weight: Font.Medium
@@ -1214,7 +1214,7 @@ Overlay {
                     anchors.fill: parent
                     anchors.leftMargin: 16
                     anchors.rightMargin: 16
-                    spacing: 14
+                    spacing: 16
                     Repeater {
                         model: spot.mode === "apps" ? [] : [[">", "comandos"], ["=", "calcular"], ["?", "IA"], ["@", "ventanas"], ["/", "archivos"], [":", "portapapeles"], [";", "emojis"], ["!", "web"], ["+", "tarea"]].filter(h => h[0] !== "?" || Settings.get("aiSpotlight", true) !== false)
                         Text {
@@ -1282,7 +1282,7 @@ Overlay {
 
         Txt {
             visible: root.header
-            anchors { left: parent.left; leftMargin: 10; bottom: parent.bottom; bottomMargin: 3 }
+            anchors { left: parent.left; leftMargin: 12; bottom: parent.bottom; bottomMargin: 4 }
             text: root.row.label ?? ""
             size: 11
             weight: Font.DemiBold
@@ -1302,7 +1302,7 @@ Overlay {
                 anchors.fill: parent
                 anchors.leftMargin: 8
                 anchors.rightMargin: 8
-                spacing: 10
+                spacing: 12
                 SpotTile { item: root.row.item ?? ({}); size: 24; selected: root.selected }
                 Text {
                     Layout.fillWidth: true

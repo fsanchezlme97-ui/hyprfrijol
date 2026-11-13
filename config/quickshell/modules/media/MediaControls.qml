@@ -128,20 +128,20 @@ Overlay {
             id: col
             x: 16; y: 16
             width: parent.width - 32
-            spacing: 14
+            spacing: 16
 
             // ---------------------------------------------------------------- sin reproductores
             RowLayout {
                 visible: !win.player
                 Layout.fillWidth: true
-                spacing: 14
+                spacing: 16
                 Rectangle {
                     Layout.preferredWidth: 56; Layout.preferredHeight: 56; radius: Theme.r(12); color: Theme.fill2
                     Icon { anchors.centerIn: parent; name: "music"; size: 22; color: Theme.tv }
                 }
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 3
+                    spacing: 4
                     Txt { text: "No hay nada sonando"; weight: Font.DemiBold; size: 14 }
                     Txt {
                         Layout.fillWidth: true
@@ -167,7 +167,7 @@ Overlay {
                     Row {
                         id: openRow
                         anchors.centerIn: parent
-                        spacing: 5
+                        spacing: 4
                         Txt { text: "Abrir"; size: 11; anchors.verticalCenter: parent.verticalCenter }
                         Icon { name: "external"; size: 11; color: Theme.tv; anchors.verticalCenter: parent.verticalCenter }
                     }
@@ -179,7 +179,7 @@ Overlay {
             RowLayout {
                 visible: !!win.player
                 Layout.fillWidth: true
-                spacing: 14
+                spacing: 16
                 Rectangle {
                     Layout.preferredWidth: 84; Layout.preferredHeight: 84
                     Layout.alignment: Qt.AlignTop
@@ -200,7 +200,7 @@ Overlay {
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignVCenter
-                    spacing: 3
+                    spacing: 4
                     Txt {
                         Layout.fillWidth: true
                         text: win.player?.trackTitle || "Sin título"
@@ -278,7 +278,7 @@ Overlay {
                 }
                 Row {
                     anchors.centerIn: parent
-                    spacing: 14
+                    spacing: 16
                     IconBtn {
                         anchors.verticalCenter: parent.verticalCenter
                         icon: "prev"; iconSize: 17; implicitWidth: 40; implicitHeight: 36
@@ -324,7 +324,7 @@ Overlay {
             ColumnLayout {
                 visible: !!win.player && (win.player?.trackTitle ?? "") !== ""
                 Layout.fillWidth: true
-                spacing: 3
+                spacing: 4
                 // sin activar: un enlace que explica qué se manda y a quién
                 Txt {
                     visible: !Lyrics.enabled
@@ -381,7 +381,7 @@ Overlay {
             // ---------------------------------------------------------------- volumen y salida
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
@@ -393,7 +393,7 @@ Overlay {
                         to: Audio.maxVolume
                         onMoved: v => Audio.setVolume(v)
                         Txt {
-                            anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
+                            anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
                             text: Audio.muted ? "Silencio" : Math.round(Audio.volume * 100) + " %"
                             size: 11; tabular: true; color: Theme.tv
                         }
@@ -407,8 +407,8 @@ Overlay {
                         border.width: win.showDevices ? 0 : 1; border.color: Theme.border
                         RowLayout {
                             id: outRow
-                            anchors { fill: parent; leftMargin: 10; rightMargin: 8 }
-                            spacing: 5
+                            anchors { fill: parent; leftMargin: 12; rightMargin: 8 }
+                            spacing: 4
                             Icon { name: Audio.kindIcon(Audio.sink); size: 13; color: win.showDevices ? Theme.fillOnText : Theme.t }
                             Txt { Layout.fillWidth: true; Layout.maximumWidth: 92; text: Audio.nodeName(Audio.sink) || "Salida"; size: 11; color: win.showDevices ? Theme.fillOnText : Theme.t }
                             Icon { name: win.showDevices ? "chevron_up" : "chevron_down"; size: 11; color: win.showDevices ? Theme.fillOnText : Theme.tv }
@@ -428,7 +428,7 @@ Overlay {
                 visible: win.players.length > 1
                 Layout.fillWidth: true
                 spacing: 2
-                Rectangle { Layout.fillWidth: true; Layout.bottomMargin: 6; implicitHeight: 1; color: Theme.ov }
+                Rectangle { Layout.fillWidth: true; Layout.bottomMargin: 8; implicitHeight: 1; color: Theme.ov }
                 Txt { text: "Reproductores"; size: 11; weight: Font.DemiBold; color: Theme.tv; Layout.bottomMargin: 2 }
                 Repeater {
                     model: win.players
@@ -443,8 +443,8 @@ Overlay {
                         color: on ? Theme.selBg : prowMa.containsMouse ? Theme.fill2 : "transparent"
                         Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                         RowLayout {
-                            anchors { fill: parent; leftMargin: 8; rightMargin: 6 }
-                            spacing: 9
+                            anchors { fill: parent; leftMargin: 8; rightMargin: 8 }
+                            spacing: 8
                             AppIcon { info: prow.info; size: 18 }
                             ColumnLayout {
                                 Layout.fillWidth: true
@@ -460,7 +460,7 @@ Overlay {
                             Row {
                                 visible: prow.modelData.isPlaying
                                 spacing: 2
-                                Layout.rightMargin: 6
+                                Layout.rightMargin: 8
                                 Repeater {
                                     model: 3
                                     Rectangle {

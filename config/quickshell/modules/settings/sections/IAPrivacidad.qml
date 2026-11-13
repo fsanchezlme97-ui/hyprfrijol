@@ -72,7 +72,7 @@ ColumnLayout {
         }
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 12
             Txt { Layout.fillWidth: true; text: "Borrar todas las conversaciones guardadas"; muted: true; size: 11.5 }
             ConfirmButton {
                 h: 28
@@ -117,7 +117,7 @@ ColumnLayout {
                 id: lr
                 required property var modelData
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Txt { text: lr.modelData.time; muted: true; size: 11; font.family: Theme.mono }
                 Txt { Layout.fillWidth: true; text: (lr.modelData.labels ?? []).join(" · ") || "Cambio"; elide: Text.ElideRight }
                 Button {

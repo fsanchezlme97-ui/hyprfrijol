@@ -235,7 +235,7 @@ Scope {
                 Row {
                     id: chipRow
                     anchors.centerIn: parent
-                    spacing: 7
+                    spacing: 8
                     Rectangle { width: 14; height: 14; radius: 7; color: root.cur; border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
                     Txt { text: root.ready ? root.fmt(root.cur, root.format) : "…"; color: "white"; size: 12; font.family: Theme.mono; anchors.verticalCenter: parent.verticalCenter }
                 }
@@ -308,8 +308,8 @@ Scope {
                             radius: Theme.r(8)
                             color: fma.containsMouse ? Theme.fill2 : "transparent"
                             RowLayout {
-                                anchors { fill: parent; leftMargin: 10; rightMargin: 6 }
-                                spacing: 10
+                                anchors { fill: parent; leftMargin: 12; rightMargin: 8 }
+                                spacing: 12
                                 Txt { text: frow.modelData[1]; muted: true; size: 11; weight: Font.DemiBold; Layout.preferredWidth: 46 }
                                 Txt { Layout.fillWidth: true; text: frow.val; font.family: Theme.mono; size: 12.5; elide: Text.ElideRight }
                                 Txt { visible: frow.pref; text: "al elegir"; size: 10.5; color: Theme.p }
@@ -329,7 +329,7 @@ Scope {
                 ColumnLayout {
                     visible: root.history.length > 0
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: 8
                     RowLayout {
                         Layout.fillWidth: true
                         Txt { Layout.fillWidth: true; text: "Recientes"; muted: true; size: 11.5; weight: Font.DemiBold }
@@ -341,7 +341,7 @@ Scope {
                     }
                     Flow {
                         Layout.fillWidth: true
-                        spacing: 6
+                        spacing: 8
                         Repeater {
                             model: root.history
                             Rectangle {

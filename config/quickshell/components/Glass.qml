@@ -15,7 +15,7 @@ import ".."
 Item {
     id: root
     property string kind: "panel"
-    property real radius: kind === "bar" ? Theme.barRadius : kind === "fill" ? Theme.r(8) : Theme.panelRadius
+    property real radius: kind === "bar" ? Theme.barRadius : kind === "fill" ? Theme.inner(Theme.panelRadius, 8) : Theme.panelRadius
     property bool shadow: kind !== "fill" && kind !== "bar"
     property bool big: kind === "popup"
     property color color: kind === "bar" ? Theme.glass : kind === "popup" ? Theme.glassPopup

@@ -121,14 +121,14 @@ Overlay {
         ColumnLayout {
             id: body
             anchors.centerIn: parent
-            spacing: 10
+            spacing: 12
 
             // Sin ventanas
             ColumnLayout {
                 visible: win.items.length === 0
                 Layout.preferredWidth: 360
                 Layout.preferredHeight: 120
-                spacing: 6
+                spacing: 8
                 Icon { Layout.alignment: Qt.AlignHCenter; name: "window"; size: 26; color: Theme.tv }
                 Txt { Layout.alignment: Qt.AlignHCenter; text: win.appFilter ? "No hay más ventanas de esta app" : "No hay ventanas abiertas"; weight: Font.DemiBold }
                 Txt { Layout.alignment: Qt.AlignHCenter; text: "Abre apps con Super + Espacio"; muted: true; size: 11.5 }
@@ -137,8 +137,8 @@ Overlay {
             GridLayout {
                 visible: win.items.length > 0
                 columns: win.perRow
-                columnSpacing: 10
-                rowSpacing: 10
+                columnSpacing: 12
+                rowSpacing: 12
 
                 Repeater {
                     model: win.items
@@ -157,7 +157,7 @@ Overlay {
 
                         ColumnLayout {
                             id: col
-                            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 6 }
+                            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
                             spacing: 8
                             Item {
                                 Layout.fillWidth: true
@@ -179,7 +179,7 @@ Overlay {
                                 }
                                 Rectangle {
                                     visible: it.modelData.workspace?.id !== (Hyprland.focusedMonitor?.activeWorkspace?.id ?? -1)
-                                    anchors { top: parent.top; right: parent.right; margins: 5 }
+                                    anchors { top: parent.top; right: parent.right; margins: 4 }
                                     width: wsTxt.implicitWidth + 10; height: 16; radius: Theme.ctl(16)
                                     color: Qt.alpha("#000000", 0.55)
                                     Txt { id: wsTxt; anchors.centerIn: parent; text: WinMode.isMin(it.modelData) ? "Minimizada" : String(it.modelData.workspace?.id ?? ""); size: 10; color: "white"; weight: Font.DemiBold }
@@ -187,7 +187,7 @@ Overlay {
                             }
                             RowLayout {
                                 Layout.fillWidth: true
-                                spacing: 7
+                                spacing: 8
                                 Rectangle {
                                     Layout.preferredWidth: 18; Layout.preferredHeight: 18
                                     radius: Theme.r(5)

@@ -173,8 +173,8 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 10
-        spacing: 6
+        anchors.margins: 12
+        spacing: 8
 
         // Grupos: atajo a cada sección (se oculta al buscar)
         Row {

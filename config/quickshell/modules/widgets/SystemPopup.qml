@@ -68,7 +68,7 @@ ChipPopup {
                     Layout.preferredHeight: 58
                     radius: Theme.r(8)
                     color: Theme.fill2
-                    MiniSpark { anchors.fill: parent; anchors.margins: 6; values: SysStats.cpuHist; lineWidth: 1.8 }
+                    MiniSpark { anchors.fill: parent; anchors.margins: 8; values: SysStats.cpuHist; lineWidth: 1.8 }
                 }
             }
             // núcleos
@@ -77,7 +77,7 @@ ChipPopup {
                 Layout.fillWidth: true
                 readonly property int n: SysStats.cores.length
                 columns: n > 16 ? Math.ceil(n / 2) : n
-                columnSpacing: 3; rowSpacing: 3
+                columnSpacing: 4; rowSpacing: 4
                 readonly property real cw: (width - (columns - 1) * columnSpacing) / Math.max(1, columns)
                 Repeater {
                     model: SysStats.cores
@@ -148,7 +148,7 @@ ChipPopup {
             // ---- red
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Repeater {
                     model: [
                         { l: "Bajada", i: "download", v: SysStats.netRx, h: SysStats.rxHist, c: Theme.p },
@@ -164,11 +164,11 @@ ChipPopup {
                         MiniSpark { anchors { left: parent.left; right: parent.right; bottom: parent.bottom; margins: 4 } height: 20; values: parent.modelData.h; max: NaN; color: parent.modelData.c; lineWidth: 1.2 }
                         Row {
                             x: 8; y: 6
-                            spacing: 5
+                            spacing: 4
                             Icon { name: parent.parent.modelData.i; size: 12; color: Theme.tv; anchors.verticalCenter: parent.verticalCenter }
                             Txt { text: parent.parent.modelData.l; muted: true; size: 11; anchors.verticalCenter: parent.verticalCenter }
                         }
-                        Txt { anchors { right: parent.right; top: parent.top; rightMargin: 8; topMargin: 5 } text: SysStats.rate(parent.modelData.v); weight: Font.DemiBold; size: 12; tabular: true }
+                        Txt { anchors { right: parent.right; top: parent.top; rightMargin: 8; topMargin: 4 } text: SysStats.rate(parent.modelData.v); weight: Font.DemiBold; size: 12; tabular: true }
                     }
                 }
             }
@@ -176,7 +176,7 @@ ChipPopup {
             // ---- discos
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 RowLayout {
                     Layout.fillWidth: true
                     SectionLabel { text: "Discos"; Layout.fillWidth: true }
@@ -236,7 +236,7 @@ ChipPopup {
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 WBtn {
                     readonly property var mon: DesktopEntries.heuristicLookup("btop") ?? DesktopEntries.heuristicLookup("htop")
                                              ?? DesktopEntries.heuristicLookup("gnome-system-monitor") ?? DesktopEntries.heuristicLookup("missioncenter")

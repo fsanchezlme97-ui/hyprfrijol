@@ -37,7 +37,7 @@ Rectangle {
 
     ColumnLayout {
         id: col
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 10 }
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
         spacing: 8
         // Pantalla en miniatura (16:10)
         Rectangle {
@@ -86,7 +86,7 @@ Rectangle {
                     x: 3; y: scr.y0 + scr.ih * 0.18; width: 9; height: scr.ih * 0.64
                     radius: 4; color: Theme.s4; border.width: 1; border.color: Qt.alpha(Theme.ov, 0.5)
                     Column {
-                        anchors.centerIn: parent; spacing: 3
+                        anchors.centerIn: parent; spacing: 4
                         Repeater { model: 4; Rectangle { width: 5; height: 5; radius: 1.5; color: index === 1 ? Theme.p : Theme.tv; opacity: index === 1 ? 1 : 0.5 } }
                     }
                 }

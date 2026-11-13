@@ -120,7 +120,7 @@ RowLayout {
                 RowLayout {
                     required property var modelData
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: 12
                     Icon { name: "edit"; size: 15; color: Theme.tv }
                     Txt { Layout.fillWidth: true; text: parent.modelData; weight: Font.Medium }
                 }

@@ -29,7 +29,7 @@ Rectangle {
     border.color: k === "none" ? Theme.o : Qt.alpha(hue, 0.55)
     Row {
         anchors.centerIn: parent
-        spacing: 3
+        spacing: 4
         Txt { id: bl; text: Pkg.longLabels[sb.k] ?? sb.k; size: sb.big ? 12 : 10; weight: Font.Bold; color: sb.fg }
         Txt { visible: sb.menu; text: "▾"; size: sb.big ? 10.5 : 9; color: sb.fg; anchors.verticalCenter: parent.verticalCenter }
     }
@@ -46,7 +46,7 @@ Rectangle {
         delay: 450
         y: sb.height + 6
         x: Math.min(0, sb.width - width)
-        padding: 9
+        padding: 8
         width: Math.min(320, tipTxt.implicitWidth + 18)
         background: Rectangle { color: Theme.s1; radius: Theme.r(6); border.width: 1; border.color: Theme.ov }
         contentItem: Txt {
@@ -62,7 +62,7 @@ Rectangle {
         y: sb.height + 4
         x: Math.min(0, sb.width - width)
         width: 320
-        padding: 5
+        padding: 4
         background: Rectangle { color: Theme.s1; radius: Theme.r(8); border.width: 1; border.color: Theme.ov }
         contentItem: ColumnLayout {
             spacing: 2

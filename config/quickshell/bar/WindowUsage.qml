@@ -66,7 +66,7 @@ Row {
             Row {
                 id: row
                 anchors.centerIn: parent
-                spacing: 5
+                spacing: 4
                 Image {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 16; height: 16

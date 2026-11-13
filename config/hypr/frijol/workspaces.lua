@@ -72,6 +72,10 @@ local function apply()
     elseif HF.wsPrimary and order[1] then
         HF.wsRules[1] = hl.workspace_rule({ workspace = "1", monitor = order[1], default = true })
     end
+    -- Apps que abren en la secundaria (secondaryApps, 40-monitors.py): la regla sigue a la secundaria de ahora
+    if HF.secondaryApps and order[2] then
+        HF.wsRules[#HF.wsRules + 1] = hl.window_rule({ name = "hf-secondary-apps", match = { class = HF.secondaryApps }, monitor = order[2] })
+    end
 end
 apply()
 if HF.wsPerMonitor then

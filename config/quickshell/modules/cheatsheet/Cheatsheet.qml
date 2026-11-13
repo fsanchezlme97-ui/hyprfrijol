@@ -142,12 +142,12 @@ Overlay {
         kind: "popup"
 
         ColumnLayout {
-            anchors { fill: parent; margins: 14 }
-            spacing: 10
+            anchors { fill: parent; margins: 16 }
+            spacing: 12
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Icon { name: "keyboard"; size: 17; color: Theme.p }
                 ColumnLayout {
                     spacing: 0
@@ -177,7 +177,7 @@ Overlay {
                 RowLayout {
                     id: colsRow
                     width: flick.width
-                    spacing: 18
+                    spacing: 16
                     Repeater {
                         model: win.columns
                         ColumnLayout {
@@ -185,7 +185,7 @@ Overlay {
                             required property var modelData
                             Layout.preferredWidth: (colsRow.width - 36) / 3
                             Layout.alignment: Qt.AlignTop
-                            spacing: 14
+                            spacing: 16
                             Repeater {
                                 model: column.modelData
                                 ColumnLayout {
@@ -211,7 +211,7 @@ Overlay {
                                                         id: combo
                                                         required property var modelData
                                                         required property int index
-                                                        spacing: 3
+                                                        spacing: 4
                                                         Txt { visible: combo.index > 0; text: "o"; size: 10.5; muted: true; height: 20 }
                                                         Repeater {
                                                             model: combo.modelData

@@ -53,7 +53,7 @@ BarChip {
         id: r
         visible: !chip.vertical
         anchors.centerIn: parent
-        spacing: 5
+        spacing: 4
         Icon { visible: chip.style !== "texto" || chip.empty; name: "cpu"; color: chip.hot ? Theme.danger : Theme.t }
         // barras
         Row {
@@ -98,7 +98,7 @@ BarChip {
         id: vcol
         visible: chip.vertical
         anchors.centerIn: parent
-        spacing: 3
+        spacing: 4
         Icon { visible: chip.meters.length === 0; Layout.alignment: Qt.AlignHCenter; name: "cpu"; color: chip.hot ? Theme.danger : Theme.t }
         Row {
             visible: chip.meters.length > 0

@@ -246,7 +246,7 @@ Overlay {
                 spacing: 8
                 RowLayout {
                     Layout.alignment: Qt.AlignHCenter
-                    spacing: 10
+                    spacing: 12
                     Txt {
                         text: win.cur ? win.cur.name : (win.listing ? "Buscando fondos…" : "No hay fondos: añade los tuyos con «Mis fondos»")
                         size: 30; weight: Font.DemiBold
@@ -262,7 +262,7 @@ Overlay {
                 RowLayout {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.preferredHeight: 26
-                    spacing: 6
+                    spacing: 8
                     opacity: win.cur ? 1 : 0
                     Chip { text: win.cur ? win.originLabel(win.cur.origin) : ""; icon: win.webOrigin ? "globe" : win.cur && win.cur.origin === "mio" ? "folder" : "image" }
                     Chip { visible: !!win.cur && win.cur.video; text: "Vídeo"; icon: "play" }
@@ -271,7 +271,7 @@ Overlay {
                     // Colores dominantes (de la miniatura)
                     Row {
                         visible: sw.count > 0
-                        Layout.leftMargin: 6
+                        Layout.leftMargin: 8
                         spacing: -5
                         Repeater {
                             id: sw
@@ -287,7 +287,7 @@ Overlay {
                     Chip { visible: !!win.credit.author; text: "Foto de " + (win.credit.author ?? "") + " en Unsplash" }
                     Btn {
                         visible: win.webOrigin
-                        Layout.leftMargin: 6
+                        Layout.leftMargin: 8
                         kind: "ghost"; h: 26; icon: "download"; text: "Guardar en mis fondos"
                         onClicked: { addProc.command = [Paths.script("hf-wallpaper"), "add", win.cur.path]; addProc.running = true; }
                     }
@@ -457,7 +457,7 @@ Overlay {
         RowLayout {
             id: cr
             anchors.centerIn: parent
-            spacing: 5
+            spacing: 4
             Icon { visible: chip.icon !== ""; name: chip.icon; size: 12; color: chip.accent ? Theme.selText : Theme.tv }
             Txt { text: chip.text; size: 11.5; weight: Font.Medium; tabular: chip.tabular; color: chip.accent ? Theme.selText : Theme.t }
         }

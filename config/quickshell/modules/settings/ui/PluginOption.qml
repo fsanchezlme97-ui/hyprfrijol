@@ -21,7 +21,7 @@ Item {
     RowLayout {
         anchors.fill: parent
         anchors.topMargin: 1
-        spacing: 10
+        spacing: 12
         Txt { Layout.fillWidth: true; text: root.opt.label ?? root.opt.key; weight: Font.Medium; wrapMode: Text.WordWrap; maximumLineCount: 2 }
         Sw {
             visible: root.opt.type === "bool"
@@ -30,7 +30,7 @@ Item {
         }
         RowLayout {
             visible: root.opt.type === "int"
-            spacing: 6
+            spacing: 8
             Button {
                 h: 26; text: "−"
                 enabled: Number(root.cur) > (root.opt.min ?? -1e9)

@@ -165,23 +165,23 @@ ColumnLayout {
             RowLayout {
                 visible: root.colorMode === "auto"
                 Layout.leftMargin: 80
-                spacing: 6
+                spacing: 8
                 Repeater {
                     model: [Theme.p, Theme.pc, Theme.sc, Theme.ter, Theme.s4]
                     Rectangle { required property color modelData; width: 22; height: 22; radius: 11; color: modelData; border.width: 1; border.color: Theme.ov }
                 }
-                Txt { Layout.leftMargin: 6; muted: true; size: 11.5; text: "Tomado del fondo «" + (wp.current ? wp.name(wp.current) : "—") + "»" }
+                Txt { Layout.leftMargin: 8; muted: true; size: 11.5; text: "Tomado del fondo «" + (wp.current ? wp.name(wp.current) : "—") + "»" }
             }
             // Paleta elegida (la lista completa, con búsqueda y grupos, va en «Paleta de colores», debajo)
             RowLayout {
                 visible: root.colorMode === "elegir"
                 Layout.leftMargin: 80
-                spacing: 6
+                spacing: 8
                 Repeater {
                     model: [Theme.p, Theme.pc, Theme.sc, Theme.ter, Theme.s4]
                     Rectangle { required property color modelData; width: 22; height: 22; radius: 11; color: modelData; border.width: 1; border.color: Theme.ov }
                 }
-                Txt { Layout.leftMargin: 6; muted: true; size: 11.5; text: (root.pals[root.paletteKey]?.name ?? Theme.paletteName).replace(" · claro", "") + " · " + root.palKeys.length + " paletas abajo" }
+                Txt { Layout.leftMargin: 8; muted: true; size: 11.5; text: (root.pals[root.paletteKey]?.name ?? Theme.paletteName).replace(" · claro", "") + " · " + root.palKeys.length + " paletas abajo" }
             }
             // Acento: el de la paleta o uno propio (sustituye al color principal en todo el tema)
             LabeledRow {
@@ -192,7 +192,7 @@ ColumnLayout {
                 visible: root.colorMode === "mono"
                 Layout.fillWidth: true
                 Layout.leftMargin: 80
-                spacing: 10
+                spacing: 12
                 Seg {
                     model: [["oscuro", "Oscuro"], ["claro", "Claro"]]
                     current: root.themeMode === "claro" ? "claro" : "oscuro"
@@ -272,7 +272,7 @@ ColumnLayout {
         headerRight: Mono { tech: true; text: "palette = " + root.paletteKey }
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 12
             Field {
                 Layout.preferredWidth: 220
                 placeholder: "Buscar paleta…"
@@ -348,11 +348,11 @@ ColumnLayout {
         headerRight: Mono { tech: true; text: "fontFamily · fontScale = " + Settings.get("fontScale", 1) + " · appFontPx = " + Settings.get("appFontPx", 12) + " · termFontPx = " + Settings.get("termFontPx", 13) }
         RowLayout {
             Layout.fillWidth: true
-            spacing: 22
+            spacing: 24
             ColumnLayout {
                 Layout.fillWidth: true; Layout.preferredWidth: 1
                 Layout.alignment: Qt.AlignTop
-                spacing: 10
+                spacing: 12
                 LabeledRow {
                     label: "Fuente"; labelWidth: 120
                     RowLayout {
@@ -436,7 +436,7 @@ ColumnLayout {
         headerRight: Mono { tech: true; text: "rounding = " + (Settings.get("rounding", null) ?? Theme.winRadius) + " · rounding_power" }
         RowLayout {
             Layout.fillWidth: true
-            spacing: 22
+            spacing: 24
             ColumnLayout {
                 Layout.fillWidth: true; Layout.preferredWidth: 1
                 spacing: 8
@@ -480,7 +480,7 @@ ColumnLayout {
         Layout.fillWidth: true
         RowLayout {
             Layout.fillWidth: true
-            spacing: 22
+            spacing: 24
             ColumnLayout {
                 Layout.fillWidth: true; Layout.preferredWidth: 1
                 spacing: 8
@@ -513,7 +513,7 @@ ColumnLayout {
             visible: Settings.get("themeApps", false)
             Layout.fillWidth: true
             columns: 2
-            columnSpacing: 22
+            columnSpacing: 24
             rowSpacing: 0
             SwRow { Layout.preferredWidth: 1; label: "Terminal (kitty)"; sub: "Esquema completo: 16 colores, selección y pestañas"; key: "themeKitty"; def: true }
             SwRow { Layout.preferredWidth: 1; label: "Apps GTK y GNOME"; sub: "Nautilus, Loupe, Papers… · libadwaita y GTK 3"; key: "themeGtk"; def: true }

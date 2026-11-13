@@ -19,8 +19,8 @@ Item {
     readonly property string compat: tool.preview ? "Nativa · no oficial" : tool.alpha ? "Por verificar" : tool.web ? "Navegador" : tool.term ? "Terminal" : tool.xw ? "XWayland" : "Wayland"
     Rectangle {
         anchors.fill: parent
-        anchors.rightMargin: 6
-        anchors.bottomMargin: 6
+        anchors.rightMargin: 8
+        anchors.bottomMargin: 8
         radius: Theme.r(6)
         color: card.on ? Qt.alpha(Theme.p, 0.10) : cardMa.containsMouse ? Qt.tint(Theme.s3, Qt.alpha(Theme.t, 0.04)) : Theme.s3
         border.width: 1
@@ -34,10 +34,10 @@ Item {
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                spacing: 3
+                spacing: 2   // alto fijo de la tarjeta: la descripción necesita sus dos líneas
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 5
+                    spacing: 4
                     Txt { id: nm; text: card.tool.name; weight: Font.DemiBold; size: 13; Layout.fillWidth: true; Layout.maximumWidth: tm.advanceWidth + 2; elide: Text.ElideRight
                         TextMetrics { id: tm; font: nm.font; text: nm.text } }
                     Txt { visible: card.tool.star; text: "★"; size: 11; color: Theme.ter }
@@ -48,7 +48,7 @@ Item {
                 Txt { Layout.fillWidth: true; Layout.fillHeight: true; text: card.tool.desc; muted: true; size: 12; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight; verticalAlignment: Text.AlignTop; lineHeight: 1.05 }
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 5
+                    spacing: 4
                     Repeater {
                         model: [card.inst ? ["INSTALADA", Theme.sc, Theme.scText] : null, card.upd ? ["ACTUALIZACIÓN", Theme.p, Theme.pText] : null, !card.inst && card.tool.isNew ? ["NUEVO", Theme.pc, Theme.pcText] : null, card.tool.alpha ? ["ALFA", Theme.ter, Theme.bg] : null, card.tool.preview ? ["PREVIEW", Theme.ter, Theme.bg] : null].filter(Boolean)
                         Rectangle {

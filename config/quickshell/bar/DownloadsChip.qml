@@ -49,7 +49,7 @@ BarChip {
         id: r
         visible: !chip.vertical
         anchors.centerIn: parent
-        spacing: 5
+        spacing: 4
         Ring {}
         Txt {
             visible: Downloads.active.length > 0

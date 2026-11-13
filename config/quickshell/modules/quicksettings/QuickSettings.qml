@@ -156,7 +156,7 @@ Overlay {
             width: flick.width
             // Llena el alto del panel (las notificaciones crecen) o lo que pida el contenido
             height: Math.max(flick.height, implicitHeight)
-            spacing: 6
+            spacing: 8
 
             // ═══ Tarjeta principal ═══
             Glass {
@@ -167,12 +167,12 @@ Overlay {
                 ColumnLayout {
                     id: main
                     anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
-                    spacing: 9
+                    spacing: 8
 
                     // Cabecera
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 10
+                        spacing: 12
                         Rectangle {
                             implicitWidth: 30; implicitHeight: 30; radius: 15
                             color: Theme.pc
@@ -226,7 +226,7 @@ Overlay {
                     }
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 5
+                        spacing: 4
                         AjusteSlider {
                             Layout.fillWidth: true
                             icon: Audio.icon
@@ -303,7 +303,7 @@ Overlay {
                             GridLayout {
                                     width: pflick.width
                                     columns: 2
-                                    rowSpacing: 5; columnSpacing: 5
+                                    rowSpacing: 4; columnSpacing: 4
                                     AjusteTile {
                                         Layout.fillWidth: true; Layout.preferredWidth: 10
                                         icon: Net.type === "ethernet" ? "ethernet" : "wifi"
@@ -372,7 +372,7 @@ Overlay {
                             GridLayout {
                                     width: pflick.width
                                     columns: 2
-                                    rowSpacing: 5; columnSpacing: 5
+                                    rowSpacing: 4; columnSpacing: 4
                                     AjusteTile {
                                         Layout.fillWidth: true; Layout.preferredWidth: 10
                                         icon: "contrast"; label: "Claro/oscuro auto"
@@ -442,7 +442,7 @@ Overlay {
                     // puntos de página
                     Row {
                         Layout.alignment: Qt.AlignHCenter
-                        spacing: 6
+                        spacing: 8
                         Repeater {
                             model: pager.pages
                             Rectangle {
@@ -472,7 +472,7 @@ Overlay {
                             ColumnLayout {
                                 id: wmCol
                                 anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
-                                spacing: 6
+                                spacing: 8
                                 Txt { text: "Todos los espacios"; size: 11.5; muted: true }
                                 AjusteSeg {
                                     Layout.fillWidth: true
@@ -507,7 +507,7 @@ Overlay {
                         active: win.expanded === "cafe"
                         visible: active
                         sourceComponent: RowLayout {
-                            spacing: 5
+                            spacing: 4
                             Repeater {
                                 model: [[30, "30 min"], [60, "1 hora"], [120, "2 horas"], [0, "Sin límite"]]
                                 Btn {
@@ -525,7 +525,7 @@ Overlay {
                         active: win.expanded === "phone" && win.phone !== null
                         visible: active
                         sourceComponent: RowLayout {
-                            spacing: 5
+                            spacing: 4
                             Btn { Layout.fillWidth: true; h: 28; padX: 6; icon: "bell"; text: "Hacer sonar"
                                   onClicked: Quickshell.execDetached([Paths.script("hf-phone"), "ring", win.phone.id]) }
                             Btn { Layout.fillWidth: true; h: 28; padX: 6; icon: "upload"; text: "Enviar archivo"
@@ -535,7 +535,7 @@ Overlay {
                     // Modo de energía
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 5
+                        spacing: 4
                         Txt { size: 11.5; muted: true; text: "Modo de energía" }
                         AjusteSeg {
                             Layout.fillWidth: true
@@ -656,7 +656,7 @@ Overlay {
                             color: Theme.s1
                             TextInput {
                                 id: pw
-                                anchors { fill: parent; leftMargin: 10; rightMargin: 34 }
+                                anchors { fill: parent; leftMargin: 12; rightMargin: 34 }
                                 verticalAlignment: TextInput.AlignVCenter
                                 echoMode: TextInput.Password
                                 color: Theme.t
@@ -667,7 +667,7 @@ Overlay {
                                 Txt { visible: !pw.text; anchors.fill: parent; muted: true; size: 12; text: "Contraseña…" }
                             }
                             IconBtn {
-                                anchors { right: parent.right; rightMargin: 3; verticalCenter: parent.verticalCenter }
+                                anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
                                 implicitWidth: 22; implicitHeight: 22; radius: 11
                                 color: Theme.p; fg: Theme.pText; icon: "arrow_right"; iconSize: 12
                                 onClicked: pw.accepted()
@@ -766,7 +766,7 @@ Overlay {
         }
         Icon { x: 11; anchors.verticalCenter: parent.verticalCenter; name: root.icon; color: root.muted ? Theme.t : Theme.fillOnText }
         Txt {
-            anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
+            anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
             text: Math.round(root.value * 100) + " %"
             size: 11.5
             tabular: true
@@ -816,9 +816,9 @@ Overlay {
         }
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 11
+            anchors.leftMargin: 12
             anchors.rightMargin: root.expandable ? 2 : 11
-            spacing: 10
+            spacing: 12
             Icon { name: root.icon; color: root.fg; size: 17 }
             ColumnLayout {
                 id: tcol

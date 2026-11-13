@@ -77,7 +77,7 @@ ColumnLayout {
                         radius: Theme.r(6)
                         color: nw.modelData.active ? Theme.pc : ma.containsMouse ? Qt.alpha(Theme.t, 0.05) : "transparent"
                         RowLayout {
-                            anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10
+                            anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
                             spacing: 12
                             Row {   // barras de señal
                                 spacing: 2
@@ -329,7 +329,7 @@ ColumnLayout {
                             }
                         }
                         Sw {
-                            Layout.leftMargin: 6
+                            Layout.leftMargin: 8
                             checked: row.on || row.working
                             enabled: !(vs.busy === row.modelData.uuid)
                             onToggled: v => { vs.busy = row.modelData.uuid; vs.run([v ? "up" : "down", row.modelData.uuid]); }
@@ -341,7 +341,7 @@ ColumnLayout {
                     visible: row.failed && (row.modelData.msg ?? "") !== ""
                     Layout.fillWidth: true
                     Layout.leftMargin: 46
-                    Layout.bottomMargin: 10
+                    Layout.bottomMargin: 12
                     implicitHeight: errCol.implicitHeight + 20
                     radius: Theme.r(8)
                     color: Qt.alpha(Theme.danger, 0.08)
@@ -350,8 +350,8 @@ ColumnLayout {
                     ColumnLayout {
                         id: errCol
                         anchors.fill: parent
-                        anchors.margins: 10
-                        spacing: 6
+                        anchors.margins: 12
+                        spacing: 8
                         Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; size: 12; text: row.modelData.msg ?? "" }
                         Mono {
                             visible: row.modelData.errKind === "cert"
@@ -393,7 +393,7 @@ ColumnLayout {
         ColumnLayout {
             visible: vs.adding
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 12
             Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.ov; visible: vs.conns.length > 0 }
             Txt { text: "Tipo de VPN"; muted: true; size: 11.5 }
             GridLayout {
@@ -431,7 +431,7 @@ ColumnLayout {
             RowLayout {
                 visible: vs.cur !== null && !vs.cur.corp && !vs.cur.installed
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Txt {
                     Layout.fillWidth: true; wrapMode: Text.WordWrap
                     text: vs.cur ? "Para conectarte a una VPN " + vs.cur.label + " hace falta el plugin de NetworkManager «" + vs.cur.pkg + "»"
@@ -444,7 +444,7 @@ ColumnLayout {
             RowLayout {
                 visible: vs.cur !== null && vs.cur.installed && vs.cur.key === "wireguard"
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; text: "Lo normal es importar el .conf que te da tu servidor (o tu proveedor: Mullvad, Proton, tu router…). También puedes crearla a mano." }
                 Button { kind: "primary"; text: "Importar .conf…"; onClicked: vs.run(["import", "", "wireguard"], "VPN importada") }
                 Button { text: vs.editor ? "Crear a mano" : "Instalar editor"; onClicked: vs.editor ? vs.run(["create", "wireguard"]) : vs.install("editor") }
@@ -461,7 +461,7 @@ ColumnLayout {
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.leftMargin: 130
-                    spacing: 10
+                    spacing: 12
                     Button {
                         kind: "primary"; text: "Crear"
                         enabled: hostF.text.trim() !== ""
@@ -536,7 +536,7 @@ ColumnLayout {
             visible: tsRow.st === "Running" && (ms.ts.exitNodes ?? []).length > 0
             Layout.fillWidth: true
             Layout.leftMargin: 46
-            spacing: 10
+            spacing: 12
             Txt { Layout.fillWidth: true; text: "Nodo de salida"; size: 12.5; weight: Font.Medium }
             Txt { visible: !!ms.ts.exitNode; text: "el tráfico sale por " + ms.ts.exitNode; muted: true; size: 11.5 }
             Dropdown {
@@ -572,7 +572,7 @@ ColumnLayout {
                 required property var modelData
                 Layout.fillWidth: true
                 Layout.leftMargin: 46
-                spacing: 10
+                spacing: 12
                 Mono { text: modelData.id }
                 Txt { Layout.fillWidth: true; text: (modelData.name || "sin nombre") + " · " + (modelData.status === "OK" ? (modelData.ip || "conectada") : modelData.status === "ACCESS_DENIED" ? "falta autorizarte en el controlador" : modelData.status.toLowerCase()); size: 12 }
                 Button { kind: "link"; text: "Salir"; onClicked: ms.term("zerotier leave " + modelData.id, "ZeroTier") }

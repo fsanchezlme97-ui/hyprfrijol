@@ -28,8 +28,8 @@ ChipPopup {
 
         ColumnLayout {
             id: col
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 14 }
-            spacing: 10
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 16 }
+            spacing: 12
 
             RowLayout {
                 Layout.fillWidth: true
@@ -60,11 +60,11 @@ ChipPopup {
                     color: Theme.fill2
                     ColumnLayout {
                         id: rc
-                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 10 }
-                        spacing: 7
+                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
+                        spacing: 8
                         RowLayout {
                             Layout.fillWidth: true
-                            spacing: 9
+                            spacing: 8
                             Rectangle {
                                 implicitWidth: 30; implicitHeight: 30; radius: Theme.r(8)
                                 color: Theme.pc
@@ -93,7 +93,7 @@ ChipPopup {
                         }
                         RowLayout {
                             Layout.fillWidth: true
-                            spacing: 6
+                            spacing: 8
                             DevBtn {
                                 icon: "folder"
                                 text: row.d.mounted ? "Abrir" : "Montar y abrir"
@@ -121,7 +121,7 @@ ChipPopup {
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
                 DevBtn {
                     visible: Devices.list.length > 1
                     svgIcon: pop.ejectSvg

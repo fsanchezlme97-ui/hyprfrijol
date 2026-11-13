@@ -15,7 +15,7 @@ Rectangle {
     RowLayout {
         id: r
         anchors.centerIn: parent
-        spacing: 5
+        spacing: 4
         Rectangle { width: 6; height: 6; radius: 3; color: Theme.ter }
         Txt { text: "Micrófono"; size: 11.5; weight: Font.Medium }
     }

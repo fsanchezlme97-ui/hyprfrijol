@@ -67,7 +67,7 @@ RowLayout {
             SliderBar { Layout.fillWidth: true; icon: "volume"; value: Audio.volume; to: Audio.maxVolume; onMoved: v => Audio.setVolume(v) }
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Txt { text: "Balance"; muted: true; Layout.preferredWidth: 60 }
                 Txt { text: "I"; muted: true; size: 11; weight: Font.DemiBold }
                 Item {
@@ -111,7 +111,7 @@ RowLayout {
                 implicitHeight: 14
                 Row {
                     anchors.fill: parent
-                    spacing: 3
+                    spacing: 4
                     Repeater {
                         model: 26
                         Rectangle {

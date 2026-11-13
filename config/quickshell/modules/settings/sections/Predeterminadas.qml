@@ -107,7 +107,7 @@ RowLayout {
             RowLayout {
                 Layout.fillWidth: true
                 Layout.topMargin: 2
-                spacing: 10
+                spacing: 12
                 Button {
                     text: "Usar las recomendadas"
                     onClicked: root.act(["recommended", "--force"], "list")
@@ -119,7 +119,7 @@ RowLayout {
             }
             RowLayout {   // las de serie de install/apps.json (también Chrome como navegador): scripts/hf-apps defaults
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
                 Button {
                     text: serieDefaults.running ? "Aplicando…" : "Usar las de serie"
                     enabled: !serieDefaults.running
@@ -163,7 +163,7 @@ RowLayout {
                     RowLayout {
                         anchors.fill: parent
                         anchors.topMargin: 1
-                        spacing: 10
+                        spacing: 12
                         Rectangle {
                             implicitWidth: 30; implicitHeight: 30; radius: Theme.r(6)
                             color: Theme.s4
