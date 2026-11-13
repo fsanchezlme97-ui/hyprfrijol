@@ -59,7 +59,7 @@ Scope {
         { key: "fecha", label: "Fecha, hora e idioma", icon: "clock", file: "Fecha", sub: "timedatectl · localectl", kw: "fecha hora calendario calendarios ics google nextcloud zona horaria 24 horas semana relojes del mundo idioma región formatos ntp localectl locale" },
         { key: "usuarios", label: "Usuarios", icon: "user", file: "Usuarios", sub: "AccountsService · useradd", kw: "usuarios cuenta contraseña avatar administrador" },
         { key: "virtualizacion", label: "Máquinas virtuales", icon: "cpu", file: "Virtualizacion", sub: "Cockpit · libvirt · Boxes", kw: "máquinas virtuales vm cockpit libvirt qemu kvm boxes contenedores podman distrobox" },
-        { key: "sistema", label: "Sistema y recuperación", icon: "restart", file: "Sistema", sub: "snapper · limine · paru", kw: "sistema snapper puntos de restauración copia de seguridad kernel lts actualizaciones firmware flatpak exportar importar ajustes" },
+        { key: "sistema", label: "Sistema y recuperación", icon: "restart", file: "Sistema", sub: "snapper · limine · paru", kw: "sistema respaldo reinstalar otro equipo nuevo cargar respaldo snapper puntos de restauración copia de seguridad kernel lts actualizaciones firmware flatpak exportar importar ajustes" },
         { key: "acerca", label: "Acerca del sistema", icon: "info", file: "Acerca", sub: "fastfetch · tu perfil de escritorio", kw: "acerca sistema equipo kernel cpu gpu memoria sincronizar perfil exportar perfil" }
     ]
     readonly property var current: nav.find(n => n.key === section) ?? nav[0]

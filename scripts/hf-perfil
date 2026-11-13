@@ -497,7 +497,7 @@ def main():
             if subprocess.run(c).returncode != 0:
                 failed.append(label)
         if not dry:
-            print("\nListo." if not failed else "\nTerminado con fallos en: " + ", ".join(failed) + " (puedes repetir: solo hace lo que falta)")
+            print("\nListo. Cierra sesión y vuelve a entrar para verlo todo." if not failed else "\nTerminado con fallos en: " + ", ".join(failed) + " (puedes repetir: solo hace lo que falta)")
             print("Falta lo que no va en el perfil: claves de la IA (Ajustes › Asistente de IA), contraseña de RDP "
                   "(hf-remote rdp password), contraseña permanente de RustDesk y tus fondos (" + str(p.get("wallpapers")) + ").")
         return 1 if failed else 0

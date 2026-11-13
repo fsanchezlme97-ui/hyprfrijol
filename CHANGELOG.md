@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.81] — 2026-11-13
+
+### Añadido
+- Ajustes › Sistema y recuperación › **Respaldo**: «Crear…» guarda el respaldo completo (`hf-perfil respaldo`) donde
+  elijas, para llevarlo fuera (USB, tu nube); «Cargar…», en el equipo nuevo tras instalar HyprFrijol desde GitHub,
+  lo repone en una terminal (pide tu contraseña) y al terminar basta con cerrar sesión y volver a entrar. La sección
+  muestra también la orden para instalar y cargar el respaldo de una vez.
+
+### Cambiado
+- Acerca › «Respaldo completo…» lleva a esa sección en vez de exportar solo los ajustes.
+- La sincronización de ajustes por git deja fuera la carpeta `secrets/`.
+
 ## [0.9.80] — 2026-11-13
 
 ### Añadido

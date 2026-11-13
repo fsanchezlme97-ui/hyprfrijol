@@ -202,6 +202,82 @@ RowLayout {
             SwRow { label: "Incluir Flatpak"; sub: "flatpak update"; mono: true; key: "updatesFlatpak"; def: true; enabled: !!root.has["flatpak"] }
             SwRow { label: "Firmware"; sub: root.has["fwupd"] ? "fwupdmgr" : "instala fwupd"; mono: true; key: "updatesFirmware"; def: true; enabled: !!root.has["fwupd"] }
         }
+        // ---------- respaldo completo (scripts/hf-perfil respaldo / aplicar): llevarlo todo a otro equipo ----------
+        Section {
+            id: bk
+            Layout.fillWidth: true
+            title: "Respaldo"
+            headerRight: Mono { tech: true; text: "hf-perfil respaldo" }
+            readonly property string tool: Paths.root + "/scripts/hf-perfil"
+            property string msg: ""
+            property bool bad: false
+            property string file: ""
+            Txt {
+                Layout.fillWidth: true; muted: true; wrapMode: Text.WordWrap
+                text: "Todo en un archivo para reinstalar o pasar a otro equipo: apps, servicios, acceso remoto, voz, tus ajustes, "
+                    + "tus datos (notas, tareas, calendario, conversaciones del asistente, firmas), tus fondos y el idioma, teclado y "
+                    + "hora. Sin contraseñas ni claves: al cargarlo se dice cuáles volver a poner."
+            }
+            InfoRow {
+                label: "Crear respaldo"; icon: "upload"
+                sub: mkProc.running ? "creando… puede tardar un minuto" : "un .tar.gz para guardar fuera (USB, tu nube)"
+                Button { text: mkProc.running ? "Creando…" : "Crear…"; kind: "primary"; enabled: !mkProc.running && !pickProc.running; onClicked: { bk.msg = ""; mkProc.running = true; } }
+            }
+            InfoRow {
+                label: "Cargar respaldo"; icon: "download"
+                sub: "en el equipo nuevo; pide tu contraseña"
+                Button { text: "Cargar…"; enabled: !mkProc.running && !pickProc.running; onClicked: { bk.msg = ""; pickProc.running = true; } }
+            }
+            RowLayout {
+                visible: bk.msg !== ""
+                Layout.fillWidth: true
+                spacing: 8
+                Txt {
+                    Layout.fillWidth: true
+                    text: bk.msg; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                    color: bk.bad ? Theme.danger : Theme.tv
+                }
+                Button { visible: bk.file !== "" && !bk.bad; text: "Abrir carpeta"; onClicked: Quickshell.execDetached(["xdg-open", bk.file.replace(/\/[^/]*$/, "")]) }
+            }
+            Mono { tech: true; Layout.fillWidth: true; wrapMode: Text.WrapAtWordBoundaryOrAnywhere; elide: Text.ElideNone
+                   text: "Sin HyprFrijol aún: curl -fsSL https://raw.githubusercontent.com/fsanchezlme97-ui/hyprfrijol/main/install/bootstrap.sh | bash -s -- --perfil=RUTA.tar.gz" }
+            // Dónde guardarlo (zenity; sin diálogo, tu carpeta personal) y crearlo
+            Process {
+                id: mkProc
+                command: ["sh", "-c", "def=\"$HOME/respaldo-hyprfrijol-$(date +%Y%m%d-%H%M).tar.gz\"; "
+                    + "if command -v zenity >/dev/null; then f=$(zenity --file-selection --save --confirm-overwrite --title='Crear respaldo' "
+                    + "--filename=\"$def\" --file-filter='Respaldo | *.tar.gz' 2>/dev/null) || { echo CANCEL; exit; }; else f=$def; fi; "
+                    + "case $f in *.tar.gz) ;; *) f=$f.tar.gz;; esac; \"$1\" respaldo \"$f\" >/dev/null 2>&1 && echo \"OK $f\" || echo \"ERR $f\"",
+                    "sh", bk.tool]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        const t = text.trim();
+                        if (t === "CANCEL" || t === "") return;
+                        bk.bad = !t.startsWith("OK ");
+                        bk.file = t.slice(t.indexOf(" ") + 1);
+                        bk.msg = (bk.bad ? "No se pudo crear «" : "Respaldo creado: «") + bk.file.split(Paths.home).join("~") + "»"
+                            + (bk.bad ? "" : ". Cópialo fuera de este equipo.");
+                    }
+                }
+            }
+            // Elegir el archivo y cargarlo en una terminal (instala paquetes y servicios: pide la contraseña)
+            Process {
+                id: pickProc
+                command: ["sh", "-c", "command -v zenity >/dev/null || { echo NOZENITY; exit; }; "
+                    + "zenity --file-selection --title='Cargar respaldo' --filename=\"$HOME/\" --file-filter='Respaldo | *.tar.gz *.json' 2>/dev/null || echo CANCEL"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        const f = text.trim();
+                        if (f === "CANCEL" || f === "") return;
+                        if (f === "NOZENITY") { bk.bad = true; bk.msg = "Falta zenity para elegir el archivo: en una terminal, hf-perfil aplicar RUTA.tar.gz"; return; }
+                        const q = s => "'" + s.replace(/'/g, "'\\''") + "'";
+                        Pkg.runInTerminal(q(bk.tool) + " aplicar " + q(f), "Cargar respaldo");
+                        bk.bad = false; bk.file = "";
+                        bk.msg = "Cargando en la terminal. Al terminar, cierra sesión y vuelve a entrar para verlo todo.";
+                    }
+                }
+            }
+        }
         // ---------- copia de los ajustes (~/.config/hyprfrijol/settings.json) → services/SettingsIO.qml ----------
         Section {
             Layout.fillWidth: true

@@ -139,7 +139,7 @@ RowLayout {
             Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
             text: sync.method === "git" ? (root.sys.git ? "Repositorio: " + root.sys.git : "Repositorio git privado en ~/.config/hyprfrijol · historial de cambios y vuelta atrás.")
                 : sync.method === "sync" ? "Comparte ~/.config/hyprfrijol con Syncthing entre tus equipos."
-                : "Un .tar con tu perfil que puedes copiar a mano."
+                : "Un archivo con todo, también tus datos y tus fondos: Sistema y recuperación › Respaldo."
         }
         LabeledRow {
             visible: sync.method === "git"
@@ -159,15 +159,17 @@ RowLayout {
                 onClicked: {
                     const apps = Settings.get("syncApps", true) ? "pacman -Qqe > apps-pacman.txt; command -v flatpak >/dev/null && flatpak list --app --columns=application > apps-flatpak.txt; " : "";
                     const walls = Settings.get("syncWallpapers", false) ? "mkdir -p fondos; cp -u \"$(xdg-user-dir PICTURES)\"/Wallpapers/* \"$(xdg-user-dir PICTURES)\"/Fondos/* fondos/ 2>/dev/null; " : "";
-                    syncProc.command = ["sh", "-c", "cd ~/.config/hyprfrijol && { [ -d .git ] || git init -q; } && " + apps + walls
+                    syncProc.command = ["sh", "-c", "cd ~/.config/hyprfrijol && { [ -d .git ] || git init -q; } && "
+                        + "{ grep -qx 'secrets/' .gitignore 2>/dev/null || echo 'secrets/' >> .gitignore; } && " + apps + walls   // las claves nunca al remoto
                         + "git add -A && { git commit -qm \"hyprfrijol: $(date '+%F %T')\" || true; } && { git remote get-url origin >/dev/null 2>&1 && git push -q -u origin HEAD 2>&1 && echo OK-PUSH || echo OK-LOCAL; }"];
                     syncProc.running = true;
                 }
             }
             Button {
                 Layout.fillWidth: true
-                text: "Exportar perfil (.tar)"
-                onClicked: { syncProc.command = ["sh", "-c", "f=\"$HOME/hyprfrijol-perfil-$(date +%F).tar.gz\"; tar czf \"$f\" -C \"$HOME/.config\" hyprfrijol && echo \"EXPORT $f\""]; syncProc.running = true; }
+                text: "Respaldo completo…"
+                // El .tar de toda la carpeta llevaba también secrets/ (claves): ahora es el respaldo de hf-perfil, sin claves
+                onClicked: Shell.open("ajustesapp", "sistema#Crear respaldo")
             }
         }
         Process {
@@ -175,7 +177,7 @@ RowLayout {
             stdout: StdioCollector {
                 onStreamFinished: root.syncMsg = text.includes("OK-PUSH") ? "Sincronizado con " + (root.sys.git ?? "el remoto") + " ✓"
                     : text.includes("OK-LOCAL") ? "Guardado en el historial local (añade un remoto para subirlo)"
-                    : text.includes("EXPORT") ? "Exportado: " + text.trim().split(" ").slice(1).join(" ") : (text.trim() || "No se pudo sincronizar")
+                    : (text.trim() || "No se pudo sincronizar")
             }
         }
         Mono { tech: true; Layout.fillWidth: true; text: "En otro equipo: git clone <remoto> ~/.config/hyprfrijol && hf-apply"; wrapMode: Text.WrapAtWordBoundaryOrAnywhere; elide: Text.ElideNone }
