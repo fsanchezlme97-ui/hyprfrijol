@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.68] — 2026-11-12
+
+### Seguridad
+- Vista previa de Word, Excel y LibreOffice: un documento con párrafos o celdas metidos unos dentro de otros a
+  propósito hacía que el texto se recorriera una vez por nivel (cuadrático). Ahora solo cuentan los de fuera, el XML
+  se lee por trozos y cada elemento se suelta al usarlo: 200 000 niveles se leen en 0,3 s.
+
 ## [0.9.67] — 2026-11-12
 
 ### Seguridad

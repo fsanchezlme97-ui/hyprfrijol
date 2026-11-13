@@ -249,15 +249,24 @@ def zip_xml(z, name, limit=4 << 20):
         return ""
 
 
-def xml_ends(x):
-    """Elementos ya cerrados de un XML, en orden, como (nombre sin espacio de nombres, elemento). Aguanta el XML cortado
-    por el límite de zip_xml y es lineal (antes, expresiones regulares: un archivo hecho a mala idea las volvía
-    cuadráticas). ElementTree no resuelve entidades externas."""
-    p = ET.XMLPullParser(("end",))
+def xml_ends(x, want):
+    """Los elementos «want» (nombres sin espacio de nombres) ya cerrados, en orden, como (nombre, elemento). Solo los de
+    fuera: uno metido en otro no se vuelve a sacar (con anidados a propósito, sacar el texto de cada uno era
+    cuadrático), y cada uno se vacía tras usarlo. Lee el XML por trozos, así que parar pronto ahorra el resto; aguanta
+    el XML cortado por el límite de zip_xml. ElementTree no resuelve entidades externas."""
+    p = ET.XMLPullParser(("start", "end"))
+    depth = 0
     try:
-        p.feed(x)
-        for _, e in p.read_events():
-            yield e.tag.rsplit("}", 1)[-1], e
+        for i in range(0, len(x), 1 << 16):
+            p.feed(x[i:i + (1 << 16)])
+            for ev, e in p.read_events():
+                tag = e.tag.rsplit("}", 1)[-1]
+                if tag not in want:
+                    continue
+                depth += 1 if ev == "start" else -1
+                if ev == "end" and depth == 0:
+                    yield tag, e
+                    e.clear()
     except ET.ParseError:
         return
 
@@ -278,11 +287,10 @@ def office_text(p, ext, most=200):
         if ext == "pptx":
             slides = sorted((n for n in z.namelist() if re.match(r"ppt/slides/slide\d+\.xml$", n)), key=lambda n: int(re.sub(r"\D", "", n)))
             for n in slides[:8]:
-                out.append(" ".join(t for tag, e in xml_ends(zip_xml(z, n)) if tag == "t" and (t := el_text(e))))
+                out.append(" ".join(t for _, e in xml_ends(zip_xml(z, n), {"t"}) if (t := el_text(e))))
         elif ext == "xlsx":
-            shared = [el_text(e) for tag, e in xml_ends(zip_xml(z, "xl/sharedStrings.xml")) if tag == "si"]
-            for tag, row in xml_ends(zip_xml(z, "xl/worksheets/sheet1.xml")):
-                if tag != "row": continue
+            shared = [el_text(e) for _, e in xml_ends(zip_xml(z, "xl/sharedStrings.xml"), {"si"})]
+            for _, row in xml_ends(zip_xml(z, "xl/worksheets/sheet1.xml"), {"row"}):
                 cells = []
                 for c in [c for c in row if c.tag.endswith("}c")][:10]:
                     v = next((x.text or "" for x in c if x.tag.endswith("}v")), None)
@@ -294,13 +302,12 @@ def office_text(p, ext, most=200):
                 if len(out) >= 20: break
         elif ext == "docx" or ext in ("odt", "odp", "ods"):
             x = zip_xml(z, "word/document.xml" if ext == "docx" else "content.xml")
-            for tag, e in xml_ends(x):
+            for tag, e in xml_ends(x, {"table-row"} if ext == "ods" else {"p"} if ext == "docx" else {"p", "h"}):
                 if ext == "ods":
-                    if tag != "table-row": continue
                     cells = [el_text(c) for c in e if c.tag.endswith("}table-cell")][:10]
                     if any(cells): out.append("\t".join(cells))
                     if len(out) >= 20: break
-                elif tag in (("p",) if ext == "docx" else ("p", "h")) and (t := el_text(e)):
+                elif t := el_text(e):
                     out.append(t)
                     if len(out) >= most: break
     return "\n".join(out)
