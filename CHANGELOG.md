@@ -3,6 +3,17 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.72] — 2026-11-13
+
+### Corregido
+- Con el modelo local, «Abre YouTube» o «abre Spotify» no hacían nada y el asistente decía «Estos son los pasos:»
+  sin pasos: pedía abrir una app que no está instalada. Si no la hay y es una web conocida (YouTube, Spotify, Gmail,
+  WhatsApp, Netflix…) se abre su web; si no, dice que no la encuentra.
+- Las miniaturas de la vista previa de Spotlight (`~/.cache/hyprfrijol/preview`) no se borraban nunca: las que nadie
+  mira en 30 días se borran (se revisa como mucho una vez al día).
+- Las instalaciones con una gráfica en nouveau que ya tenían RustDesk reciben una vez el códec por hardware apagado
+  (`hf-remote rustdesk hwcodec-off`, sin sudo); antes solo se apagaba al volver a lanzar `hf-remote rustdesk gpu`.
+
 ## [0.9.71] — 2026-11-13
 
 ### Corregido

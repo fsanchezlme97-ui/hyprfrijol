@@ -12,9 +12,10 @@
 #   hf-remote rdp status|start|stop|restart   compartir ESTA sesión por RDP (hypr-rdp): desde Windows con mstsc
 #   hf-remote rdp password               pide la contraseña de RDP (usuario = el tuyo) y la guarda en ~/.config/hypr-rdp
 #   hf-remote rdp boot                   al iniciar sesión: lo arranca si rdpServer está activo
-#   hf-remote rustdesk status|portal|instalar|gpu entrar a ESTA sesión con RustDesk (status: JSON; portal: instala el
+#   hf-remote rustdesk status|portal|instalar|gpu|hwcodec-off entrar a ESTA sesión con RustDesk (status: JSON; portal: instala el
 #                                        portal RemoteDesktop; instalar: rustdesk-bin + su servicio)
 #                                        gpu: con una gráfica en nouveau, su servicio dibuja en la otra
+#                                        hwcodec-off: con nouveau, sin códec por hardware (sin sudo)
 #   hf-remote acceso status|on|off [--sin-lan]   entrar a este equipo desde fuera: SSH (sshd), cortafuegos (ufw o
 #                                        firewalld: SSH y RDP solo por Tailscale, SSH también desde tu red local) y
 #                                        Tailscale (si no está conectado, «tailscale up» da el enlace para entrar)
@@ -397,7 +398,9 @@ rustdesk() {
       fi
       rd_gpu; sudo systemctl daemon-reload
       sudo systemctl enable --now rustdesk && echo "RustDesk listo. Pon una contraseña permanente en su ventana.";;
-    *) echo "rustdesk status|portal|instalar|gpu" >&2; exit 1;;
+    hwcodec-off)   # solo la opción de RustDesk, sin sudo (hf-apply la pone una vez en las instalaciones con nouveau)
+      [ -e /sys/module/nouveau/initstate ] && rd_option enable-hwcodec N;;
+    *) echo "rustdesk status|portal|instalar|gpu|hwcodec-off" >&2; exit 1;;
   esac
 }
 

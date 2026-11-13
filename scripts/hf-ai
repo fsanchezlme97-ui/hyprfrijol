@@ -581,6 +581,8 @@ def validate(actions):
                 if e:
                     a["desktop"], a["name"] = e["id"], e["name"]
                     ok.append(a)
+                elif (w := WEB_APPS.get(a["app"].strip().lower())):
+                    ok.append({"type": "url", "value": w})
             elif t == "url" and isinstance(a.get("value"), str) and re.match(r"^https?://\S+$", a["value"]):
                 ok.append(a)
             elif t == "winmode" and a.get("value") in ("mosaico", "desplazamiento", "flotante"):
@@ -753,6 +755,14 @@ def desktop_entries():
     return out
 
 BROWSER_WORDS = ("navegador", "el navegador", "navegador web", "browser", "web browser")
+# «Abre YouTube» con la web y no la app: si no hay una app instalada con ese nombre, se abre su web
+WEB_APPS = {"youtube": "https://www.youtube.com", "spotify": "https://open.spotify.com", "gmail": "https://mail.google.com",
+            "google": "https://www.google.com", "maps": "https://www.google.com/maps", "google maps": "https://www.google.com/maps",
+            "drive": "https://drive.google.com", "google drive": "https://drive.google.com", "netflix": "https://www.netflix.com",
+            "whatsapp": "https://web.whatsapp.com", "telegram": "https://web.telegram.org", "discord": "https://discord.com/app",
+            "github": "https://github.com", "chatgpt": "https://chatgpt.com", "x": "https://x.com", "twitter": "https://x.com",
+            "facebook": "https://www.facebook.com", "instagram": "https://www.instagram.com", "outlook": "https://outlook.live.com",
+            "twitch": "https://www.twitch.tv", "wikipedia": "https://es.wikipedia.org"}
 
 def find_app(q, many=False):
     q = str(q).strip().lower()
@@ -1753,6 +1763,13 @@ def _selftest_handoff():
     assert handoff_target({"aiHandoff": "custom", "aiHandoffCmd": "x {prompt}", "aiHandoffLabel": "X"})["label"] == "X"
     assert handoff_target({"aiHandoff": "no-existe"}) is None
     assert (handoff_target({"aiHandoff": "auto"}) or {}).get("id") == (found[0]["id"] if found else None) or found
+
+def _selftest_reply():
+    s = {"aiAllowShell": False}
+    r = parse_reply('Puedo hacerlo. Estos son los pasos:\n```hf-actions\n[{"type":"launch","app":"youtube"}]\n```', s)
+    assert r["actions"] == [{"type": "url", "value": "https://www.youtube.com"}], r
+    r = parse_reply('Puedo hacerlo. Estos son los pasos:\n```hf-actions\n[{"type":"launch","app":"zz-no-existe"}]\n```', s)
+    assert not r["actions"] and r["text"] == "No encuentro «zz-no-existe» instalada en este equipo.", r
 
 def _selftest_redact():
     s = {"aiRedactSecrets": True}
@@ -2933,8 +2950,13 @@ def parse_reply(raw, s=None):
     # texto copiado de una web) solo vale la lista de siempre, para que un JSON de muestra no se vuelva un plan
     m = re.search(r"```(?:hf-actions|hl-actions)\s*(.*?)\s*```", raw, re.S) or re.search(r"```json\s*(\[.*?\])\s*```", raw, re.S)
     if m:
-        actions = validate(actions_json(m.group(1)))
+        asked = actions_json(m.group(1))
+        actions = validate(asked)
         raw = (raw[:m.start()] + raw[m.end():]).strip()
+        if asked and not actions:   # no quedó ninguna (p. ej. una app que no está): no anunciar pasos que no hay
+            apps = [a.get("app") for a in asked if isinstance(a, dict) and a.get("type") == "launch" and isinstance(a.get("app"), str)]
+            why = f"No encuentro «{apps[0]}» instalada en este equipo." if apps else "No pude preparar eso en este equipo."
+            raw = why if not raw or raw.rstrip().endswith(":") else f"{raw} {why}"
     raw = re.sub(r"```hf-query.*?```", "", raw, flags=re.S).strip()
     runs = [a for a in actions if a["type"] == "run"] if term else []
     actions = [a for a in actions if a["type"] != "run"] if shell else []
@@ -3731,6 +3753,7 @@ def main(argv):
     elif cmd == "selftest":
         _selftest_redact()
         _selftest_handoff()
+        _selftest_reply()
         out = {"ok": True}
     elif cmd == "undo":
         out = do_undo(arg)

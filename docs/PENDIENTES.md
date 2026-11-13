@@ -48,7 +48,10 @@ reducción automática) se descartó en las decisiones del plan.
       modelos de Ollama, login y ajustes; `install.sh --perfil=` lo aplica. El repo trae `perfil/perfil.json` sin
       datos personales (0.9.52, `./install.sh --perfil`). Falta: probarlo en una máquina virtual.
 - [~] **IA local** (0.9.49): gemma4:e4b en la gráfica (0,5 s; tabla en `docs/IA.md`) como respaldo y, con
-      `aiVoiceLocal`, primero en la voz. Falta: probarlo con tu voz unos días; ROCm sin probar (gfx1032 no está
+      `aiVoiceLocal`, primero en la voz. Medido en 0.9.72 (22 órdenes habladas × 3): todas con su acción en 0,4-0,9 s; las
+      dos que «fallaban» (YouTube, Spotify) eran apps sin instalar, ahora abren su web. Ojo: una frase que no es orden
+      («te habilité una función para capturar la pantalla») propuso acción 2 de 3 veces y en conversación lo
+      reversible se aplica solo. Falta: probarlo con tu voz unos días; ROCm sin probar (gfx1032 no está
       soportado oficialmente y son varios GB).
 
 ## Donde vamos por detrás
@@ -122,6 +125,11 @@ Añadidos sugeridos (sin empezar):
 - [ ] VGA por la GT 710 (`nouveau`): ya da imagen, pero la copia entre GPUs puede hacer las animaciones menos
       fluidas en esa pantalla. El registro de Hyprland repite `eglCreateSyncKHR … EGL_BAD_ATTRIBUTE` (300 veces
       en este arranque); ver si viene de esa gráfica.
+- [ ] Login sin congelarse (0.9.70–0.9.71: el login, el fondo en vídeo, el shell y RustDesk ya no usan la GT 710 para
+      vídeo ni para dibujar): confirmarlo en el próximo arranque (`journalctl -k -b | grep 'nouveau.*TRAP'` vacío).
+- [ ] `gst-plugin-scan` (el buscador de complementos de GStreamer, lo lanza cualquier app que reproduce algo) también
+      prueba VA-API en la GT 710 y cuelga un canal (`gr: TRAP … gst-plugin-scan`, una vez al regenerar su caché). Sin
+      efecto visible; si se repite, `GST_VA_ALL_DRIVERS`/`GST_PLUGIN_FEATURE_RANK` para que no use esa gráfica.
 - [x] Lo que avisaba `hf-doctor` (2026-11-11): recomendados instalados el 2026-11-12 (fuente mono, pavucontrol,
       nm-connection-editor, impresión con cups.socket activo, pymupdf). QtMultimedia ya estaba (el aviso de
       `hf-greeter-sync` era falso: 0.9.46). Login al día (0.9.42) y `primaryMonitor` = HDMI-A-2.

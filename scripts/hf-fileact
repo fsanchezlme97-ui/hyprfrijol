@@ -313,9 +313,28 @@ def office_text(p, ext, most=200):
     return "\n".join(out)
 
 
+def prune(d, days=30):
+    """Borra las miniaturas que nadie ha mirado en `days` días; como mucho una vez al día (marca .pruned)."""
+    mark, now = d / ".pruned", time.time()
+    try:
+        if now - mark.stat().st_mtime < 86400:
+            return
+    except OSError:
+        pass
+    mark.touch()
+    for f in d.glob("*.png"):
+        try:
+            st = f.stat()
+            if now - max(st.st_atime, st.st_mtime) > days * 86400:
+                f.unlink()
+        except OSError:
+            pass
+
+
 def thumb_path(p, st):
     d = CACHE / "preview"
     d.mkdir(parents=True, exist_ok=True)
+    prune(d)
     key = hashlib.sha1(f"{p}|{st.st_mtime_ns}|{st.st_size}".encode()).hexdigest()[:20]
     return d / f"{key}.png"
 
