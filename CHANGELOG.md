@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.67] — 2026-11-12
+
+### Seguridad
+- El resumen automático de avisos (al abrir el centro) solo usa el modelo local: si falla, no pasa a la nube; eso
+  solo con «Resumir» (`hf-ai digest --local`). Los avisos de las apps privadas (Ajustes › Asistente de IA ›
+  Privacidad) no entran en el resumen, y los avisos le llegan por la entrada estándar, no en la línea de órdenes
+  (donde cualquier proceso los podría leer).
+- Vista previa de Spotlight: ImageMagick solo abre la imagen con el decodificador de su extensión (un «.png» que en
+  realidad es PostScript ya no llega a Ghostscript), y Word, Excel y LibreOffice se leen con un analizador XML en
+  vez de expresiones regulares (un archivo preparado podía dejarlas minutos calculando). Además, tope de 15 s.
+
+### Corregido
+- La vista previa de texto en Spotlight enseñaba solo la primera línea.
+
 ## [0.9.66] — 2026-11-12
 
 ### Nuevo

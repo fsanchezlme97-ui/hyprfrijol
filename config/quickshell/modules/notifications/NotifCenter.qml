@@ -33,7 +33,7 @@ Glass {
         win.query = "";
         search.text = "";
         win.recentFilter = "";
-        if (digestAuto && digestStale && Notifs.count >= 3) digestRun();
+        if (digestAuto && digestStale && Notifs.count >= 3) digestRun(true);
     }
 
     // ---------- resumen de los avisos (hf-ai digest)
@@ -45,14 +45,21 @@ Glass {
     readonly property bool digestStale: digestKey !== digestFor
     readonly property bool localAi: Settings.get("aiProvider", "") === "ollama" || Settings.get("aiFallbackProvider", "") === "ollama"
     readonly property bool digestAuto: localAi && Settings.get("notifDigestAuto", true) !== false && Settings.get("aiProvider", "") !== "off"
-    function digestRun(): void {
+    // auto (al abrir el centro): solo el modelo local; con «Resumir» puede ir a la nube si el local falla.
+    // Los avisos van por la entrada estándar (en la línea de órdenes, cualquier proceso los leería en /proc)
+    function digestRun(auto: bool): void {
         if (digestProc.running) return;
         digestFor = digestKey;
-        digestProc.command = [Paths.script("hf-ai"), "digest", JSON.stringify(digestItems)];
+        digestProc.payload = JSON.stringify(digestItems);
+        digestProc.command = [Paths.script("hf-ai"), "digest"].concat(auto ? ["--local"] : []);
         digestProc.running = true;
     }
     Process {
         id: digestProc
+        property string payload: ""
+        stdinEnabled: true
+        onStarted: { write(payload); payload = ""; stdinEnabled = false; }
+        onExited: stdinEnabled = true
         stdout: StdioCollector {
             onStreamFinished: { try { win.digest = JSON.parse(text); } catch (e) { win.digest = { text: "", error: "No se pudo resumir" }; } }
         }
@@ -192,7 +199,7 @@ Glass {
                             border.width: 1; border.color: Theme.ov
                             Txt { id: dT; anchors.centerIn: parent; size: 11; color: Theme.p
                                 text: win.digest === null ? "Resumir" : win.digest.error ? "Reintentar" : "Actualizar" }
-                            MouseArea { id: dMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.digestRun() }
+                            MouseArea { id: dMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.digestRun(false) }
                         }
                     }
                     Txt {

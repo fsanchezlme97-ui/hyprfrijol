@@ -19,6 +19,7 @@ sirven también en la terminal y para la IA).
   --print   no ejecuta: imprime los comandos que usaría (pruebas)
 """
 import hashlib, json, mimetypes, os, pathlib, re, shlex, shutil, subprocess, sys, tempfile, time, zipfile
+import xml.etree.ElementTree as ET
 for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
     if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
@@ -219,6 +220,10 @@ def do_wallpaper(f):
 # ---------------------------------------------------------------- vista previa (Spotlight)
 OFFICE = {"docx", "odt", "odp", "pptx", "xlsx", "ods"}
 DIRECT = {"png", "jpg", "jpeg", "webp", "gif", "bmp", "svg"}     # Qt los pinta tal cual
+# La vista previa se hace sola al elegir el archivo: ImageMagick solo con el decodificador de su extensión (un .png que
+# en realidad es PostScript o MVG no llega a Ghostscript ni a los delegados); con otra extensión, sin ImageMagick
+CODER = {"png": "PNG", "jpg": "JPEG", "jpeg": "JPEG", "webp": "WEBP", "gif": "GIF", "bmp": "BMP", "tif": "TIFF", "tiff": "TIFF",
+         "avif": "AVIF", "heic": "HEIC", "heif": "HEIC", "jxl": "JXL", "ico": "ICO"}
 
 
 def human(n):
@@ -244,48 +249,61 @@ def zip_xml(z, name, limit=4 << 20):
         return ""
 
 
-def xml_text(x):
-    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", x)).replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">") \
-        .replace("&quot;", '"').replace("&apos;", "'").strip()
+def xml_ends(x):
+    """Elementos ya cerrados de un XML, en orden, como (nombre sin espacio de nombres, elemento). Aguanta el XML cortado
+    por el límite de zip_xml y es lineal (antes, expresiones regulares: un archivo hecho a mala idea las volvía
+    cuadráticas). ElementTree no resuelve entidades externas."""
+    p = ET.XMLPullParser(("end",))
+    try:
+        p.feed(x)
+        for _, e in p.read_events():
+            yield e.tag.rsplit("}", 1)[-1], e
+    except ET.ParseError:
+        return
 
 
-def office_text(p, ext):
+def el_text(e):
+    return re.sub(r"\s+", " ", "".join(e.itertext())).strip()
+
+
+def office_text(p, ext, most=200):
     """El principio de un documento de oficina, sin LibreOffice: párrafos (Word, Writer, presentaciones) o las primeras
     filas de la primera hoja (Excel, Calc) separadas por tabuladores."""
     try:
         z = zipfile.ZipFile(p)
     except (OSError, zipfile.BadZipFile):
         return ""
+    out = []
     with z:
-        if ext == "docx":
-            x = zip_xml(z, "word/document.xml")
-            return "\n".join(t for t in (xml_text(par) for par in re.findall(r"<w:p[ >].*?</w:p>", x, re.S)) if t)
         if ext == "pptx":
             slides = sorted((n for n in z.namelist() if re.match(r"ppt/slides/slide\d+\.xml$", n)), key=lambda n: int(re.sub(r"\D", "", n)))
-            return "\n".join(xml_text(" ".join(re.findall(r"<a:t>(.*?)</a:t>", zip_xml(z, n), re.S))) for n in slides[:8])
-        if ext == "xlsx":
-            shared = [xml_text(si) for si in re.findall(r"<si>(.*?)</si>", zip_xml(z, "xl/sharedStrings.xml"), re.S)]
-            rows = []
-            for row in re.findall(r"<row[^>]*>(.*?)</row>", zip_xml(z, "xl/worksheets/sheet1.xml"), re.S)[:20]:
+            for n in slides[:8]:
+                out.append(" ".join(t for tag, e in xml_ends(zip_xml(z, n)) if tag == "t" and (t := el_text(e))))
+        elif ext == "xlsx":
+            shared = [el_text(e) for tag, e in xml_ends(zip_xml(z, "xl/sharedStrings.xml")) if tag == "si"]
+            for tag, row in xml_ends(zip_xml(z, "xl/worksheets/sheet1.xml")):
+                if tag != "row": continue
                 cells = []
-                for attrs, body in re.findall(r"<c([^>]*?)(?:/>|>(.*?)</c>)", row, re.S)[:10]:
-                    v = re.search(r"<v>(.*?)</v>", body or "", re.S)
-                    t = re.search(r'\bt="(\w+)"', attrs)
-                    val = v.group(1) if v else xml_text(body or "")
-                    if t and t.group(1) == "s" and val.isdigit() and int(val) < len(shared):
+                for c in [c for c in row if c.tag.endswith("}c")][:10]:
+                    v = next((x.text or "" for x in c if x.tag.endswith("}v")), None)
+                    val = el_text(c) if v is None else v.strip()
+                    if c.get("t") == "s" and val.isdigit() and int(val) < len(shared):
                         val = shared[int(val)]
-                    cells.append(xml_text(val))
-                rows.append("\t".join(cells))
-            return "\n".join(rows)
-        x = zip_xml(z, "content.xml")             # LibreOffice: odt, odp, ods
-        if ext == "ods":
-            rows = []
-            for row in re.findall(r"<table:table-row[^>]*>(.*?)</table:table-row>", x, re.S)[:20]:
-                cells = [xml_text(c) for c in re.findall(r"<table:table-cell[^>]*?(?:/>|>(.*?)</table:table-cell>)", row, re.S)[:10]]
-                if any(cells):
-                    rows.append("\t".join(cells))
-            return "\n".join(rows)
-        return "\n".join(t for t in (xml_text(par) for par in re.findall(r"<text:[ph][ >].*?</text:[ph]>", x, re.S)) if t)
+                    cells.append(val)
+                out.append("\t".join(cells))
+                if len(out) >= 20: break
+        elif ext == "docx" or ext in ("odt", "odp", "ods"):
+            x = zip_xml(z, "word/document.xml" if ext == "docx" else "content.xml")
+            for tag, e in xml_ends(x):
+                if ext == "ods":
+                    if tag != "table-row": continue
+                    cells = [el_text(c) for c in e if c.tag.endswith("}table-cell")][:10]
+                    if any(cells): out.append("\t".join(cells))
+                    if len(out) >= 20: break
+                elif tag in (("p",) if ext == "docx" else ("p", "h")) and (t := el_text(e)):
+                    out.append(t)
+                    if len(out) >= most: break
+    return "\n".join(out)
 
 
 def thumb_path(p, st):
@@ -316,13 +334,14 @@ def preview(f):
     th = thumb_path(p, st)
     if k == "image":
         ident = ["magick", "identify"] if magick() == ["magick"] else ["identify"]
-        dims = out_of(ident + ["-ping", "-format", "%w × %h", str(p) + "[0]"])
+        src = f"{CODER[ext]}:{p}[0]" if ext in CODER else ""
+        dims = out_of(ident + ["-ping", "-format", "%w × %h", src]) if src else ""
         if dims: rows.insert(0, ["Medidas", dims + " px"])
         if ext in DIRECT:
             res["image"] = str(p)
-        else:
+        elif src:
             if not th.exists():
-                out_of([*magick(), str(p) + "[0]", "-thumbnail", "640x640>", str(th)], 10)
+                out_of([*magick(), src, "-thumbnail", "640x640>", "PNG:" + str(th)], 10)
             if th.exists(): res["image"] = str(th)
     elif k == "pdf":
         pages = re.search(r"^Pages:\s+(\d+)", out_of(["pdfinfo", str(p)]), re.M)

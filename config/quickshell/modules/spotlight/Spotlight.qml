@@ -633,7 +633,7 @@ Overlay {
     }
     Timer {
         id: prevTimer; interval: 120
-        onTriggered: if (spot.cur?.kind === "file") { prevProc.path = spot.cur.path; prevProc.command = [Paths.script("hf-fileact"), "preview", spot.cur.path]; prevProc.running = true; }
+        onTriggered: if (spot.cur?.kind === "file") { prevProc.path = spot.cur.path; prevProc.command = ["timeout", "15", Paths.script("hf-fileact"), "preview", spot.cur.path]; prevProc.running = true; }
     }
     Process {
         id: prevProc
@@ -900,7 +900,7 @@ Overlay {
                     // Vista previa del archivo (miniatura, o el principio del texto o de la carpeta)
                     Rectangle {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: spot.prev.image ? 130 : Math.min(130, prevTxt.contentHeight + 20)
+                        Layout.preferredHeight: spot.prev.image ? 130 : Math.min(130, prevTxt.implicitHeight + 20)   // implicitHeight: contentHeight depende de la altura que le da este mismo cuadro
                         visible: spot.prevHere && !spot.moreMode && (spot.prev.image !== "" || spot.prev.text !== "")
                         radius: Theme.r(6)
                         color: Theme.fill2
