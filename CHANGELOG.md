@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.77] — 2026-11-13
+
+### Cambiado
+- Pendientes recortados a tres: idiomas, otras distros y la comparación de rendimiento con otros shells. El resto
+  (motor único de paquetes, plugins, otros compositores, Howdy, pruebas con uso real abiertas y avisos sin arreglo
+  de nouveau) queda como descartado en `docs/PENDIENTES.md`.
+
 ## [0.9.76] — 2026-11-13
 
 ### Corregido
