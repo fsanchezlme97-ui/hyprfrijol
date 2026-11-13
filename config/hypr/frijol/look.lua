@@ -50,6 +50,8 @@ hl.config({
         disable_splash_rendering = true,
         force_default_wallpaper  = 0,
         background_color         = c.surface,
+        -- si Quickshell se cae con la pantalla bloqueada, el que relanza hf-shell puede retomar el bloqueo (Lock.qml)
+        allow_session_lock_restore = true,
     },
 
     -- Juegos y vídeo a pantalla completa van directos a la pantalla, sin componer (2 = solo esos, no el escritorio)

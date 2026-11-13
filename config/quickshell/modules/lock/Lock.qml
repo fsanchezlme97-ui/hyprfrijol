@@ -138,10 +138,23 @@ Scope {
         }
     }
 
+    // Marca «bloqueado» de esta sesión de Hyprland: si qs se cae con la pantalla bloqueada, el que relanza hf-shell
+    // vuelve a tomar el bloqueo (allow_session_lock_restore en look.lua) en vez de dejar el «oopsie daisy» de Hyprland
+    FileView {
+        id: lockMark
+        path: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/hf-locked-" + (Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || "")
+        printErrors: false
+        onLoaded: root.lock()
+    }
+
     WlSessionLock {
         id: sessionLock
         locked: false
-        onLockedChanged: Shell.locked = locked
+        onLockedChanged: {
+            Shell.locked = locked;
+            if (locked) lockMark.setText("1");
+            else Quickshell.execDetached(["rm", "-f", lockMark.path]);
+        }
 
         WlSessionLockSurface {
             id: surface

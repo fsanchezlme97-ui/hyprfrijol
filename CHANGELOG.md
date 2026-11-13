@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.76] — 2026-11-13
+
+### Corregido
+- Si Quickshell se caía con la pantalla bloqueada, Hyprland dejaba su pantalla de error («oopsie daisy») en vez del
+  bloqueo. Dos causas: `hf-shell` dejaba Quickshell en el grupo de procesos de quien lo lanzaba (una terminal, una
+  sesión de un asistente…) y systemd lo mataba al cerrarse ese grupo; ahora va en su propio scope. Y si aun así se
+  cae, el Quickshell que relanza `hf-shell` retoma el bloqueo (`allow_session_lock_restore` y una marca en
+  `$XDG_RUNTIME_DIR`), así que la sesión sigue protegida y se desbloquea con la contraseña de siempre.
+
 ## [0.9.75] — 2026-11-13
 
 ### Corregido

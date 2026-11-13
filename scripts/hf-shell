@@ -50,7 +50,15 @@ code_rev() {
     || find "$ROOT/config/quickshell" -type f -printf '%T@\n' 2>/dev/null | sort -n | tail -n1
 }
 # Marca de arranque: refresh la compara con la versión de ahora (¿hubo una actualización desde entonces?)
-start() { running || { code_rev > "$RUN.started"; rm -f "$RUN.pending"; setsid -f flock -n -o "$LOCK" "${NOTHP[@]}" "${CMD[@]}" >/dev/null 2>&1; }; }
+# En su propio scope de systemd: si no, qs se queda en el cgroup de quien lo lanzó (una terminal, una sesión de Claude…)
+# y al cerrarse ese scope systemd lo mata con él; con la pantalla bloqueada, Hyprland enseña «oopsie daisy»
+start() {
+  running && return
+  code_rev > "$RUN.started"; rm -f "$RUN.pending"
+  local scope=()
+  systemd-run --user --scope -q --collect true >/dev/null 2>&1 && scope=(systemd-run --user --scope -q --collect)
+  setsid -f "${scope[@]}" flock -n -o "$LOCK" "${NOTHP[@]}" "${CMD[@]}" >/dev/null 2>&1
+}
 
 # Solo los Quickshell de ESTA sesión (no los de una sesión de prueba anidada con el mismo repo)
 mine() {
