@@ -3,6 +3,17 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.89] — 2026-11-13
+
+### Seguridad
+- Al terminar de dictar ya no se vuelve a copiar una contraseña:
+  - Si lo que tenías copiado venía de un gestor de contraseñas (marcado como tal), no se guarda ni se devuelve, porque
+    antes volvía sin esa marca, entraba en el historial del portapapeles y reaparecía aunque el gestor ya la hubiera
+    borrado.
+  - Lo que se devuelve va marcado como sensible, porque ya estaba en el historial.
+  - Solo se devuelve si el portapapeles sigue teniendo lo último que pegó el dictado: si copias algo tú mientras
+    dictas, se queda lo tuyo.
+
 ## [0.9.88] — 2026-11-13
 
 ### Corregido

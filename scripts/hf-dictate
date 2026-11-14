@@ -1119,7 +1119,7 @@ def keys_free(timeout):
 # ignora) y al acabar el dictado se devuelve lo que había copiado. En las terminales Ctrl+V no pega: ahí, wtype.
 TERMS = ("kitty", "foot", "alacritty", "wezterm", "ghostty", "konsole", "terminal", "xterm", "console", "kgx", "ptyxis",
          "tilix", "terminator", "st-256color", "urxvt")
-CLIP = {"saved": None}
+CLIP = {"saved": None, "last": None}
 
 def pasting():
     if os.environ.get("HF_DICTATE_TYPE") == "wtype" or not (shutil.which("wl-copy") and shutil.which("wl-paste")):
@@ -1137,6 +1137,8 @@ def clip_save():
         return
     try:
         types = subprocess.run(["wl-paste", "--list-types"], capture_output=True, text=True, timeout=2).stdout.split()
+        if "x-kde-passwordManagerHint" in types:     # una contraseña: no se guarda ni se devuelve (su gestor la borra)
+            CLIP["saved"] = ("", b""); return
         t = next((x for x in ("text/plain;charset=utf-8", "UTF8_STRING", "text/plain") if x in types), types[0] if types else "")
         data = subprocess.run(["wl-paste", "-n", "-t", t], capture_output=True, timeout=3).stdout if t else b""
     except Exception:
@@ -1144,14 +1146,19 @@ def clip_save():
     CLIP["saved"] = (t, data)
 
 def clip_restore():
-    """shortcut: si copias algo tú mientras dictas, al acabar vuelve lo de antes; habría que vigilar el portapapeles."""
+    """Devuelve lo de antes, marcado como sensible (ya estaba en el historial), solo si el portapapeles sigue con lo
+    último que pegó el dictado: si copiaste algo tú mientras tanto, se queda lo tuyo."""
     if CLIP["saved"] is None:
         return
     t, data = CLIP["saved"]; CLIP["saved"] = None
     time.sleep(0.3)                     # que la ventana acabe de leer el último pegado
     try:
+        now = subprocess.run(["wl-paste", "-n", "-t", "text/plain;charset=utf-8"], capture_output=True, text=True,
+                             timeout=2).stdout
+        if now != CLIP["last"]:
+            return
         if data:
-            subprocess.run(["wl-copy", "-t", t], input=data, timeout=3)
+            subprocess.run(["wl-copy", "--sensitive", "-t", t], input=data, timeout=3)
         else:
             subprocess.run(["wl-copy", "--clear"], timeout=3)
     except Exception:
@@ -1161,6 +1168,7 @@ def paste_text(text):
     clip_save()
     if subprocess.run(["wl-copy", "--sensitive", "--", text], stderr=subprocess.DEVNULL).returncode != 0:
         return False
+    CLIP["last"] = text
     ok = subprocess.run(["wtype", "-M", "ctrl", "-k", "v", "-m", "ctrl"], stderr=subprocess.DEVNULL).returncode == 0
     time.sleep(0.12)                    # que lo lea antes de que el siguiente pegado lo cambie
     return ok
