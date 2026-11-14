@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.1] — 2026-11-14
+
+### Arreglos
+- **Mover ventanas que se quedan el ratón (RustDesk, máquinas virtuales, juegos):** en ellas arrastrar mueve lo de
+  dentro, no la ventana. Super + arrastrar (clic izquierdo: mover · clic derecho: tamaño) ahora funciona también
+  cuando la app captura el teclado para mandarlo al otro equipo, y sale en la chuleta de atajos.
+
 ## [0.10.0] — 2026-11-14
 
 ### Cambios

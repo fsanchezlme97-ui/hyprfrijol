@@ -114,8 +114,10 @@ for i, k in ipairs({ "APOSTROPHE", "code:48" }) do
 end
 b(mod .. " + CTRL + F",    HF.scroll("fit visible"),          { description = "Encajar las columnas a la vista" })
 b("CTRL + " .. mod .. " + BACKSLASH", hl.dsp.window.resize({ x = 640, y = 480, "exact" }))
-b(mod .. " + mouse:272",   hl.dsp.window.drag(),   { mouse = true })
-b(mod .. " + mouse:273",   hl.dsp.window.resize(), { mouse = true })
+-- Super + arrastrar mueve / redimensiona cualquier ventana, también las que capturan el teclado (RustDesk, máquinas
+-- virtuales, juegos): con ellas el arrastre normal va a lo de dentro y Super no llegaría a Hyprland (dont_inhibit)
+b(mod .. " + mouse:272",   hl.dsp.window.drag(),   { mouse = true, dont_inhibit = true, description = "Mover la ventana (arrastrar)" })
+b(mod .. " + mouse:273",   hl.dsp.window.resize(), { mouse = true, dont_inhibit = true, description = "Cambiar el tamaño de la ventana (arrastrar)" })
 
 -- Flechas: Super = acoplar (Snap) · Super + Alt = foco · Super + Mayús = mover
 local dirs = { left = "l", right = "r", up = "u", down = "d" }
