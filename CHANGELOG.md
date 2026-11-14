@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.3] — 2026-11-14
+
+### Arreglos
+- **Modo flotante:** la ventana que eliges con un clic, Alt + Tab, la vista general o el dock pasa al frente, como
+  en un escritorio clásico. Antes recibía el foco pero podía quedarse detrás de otra. En los modos en que el foco
+  sigue al cursor no cambia nada (si no, pasar el ratón por encima ya las iría subiendo).
+
 ## [0.10.2] — 2026-11-14
 
 ### Mejoras

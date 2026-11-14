@@ -37,3 +37,13 @@ local function start()
 end
 local mons = hl.get_monitors and hl.get_monitors() or {}
 if #mons > 0 then start() else hl.on("hyprland.start", start) end
+
+-- Traer al frente (como en un escritorio clásico): la ventana flotante que recibe el foco con un clic, Alt + Tab, la
+-- vista general o el dock pasa por encima de las demás. Solo cuando el foco no sigue al cursor (follow_mouse ≠ 1, p. ej.
+-- el modo flotante): si no, pasar el ratón por encima ya las iría subiendo.
+hl.on("window.active", function(w)
+    if not (w and w.floating) then return end
+    local ok, follow = pcall(hl.get_config, "input.follow_mouse")
+    if ok and tonumber(follow) == 1 then return end
+    hl.dispatch(hl.dsp.window.bring_to_top())
+end)

@@ -124,7 +124,7 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.10.1",
+ "hyprfrijol": "v0.10.2",
  "ollama": [
   "gemma4:e4b"
  ],
@@ -134,7 +134,7 @@
   "rustdesk": true,
   "rustdeskPortal": true
  },
- "saved": "2026-11-14 11:28",
+ "saved": "2026-11-14 13:31",
  "services": [
   "sshd",
   "ufw",
@@ -266,6 +266,7 @@
   ],
   "lowBatterySaver": false,
   "micMode": "ia",
+  "musicLyrics": false,
   "naturalScroll": true,
   "nightLight": "off",
   "nightTemp": 5500,
@@ -281,7 +282,7 @@
   "palette": "oxocarbon",
   "pip": true,
   "pipAuto": false,
-  "pipCorner": "inf-der",
+  "pipCorner": "sup-der",
   "pipFree": [
    0.3677,
    0.4333
@@ -328,7 +329,7 @@
    "notas"
   ],
   "widgetsOnDesktop": false,
-  "windowMode": "desplazamiento",
+  "windowMode": "mosaico",
   "workspaceAnim": "auto",
   "wsBarNames": false,
   "wsNumerals": "japonesa"
