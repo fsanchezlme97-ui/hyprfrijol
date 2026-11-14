@@ -3,6 +3,29 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.93] — 2026-11-14
+
+### Seguridad
+- **Usar la pantalla, más seguro:**
+  - Una tarjeta aprobada más de 5 minutos después ya no hace clic: la pantalla puede haber cambiado, así que hay que
+    volver a pedírselo.
+  - El modelo ya no puede dar coordenadas por su cuenta. Solo valen los elementos de un análisis hecho en esa misma
+    petición.
+  - El nombre del paso y del cursor fantasma sale de lo que se lee en la pantalla, no de lo que diga el modelo.
+  - «Escribir» enseña en la tarjeta el texto entero y no admite saltos de línea ni caracteres de control.
+  - Helpert no escribe ni pulsa teclas en una terminal: los comandos siguen yendo por su tarjeta.
+  - Lo que el filtro de secretos taparía en el texto (claves, contraseñas, tokens) también se tapa en negro en la
+    captura numerada antes de enviarla.
+- **Menos capturas enviadas:** la pantalla solo se analiza de entrada con frases claras («haz clic en…», «pulsa el
+  botón…», «escribe en el campo…»). En lo demás la pide el modelo si la necesita.
+
+### Corregido
+- Con el panel del asistente abierto, el panel salía en la captura numerada y tapaba lo de debajo. Ahora se aparta un
+  momento mientras se analiza la pantalla.
+- Escribir con «Usar la pantalla» podía quedarse colgado al copiar el texto.
+- Los números de los elementos usan Noto Sans, que instala el instalador. Si no está, se usa la fuente de serie y los
+  números no desaparecen.
+
 ## [0.9.92] — 2026-11-13
 
 ### Añadido

@@ -147,9 +147,10 @@ POINTER_OPS = {"click": "Clic", "double": "Doble clic", "right": "Clic derecho",
                "type": "Escribir", "key": "Pulsar", "scroll": "Desplazar"}
 QUERY_IMAGES = []                         # capturas que trae una consulta («ui»): van al modelo con visión en la ronda siguiente
 UI_SEEN = []                              # análisis «ui» hechos en ESTA petición: solo sus números de elemento valen
-SCREEN_INTENT = re.compile(r"\b(haz(me)? (un )?(doble )?clic|dale (un )?clic|clica|cliquea|pulsa|presiona|toca (en|sobre)|"
-                           r"selecciona (el|la|en)|escribe (en|dentro)|rellena|marca la casilla|desplaza|baja (en|por) la|"
-                           r"(en|de) (la|mi|esta) pantalla|senala(me)?|donde (esta|hay|pulso)|muestrame donde)\b")
+# Solo frases claras de usar la pantalla (cada coincidencia sube una captura): lo demás lo pide el modelo si hace falta
+SCREEN_INTENT = re.compile(r"\b(haz(me)? (un )?(doble )?clic|dale (un )?clic|clica|cliquea|(pulsa|presiona|toca) (en|sobre) |"
+                           r"(pulsa|presiona) (el|la) (boton|enlace|casilla|pestana|icono)|escribe (en|dentro de) (el|la|ese|esa|este|esta) "
+                           r"(campo|cuadro|caja|buscador|barra)|senalame)")
 
 def screen_intent(req, s):
     """¿El último mensaje pide usar o señalar algo de la pantalla? (y está permitido)"""
@@ -454,7 +455,7 @@ def label(a):
     if t == "pointer":
         op, lab = a.get("op"), str(a.get("label") or "").strip()
         if op == "type":
-            return f"Escribir «{str(a.get('text') or '')[:60]}»" + (f" en «{lab}»" if lab else "")
+            return f"Escribir «{a.get('text') or ''}»" + (f" en «{lab}»" if lab else "")
         if op == "key":
             return f"Pulsar {a.get('keys')}"
         if op == "scroll":
@@ -720,15 +721,18 @@ def validate(actions):
                     continue
                 ok.append(a)
             elif t == "pointer" and a.get("op") in POINTER_OPS and settings().get("aiScreenControl", True) is not False:
-                a = {k: a[k] for k in ("type", "op", "mark", "x", "y", "at", "box", "text", "keys", "value", "amount", "label") if k in a}
+                a = {k: a[k] for k in ("type", "op", "mark", "x", "y", "at", "box", "t", "text", "keys", "value", "amount", "label") if k in a}
                 a["label"] = str(a.get("label") or "")[:60]
                 if a["op"] == "type":
-                    a["text"] = str(a.get("text") or "")[:2000]
-                    if not a["text"]:
+                    # entero en la tarjeta y sin saltos de línea ni caracteres de control (en una terminal serían comandos)
+                    a["text"] = str(a.get("text") or "")
+                    if not a["text"] or len(a["text"]) > 300 or any(ord(c) < 32 for c in a["text"]):
                         continue
                 if a["op"] == "key" and not re.fullmatch(r"[\w+ ]{1,40}", str(a.get("keys") or "")):
                     continue
-                if "at" in a:                # ya resuelta (al volver del panel): números enteros y nada más
+                if "at" in a:                # ya resuelta (al volver del panel): números enteros y no muy vieja
+                    if time.time() - float(a.get("t") or 0) > 300:
+                        continue
                     a["at"] = [int(a["at"][0]), int(a["at"][1])]
                     if "box" in a:
                         a["box"] = [int(v) for v in a["box"][:4]]
@@ -1360,6 +1364,16 @@ def run_query(q, ctx=None, s=None):
             r = {}
         if not r.get("ok"):
             return lab, r.get("error") or "No pude analizar la pantalla"
+        secret = [e for e in r["marks"] if s.get("aiRedactSecrets", True) is not False and redact(e["text"], s)[1]]
+        if secret:                       # el filtro de secretos vale también para la imagen: esos recuadros, en negro
+            sc = r["monitor"]["scale"]
+            draw = []
+            for e in secret:
+                x, y = (e["x"] - r["monitor"]["x"]) * sc, (e["y"] - r["monitor"]["y"]) * sc
+                draw += ["-draw", f"rectangle {x - 4:.0f},{y - 4:.0f} {x + e['w'] * sc + 4:.0f},{y + e['h'] * sc + 4:.0f}"]
+                e["text"] = "[dato oculto]"
+            if subprocess.run(["magick", r["marked"], "-fill", "black", *draw, r["marked"]], capture_output=True).returncode != 0:
+                return lab, "No pude ocultar los datos sensibles de la captura: no la mando"
         QUERY_IMAGES.append(r["marked"])
         UI_SEEN.append(r["time"])
         m = r["monitor"]
@@ -3157,6 +3171,9 @@ def parse_reply(raw, s=None):
     m = re.search(r"```(?:hf-actions|hl-actions)\s*(.*?)\s*```", raw, re.S) or re.search(r"```json\s*(\[.*?\])\s*```", raw, re.S)
     if m:
         asked = actions_json(m.group(1))
+        # las coordenadas resueltas («at») solo las pone hf-screen con un análisis de esta petición, nunca el modelo
+        asked = [{k: v for k, v in a.items() if k not in ("at", "box", "t")} if isinstance(a, dict) and a.get("type") == "pointer" else a
+                 for a in (asked or [])]
         actions = validate(asked)
         raw = (raw[:m.start()] + raw[m.end():]).strip()
         if asked and not actions:   # no quedó ninguna (p. ej. una app que no está): no anunciar pasos que no hay

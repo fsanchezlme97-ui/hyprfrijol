@@ -58,7 +58,10 @@ PanelWindow {
         ignoreUnknownSignals: true
         function onCapturingChanged() { win.chatCapturing = chatLoader.item?.capturing ?? false; }
     }
-    readonly property bool pinShown: pinActive && !fsHere && !chatCapturing
+    // hf-screen parse (Helpert analiza la pantalla para usarla): el panel se aparta un momento y vuelve
+    property bool asideForScreen: false
+    property bool reopenAfterAside: false
+    readonly property bool pinShown: pinActive && !fsHere && !chatCapturing && !asideForScreen
     readonly property bool shown: Shell.view === "ia" || pinShown
     onPinActiveChanged: Shell.sidePinned = pinActive
     function togglePin() {
@@ -325,5 +328,10 @@ PanelWindow {
         function askImage(text: string, image: string): void { Shell.open("ia", { ask: text, image: image }); }
         // El registro del asistente (cada petición y cada acción aplicada)
         function log(): void { Shell.open("ia", { log: true }); }
+        // Apartar el panel mientras hf-screen captura la pantalla (no debe salir, ni tapar lo que hay debajo)
+        function aside(on: bool): void {
+            if (on) { win.reopenAfterAside = Shell.view === "ia"; win.asideForScreen = true; if (win.reopenAfterAside) Shell.close(); }
+            else { win.asideForScreen = false; if (win.reopenAfterAside) Shell.open("ia"); win.reopenAfterAside = false; }
+        }
     }
 }
