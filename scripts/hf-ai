@@ -2598,6 +2598,10 @@ GEMINI_API = os.environ.get("HF_GEMINI_API") or "https://generativelanguage.goog
 # Los alias «latest» siguen al modelo más nuevo (gemini-2.5-flash ya no se da a cuentas nuevas)
 GEMINI_DEFAULT = "gemini-flash-latest"
 GEMINI_LITE = "gemini-flash-lite-latest"
+# Usar la pantalla: entender una captura numerada y elegir bien el elemento pide un Flash completo; el Lite confunde
+# iconos (llegó a borrar un correo en vez de responder). Va en ~3-5 s; si falla o está saturado, se repite con el Lite.
+# El alias «flash-latest» da 503 muy a menudo en el plan gratuito y los Flash más nuevos no tienen cuota gratuita.
+GEMINI_SCREEN = "gemini-3-flash-preview"
 GEMINI_FALLBACK = [["gemini-flash-latest", "Gemini Flash (recomendado)"], ["gemini-flash-lite-latest", "Gemini Flash-Lite (más rápido)"],
                    ["gemini-pro-latest", "Gemini Pro (el más capaz, menos cuota)"]]
 SECRETS = HOME / ".config/hyprfrijol/secrets"
@@ -3024,13 +3028,13 @@ def call_gemini(system, messages, ctx_text, s):
         try:
             return gemini_live(path, key, body)
         except AIError as e:
-            if "no responden" not in str(e) or GEMINI_LITE in path or LIVE.buf:
+            if not ("no responden" in str(e) or s.get("_screen")) or GEMINI_LITE in path or LIVE.buf:
                 raise
             return gemini_live(f"/models/{GEMINI_LITE}:generateContent", key, body)
     try:
         data = gemini_http("POST", path, key, body)
     except AIError as e:
-        if "no responden" not in str(e) or GEMINI_LITE in path:
+        if not ("no responden" in str(e) or s.get("_screen")) or GEMINI_LITE in path:
             raise
         # modelo saturado (503, pasa a menudo con el gratuito): una vez con el ligero
         data = gemini_http("POST", f"/models/{GEMINI_LITE}:generateContent", key, body)
@@ -3308,7 +3312,10 @@ def do_chat(req, print_request=False):
         ctx_text = without_vision("este modelo no ve imágenes" if not vision else "no se pudieron preparar las imágenes") if nimg else base_ctx
     if ctx.get("spoken"):   # conversación por voz (Dictado.qml): la respuesta la lee Helpert
         ctx_text += ("\n\nConversación por voz: tu respuesta se leerá en voz alta. Contesta como al hablar: una a tres frases "
-                     "cortas, sin listas, sin markdown, sin código ni enlaces. Si hace falta más, ofrece contarlo.")
+                     "cortas, sin listas, sin markdown, sin código ni enlaces. Si hace falta más, ofrece contarlo. "
+                     "Lo que dice el usuario llega del reconocimiento de voz y puede traer palabras mal oídas («Aslo» = "
+                     "«Hazlo», «Ibrese» = «ábrelo»): entiéndelo por cómo suena y por la conversación; si aun así no está "
+                     "claro qué quiere, pregúntalo en una frase en vez de adivinar.")
     ctx_text, hidden = redact(ctx_text, s)
     if print_request:
         sp = system_prompt(s)
@@ -3380,6 +3387,10 @@ def do_chat(req, print_request=False):
             hidden += k
             qmsg = {"role": "user", "text": QUERY_RESULT_HEAD + " (datos del escritorio, no los escribió el usuario):\n\n"
                     + res_text + "\n\nAhora responde al usuario (sin repetir consultas ya hechas)."}
+            # ya hay que entender la pantalla: con el Gemini de serie (el Lite en la voz), un Flash completo (GEMINI_SCREEN)
+            if UI_SEEN and prov == "gemini" and not req.get("model") and not str(s0.get("aiModelVision") or "").strip() \
+                    and str(s.get("aiModel") or "").strip() in ("", GEMINI_LITE, GEMINI_DEFAULT):
+                s["aiModel"], s["_screen"] = GEMINI_SCREEN, True
             if QUERY_IMAGES and provider_vision(prov, s):   # «ui»: la captura numerada (Set-of-Mark) para el modelo con visión
                 qmsg["_paths"] = list(QUERY_IMAGES)
                 attach_vision([qmsg])

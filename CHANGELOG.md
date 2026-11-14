@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.97] — 2026-11-14
+
+### Mejoras
+- **Helpert entiende mejor lo que le pides por voz:**
+  - Para usar la pantalla pasa a Gemini 3 Flash, bastante más listo que el Flash-Lite de la conversación (~3-5 s). Si
+    está saturado o sin cuota, responde el Lite como antes.
+  - Sabe que lo que dices llega del reconocimiento de voz y puede venir mal oído («Aslo» por «Hazlo»): lo entiende por
+    cómo suena y, si sigue sin estar claro, te pregunta en vez de adivinar.
+  - «Aslo» y «Haslo» también cuentan como «hazlo» al contestar «¿Lo hago?».
+
 ## [0.9.96] — 2026-11-14
 
 ### Seguridad

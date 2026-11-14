@@ -195,6 +195,8 @@ Helpert puede señalar y usar lo que se ve en la pantalla, siempre con tu permis
    - En la conversación se oyen los pasos tal cual antes de «¿Lo hago?», no solo lo que el modelo dice que hará. El sí
      tiene que ser la frase entera («sí», «vale, hazlo»): «sí, pero ese no es» no aprueba.
    - Un icono sin texto o un punto sin texto no se aprueba de oído: va al panel, para ver antes dónde señala el cursor.
+   - En cuanto hay que entender la pantalla, Gemini pasa a un Flash completo (`GEMINI_SCREEN`, ~3-5 s) aunque la voz
+     use el Lite; si falla o está saturado, se repite con el Lite. Con `aiModelVision` puesto, manda ese.
    - Al aprobarla se cierra el panel, el cursor se coloca con `hl.dsp.cursor.move` y el clic va por el protocolo de
      puntero virtual de Wayland (`zwlr_virtual_pointer_v1`, un cliente mínimo en Python dentro de `hf-screen`), sin
      ydotool.
