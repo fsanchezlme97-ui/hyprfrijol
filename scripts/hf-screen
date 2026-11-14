@@ -242,6 +242,10 @@ def resolve(a):
         if not (0 <= x <= 1000 and 0 <= y <= 1000):
             raise ValueError("«x» e «y» van de 0 a 1000 (sobre la captura)")
         a["at"] = [round(m["x"] + x * m["w"] / 1000), round(m["y"] + y * m["h"] / 1000)]
+        px, py = a["at"]
+        e = next((e for e in d["marks"] if e["x"] - 6 <= px <= e["x"] + e["w"] + 6 and e["y"] - 6 <= py <= e["y"] + e["h"] + 6), None)
+        # el nombre sale de lo que hay ahí, nunca del modelo: es lo que ves antes de decir sí
+        a["label"] = e["text"] if e else f"un punto sin texto ({round(x)}, {round(y)})"
     return a
 
 
@@ -358,6 +362,12 @@ def active_class():
     return str((jrun(["hyprctl", "activewindow", "-j"]) or {}).get("class") or "").lower()
 
 
+def plain(text):
+    """Sin caracteres de control, invisibles ni de dirección del texto (lo que se ve en la tarjeta es lo que se escribe)."""
+    import unicodedata
+    return not any(unicodedata.category(c) in ("Cc", "Cf", "Zl", "Zp") for c in text)
+
+
 def no_terminal():
     """En una terminal, escribir o pulsar Intro ejecuta comandos: eso va por la tarjeta de comandos (con su texto entero)."""
     if active_class() in TERMS:
@@ -450,8 +460,8 @@ def do(a):
             vp_click("left")
             time.sleep(0.15)
         text = str(a.get("text") or "")
-        if not text or any(ord(c) < 32 for c in text):
-            raise ValueError("Falta el texto que escribir (o lleva saltos de línea o caracteres de control)")
+        if not text or not plain(text):
+            raise ValueError("Falta el texto que escribir (o lleva saltos de línea o caracteres invisibles)")
         no_terminal()
         type_text(text[:300])
     elif op == "key":
@@ -473,6 +483,8 @@ def selftest():
     r = resolve({"op": "click", "mark": 1})
     assert r["at"] == [140, 15] and r["label"] == "Guardar", r
     assert resolve({"op": "click", "x": 500, "y": 1000})["at"] == [600, 500]
+    assert resolve({"op": "click", "x": 40, "y": 30, "label": "Aceptar"})["label"] == "Guardar"     # sobre la marca
+    assert resolve({"op": "click", "x": 900, "y": 900, "label": "Aceptar"})["label"].startswith("un punto sin texto")
     for bad in ({"op": "click", "mark": 2}, {"op": "click", "x": 1200, "y": 3}, {"op": "click", "mark": "x"}):
         try:
             resolve(bad)
@@ -488,6 +500,7 @@ def selftest():
         except ValueError:
             pass
     assert describe({"op": "click", "label": "Guardar"}) == "Clic: Guardar"
+    assert plain("Hola, ¿qué tal? Ñandú") and not plain("ls\nrm") and not plain("abc\u202edcba") and not plain("a\u200bb")
     try:                                 # tarjeta aprobada tarde: no hace nada (ni siquiera señala)
         do({"op": "click", "at": [1, 1], "t": 0})
         raise AssertionError("clic con un análisis viejo")

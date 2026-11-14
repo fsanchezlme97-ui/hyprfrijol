@@ -722,11 +722,14 @@ def validate(actions):
                 ok.append(a)
             elif t == "pointer" and a.get("op") in POINTER_OPS and settings().get("aiScreenControl", True) is not False:
                 a = {k: a[k] for k in ("type", "op", "mark", "x", "y", "at", "box", "t", "text", "keys", "value", "amount", "label") if k in a}
-                a["label"] = str(a.get("label") or "")[:60]
+                # sin posición (escribir o teclas en la ventana activa) no hay nada que nombrar: nada del modelo
+                a["label"] = str(a.get("label") or "")[:60] if "at" in a else ""
                 if a["op"] == "type":
                     # entero en la tarjeta y sin saltos de línea ni caracteres de control (en una terminal serían comandos)
                     a["text"] = str(a.get("text") or "")
-                    if not a["text"] or len(a["text"]) > 300 or any(ord(c) < 32 for c in a["text"]):
+                    # ni invisibles ni de dirección (U+202E…): la tarjeta tiene que enseñar lo que se escribirá
+                    import unicodedata
+                    if not a["text"] or len(a["text"]) > 300 or any(unicodedata.category(c) in ("Cc", "Cf", "Zl", "Zp") for c in a["text"]):
                         continue
                 if a["op"] == "key" and not re.fullmatch(r"[\w+ ]{1,40}", str(a.get("keys") or "")):
                     continue
@@ -737,6 +740,7 @@ def validate(actions):
                     if "box" in a:
                         a["box"] = [int(v) for v in a["box"][:4]]
                 elif a.get("mark") is not None or a.get("x") is not None:
+                    a["label"] = ""          # lo pone hf-screen con lo que se lee ahí, no el modelo
                     if not UI_SEEN:          # números de otra captura (o inventados): no se acepta sin mirar antes
                         continue
                     r = json.loads(run([str(ROOT / "scripts/hf-screen"), "resolve", json.dumps(a)], timeout=10) or "{}")

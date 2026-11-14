@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.94] — 2026-11-14
+
+### Seguridad
+- **Usar la pantalla:** el nombre de cada paso en la tarjeta y en el cursor fantasma sale siempre de lo que se lee en
+  ese punto de la pantalla. En los clics por posición también: si ahí no hay texto, dice «un punto sin texto». Antes
+  ese nombre lo podía poner el modelo.
+- «Escribir» rechaza los caracteres invisibles y los que cambian la dirección del texto (como U+202E): lo que ves en
+  la tarjeta es exactamente lo que se escribe.
+
 ## [0.9.93] — 2026-11-14
 
 ### Seguridad
