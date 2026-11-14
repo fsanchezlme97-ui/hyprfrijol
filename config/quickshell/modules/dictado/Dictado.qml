@@ -136,8 +136,10 @@ Scope {
     }
     // «¿Lo hago?» contestado hablando: true (sí), false (no) o null (otra cosa: va al asistente como pregunta nueva).
     // Sin tildes ni muletillas delante («Mm, de acuerdo»); el reconocedor a veces lo oye en inglés («Proceed.») o partido
-    // («A probar y aplicar»).
-    readonly property var yesRe: /^(si|vale|ok|okay|okey|claro|adelante|hazlo|hagalo|dale|de acuerdo|perfecto|venga|por favor|procede|proceda|proced|proceed|yes|sure|aprobar|apruebo|aprobado|apruebalo|a probar|aplica|aplicalo|confirmo|confirmado|confirma|correcto|afirmativo|exacto|ejecuta|ejecutalo|abrelo|abrela|eso es)( |$)/
+    // («A probar y aplicar»). El sí tiene que ser la frase entera («sí, hazlo», «vale, adelante»): «sí, pero ese no es»
+    // no aprueba nada, va al asistente (lo que espera la respuesta no tiene vuelta atrás).
+    readonly property string yesW: "(si|vale|ok|okay|okey|claro|adelante|hazlo|hagalo|dale|de acuerdo|perfecto|venga|por favor|procede|proceda|proced|proceed|yes|sure|aprobar|apruebo|aprobado|apruebalo|a probar|aplica|aplicalo|confirmo|confirmado|confirma|correcto|afirmativo|exacto|ejecuta|ejecutalo|abrelo|abrela|eso es|aplicar)"
+    readonly property var yesRe: new RegExp("^" + yesW + "( (y |e )?" + yesW + ")*$")
     readonly property var noRe: /^(no|nope|cancela|cancelar|cancelalo|dejalo|mejor no|ni hablar|olvidalo|espera)( |$)/
     function planAnswer(t: string): var {
         const w = t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z0-9ñ]+/).filter(x => x);

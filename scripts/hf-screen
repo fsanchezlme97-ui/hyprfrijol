@@ -188,7 +188,7 @@ def parse():
     ox, oy = int(mon["x"]), int(mon["y"])
     marks = []
     for i, e in enumerate(els, 1):
-        marks.append({"n": i, "text": e["t"][:80],
+        marks.append({"n": i, "text": e["t"][:80], "icon": not readable(e["t"]),
                       # global (lógico) = origen de la pantalla + píxel / escala
                       "x": round(ox + e["x"] / scale), "y": round(oy + e["y"] / scale),
                       "w": max(1, round(e["w"] / scale)), "h": max(1, round(e["h"] / scale)),
@@ -213,6 +213,19 @@ def last():
     return d if time.time() - d.get("time", 0) < MAX_AGE else None
 
 
+def readable(t):
+    """¿Es un nombre? Una o dos letras sueltas («U», «X») son lo que el OCR cree ver en un icono, no lo que hace."""
+    return len(re.findall(r"[^\W_]", t)) >= 3
+
+def snap(a, e):
+    """El paso va al centro del elemento y se llama como lo que se lee en él (nunca como diga el modelo); sin un nombre
+    de verdad queda «blind»: no se aprueba de oído, hay que ver dónde señala (AiChat.qml)."""
+    a["at"] = [e["x"] + e["w"] // 2, e["y"] + e["h"] // 2]
+    a["box"] = [e["x"], e["y"], e["w"], e["h"]]
+    a["label"] = e["text"] if readable(e["text"]) else "un icono sin texto"
+    if not readable(e["text"]):
+        a["blind"] = True
+
 def resolve(a):
     """«mark» N o «x», «y» (0-1000 sobre la captura analizada) → "at" [x, y] globales y "box" del elemento."""
     a = dict(a)
@@ -231,9 +244,7 @@ def resolve(a):
         e = next((e for e in d["marks"] if e["n"] == n), None)
         if not e:
             raise ValueError(f"No hay ningún elemento con el número {n}")
-        a["at"] = [e["x"] + e["w"] // 2, e["y"] + e["h"] // 2]
-        a["box"] = [e["x"], e["y"], e["w"], e["h"]]
-        a["label"] = e["text"]           # lo que se lee ahí, no lo que diga el modelo: es lo que ves antes de decir sí
+        snap(a, e)
     else:
         try:
             x, y = float(a["x"]), float(a["y"])
@@ -245,14 +256,11 @@ def resolve(a):
         px, py = a["at"]
         near = [e for e in d["marks"] if e["x"] - 6 <= px <= e["x"] + e["w"] + 6 and e["y"] - 6 <= py <= e["y"] + e["h"] + 6]
         e = min(near, key=lambda e: e["w"] * e["h"]) if near else None
-        # el nombre sale de lo que hay ahí, nunca del modelo; y si es un elemento, el clic va a su centro: lo que dice
-        # la tarjeta y donde se hace clic son siempre lo mismo
+        # junto a un elemento, el clic va a su centro: lo que dice la tarjeta y donde se hace clic son lo mismo
         if e:
-            a["at"] = [e["x"] + e["w"] // 2, e["y"] + e["h"] // 2]
-            a["box"] = [e["x"], e["y"], e["w"], e["h"]]
-            a["label"] = e["text"]
+            snap(a, e)
         else:
-            a["label"] = f"un punto sin texto ({round(x)}, {round(y)})"
+            a["label"], a["blind"] = f"un punto sin texto ({round(x)}, {round(y)})", True
     return a
 
 
@@ -486,14 +494,18 @@ def selftest():
     tmp = pathlib.Path(tempfile.mkdtemp())
     LAST = tmp / "u.json"
     LAST.write_text(json.dumps({"time": time.time(), "monitor": {"x": 100, "y": 0, "w": 1000, "h": 500, "scale": 2},
-                                "marks": [{"n": 1, "text": "Guardar", "x": 120, "y": 10, "w": 40, "h": 10}]}))
+                                "marks": [{"n": 1, "text": "Guardar", "x": 120, "y": 10, "w": 40, "h": 10},
+                                          {"n": 2, "text": "U", "x": 400, "y": 10, "w": 12, "h": 14}]}))
     r = resolve({"op": "click", "mark": 1})
-    assert r["at"] == [140, 15] and r["label"] == "Guardar", r
+    assert r["at"] == [140, 15] and r["label"] == "Guardar" and not r.get("blind"), r
+    r = resolve({"op": "click", "mark": 2, "label": "Responder"})   # icono: ni «U» ni lo que diga el modelo
+    assert r["label"] == "un icono sin texto" and r["blind"], r
     assert resolve({"op": "click", "x": 500, "y": 1000})["at"] == [600, 500]
     r = resolve({"op": "click", "x": 65, "y": 50, "label": "Aceptar"})     # junto a la marca: va a su centro
     assert r["label"] == "Guardar" and r["at"] == [140, 15], r
-    assert resolve({"op": "click", "x": 900, "y": 900, "label": "Aceptar"})["label"].startswith("un punto sin texto")
-    for bad in ({"op": "click", "mark": 2}, {"op": "click", "x": 1200, "y": 3}, {"op": "click", "mark": "x"}):
+    r = resolve({"op": "click", "x": 900, "y": 900, "label": "Aceptar"})
+    assert r["label"].startswith("un punto sin texto") and r["blind"], r
+    for bad in ({"op": "click", "mark": 3}, {"op": "click", "x": 1200, "y": 3}, {"op": "click", "mark": "x"}):
         try:
             resolve(bad)
             raise AssertionError(bad)

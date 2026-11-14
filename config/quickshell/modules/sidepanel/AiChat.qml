@@ -340,17 +340,23 @@ Item {
             // solo lo que lleva sudo va al panel: pide tu contraseña en la terminal y hay que verlo.
             const conv = Shell.aiConversation, n = r.actions?.length ?? 0;
             const sudo = (r.actions ?? []).some(a => a.type === "run" && /(^|[\s;&|(`])(sudo|pkexec|doas|su|run0)(\s|$)/.test(String(a.command ?? "")));
+            // Usar la pantalla: lo que se oye antes de «¿Lo hago?» son los pasos tal cual (el nombre que leyó hf-screen), no
+            // lo que el modelo dice que hará; y un icono sin texto («blind») no se aprueba de oído: va al panel, a mirar.
+            const ptr = (r.actions ?? []).some(a => a.type === "pointer");
+            const blind = conv && (r.actions ?? []).some(a => a.type === "pointer" && a.blind);
             const auto = n > 0 && ((!root.confirmChanges && !r.confirm) || r.auto || (conv && !r.confirm && !sudo));
-            const waits = conv && n > 0 && !auto && !sudo;
+            const waits = conv && n > 0 && !auto && !sudo && !blind;
             if (waits) { root.planIdx = root.messages.length - 1; Shell.aiPlanPending = true; }
-            const said = (r.labels ?? []).map(l => String(l).split(":")[0]).join(". ") + ".";
-            const spoken = (r.text || (n ? said : "")) + (waits ? " ¿Lo hago?" : conv && sudo ? " Eso necesita tu contraseña: te lo dejo en el panel." : "");
+            const said = (r.labels ?? []).map(l => ptr ? String(l) : String(l).split(":")[0]).join(". ") + ".";
+            const spoken = (ptr && n ? (r.text ? r.text + " " : "") + "Voy a hacer esto: " + said : r.text || (n ? said : ""))
+                + (waits ? " ¿Lo hago?" : conv && sudo ? " Eso necesita tu contraseña: te lo dejo en el panel."
+                   : blind ? " No sé qué hace ese icono: mira en la pantalla dónde señala y, si es el que quieres, apruébalo en el panel." : "");
             // Respuestas silenciadas (aiMuted) en la conversación: la respuesta llega por escrito, en una notificación
             if (conv && Settings.get("aiMuted", false) && !root.active)
                 Quickshell.execDetached(["notify-send", "-a", Settings.get("aiName", "") || "Asistente", "-i", "dialog-information", "--", spoken]);
             else if (Settings.get("aiVoice", false) || conv) Quickshell.execDetached([Paths.script("hf-ai"), "speak", spoken]);
             if (auto) root.apply(root.messages.length - 1);
-            else if (n > 0 && !root.active && (!conv || sudo)) Shell.open("ia");
+            else if (n > 0 && !root.active && (!conv || sudo || blind)) Shell.open("ia");
         }
     }
     Process {

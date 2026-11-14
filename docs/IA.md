@@ -190,6 +190,11 @@ Helpert puede señalar y usar lo que se ve en la pantalla, siempre con tu permis
    análisis.
 4. **La acción** (`{"type":"pointer","op":"click"|"double"|"right"|"type"|"key"|"scroll"|"point", …}`) pide confirmación
    siempre: en el panel con la tarjeta, o en la conversación con «¿Lo hago?».
+   - El nombre de cada paso sale de lo que se lee en ese sitio, nunca del modelo. Una o dos letras sueltas (la «U» que
+     el OCR ve en una papelera) no son un nombre: el paso se llama «un icono sin texto».
+   - En la conversación se oyen los pasos tal cual antes de «¿Lo hago?», no solo lo que el modelo dice que hará. El sí
+     tiene que ser la frase entera («sí», «vale, hazlo»): «sí, pero ese no es» no aprueba.
+   - Un icono sin texto o un punto sin texto no se aprueba de oído: va al panel, para ver antes dónde señala el cursor.
    - Al aprobarla se cierra el panel, el cursor se coloca con `hl.dsp.cursor.move` y el clic va por el protocolo de
      puntero virtual de Wayland (`zwlr_virtual_pointer_v1`, un cliente mínimo en Python dentro de `hf-screen`), sin
      ydotool.

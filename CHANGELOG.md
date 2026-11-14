@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.96] — 2026-11-14
+
+### Seguridad
+- **Usar la pantalla por voz, sin sustos:** antes, en la conversación solo se oía lo que el modelo decía que iba a
+  hacer («pulso el botón de responder… ¿Lo hago?»), aunque el clic fuera a otro sitio. Ahora:
+  - Se oyen los pasos tal cual, con el nombre de lo que hay en ese punto, antes de «¿Lo hago?».
+  - Un icono sin texto se llama «un icono sin texto», no la letra que el OCR cree ver en él (una «U» en una papelera).
+  - Un clic en un icono o un punto sin texto no se aprueba de oído: se queda en el panel para que veas antes dónde
+    señala el cursor.
+  - El «sí» tiene que ser la frase entera: «sí, pero ese no es» ya no aprueba nada.
+- El asistente sabe qué elementos son iconos sin texto: prefiere el botón con texto que hace lo mismo, pregunta si no
+  está seguro y se le pide no repetir el elemento que le dijiste que estaba mal.
+
 ## [0.9.95] — 2026-11-14
 
 ### Seguridad
