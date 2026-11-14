@@ -3,6 +3,27 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.87] — 2026-11-13
+
+### Añadido
+- Motor de dictado **Nemotron 3.5** (NVIDIA, en streaming), el nuevo recomendado: botón en Ajustes › Dictado o
+  `hf-dictate install-nemotron`. Ocupa unos 750 MB: el runtime NeMo-Speech.cpp y el modelo, fijados por versión y
+  comprobados con su suma. En «Automático» se usa en cuanto está instalado.
+  - **Entiende mejor:** reconoce en el idioma elegido (con «Español + inglés», lo detecta él). Parakeet no deja fijar
+    el idioma y, con frases largas o un micrófono flojo, se pasaba al inglés o al portugués: «Confirm the reunion
+    delivers at the 10…», «vendas», «suporte». Con una lectura de prueba de 45 s, Nemotron la escribió entera en
+    español.
+  - **Sin parpadeo:** lo provisional se ve en el aviso del dictado mientras hablas. En la ventana, cada frase se
+    escribe entera al hacer una pausa, sin borrar ni reescribir nada. En la prueba no hubo ni un retroceso; antes
+    hubo 133.
+  - **Sin frases partidas a mitad:** el propio modelo decide dónde acaba la frase, no un detector de volumen. Si una
+    pausa corta la frase, lo siguiente sigue en minúscula y sin punto.
+  - **Consumo:** usa como máximo 4 núcleos, alrededor de 1,3 núcleos ocupados mientras dictas.
+
+### Corregido
+- Órdenes de voz con un motor en streaming (Vosk, Nemotron): lo que se seguía diciendo tras la orden ya no se manda
+  como una segunda orden.
+
 ## [0.9.86] — 2026-11-13
 
 ### Corregido

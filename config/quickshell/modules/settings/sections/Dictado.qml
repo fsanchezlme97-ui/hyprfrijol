@@ -37,6 +37,7 @@ ColumnLayout {
     readonly property bool voskModelOk: (root.st.voskModels ?? []).some(m => m.name === root.voskName && m.installed)
     readonly property bool voskMissing: root.st.ready !== false && root.eng !== "whisper.cpp" && root.eng !== "faster-whisper"
                                          && root.eng !== "parakeet" && root.st.engine !== "parakeet"
+                                         && root.eng !== "nemotron" && root.st.engine !== "nemotron"
                                          && (root.st.vosk === false || !root.voskModelOk) && (root.st.voskModels ?? []).length > 0
     function installVosk() {
         const dl = root.cmd + " download --tty " + root.voskName;
@@ -45,6 +46,11 @@ ColumnLayout {
         later.restart();
     }
     // Parakeet v3 (el motor más rápido y preciso en CPU): entorno de Python propio + modelo (~670 MB), en la terminal
+    // Nemotron 3.5 (el recomendado: en streaming y con el idioma fijo): runtime NeMo-Speech.cpp + modelo (~750 MB)
+    function installNemotron() {
+        Pkg.runInTerminal(root.cmd + " install-nemotron --tty", "Dictado: Nemotron 3.5");
+        later.restart();
+    }
     function installParakeet() {
         Pkg.runInTerminal(root.cmd + " install-parakeet --tty", "Dictado: Parakeet v3");
         later.restart();
@@ -346,7 +352,12 @@ ColumnLayout {
             }
             Timer { id: delTimer; interval: 400; onTriggered: root.refresh() }
             Button {
-                visible: root.st.parakeet === false && (root.eng === "auto" || root.eng === "parakeet")
+                visible: root.st.nemotron === false && (root.eng === "auto" || root.eng === "nemotron")
+                text: "Instalar Nemotron 3.5 (recomendado: escribe en español sin pasarse al inglés)"
+                onClicked: root.installNemotron()
+            }
+            Button {
+                visible: root.st.parakeet === false && root.eng === "parakeet"
                 text: "Instalar Parakeet v3 (recomendado: ~0,3 s por frase, español e inglés)"
                 onClicked: root.installParakeet()
             }
@@ -364,6 +375,7 @@ ColumnLayout {
                 Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
                 text: (root.eng === "vosk" || root.eng === "hibrido") && !root.st.vosk
                     ? "Vosk necesita su módulo de Python: paquetes python-vosk y vosk-api (Arch) o «hf-dictate install-vosk»."
+                    : root.st.engine === "nemotron" ? "Dictas con Nemotron 3.5 (NVIDIA, ~750 MB en …/whisper/nemotron): reconoce mientras hablas, en el idioma elegido abajo (con «Español + inglés» lo detecta él), con puntuación, y escribe cada frase al hacer una pausa, sin borrar ni reescribir. Los demás motores quedan como alternativa (Motor)."
                     : root.st.engine === "parakeet" ? "Dictas con Parakeet v3 (NVIDIA, ~670 MB en …/whisper/parakeet): español, inglés y 23 idiomas más sin tener que elegir, con puntuación y ~0,3 s por frase en CPU. Los modelos de whisper de arriba quedan como alternativa (Motor › whisper)."
                     : root.st.engine === "vosk" ? "Modelos de Vosk (alphacephei.com). El pequeño (39 MB, ~300 MB de RAM) escribe palabra a palabra al instante; el grande (1,4 GB, varios GB de RAM) acierta más."
                     : root.st.engine === "faster-whisper" ? "Con faster-whisper el modelo elegido se descarga solo la primera vez que dictas."
@@ -411,18 +423,19 @@ ColumnLayout {
                 label: "Motor"
                 labelWidth: 110
                 Seg {
-                    model: [["auto", "Automático"], ["parakeet", "Parakeet"], ["whisper.cpp", "whisper"], ["vosk", "Vosk"], ["hibrido", "Híbrido"]]
+                    model: [["auto", "Automático"], ["nemotron", "Nemotron"], ["parakeet", "Parakeet"], ["whisper.cpp", "whisper"], ["vosk", "Vosk"], ["hibrido", "Híbrido"]]
                     current: root.eng
                     onPicked: k => { Settings.set("dictationEngine", k); later.restart(); }
                 }
             }
             Txt {
                 Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
-                text: root.eng === "parakeet" ? "Parakeet v3: el más rápido y preciso sin GPU (~0,3 s por frase), español e inglés a la vez y con puntuación."
+                text: root.eng === "nemotron" ? "Nemotron 3.5: reconoce mientras hablas y escribe cada frase al hacer una pausa, en español fijo o detectando el idioma; no se pasa al inglés como Parakeet."
+                    : root.eng === "parakeet" ? "Parakeet v3: el más rápido y preciso sin GPU (~0,3 s por frase), español e inglés a la vez y con puntuación."
                     : root.eng === "vosk" ? "Vosk: tiempo real, cada palabra aparece mientras la dices y cada frase se escribe al hacer una pausa."
                     : root.eng === "whisper.cpp" ? "whisper: más preciso y con puntuación, por frases (cada frase se escribe ~1 s después de la pausa; al momento con GPU)."
                     : root.eng === "hibrido" ? "Híbrido: Vosk enseña lo provisional y whisper escribe cada frase (más preciso, algo más lento)."
-                    : "Automático: Parakeet si está instalado (el más rápido); si no, whisper si tienes su modelo; si no, Vosk."
+                    : "Automático: Nemotron si está instalado; si no Parakeet; si no, whisper si tienes su modelo; si no, Vosk."
             }
             LabeledRow {
                 label: "Idioma"

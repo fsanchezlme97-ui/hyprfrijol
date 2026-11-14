@@ -136,7 +136,7 @@ def snapshot():
         "remote": {"acceso": bool(acc.get("ssh")) and bool(acc.get("firewall")), "lan": bool(acc.get("lan")),
                    "rustdesk": bool(rd.get("service")), "rustdeskPortal": bool(rd.get("package"))},
         "voice": {"helpert": bool(ai.get("voiceLocal", ai.get("piper", (HOME / ".local/share/hyprfrijol/tts/piper-venv").is_dir())))},
-        "dictation": {"parakeet": bool(dic.get("parakeet")),
+        "dictation": {"nemotron": bool(dic.get("nemotron")), "parakeet": bool(dic.get("parakeet")),
                       "whisper": [m["name"] for m in dic.get("models", []) if m.get("installed")],
                       "vosk": [m["name"] for m in dic.get("voskModels", []) if m.get("installed")]},
         "ollama": ollama,
@@ -257,6 +257,8 @@ def plan(p, yes=False):
     if p.get("voice", {}).get("helpert"):
         steps.append(("Voz de Helpert", sh(SCRIPTS / "hf-ai", "voice-install", "--tty")))
     d = p.get("dictation", {})
+    if d.get("nemotron"):
+        steps.append(("Dictado: Nemotron", sh(SCRIPTS / "hf-dictate", "install-nemotron", "--tty")))
     if d.get("parakeet"):
         steps.append(("Dictado: Parakeet", sh(SCRIPTS / "hf-dictate", "install-parakeet", "--tty")))
     for m in d.get("whisper", []) + d.get("vosk", []):

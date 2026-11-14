@@ -4,7 +4,9 @@ en la ventana con foco mientras hablas (con wtype: lo provisional se corrige con
 ydotool, pegar o portapapeles, cada frase entera en cuanto haces una pausa). El dictado NUNCA usa IA (ni la
 limpieza de antes, dictationAI, retirada): el asistente solo recibe las órdenes de voz que hf-voice no entiende.
 
-Motor (dictationEngine; «auto» = Parakeet si está instalado; si no whisper.cpp con su modelo; si no Vosk):
+Motor (dictationEngine; «auto» = Nemotron si está instalado; si no Parakeet; si no whisper.cpp con su modelo; si no Vosk):
+  nemotron    NVIDIA Nemotron 3.5 ASR Streaming (NeMo-Speech.cpp, CPU): reconoce mientras hablas, idioma fijo (es-US,
+              en-US) o detectado, con puntuación; cierra la frase él solo en las pausas y la escribe entera.
   parakeet    NVIDIA Parakeet TDT v3 (onnx-asr, CPU): español, inglés y 23 idiomas más sin elegir, con puntuación,
               ~0,3 s por frase; texto provisional cada 0,4 s.
   vosk        tiempo real: Vosk reconoce mientras llega el audio (palabra a palabra) y cierra la frase él solo en las
@@ -36,6 +38,7 @@ Motor (dictationEngine; «auto» = Parakeet si está instalado; si no whisper.cp
   hf-dictate output "<texto>"    lo escribe / pega / copia según dictationOutput
   hf-dictate download <modelo>   tiny|base|small|medium|turbo (whisper, Hugging Face) o vosk-model-small-es-0.42 …
                                  (alphacephei.com) → {"ev":"progress","pct":…}; --tty: barra de progreso en la terminal
+  hf-dictate install-nemotron [--tty]  motor Nemotron 3.5 (el recomendado): runtime NeMo-Speech.cpp y modelo, verificados
   hf-dictate install-parakeet [--tty]  motor Parakeet v3 (el más rápido y preciso en CPU): venv con onnx-asr y modelo
   hf-dictate install-vosk        (solo si tu distro no trae python-vosk) venv con pip en …/whisper/vosk-venv; lo pides tú
   hf-dictate manage              menú de la terminal para descargar y borrar modelos (Ajustes › Dictado lo abre)
@@ -43,7 +46,7 @@ Motor (dictationEngine; «auto» = Parakeet si está instalado; si no whisper.cp
   hf-dictate last                último texto dictado
 
 Ajustes (settings.json): dictationModel tiny|base|small|medium|turbo (base) · dictationLang es+en|es|auto|en|… (es+en: español e inglés) ·
-  dictationMode ptt|toggle|continuo · dictationEngine auto|whisper.cpp|vosk|hibrido|faster-whisper ·
+  dictationMode ptt|toggle|continuo · dictationEngine auto|nemotron|parakeet|whisper.cpp|vosk|hibrido|faster-whisper ·
   dictationOutput escribir|pegar|portapapeles · dictationPunct (puntuación y mayúsculas) · dictationLive (texto
   provisional) · dictationPauseMs (silencio que cierra una frase, 700) · dictationSilenceSec (continuo: para tras
   N s callado, 5) · dictationKeepLoaded (s con el modelo cargado, 600) · dictationWake + dictationWakeWord (decir
@@ -233,6 +236,72 @@ def install_parakeet(tty=False):
     say("Parakeet listo: el dictado lo usa en «Automático».")
     return 0
 
+# ---- Nemotron 3.5 ASR Streaming (NVIDIA, 0,6B, q8_0) con NeMo-Speech.cpp: reconoce mientras hablas (lo provisional solo
+# crece), cierra la frase él solo en las pausas y el idioma se fija (es-US) o lo detecta; Parakeet, sin idioma fijo, se
+# pasaba al inglés o al portugués en frases largas o con un micrófono flojo («Confirm the reunion…»). ~25 % del tiempo
+# real en CPU. Runtime precompilado (Apache-2.0) y modelo (OpenMDW) fijados por versión y suma: …/whisper/nemotron.
+NEMO_VER = "0.3.0"
+NEMO_SHA = {"x86_64": "255f12b722ab15b2a38a51cf125d56e3fa97058b528f7e895b39d6a473deb06e",
+            "aarch64": "56858eaf50d19b05902c043f65d0057352bdc107ae380c41053bfbddfc204bf1"}
+NEMO_URL = "https://github.com/NVIDIA/NeMo-Speech.cpp/releases/download/v{v}/nemo-speech-{v}-linux-{a}-cpu.tar.gz"
+NEMOTRON_URL = ("https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b/resolve/"
+                "ea30d66debe3740a08b573244286791d423d6b3e/nemotron-3.5-asr-streaming-0.6b.q8_0.gguf")
+NEMOTRON_SHA = "3fc991d3badad7277c11030a7519832cddaf2057aafed6d4b25147e953a070b1"
+NEMOTRON_DIR = DATA / "nemotron"
+NEMOTRON_GGUF = NEMOTRON_DIR / "nemotron-3.5-asr-streaming-0.6b.q8_0.gguf"
+
+def nemotron_lib():
+    return NEMOTRON_DIR / f"nemo-speech-{NEMO_VER}-linux-{os.uname().machine}-cpu/lib/libnemo_speech_asr_c.so"
+
+def nemotron_ready():
+    return (NEMOTRON_DIR / "ok").exists() and nemotron_lib().exists() and NEMOTRON_GGUF.exists()
+
+def _sha256(p):
+    import hashlib
+    h = hashlib.sha256()
+    with open(p, "rb") as f:
+        for b in iter(lambda: f.read(1 << 20), b""):
+            h.update(b)
+    return h.hexdigest()
+
+def install_nemotron(tty=False):
+    """Instalación pedida por el usuario: runtime de NeMo-Speech.cpp (~10 MB) y modelo (~740 MB), ambos verificados."""
+    import tarfile
+    say = (lambda m: print(m, flush=True)) if tty else (lambda m: emit("progress", msg=m))
+    arch = os.uname().machine
+    if arch not in NEMO_SHA:
+        say(f"Nemotron no tiene runtime para {arch}"); return 1
+    try:
+        NEMOTRON_DIR.mkdir(parents=True, exist_ok=True)
+        (NEMOTRON_DIR / "ok").unlink(missing_ok=True)
+        say(f"Descargando NeMo-Speech.cpp {NEMO_VER} (NVIDIA, ~10 MB)…")
+        tgz = NEMOTRON_DIR / "runtime.tar.gz"
+        _fetch(NEMO_URL.format(v=NEMO_VER, a=arch), tgz, "nemo-speech", tty, 10)
+        if _sha256(tgz) != NEMO_SHA[arch]:
+            tgz.unlink(missing_ok=True); raise RuntimeError("el runtime descargado no coincide con su suma")
+        with tarfile.open(tgz) as t:
+            try:
+                t.extractall(NEMOTRON_DIR, filter="data")   # «data»: nada fuera de la carpeta ni enlaces raros
+            except TypeError:                               # Python < 3.11.4 (Debian 12): la misma regla a mano
+                for m in t.getmembers():
+                    p = pathlib.PurePosixPath(m.name)
+                    if p.is_absolute() or ".." in p.parts or m.isdev() or \
+                            (m.issym() or m.islnk()) and (m.linkname.startswith("/") or ".." in m.linkname):
+                        raise RuntimeError(f"ruta no válida en el runtime: {m.name}")
+                t.extractall(NEMOTRON_DIR)
+        tgz.unlink(missing_ok=True)
+        if not (NEMOTRON_GGUF.exists() and _sha256(NEMOTRON_GGUF) == NEMOTRON_SHA):
+            say("Descargando el modelo Nemotron 3.5 ASR (~740 MB)…")
+            _fetch(NEMOTRON_URL, NEMOTRON_GGUF, "nemotron", tty, 742)
+            if _sha256(NEMOTRON_GGUF) != NEMOTRON_SHA:
+                NEMOTRON_GGUF.unlink(missing_ok=True); raise RuntimeError("el modelo descargado no coincide con su suma")
+        eng = NemotronEngine({}); eng.start(); eng.close()
+    except Exception as e:
+        say(f"No se pudo instalar Nemotron: {e}"); return 1
+    (NEMOTRON_DIR / "ok").write_text(NEMO_VER)
+    say("Nemotron listo: el dictado lo usa en «Automático».")
+    return 0
+
 def model_path(name):
     return DATA / MODELS.get(name, (0, "", f"ggml-{name}.bin"))[2]
 
@@ -325,14 +394,16 @@ def live_model(s):
     return m
 
 def engine(s):
-    """motor efectivo: parakeet | whisper.cpp | vosk | hibrido | faster-whisper | ""."""
+    """motor efectivo: nemotron | parakeet | whisper.cpp | vosk | hibrido | faster-whisper | ""."""
     want = s.get("dictationEngine") or "auto"
     wm = s.get("dictationModel") or "base"
     vm = s.get("dictationVoskModel") or "vosk-model-small-es-0.42"
     has_w = bool(whisper_bin() or server_bin())
     has_v = vosk_ok() and vosk_installed(vm)
+    if want in ("nemotron", "auto") and nemotron_ready():
+        return "nemotron"         # en streaming y con el idioma fijo: no se pasa al inglés ni reescribe lo escrito
     if want in ("parakeet", "auto") and parakeet_ready():
-        return "parakeet"         # el más rápido y preciso en CPU (español e inglés sin elegir)
+        return "parakeet"         # el más rápido por frases en CPU (español e inglés sin elegir)
     if want == "hibrido" and has_w and has_v:
         return "hibrido"
     if want == "vosk" and has_v:
@@ -388,7 +459,7 @@ def status():
             "model": m, "modelOk": model_ok, "models": models, "voskModel": vm, "voskModels": vmodels, "dir": str(DATA),
             "recorder": recorder(), "typer": typer(), "clipboard": bool(shutil.which("wl-copy")),
             "ready": bool(eng and model_ok and recorder()), "recording": running_pid() > 0, "family": fam,
-            "parakeet": parakeet_ready(), "parakeetEnv": bool(parakeet_python()),
+            "parakeet": parakeet_ready(), "parakeetEnv": bool(parakeet_python()), "nemotron": nemotron_ready(),
             "gpu": gpu_backends(), "gpuUsed": use_gpu(m, s, measure=False), "loaded": loaded, "loadedModels": [m for m, _ in srv], "liveModel": live_model(s),
             "ytdlp": bool(shutil.which("yt-dlp")),
             # paquetes que ofrece instalar Ajustes › Dictado (Arch: todo en los repos oficiales)
@@ -645,6 +716,121 @@ class ParakeetEngine:
     def close(self):
         if self.p:
             self.p.kill()
+
+NEMO_LANGS = {"es": "es-US", "en": "en-US", "fr": "fr-FR", "it": "it-IT", "pt": "pt-BR", "de": "de-DE", "nl": "nl-NL",
+              "tr": "tr-TR", "ru": "ru-RU", "uk": "uk-UA", "ar": "ar-AR", "hi": "hi-IN", "ja": "ja-JP", "ko": "ko-KR", "vi": "vi-VN"}
+
+class NemotronEngine:
+    """Nemotron 3.5 en streaming (API en C de NeMo-Speech.cpp con ctypes). Como Vosk puro: stream() recibe el audio
+    según llega, da lo provisional y la frase cuando el modelo detecta el final (tras dictationPauseMs, mínimo 800 ms)."""
+    name = "nemotron"
+    def __init__(self, s):
+        self.model = "nemotron-3.5"
+        lang = s.get("dictationLang") or "es+en"
+        self.lang = NEMO_LANGS.get(lang, "auto")         # es+en, auto y los que no tiene (ca, gl, eu): lo detecta él
+        self.eou = max(800, int(s.get("dictationPauseMs") or 800))
+        self.L = self.rec = self.st = None
+    def start(self):
+        import ctypes as C
+        sz = C.c_size_t
+        class Backend(C.Structure): _fields_ = [("size", sz), ("gpu", C.c_int32)]
+        class Model(C.Structure): _fields_ = [("size", sz), ("path", C.c_char_p), ("name", C.c_char_p)]
+        class Endp(C.Structure): _fields_ = [("size", sz), ("enable", C.c_bool), ("vad_based", C.c_bool), ("eou_ms", C.c_int32)]
+        class Cfg(C.Structure):
+            _fields_ = [("size", sz)] + [(n, C.c_void_p) for n in
+                        "backend model streaming decoder vad endpointing postproc diar batching salm".split()]
+        class Opts(C.Structure):     # nemo_speech_asr_recognition_options (asr.h, ABI v1)
+            _fields_ = [("size", sz), ("request_id", C.c_char_p), ("language_code", C.c_char_p), ("interim", C.c_bool),
+                        ("words", C.c_bool), ("punct", C.c_bool), ("verbatim", C.c_bool), ("profanity", C.c_bool),
+                        ("eou_ms", C.c_int32), ("ctx", C.c_void_p), ("ctx_n", sz), ("max_alt", C.c_int32),
+                        ("diar", C.c_bool), ("max_spk", C.c_int32)]
+        L = C.CDLL(str(nemotron_lib()))
+        L.nemo_speech_asr_recognition_options_default.restype = Opts
+        L.nemo_speech_asr_last_error.restype = C.c_char_p
+        L.nemo_speech_asr_result_transcript.restype = C.c_char_p
+        L.nemo_speech_asr_result_transcript.argtypes = [C.c_void_p, sz]
+        L.nemo_speech_asr_result_is_final.restype = C.c_bool
+        L.nemo_speech_asr_result_is_final.argtypes = [C.c_void_p]
+        for f in ("result_destroy", "stream_close", "destroy", "stream_finish"):
+            getattr(L, "nemo_speech_asr_" + f).argtypes = [C.c_void_p]
+        L.nemo_speech_asr_stream_push_f32.argtypes = [C.c_void_p, C.c_void_p, sz, C.c_int32]
+        L.nemo_speech_asr_stream_next.argtypes = [C.c_void_p, C.c_void_p]
+        L.nemo_speech_asr_streaming_recognize.argtypes = [C.c_void_p, C.c_void_p, C.c_void_p]
+        self.C, self.L = C, L
+        self._keep = [Backend(C.sizeof(Backend), -1), Model(C.sizeof(Model), str(NEMOTRON_GGUF).encode(), None),
+                      Endp(C.sizeof(Endp), True, False, self.eou)]
+        cfg = Cfg(C.sizeof(Cfg), C.addressof(self._keep[0]), C.addressof(self._keep[1]), None, None, None,
+                  C.addressof(self._keep[2]))
+        self.rec = C.c_void_p()
+        if L.nemo_speech_asr_create(C.byref(cfg), C.byref(self.rec)) != 0:
+            raise RuntimeError("Nemotron no arrancó: " + (L.nemo_speech_asr_last_error() or b"").decode(errors="replace"))
+        self.opts = L.nemo_speech_asr_recognition_options_default()
+        self.lang_b = self.lang.encode()
+        self.opts.language_code = self.lang_b; self.opts.interim = True; self.opts.punct = True
+        self.st = self._open()
+    def _open(self):
+        st = self.C.c_void_p()
+        if self.L.nemo_speech_asr_streaming_recognize(self.rec, self.C.byref(self.opts), self.C.byref(st)) != 0:
+            raise RuntimeError("Nemotron: " + (self.L.nemo_speech_asr_last_error() or b"").decode(errors="replace"))
+        return st
+    def _push(self, st, pcm):
+        a = array.array("h", bytes(pcm))
+        self.L.nemo_speech_asr_stream_push_f32(st, (self.C.c_float * len(a))(*[x / 32768 for x in a]), len(a), RATE)
+    def _drain(self, st):
+        """→ (frases terminadas, último provisional o None)."""
+        done, part = [], None
+        while True:
+            r = self.C.c_void_p()
+            if self.L.nemo_speech_asr_stream_next(st, self.C.byref(r)) != 0 or not r.value:
+                return done, part
+            t = (self.L.nemo_speech_asr_result_transcript(r, 0) or b"").decode(errors="replace").strip()
+            if self.L.nemo_speech_asr_result_is_final(r):
+                done.append(t); part = ""
+            else:
+                part = t
+            self.L.nemo_speech_asr_result_destroy(r)
+    def stream(self, frame):
+        self._push(self.st, frame)
+        done, part = self._drain(self.st)
+        if done:
+            return " ".join(t for t in done if t), part or ""
+        return None, part or ""
+    def flush(self):
+        """Fin del audio: lo que quedaba a medias."""
+        self.L.nemo_speech_asr_stream_finish(self.st)
+        done, _ = self._drain(self.st)
+        self.L.nemo_speech_asr_stream_close(self.st)
+        self.st = self._open()
+        return " ".join(t for t in done if t)
+    final = flush
+    def transcribe(self, pcm, prompt="", final=True):
+        st = self._open()
+        try:
+            self._push(st, pcm)
+            self.L.nemo_speech_asr_stream_finish(st)
+            return nemo_join(self._drain(st)[0])
+        finally:
+            self.L.nemo_speech_asr_stream_close(st)
+    def close(self):
+        if self.st:
+            self.L.nemo_speech_asr_stream_close(self.st); self.st = None
+        if self.rec:
+            self.L.nemo_speech_asr_destroy(self.rec); self.rec = None
+
+def nemo_join(parts):
+    out = ""
+    for t in parts:
+        if t.strip():
+            out += join_piece(out, nemo_text(out, t))
+    return out
+
+def nemo_text(prev, text):
+    """Nemotron no pone punto al cerrar una frase: si la siguiente empieza en mayúscula y lo de antes no acaba en signo,
+    es otra frase y va con su punto delante (join_piece la tomaría por continuación y la pondría en minúscula)."""
+    text, p = text.strip(), prev.rstrip(" ")
+    if p and not p.endswith((".", "!", "?", "…", ":", ",", ";", "\n")) and text[:1].isupper() and text[1:2].islower():
+        return ". " + text
+    return text
 
 class VoskEngine:
     """Vosk (Kaldi): reconoce mientras llega el audio, así que lo provisional sale al momento."""
@@ -1099,7 +1285,16 @@ class Session:
             raise RuntimeError("Falta whisper.cpp: instálalo en Ajustes › Dictado")
         if e in ("vosk", "hibrido"):
             self.vosk = VoskEngine(self.s)
-        if e == "vosk":
+        elif e == "nemotron":                            # va por el camino de Vosk puro: reconoce según llega el audio
+            self.vosk = NemotronEngine(self.s)
+            # El runtime no deja fijar sus hilos y con todos los núcleos los tiene esperando en vacío (con 12: ~2 núcleos
+            # ocupados al dictar); con 4 sigue en tiempo real (~0,5 s por s de audio) con la mitad de CPU. Antes de crear
+            # ningún hilo: todos heredan la afinidad
+            try:
+                os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:4])
+            except (AttributeError, OSError):
+                pass
+        if e in ("vosk", "nemotron"):
             self.eng = self.vosk
         elif e == "faster-whisper":
             self.eng = FasterWhisperEngine(self.s)
@@ -1233,8 +1428,9 @@ class Session:
     def do_final(self, pid, pcm, speech_s, end_wall, text=None):
         if self.cancel.is_set():
             return
-        if text is not None:                           # Vosk puro: la frase ya viene reconocida
-            text = vosk_punct(text) if self.punct else text
+        if text is not None:                           # Vosk puro (o Nemotron): la frase ya viene reconocida
+            if self.eng.name != "nemotron":           # Nemotron ya puntúa
+                text = vosk_punct(text) if self.punct else text
             return self.handle_text(text, speech_s, end_wall)
         if os.environ.get("HF_DICTATE_DUMP"):          # depurar: guarda el audio de cada frase
             pathlib.Path(os.environ["HF_DICTATE_DUMP"], f"frase-{pid:03d}.wav").write_bytes(wav_bytes(pcm))
@@ -1274,7 +1470,10 @@ class Session:
             self.run_command(text, lat)
             return
         sp = spoken_cmd(text)
-        piece = (sp if sp is not None else join_piece(self.typed + "".join(self.pending), text, self.punct))
+        prev = self.typed + "".join(self.pending)
+        if sp is None and self.punct and self.eng.name == "nemotron":
+            text = nemo_text(prev, text)
+        piece = (sp if sp is not None else join_piece(prev, text, self.punct))
         if sp is not None and sp.startswith((".", ",", ":", ";", "?", "…")):
             piece = sp
         self.phrases += 1
@@ -1393,6 +1592,9 @@ class Session:
         self.released.wait(timeout=4)    # lo que falta, con las teclas del atajo ya sueltas
         self.released.set()
         self.flush()
+        if self.punct and self.eng and self.eng.name == "nemotron" and self.typed.strip() \
+                and not self.typed.rstrip().endswith((".", "!", "?", "…", ":", ";", ",", "\n")):
+            self.deliver(".")            # Nemotron no cierra con punto la última frase
         full = self.typed.strip()
         if not full:
             if self.peak < 0.12 and not self.src:
@@ -1594,7 +1796,9 @@ class Session:
                         last_partial = time.time()
         if phrase is not None and not self.cancel.is_set() and speech_frames >= 8:
             self.finalize(phrase, speech_frames * FRAME_S, silence_frames * FRAME_S)
-        if self.eng is not None and self.eng is self.vosk and self.ready.is_set() and not self.errors and not self.cancel.is_set():
+        # una orden = una frase: con la orden ya oída, lo que siguiera a medias no se manda como otra
+        if self.eng is not None and self.eng is self.vosk and self.ready.is_set() and not self.errors and not self.cancel.is_set() \
+                and not (self.kind == "comando" and self.phrases_heard):
             for b in backlog:
                 done, _ = self.vosk.stream(b)
                 if done:
@@ -1637,7 +1841,7 @@ def wake_split(text, s):
 def transcribe_file(wav, s=None):
     s = s or settings()
     e = engine(s)
-    eng = VoskEngine(s) if e == "vosk" else FasterWhisperEngine(s) if e == "faster-whisper" else ParakeetEngine(s) if e == "parakeet" else WhisperEngine(s)
+    eng = VoskEngine(s) if e == "vosk" else NemotronEngine(s) if e == "nemotron" else FasterWhisperEngine(s) if e == "faster-whisper" else ParakeetEngine(s) if e == "parakeet" else WhisperEngine(s)
     eng.start()
     try:
         return clean_out(eng.transcribe(file_pcm(wav), (s.get("dictationPrompt") or "").strip()))
@@ -1821,6 +2025,8 @@ def main(argv):
         sys.exit(install_vosk())
     if cmd == "install-parakeet":
         sys.exit(install_parakeet(tty="--tty" in flags))
+    if cmd == "install-nemotron":
+        sys.exit(install_nemotron(tty="--tty" in flags))
     if cmd == "manage":
         sys.exit(manage())
     if cmd == "delete":
