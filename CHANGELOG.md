@@ -3,6 +3,27 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.90] — 2026-11-13
+
+### Cambiado
+- **Conversación por voz con Helpert mucho más rápida.** Después de una visita de Helpert, con capturas de pantalla en
+  la conversación, cada turno tardaba unos 5,5 s en responder. Ahora tarda alrededor de 1 s, medido con la misma
+  conversación antes y después.
+  - La causa: la hora al minuto, la ventana y el portapapeles iban dentro de las instrucciones del sistema. Cada vez
+    que cambiaban, el modelo local tenía que volver a leer las ~2.700 palabras de instrucciones y a mirar todas las
+    capturas del historial.
+  - Ahora ese contexto va con tu último mensaje, y el historial se recorta por bloques, así que el modelo reaprovecha
+    lo ya leído. Vale para Ollama, para los servidores compatibles con OpenAI y para Gemini.
+  - Además, el portapapeles y el título de la ventana dejan de tratarse como instrucciones del sistema: ahora son datos
+    junto a tu mensaje.
+- **La voz de Helpert empieza a sonar en ~0,2 s en vez de ~1,3 s.** La voz (Piper) se queda cargada en memoria
+  mientras conversas, unos 150 MB, y se cierra sola tras 10 minutos sin hablar. Se precarga al empezar una
+  conversación o una visita. Interrumpir a Helpert hablando funciona igual que antes.
+
+### Corregido
+- Dictado con Nemotron: una pregunta o exclamación que no cerraba el propio modelo («¿qué tiempo hará mañana») ya no
+  termina en punto, sino con su «?» o su «!».
+
 ## [0.9.89] — 2026-11-13
 
 ### Seguridad

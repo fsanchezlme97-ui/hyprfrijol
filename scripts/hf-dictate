@@ -829,8 +829,13 @@ def nemo_text(prev, text):
     es otra frase y va con su punto delante (join_piece la tomaría por continuación y la pondría en minúscula)."""
     text, p = text.strip(), prev.rstrip(" ")
     if p and not p.endswith((".", "!", "?", "…", ":", ",", ";", "\n")) and text[:1].isupper() and text[1:2].islower():
-        return ". " + text
+        return nemo_close(p) + " " + text
     return text
+
+def nemo_close(prev):
+    """Signo con que se cierra la última frase: «?» o «!» si se abrió con «¿» o «¡» (Nemotron a veces no lo cierra)."""
+    last = re.split(r"[.!?…]", prev)[-1]
+    return "?" if "¿" in last else "!" if "¡" in last else "."
 
 class VoskEngine:
     """Vosk (Kaldi): reconoce mientras llega el audio, así que lo provisional sale al momento."""
@@ -1661,7 +1666,7 @@ class Session:
         self.flush()
         if self.punct and self.eng and self.eng.name == "nemotron" and self.typed.strip() \
                 and not self.typed.rstrip().endswith((".", "!", "?", "…", ":", ";", ",", "\n")):
-            self.deliver(".")            # Nemotron no cierra con punto la última frase
+            self.deliver(nemo_close(self.typed))   # Nemotron no cierra la última frase
         full = self.typed.strip()
         if not full:
             if self.peak < 0.12 and not self.src:

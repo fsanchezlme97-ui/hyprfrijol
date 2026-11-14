@@ -62,6 +62,7 @@ Scope {
     // Modo compañero: Helpert ya está pensando qué decir (AiChat.checkIn); al terminar de hablar, escucha una vez
     function companionTalk(): void {
         if (conv || proc.running) return;
+        Quickshell.execDetached([Paths.script("hf-ai"), "voice-warm"]);   // mientras piensa qué decir
         Shell.aiConversation = true;
         convProactive = true;
         convMisses = 2;
@@ -72,6 +73,7 @@ Scope {
     function convToggle(): void { if (conv) convEnd(false); else convStart(); }
     function convStart(): void {
         if (conv) return;
+        Quickshell.execDetached([Paths.script("hf-ai"), "voice-warm"]);   // la voz ya cargada para la primera respuesta
         if (Audio.micMuted) { phase = "done"; msg = "Micrófono silenciado"; hider.interval = 1800; hider.restart(); return; }
         if (proc.running) send("cancel");
         Shell.aiConversation = true;
