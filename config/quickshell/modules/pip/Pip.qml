@@ -175,7 +175,6 @@ Scope {
     // Dónde lo pusimos la última vez (para distinguir un arrastre del usuario de un cambio nuestro)
     property var placed: null
     property string resized: ""
-    property int resizeTries: 0
     property real lastResize: 0
     property real lastMove: 0
     // Hyprland no avisa cuando una ventana solo cambia de sitio: mientras haya PiP se consulta cada poco
@@ -188,12 +187,12 @@ Scope {
         if (String(c.workspace?.name ?? "").startsWith("special"))
             Shell.dispatch('hl.dsp.window.move({ workspace = ' + (root.pipMon?.activeWorkspace?.id ?? 1) + ', follow = false, ' + sel(c) + ' })');
         if (!c.floating) Shell.dispatch('hl.dsp.window.float({ action = "enable", ' + sel(c) + ' })');
-        // Redimensionar hasta 3 veces por tamaño pedido (el navegador, recién abierta, a veces vuelve a poner el suyo);
-        // si la app no baja de su mínimo, se deja (y la posición ya usa su tamaño real)
-        const rk = c.address + "|" + t.w + "x" + t.h;
-        if ((c.size?.[0] !== t.w || c.size?.[1] !== t.h) && (resized !== rk || (resizeTries < 3 && Date.now() - lastResize > 1200))) {
-            if (resized !== rk) { resized = rk; resizeTries = 0; }
-            resizeTries++;
+        // Se pide el tamaño una vez por cada tamaño que tenga la ventana: si la app no baja de su mínimo (Chrome: ~284×160)
+        // se deja así, y si luego cambia por su cuenta (Chrome al abrirse o al cambiar de vídeo, un borde arrastrado) es
+        // otra clave y se vuelve a pedir. Como mucho una vez cada 1,2 s, por si la app se resiste.
+        const rk = c.address + "|" + t.w + "x" + t.h + "|" + c.size?.[0] + "x" + c.size?.[1];
+        if ((c.size?.[0] !== t.w || c.size?.[1] !== t.h) && resized !== rk && Date.now() - lastResize > 1200) {
+            resized = rk;
             lastResize = Date.now();
             Shell.dispatch('hl.dsp.window.resize({ x = ' + t.w + ', y = ' + t.h + ', ' + sel(c) + ' })');
             // Hyprland (0.57) redimensiona desde el centro y la ventana se desplaza: se vuelve a colocar en la siguiente

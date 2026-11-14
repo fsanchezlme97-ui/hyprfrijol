@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.99] — 2026-11-14
+
+### Arreglos
+- **PiP:** si el navegador lo agranda después de abrirlo (al cambiar de vídeo, por ejemplo), vuelve a su tamaño y a
+  su esquina. Antes el tamaño se pedía solo tres veces por ventana y, como Chrome no baja de ~284×160, esas tres se
+  gastaban enseguida: luego se quedaba grande, y el cambio de tamaño podía tomarse por un arrastre y dejarlo «libre».
+  Ahora se pide una vez por cada tamaño que tenga la ventana. Arrastrarlo tú sigue funcionando igual.
+
 ## [0.9.98] — 2026-11-14
 
 ### Arreglos

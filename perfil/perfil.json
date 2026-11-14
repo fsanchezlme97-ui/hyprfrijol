@@ -124,7 +124,7 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.9.97",
+ "hyprfrijol": "v0.9.98",
  "ollama": [
   "gemma4:e4b"
  ],
@@ -134,7 +134,7 @@
   "rustdesk": true,
   "rustdeskPortal": true
  },
- "saved": "2026-11-14 08:08",
+ "saved": "2026-11-14 09:55",
  "services": [
   "sshd",
   "ufw",
@@ -282,8 +282,8 @@
   "pipAuto": false,
   "pipCorner": "sup-der",
   "pipFree": [
-   0.6766,
-   0.105
+   0.3677,
+   0.4333
   ],
   "pipHoverControls": true,
   "pipMargin": 4,
