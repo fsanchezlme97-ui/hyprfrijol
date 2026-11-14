@@ -124,7 +124,7 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.9.98",
+ "hyprfrijol": "v0.9.99",
  "ollama": [
   "gemma4:e4b"
  ],
@@ -134,7 +134,7 @@
   "rustdesk": true,
   "rustdeskPortal": true
  },
- "saved": "2026-11-14 09:55",
+ "saved": "2026-11-14 11:09",
  "services": [
   "sshd",
   "ufw",
@@ -156,6 +156,7 @@
   "aiFallbackProvider": "ollama",
   "aiHistoryDays": 0,
   "aiModel": "",
+  "aiMuted": false,
   "aiOnboarded": true,
   "aiProvider": "gemini",
   "aiVoice": true,
@@ -327,7 +328,7 @@
    "notas"
   ],
   "widgetsOnDesktop": false,
-  "windowMode": "mosaico",
+  "windowMode": "desplazamiento",
   "workspaceAnim": "auto",
   "wsBarNames": false,
   "wsNumerals": "japonesa"

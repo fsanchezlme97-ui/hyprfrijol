@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.0] — 2026-11-14
+
+### Cambios
+- **Modo Desplazamiento:** cada ventana nueva se abre ocupando toda la pantalla (antes, media). Si quieres verlas
+  lado a lado, Super + ñ / ´ pasa la columna activa por ⅓, ½ y ⅔; y en Ajustes › Escritorio y gestos ›
+  Desplazamiento › «Ancho de una columna nueva» puedes volver a ½ (o al ancho que prefieras) para todas.
+
 ## [0.9.99] — 2026-11-14
 
 ### Arreglos

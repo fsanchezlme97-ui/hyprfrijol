@@ -235,7 +235,7 @@
   "naturalScroll": true,
   "disableWhileTyping": true,
   "layout": "dwindle",
-  "scrollColumnWidth": 0.5,
+  "scrollColumnWidth": 1.0,
   "scrollFocusFit": "ajustar",
   "scrollOneFull": true,
   "focusOnHover": true,

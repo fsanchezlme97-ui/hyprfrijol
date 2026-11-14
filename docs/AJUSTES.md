@@ -145,7 +145,7 @@ portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si o
 | `titleBars` | `true` | botones de ventana del shell (`modules/desktop/TitleBar.qml`): una pastilla dentro de la ventana activa de los espacios flotantes, arriba a la derecha, con asa para moverla (sin la animación de movimiento mientras se arrastra; doble clic maximiza), minimizar, maximizar / restaurar y cerrar; clic derecho: menú (`WinMenu.qml`, también Alt + Espacio). Sin plugins de Hyprland |
 | `barsOwnFrame` | navegadores, apps de GNOME, editores, Discord, Spotify, Ghostty | clases que ya dibujan su barra con botones: no llevan los del shell («Apps con su propia barra», `ui/FloatApps.qml`) |
 | `layout` | `dwindle` (por defecto) · `master` | diseño del modo mosaico (el antiguo `scrolling` es ahora el modo desplazamiento; al elegir otro modo vuelve a `dwindle`) |
-| `scrollColumnWidth` | `0.5` (0.333 · 0.5 · 0.667 · 1.0) | ancho de una columna nueva (`scrolling:column_width`) |
+| `scrollColumnWidth` | `1.0` (0.333 · 0.5 · 0.667 · 1.0) | ancho de una columna nueva (`scrolling:column_width`): por defecto, toda la pantalla |
 | `scrollFocusFit` | `ajustar` (por defecto) · `centrar` | al enfocar una columna se trae justo a la vista o se centra (`scrolling:focus_fit_method` 1 / 0) |
 | `scrollOneFull` | `true` | una sola columna ocupa toda la pantalla (`scrolling:fullscreen_on_one_column`) |
 | `dockBehavior` | `inteligente` (por defecto) · `fijo` · `auto` | `fijo`: siempre visible y reserva su franja. `auto`: se esconde y vuelve con el cursor en su borde. `inteligente`: esquiva las ventanas (se aparta cuando una pasa por su zona; en un espacio en mosaico reserva su sitio salvo con una ventana maximizada) |

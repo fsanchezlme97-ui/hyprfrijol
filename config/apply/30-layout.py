@@ -24,9 +24,9 @@ def hypr_lua(s, c):
         lay = "scrolling"
     snap = "true" if s.get("snapEdges", True) else "false"
     try:
-        w = float(s.get("scrollColumnWidth", 0.5))
+        w = float(s.get("scrollColumnWidth", 1.0))
     except (TypeError, ValueError):
-        w = 0.5
+        w = 1.0
     w = min(1.0, max(0.1, w))
     fit = 0 if s.get("scrollFocusFit", "ajustar") == "centrar" else 1
     one = "true" if s.get("scrollOneFull", True) else "false"

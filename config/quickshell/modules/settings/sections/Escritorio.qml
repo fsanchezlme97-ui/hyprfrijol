@@ -102,13 +102,13 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Desplazamiento"
-        headerRight: Mono { tech: true; text: "scrolling:column_width = " + Settings.get("scrollColumnWidth", 0.5) }
+        headerRight: Mono { tech: true; text: "scrolling:column_width = " + Settings.get("scrollColumnWidth", 1.0) }
         LabeledRow {
             label: "Ancho de una columna nueva"
             labelWidth: 190
             Pills {
                 model: [[0.333, "⅓"], [0.5, "½"], [0.667, "⅔"], [1.0, "Completa"]]
-                current: Settings.get("scrollColumnWidth", 0.5)
+                current: Settings.get("scrollColumnWidth", 1.0)
                 onPicked: k => Settings.set("scrollColumnWidth", k)
             }
         }
