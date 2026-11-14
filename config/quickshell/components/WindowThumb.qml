@@ -19,6 +19,10 @@ Item {
     property bool showLabel: true          // nombre de la app en el centro cuando no hay imagen o la miniatura es pequeña
     property bool forceLabel: false
     property real labelSize: 12.5
+    // Proporción (ancho / alto) de la ventana: si es > 0, la captura se recorta por el centro para llenar la miniatura
+    // sin deformarse (la vista general, en mosaico). coverF < 1: sobra ancho; > 1: sobra alto.
+    property real cover: 0
+    readonly property real coverF: cover > 0 && width > 0 && height > 0 ? width / height / cover : 1
     readonly property var toplevel: { HyprClients.refreshes; return HyprClients.toplevelFor(address); }
     readonly property bool hasImage: shot.hasContent && shot.visible
 
@@ -31,12 +35,23 @@ Item {
 
     ScreencopyView {
         id: shot
-        anchors.fill: parent
+        // Con cover, más grande que la miniatura (con la forma de la ventana) y centrada: crop recorta lo que se ve
+        width: root.width / Math.min(1, root.coverF)
+        height: root.height * Math.max(1, root.coverF)
+        x: (root.width - width) / 2
+        y: (root.height - height) / 2
         visible: false
         captureSource: root.live && root.width > 8 ? (root.toplevel?.wayland ?? null) : null
         live: root.live
         paintCursor: false
-        constraintSize: Qt.size(Math.ceil(root.width * 1.5), Math.ceil(root.height * 1.5))
+        constraintSize: Qt.size(Math.ceil(width * 1.5), Math.ceil(height * 1.5))
+    }
+    ShaderEffectSource {
+        id: crop
+        visible: false
+        sourceItem: root.cover > 0 ? shot : null
+        sourceRect: Qt.rect(-shot.x, -shot.y, root.width, root.height)
+        textureSize: Qt.size(Math.ceil(root.width * 1.5), Math.ceil(root.height * 1.5))
     }
     // Esquinas redondeadas sobre la captura
     Rectangle {
@@ -49,7 +64,7 @@ Item {
     MultiEffect {
         anchors.fill: parent
         visible: shot.hasContent
-        source: shot
+        source: root.cover > 0 ? crop : shot
         maskEnabled: true
         maskSource: mask
         maskThresholdMin: 0.5

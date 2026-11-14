@@ -231,30 +231,26 @@ Overlay {
                                 anchors.fill: parent
                                 anchors.margins: 8
                                 readonly property var geo: HyprClients.logical(cell.mon)
-                                // Modo «Desplazamiento»: la cinta de columnas sigue fuera de la pantalla por los lados; se
-                                // encoge para que quepa entera y un marco señala la parte que se ve
-                                readonly property var ext: {
-                                    let x0 = geo.x, x1 = geo.x + geo.w;
-                                    for (const c of cell.wins) {
-                                        if (c.floating || !c.at || !c.size) continue;
-                                        x0 = Math.min(x0, c.at[0]); x1 = Math.max(x1, c.at[0] + c.size[0]);
-                                    }
-                                    return { x: x0, w: x1 - x0 };
-                                }
-                                readonly property bool tape: ext.w > geo.w + 4
-                                readonly property real k: Math.min(width / Math.max(1, ext.w), height / Math.max(1, geo.h))
-                                readonly property real ox: (width - ext.w * k) / 2 + (geo.x - ext.x) * k
+                                readonly property real k: Math.min(width / Math.max(1, geo.w), height / Math.max(1, geo.h))
+                                readonly property real ox: (width - geo.w * k) / 2
                                 readonly property real oy: (height - geo.h * k) / 2
-
-                                Rectangle {
-                                    visible: screenArea.tape
-                                    x: screenArea.ox - 2; y: screenArea.oy - 2
-                                    width: screenArea.geo.w * screenArea.k + 4; height: screenArea.geo.h * screenArea.k + 4
-                                    z: 3
-                                    radius: Theme.r(7)
-                                    color: "transparent"
-                                    border.width: 1.5
-                                    border.color: Qt.alpha(Theme.p, 0.6)
+                                // Modo «Desplazamiento»: si la cinta de columnas no cabe en la pantalla, sus ventanas se dibujan
+                                // en mosaico llenando el cuadro (solo aquí: en el escritorio siguen en la cinta). Por columnas y
+                                // en el orden de la cinta: 3 ventanas → una a la izquierda y dos apiladas a la derecha.
+                                readonly property var slots: {
+                                    const ts = cell.wins.filter(c => !c.floating && c.at && c.size)
+                                        .sort((a, b) => (a.at[0] - b.at[0]) || (a.at[1] - b.at[1]));
+                                    const r = {};
+                                    if (!ts.length || ts[0].at[0] >= geo.x - 4 && Math.max(...ts.map(c => c.at[0] + c.size[0])) <= geo.x + geo.w + 4) return r;
+                                    const n = ts.length, g = 4, cols = Math.ceil(Math.sqrt(n)), base = Math.floor(n / cols), extra = n % cols;
+                                    const W = (width - g * (cols - 1)) / cols;
+                                    let i = 0;
+                                    for (let col = 0; col < cols; col++) {
+                                        const rows = base + (col >= cols - extra ? 1 : 0), H = (height - g * (rows - 1)) / rows;
+                                        for (let row = 0; row < rows; row++, i++)
+                                            r[ts[i].address] = { x: col * (W + g), y: row * (H + g), w: W, h: H };
+                                    }
+                                    return r;
                                 }
 
                                 Repeater {
@@ -266,11 +262,12 @@ Overlay {
                                         readonly property int wsId: cell.wsId
                                         readonly property bool hit: win.query !== "" && win.matches(modelData)
                                         readonly property bool sel: win.query !== "" && address === win.selAddress
-                                        readonly property real bx: screenArea.ox + (modelData.at[0] - screenArea.geo.x) * screenArea.k
-                                        readonly property real by: screenArea.oy + (modelData.at[1] - screenArea.geo.y) * screenArea.k
+                                        readonly property var slot: screenArea.slots[address] ?? null
+                                        readonly property real bx: slot ? slot.x : screenArea.ox + (modelData.at[0] - screenArea.geo.x) * screenArea.k
+                                        readonly property real by: slot ? slot.y : screenArea.oy + (modelData.at[1] - screenArea.geo.y) * screenArea.k
                                         x: bx; y: by
-                                        width: Math.max(18, modelData.size[0] * screenArea.k)
-                                        height: Math.max(14, modelData.size[1] * screenArea.k)
+                                        width: slot ? slot.w : Math.max(18, modelData.size[0] * screenArea.k)
+                                        height: slot ? slot.h : Math.max(14, modelData.size[1] * screenArea.k)
                                         z: dragArea.drag.active ? 100 : modelData.floating ? 2 : 1
                                         opacity: !win.query || hit ? 1 : 0.3
                                         Drag.active: dragArea.drag.active
@@ -286,6 +283,7 @@ Overlay {
                                             cls: wthumb.modelData.class
                                             title: wthumb.modelData.title
                                             live: win.shown
+                                            cover: wthumb.slot ? wthumb.modelData.size[0] / Math.max(1, wthumb.modelData.size[1]) : 0
                                             radius: Theme.r(7)
                                             labelSize: 12.5
                                         }
