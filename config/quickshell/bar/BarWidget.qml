@@ -16,7 +16,7 @@ Loader {
     readonly property var custom: wid.startsWith("propio:") ? (Settings.barCustomList.find(c => "propio:" + c.id === wid) ?? null) : null
     Layout.alignment: vertical ? Qt.AlignHCenter : Qt.AlignVCenter
     sourceComponent: wid.startsWith("sep:") ? cSep : custom ? cPropio : ({ clima: cClima, recursos: cRecursos, impresora: cImpresora, bongo: cBongo, pomodoro: cPomo,
-                       cafeina: cCafe, portapapeles: cClip, dictado: cDict, ia: cIa, ajustes: cGear })[wid] ?? null
+                       cafeina: cCafe, portapapeles: cClip, dictado: cDict, voz: cVoz, ia: cIa, ajustes: cGear })[wid] ?? null
 
     Component { id: cClima; WeatherChip { vertical: root.vertical } }
     Component { id: cRecursos; StatsChip { vertical: root.vertical } }
@@ -26,6 +26,7 @@ Loader {
     Component { id: cCafe; CaffeineChip { vertical: root.vertical } }
     Component { id: cClip; IconBtn { implicitHeight: root.vertical ? 26 : 22; icon: "clipboard"; tooltip: root.vertical ? "" : "Portapapeles"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") } }
     Component { id: cDict; MicBtn { implicitHeight: root.vertical ? 26 : 22 } }
+    Component { id: cVoz; VoiceBtns { vertical: root.vertical } }
     Component { id: cIa; IconBtn { implicitHeight: root.vertical ? 26 : 22; icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") } }
     Component { id: cGear; IconBtn { implicitHeight: root.vertical ? 26 : 22; icon: "gear"; onClicked: Shell.open("ajustesapp") } }
     // Separador puesto a mano: una raya fina con aire a los lados

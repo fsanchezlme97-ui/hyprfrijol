@@ -96,13 +96,13 @@ Singleton {
     // (BarH/BarV: espacios y título · onda · información · utilidades · bandeja · estado y hora)
     readonly property var barModuleList: {
         const v = get("barModules", null);
-        return Array.isArray(v) ? v : ["espacios", "titulo", "musica", "clima", "recursos", "pomodoro", "cafeina", "dictado", "ia", "red", "bateria", "notificaciones", "reloj"];
+        return Array.isArray(v) ? v : ["espacios", "titulo", "musica", "clima", "recursos", "cafeina", "voz", "ia", "red", "bateria", "notificaciones", "reloj"];
     }
     function barHas(m: string): bool { return barModuleList.includes(m); }
     // Widgets que se pueden mover (Ajustes › Widgets de la barra), más los propios (barCustom → «propio:<id>»).
     // barOrder = { izquierda: [ids], derecha: [ids] } guarda en qué isla va cada uno y su orden; los que no
     // aparecen (nuevos o sin tocar) van a la derecha en este orden. Encendido o apagado sigue en barModules.
-    readonly property var barWidgetIds: ["clima", "recursos", "impresora", "bongo", "pomodoro", "cafeina", "portapapeles", "dictado", "ia", "ajustes"]
+    readonly property var barWidgetIds: ["clima", "recursos", "impresora", "bongo", "pomodoro", "cafeina", "portapapeles", "dictado", "voz", "ia", "ajustes"]
     readonly property var barCustomList: { const v = get("barCustom", null); return Array.isArray(v) ? v.filter(c => c && c.id) : []; }
     readonly property var barOrder: {
         const o = get("barOrder", null) || {};

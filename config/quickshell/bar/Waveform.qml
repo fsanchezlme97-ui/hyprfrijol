@@ -6,9 +6,11 @@
 //   onda    curva suave rellena, simétrica
 //   linea   una sola línea fina que oscila
 // Cada fotograma se acerca al valor de cava con ataque rápido y caída suave, así se mueve fluido y sin retraso.
-// Mientras habla el asistente (Shell.aiSpeaking) es siempre «onda» rellena en color terciario: así se distingue su voz
-// del resto del audio del equipo.
-// En silencio queda una línea de puntos tenue. Clic: controles de música. Clic central: reproducir/pausar.
+// Estados del asistente, cada uno con su color fijo (Theme.aiListen/aiThink/aiSpeak) y en el estilo elegido:
+//   escucha  verde: el nivel del micrófono (dictado o conversación), lo más reciente en el centro
+//   piensa   azul: una ola que recorre las barras mientras prepara la respuesta (sin animaciones: quieta)
+//   habla    morado: la voz del asistente (cava)
+// Sin asistente: la música del equipo con los colores del tema; en silencio, una línea de puntos tenue. Clic: controles de música. Clic central: reproducir/pausar.
 // Rueda: volumen.
 import QtQuick
 import ".."
@@ -18,7 +20,12 @@ import "../services"
 Rectangle {
     id: root
     property real barHeight: 32
-    readonly property string kind: Shell.aiSpeaking ? "onda" : Settings.get("waveStyle", "barras")
+    readonly property string kind: Settings.get("waveStyle", "barras")
+    readonly property string aiState: Shell.aiSpeaking ? "habla"
+        : Shell.aiConvState === "piensa" || Shell.aiBusy || Shell.dictPhase === "trans" ? "piensa"
+        : Shell.dictPhase === "rec" || Shell.aiConvState === "escucha" ? "escucha" : ""
+    readonly property color stateColor: aiState === "habla" ? Theme.aiSpeak : aiState === "piensa" ? Theme.aiThink : Theme.aiListen
+    property real thinkT: 0
     readonly property int n: Cava.count
     readonly property real gap: kind === "barras" ? 1.6 : 0
     readonly property real bw: kind === "barras" ? 2.6 : 0
@@ -29,30 +36,38 @@ Rectangle {
     color: hover.hovered ? Theme.fill2 : "transparent"
     Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
-    readonly property bool live: Cava.active && (Media.playing || peak > 0.02)
+    readonly property bool live: aiState !== "" || Cava.active && (Media.playing || peak > 0.02)
     property real peak: 0
     property var disp: Array(n).fill(0)
     property bool idlePainted: false
-    readonly property var paintKey: [Theme.p, Theme.ter, kind, Shell.aiSpeaking]
+    readonly property var paintKey: [Theme.p, Theme.ter, kind, aiState]
     onPaintKeyChanged: { idlePainted = false; cv.requestPaint(); }
 
     UseCounter { target: Cava; active: root.visible }
 
     readonly property bool gpuBars: kind === "barras"
     FrameAnimation {
-        running: root.visible && (Cava.active || root.peak > 0.002)
+        running: root.visible && (Cava.active || root.peak > 0.002 || root.aiState !== "")
         property real acc: 0
         onTriggered: {
             // 30 fps: un fotograma de cada dos (con el tiempo acumulado, para que la caída no se ralentice)
             acc += frameTime;
             if (acc < 1 / 32) return;
-            const src = Cava.bars, d = root.disp;
+            const src = Cava.bars, d = root.disp, st = root.aiState, lv = Shell.micLevels ?? [], half = (root.n - 1) / 2;
             const dt = Math.min(0.08, acc);
             acc = 0;
+            if (st === "piensa" && !Theme.still) root.thinkT += dt;
+            const tt = root.thinkT;
             const up = 1 - Math.exp(-dt * 38), down = 1 - Math.exp(-dt * 9);
             let pk = 0;
             for (let i = 0; i < root.n; i++) {
-                const t = Math.min(1, src[i] ?? 0);
+                let t;
+                if (st === "escucha") {          // del centro hacia fuera: del nivel más nuevo al más viejo
+                    const k = Math.abs(i - half) / half, j = lv.length - 1 - Math.floor(k * (lv.length - 1) + 0.5);
+                    t = Math.min(1, (lv[j] ?? 0) * (1 - 0.35 * k) * (0.8 + 0.2 * Math.sin(i * 1.7)));
+                } else if (st === "piensa") {
+                    t = 0.12 + 0.55 * Math.pow(0.5 + 0.5 * Math.sin(tt * 4.2 - i * 0.36), 2) * (0.7 + 0.3 * Math.sin(tt * 1.3 + i * 0.13));
+                } else t = Math.min(1, src[i] ?? 0);
                 d[i] += (t - d[i]) * (t > d[i] ? up : down);
                 if (d[i] > pk) pk = d[i];
             }
@@ -68,6 +83,7 @@ Rectangle {
     // ---- «barras» en la GPU: alto de cada rectángulo puesto a mano (sin 48 enlaces que se reevalúen)
     readonly property real barsH: height - 6
     function barColor(f: real): color {
+        if (aiState !== "") { const c = stateColor; return Qt.rgba(c.r, c.g, c.b, 1 - 0.3 * Math.abs(f * 2 - 1)); }
         const p = Theme.p, t = Theme.ter;
         if (f < 0.5) return Qt.rgba(p.r, p.g, p.b, 0.75 + f * 0.5);
         const k = (f - 0.5) * 2;
@@ -119,10 +135,10 @@ Rectangle {
             ctx.reset();
             const w = width, h = height, mid = h / 2, d = root.disp, n = root.n;
             const g = ctx.createLinearGradient(0, 0, w, 0);
-            const ai = Shell.aiSpeaking;
-            g.addColorStop(0, Qt.alpha(ai ? Theme.ter : Theme.p, 0.75));
-            g.addColorStop(0.5, ai ? Theme.ter : Theme.p);
-            g.addColorStop(1, Qt.alpha(Theme.ter, 0.85));
+            const ai = root.aiState !== "", sc = root.stateColor;
+            g.addColorStop(0, Qt.alpha(ai ? sc : Theme.p, 0.7));
+            g.addColorStop(0.5, ai ? sc : Theme.p);
+            g.addColorStop(1, Qt.alpha(ai ? sc : Theme.ter, ai ? 0.7 : 0.85));
             ctx.fillStyle = g;
             ctx.strokeStyle = g;
             // Las bandas graves (izquierda) suelen dominar: se reparte la altura con una ligera curva

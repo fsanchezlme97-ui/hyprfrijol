@@ -358,6 +358,11 @@ ColumnLayout {
             sub: root.voiceLocal === false ? "falta la voz de Helpert: instálala abajo"
                                            : "Helpert lee las respuestas en voz alta (voz local: rápida y sin internet)"
         }
+        // aiMuted: hf-ai speak calla del todo (respuestas, avisos y saludo); la conversación contesta en notificaciones
+        SwRow {
+            label: "Silenciar respuestas habladas"; key: "aiMuted"; def: false
+            sub: "Helpert no dice nada en voz alta; en la conversación contesta por escrito. También con el botón de la barra o diciendo «silencio» (y «vuelve a hablar»)"
+        }
         Button {
             visible: root.voiceLocal === false
             text: "Instalar la voz de Helpert (Piper, ~250 MB, sin internet)"

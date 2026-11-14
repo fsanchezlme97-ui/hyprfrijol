@@ -47,6 +47,7 @@ Item {
         if (keepHistory && !histLoading) histTimer.restart();
     }
     property bool busy: false
+    Binding { target: Shell; property: "aiBusy"; value: root.busy }
     readonly property string aiName: String(Settings.get("aiName", "") ?? "").trim()
     property bool useWindow: Settings.get("aiContextWindow", true)
     property bool useClipboard: Settings.get("aiContextClipboard", true)
@@ -343,8 +344,11 @@ Item {
             const waits = conv && n > 0 && !auto && !sudo;
             if (waits) { root.planIdx = root.messages.length - 1; Shell.aiPlanPending = true; }
             const said = (r.labels ?? []).map(l => String(l).split(":")[0]).join(". ") + ".";
-            if (Settings.get("aiVoice", false) || conv) Quickshell.execDetached([Paths.script("hf-ai"), "speak",
-                (r.text || (n ? said : "")) + (waits ? " ¿Lo hago?" : conv && sudo ? " Eso necesita tu contraseña: te lo dejo en el panel." : "")]);
+            const spoken = (r.text || (n ? said : "")) + (waits ? " ¿Lo hago?" : conv && sudo ? " Eso necesita tu contraseña: te lo dejo en el panel." : "");
+            // Respuestas silenciadas (aiMuted) en la conversación: la respuesta llega por escrito, en una notificación
+            if (conv && Settings.get("aiMuted", false) && !root.active)
+                Quickshell.execDetached(["notify-send", "-a", Settings.get("aiName", "") || "Asistente", "-i", "dialog-information", "--", spoken]);
+            else if (Settings.get("aiVoice", false) || conv) Quickshell.execDetached([Paths.script("hf-ai"), "speak", spoken]);
             if (auto) root.apply(root.messages.length - 1);
             else if (n > 0 && !root.active && (!conv || sudo)) Shell.open("ia");
         }

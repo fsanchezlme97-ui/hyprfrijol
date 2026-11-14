@@ -38,7 +38,11 @@ Singleton {
     property bool locked: false
     // Dictado (modules/dictado): fase que pinta el botón de la barra (idle | rec | trans…) y la orden de empezar/terminar
     property string dictPhase: "idle"
-    property bool aiSpeaking: false        // hf-ai speak mientras suena la voz del asistente (onda rellena en la barra)
+    property bool aiSpeaking: false        // hf-ai speak mientras suena la voz del asistente (onda morada en la barra)
+    property bool aiBusy: false            // el asistente está pensando una respuesta (AiChat.qml: onda azul en la barra)
+    property string aiConvState: ""        // conversación por voz: escucha | piensa | habla ("" sin conversación; Dictado.qml)
+    property var micLevels: []             // niveles recientes del micrófono al dictar o escuchar (0..1, el último el más nuevo)
+    signal voiceDo(string what)            // botones de voz de la barra (bar/VoiceBtns.qml): dictar | conversar | silenciar | microfono
     signal dictToggle()                    // botón del micrófono: lo de su modo (micMode, modules/dictado)
     signal micCycle()                      // siguiente modo del micrófono
     signal aiAskHidden(string text)        // pregunta al asistente sin abrir el panel (hablar por voz: Super + Alt + H)

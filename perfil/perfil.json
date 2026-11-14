@@ -124,7 +124,7 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.9.89",
+ "hyprfrijol": "v0.9.90",
  "ollama": [
   "gemma4:e4b"
  ],
@@ -134,7 +134,7 @@
   "rustdesk": true,
   "rustdeskPortal": true
  },
- "saved": "2026-11-13 21:41",
+ "saved": "2026-11-13 23:28",
  "services": [
   "sshd",
   "ufw",
@@ -159,7 +159,7 @@
   "aiOnboarded": true,
   "aiProvider": "gemini",
   "aiVoice": true,
-  "aiVoiceLocal": true,
+  "aiVoiceLocal": false,
   "animPreset": "fluido",
   "animSpeed": 1.5,
   "animado": true,
@@ -172,7 +172,6 @@
    "espacios",
    "clima",
    "recursos",
-   "pomodoro",
    "ia",
    "red",
    "notificaciones",
@@ -180,7 +179,7 @@
    "musica",
    "titulo",
    "bongo",
-   "dictado"
+   "voz"
   ],
   "barOrder": {
    "derecha": [
@@ -189,7 +188,7 @@
     "bongo",
     "clima",
     "portapapeles",
-    "dictado",
+    "voz",
     "ia",
     "ajustes",
     "cafeina",
@@ -265,7 +264,7 @@
    "clima"
   ],
   "lowBatterySaver": false,
-  "micMode": "silencio",
+  "micMode": "ia",
   "naturalScroll": true,
   "nightLight": "off",
   "nightTemp": 5500,

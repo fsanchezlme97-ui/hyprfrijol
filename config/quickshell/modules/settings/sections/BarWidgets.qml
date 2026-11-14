@@ -21,10 +21,11 @@ ColumnLayout {
         recursos: ["Sistema", "cpu", "CPU, GPU, RAM, disco, red y temperatura · clic: núcleos, procesos, discos y red"],
         impresora: ["Impresora 3D", "printer", Printer.configured ? "estado y progreso · clic: cámara, temperaturas y pausa" : "configura la dirección en Ajustes › Escritorio"],
         bongo: ["Gato bongo", "smile", "toca el tambor mientras escribes"],
-        pomodoro: ["Pomodoro", "clock", "tiempo de foco y descansos · clic: su ventana"],
+        pomodoro: ["Pomodoro", "clock", "tiempo de foco y descansos · también en el centro de control"],
         cafeina: ["Cafeína", "coffee", "no apagar la pantalla · clic derecho: 1 hora"],
         portapapeles: ["Portapapeles", "clipboard", "abre el historial en Spotlight"],
-        dictado: ["Dictado", "mic", "dictar o hablar con el asistente"],
+        dictado: ["Micrófono", "mic", "un botón: dictar, hablar con el asistente o silenciar (clic derecho cambia de modo)"],
+        voz: ["Botones de voz", "audio_lines", "dictado, conversación, silenciar las respuestas habladas y el micrófono"],
         ia: ["Asistente de IA", "ai", "abre el panel del asistente"],
         ajustes: ["Ajustes", "gear", "la tuerca: abre esta ventana"]
     })

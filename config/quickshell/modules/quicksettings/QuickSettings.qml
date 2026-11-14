@@ -4,7 +4,7 @@
 //     volumen · mosaicos · modo de energía · teléfono (Valent, scripts/hf-phone · scrcpy)
 //   · notificaciones (recientes por app e historial: ../notifications/NotifCenter.qml; ocupan el sitio que sobre)
 //   · agenda (calendario, eventos del día, relojes del mundo: ../agenda/AgendaCard.qml)
-// Estilo, color y Pomodoro viven en Ajustes › Apariencia y en el chip de la barra. El grupo de estado de la barra
+// Estilo y color viven en Ajustes › Apariencia; el pomodoro, en el último mosaico (2.ª página) y su desplegable. El grupo de estado de la barra
 // (iconos, campana y hora) lo abre; Shell.section dice a qué parte se desplaza. Si no cabe, la columna se desplaza
 // (barra de desplazamiento fina con los colores del tema). Con la barra a la izquierda se abre a la izquierda.
 // Todo con datos reales; lo que no existe se oculta.
@@ -28,7 +28,7 @@ Overlay {
     panelWidth: 404
 
     // ── Estado local ───────────────────────────────────────────────
-    property string expanded: ""              // "" | "wifi" | "bt" | "audio" | "dnd" | "ventanas"
+    property string expanded: ""              // "" | "wifi" | "bt" | "audio" | "dnd" | "ventanas" | "cafe" | "phone" | "pomodoro"
     property string pwFor: ""                 // red Wi-Fi que pide contraseña
     property string userName: ""
     property bool hasFace: false
@@ -257,7 +257,9 @@ Overlay {
                     Item {
                         id: pager
                         Layout.fillWidth: true
-                        implicitHeight: Math.max(pg1.implicitHeight, pg2.implicitHeight)
+                        // cada página con su alto (la 2.ª tiene una fila más: el pomodoro)
+                        implicitHeight: page === 0 ? pg1.implicitHeight : pg2.implicitHeight
+                        Behavior on implicitHeight { NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
                         property int page: 0
                         readonly property int pages: 2
                         function go(i: int): void {
@@ -436,6 +438,18 @@ Overlay {
                                             else adbCheck.running = true;
                                         }
                                     }
+                                    // Pomodoro (services/Pomodoro.qml): clic empieza o pausa; el desplegable reinicia, salta o abre su ventana
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.columnSpan: 2
+                                        icon: "clock"; label: "Pomodoro"
+                                        active: Pomodoro.running
+                                        sub: Pomodoro.active ? Pomodoro.label + " · " + Pomodoro.time + (Pomodoro.running ? "" : " · en pausa")
+                                             : "Foco de " + Pomodoro.focusMin + " min · clic para empezar"
+                                        expandable: true
+                                        expanded: win.expanded === "pomodoro"
+                                        onClicked: Pomodoro.toggle()
+                                        onExpand: win.expanded = win.expanded === "pomodoro" ? "" : "pomodoro"
+                                    }
                                 }
                         }
                     }
@@ -517,6 +531,17 @@ Overlay {
                                     onClicked: { Caffeine.set(true, modelData[0]); win.expanded = ""; }
                                 }
                             }
+                        }
+                    }
+                    Loader {
+                        Layout.fillWidth: true
+                        active: win.expanded === "pomodoro"
+                        visible: active
+                        sourceComponent: RowLayout {
+                            spacing: 4
+                            Btn { Layout.fillWidth: true; h: 28; padX: 6; icon: "refresh"; text: "Reiniciar"; onClicked: Pomodoro.reset() }
+                            Btn { Layout.fillWidth: true; h: 28; padX: 6; icon: "next"; text: "Saltar"; onClicked: Pomodoro.skip() }
+                            Btn { Layout.fillWidth: true; h: 28; padX: 6; icon: "sliders"; text: "Más"; onClicked: Shell.open("w-pomodoro", "pomodoro") }
                         }
                     }
                     // Acciones del móvil enlazado (desplegable del mosaico Teléfono)

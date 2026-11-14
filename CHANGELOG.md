@@ -3,6 +3,36 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.91] — 2026-11-13
+
+### Añadido
+- **Botones de voz en la barra** (widget «Botones de voz»), cada uno con una sola función:
+  - dictado de voz a texto (Super + Alt + D);
+  - conversación con Helpert (Super + Alt + H);
+  - silenciar las respuestas habladas;
+  - deshabilitar el micrófono.
+
+  Lo silenciado se ve en rojo y lo que está en marcha, resaltado. Sustituye de fábrica al botón único del micrófono,
+  que sigue disponible en Ajustes › Widgets de la barra.
+- **La onda de la barra muestra qué hace Helpert**, con un color fijo para cada estado:
+  - verde mientras te escucha, con el nivel de tu micrófono (dictado o conversación);
+  - azul mientras piensa la respuesta, también al escribirle en el panel;
+  - morado mientras habla.
+
+  Sin Helpert, la onda sigue con la música como antes. Ajustes › Barra › Onda de audio explica los colores.
+- **Silenciar respuestas habladas** (Ajustes › Asistente de IA › Voz y conversación, o el botón de la barra):
+  Helpert deja de hablar en voz alta. En la conversación por voz sigue escuchándote y contesta por escrito, en una
+  notificación.
+  - En plena conversación se silencia diciendo «silencio», «cállate», «modo silencio» o «contéstame por escrito».
+  - Se vuelve a oír diciendo «vuelve a hablar» o «háblame otra vez».
+  - Solo cuenta si es la frase entera, así que «¿qué es el silencio?» sigue siendo una pregunta.
+
+### Cambiado
+- **El pomodoro pasa al centro de control**: es un mosaico en la segunda página. Un clic lo empieza o lo pausa, y el
+  desplegable lo reinicia, salta el bloque o abre su ventana. Sale de la barra de fábrica, pero se puede volver a
+  poner desde Ajustes › Widgets de la barra.
+- Cada página de mosaicos del centro de control tiene su propio alto.
+
 ## [0.9.90] — 2026-11-13
 
 ### Cambiado

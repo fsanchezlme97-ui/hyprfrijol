@@ -243,6 +243,25 @@ ColumnLayout {
                 onPicked: k => Settings.set("waveStyle", k)
             }
         }
+        // Estados del asistente (bar/Waveform.qml): se ven en cualquier estilo, antes que la música
+        Txt {
+            Layout.fillWidth: true
+            text: "Además de la música, la onda dice qué hace " + (Settings.get("aiName", "") || "el asistente") + ":"
+            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+        }
+        Flow {
+            Layout.fillWidth: true
+            spacing: 16
+            Repeater {
+                model: [[Qt.alpha(Theme.p, 0.45), "En espera"], [Theme.aiListen, "Escuchando"], [Theme.aiThink, "Procesando"], [Theme.aiSpeak, "Hablando"]]
+                Row {
+                    required property var modelData
+                    spacing: 8
+                    Rectangle { width: 8; height: 8; radius: 4; color: parent.modelData[0]; anchors.verticalCenter: parent.verticalCenter }
+                    Txt { text: parent.modelData[1]; size: 11.5 }
+                }
+            }
+        }
     }
     Section {
         Layout.fillWidth: true

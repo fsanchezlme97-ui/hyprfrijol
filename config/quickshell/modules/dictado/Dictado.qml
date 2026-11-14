@@ -129,6 +129,7 @@ Scope {
             if (!root.conv || root.convState !== "piensa") return;
             thinkTimer.stop();
             root.convState = "habla";
+            if (Settings.get("aiMuted", false)) { convLater.restart(); return; }   // sin voz: tu turno ya
             replyTimer.restart();
             if (Shell.aiSpeaking) root.convListen();
         }
@@ -146,6 +147,9 @@ Scope {
     }
     readonly property var noiseRe: /^[\s.,…!?¡¿-]*(m+-?h?m+|mhm+|hmm+|e+h+|a+h+|u+m+|o+h+|gracias|subt[ií]tulos.*|amara\.org.*|\[.*\]|\(.*\)|m[uú]sica)?[\s.,…!?¡¿-]*$/i
     readonly property var byeRe: /^(adi[oó]s|hasta luego|chao|terminar|termina|para ya|eso es todo|ya est[aá]|gracias,? eso es todo|fin de la conversaci[oó]n)[\s.!¡]*$/i
+    // Silenciar o volver a oír las respuestas en plena conversación: solo la frase entera («silencio», «modo silencio»…)
+    readonly property var muteRe: /^[¡¿\s]*(silencio|s[ií]l[eé]nciate|c[aá]llate|modo silencio(so)?|silencia(r)? (tus |las )?respuestas|no hables|sin voz|(cont[eé]st|respond)(a|e)?(me)? por escrito)[\s.,!¡]*(por favor)?[\s.!]*$/i
+    readonly property var unmuteRe: /^[¡¿\s]*(vuelve a hablar|ya puedes hablar|h[aá]blame( otra vez| de nuevo)?|activa (la|tu) voz|quita el silencio|con voz|(cont[eé]st|respond)(a|e)?(me)? hablando)[\s.,!¡]*(por favor)?[\s.!]*$/i
 
     function start(k, extra, fromKey): void {
         if (proc.running) return;
@@ -209,6 +213,13 @@ Scope {
                     break;
                 }
                 if (byeRe.test(t)) { convEnd(true); break; }
+                if (muteRe.test(t) || unmuteRe.test(t)) {
+                    const on = muteRe.test(t);
+                    setMuted(on);
+                    if (!on) Quickshell.execDetached([Paths.script("hf-ai"), "speak", "De acuerdo, vuelvo a hablar."]);
+                    convMisses = 0; convLater.restart();
+                    break;
+                }
                 convMisses = 0; convProactive = false;
                 // Un plan esperando (las herramientas del asistente): «sí» lo aplica, «no» lo descarta
                 if (Shell.aiPlanPending && planAnswer(t) !== null) {
@@ -269,6 +280,30 @@ Scope {
         }
     }
     Binding { target: Shell; property: "dictPhase"; value: root.phase }
+    Binding { target: Shell; property: "aiConvState"; value: root.conv ? root.convState : "" }
+    Binding { target: Shell; property: "micLevels"; value: root.levels }
+    // Botones de voz de la barra (bar/VoiceBtns.qml): cada uno hace siempre lo suyo, sin depender de micMode
+    function voiceDo(what): void {
+        if (what === "conversar") { convToggle(); return; }
+        if (what === "silenciar") { setMuted(!Settings.get("aiMuted", false)); return; }
+        if (what === "microfono") {             // silenciar el micrófono: termina lo que lo estaba usando
+            if (!Audio.micMuted) { if (conv) convEnd(false); else if (proc.running && phase === "rec") stop(); }
+            Audio.toggleMic();
+            return;
+        }
+        // dictar: con el micrófono silenciado o en plena conversación no se empieza nada
+        if (Audio.micMuted) { note("Micrófono silenciado"); return; }
+        if (!conv) toggle("dictado");
+    }
+    // Silenciar las respuestas habladas (aiMuted; hf-ai speak calla): la conversación sigue y contesta por escrito,
+    // en una notificación (AiChat.qml). Botón de la barra o, en la conversación, «silencio» / «vuelve a hablar».
+    function setMuted(on): void {
+        Settings.set("aiMuted", on);
+        if (on) Quickshell.execDetached([Paths.script("hf-ai"), "speak", "--stop"]);
+        note(on ? "Respuestas silenciadas: te contesto por escrito" : "Respuestas habladas activadas");
+    }
+    // Aviso corto en la píldora, solo si no está ocupada dictando o escuchando
+    function note(t): void { if (proc.running) return; phase = "done"; msg = t; hider.interval = 1600; hider.restart(); }
     // Micrófono de la barra y hf:micro (Super + Alt + M): según micMode, dictar, hablar con el asistente o silenciar.
     // hf:micro-modo (Super + Shift + Alt + M) y el clic derecho del botón pasan al siguiente modo.
     // Silenciado, ningún modo funcionaría: no se cambia de modo y el botón (o el atajo) solo lo vuelve a activar.
@@ -286,7 +321,7 @@ Scope {
         Settings.set("micMode", next);
         if (!proc.running) { phase = "done"; msg = "Micrófono: " + micModes[next]; hider.interval = 1400; hider.restart(); }
     }
-    Connections { target: Shell; function onDictToggle() { root.micAction(); } function onMicCycle() { root.micCycle(); } }
+    Connections { target: Shell; function onDictToggle() { root.micAction(); } function onMicCycle() { root.micCycle(); } function onVoiceDo(w) { root.voiceDo(w); } }
     property bool micHeld: false            // hf:micro pulsado en modo dictado o asistente (al soltar, released())
     Timer { id: hider; interval: 1600; onTriggered: root.phase = "idle" }
     Timer { id: cmdHider; interval: 3000; onTriggered: { root.cmdText = ""; root.cmdMsg = ""; } }

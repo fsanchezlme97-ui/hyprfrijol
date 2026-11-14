@@ -2768,6 +2768,8 @@ def speak(text, s=None):
     Una sola voz, local (Piper): conversación, avisos y saludo. Sin depender de Google, no hay esperas ni cuotas."""
     t = speakable(text, PIPER_MAX)
     speak_stop()
+    if (s or settings()).get("aiMuted"):       # respuestas habladas silenciadas (botón de la barra o «silencio» en la conversación)
+        return {"ok": True, "error": "", "muted": True}
     if not t:
         return {"ok": False, "error": "Nada que leer"}
     if not piper_ready():
