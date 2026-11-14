@@ -53,10 +53,12 @@ def _size(s):
 
 def hypr_lua(s, c):
     out = []
+    # Las ventanas en mosaico no se maximizan por su cuenta. En el modo flotante la regla no se pone: «float = false» se
+    # evalúa al abrir la ventana, antes de que hf-float-all la haga flotar, y bloqueaba el botón de maximizar de las apps.
     if s.get("windowMode", "mosaico") == "flotante":
         out.append('hl.window_rule({ name = "hf-float-all", match = { class = ".*" }, float = true })')
-    # Las ventanas en mosaico no se maximizan por su cuenta; las flotantes sí (su botón de maximizar / restaurar)
-    out.append('hl.window_rule({ name = "no-maximize", match = { float = false }, suppress_event = "maximize" })')
+    else:
+        out.append('hl.window_rule({ name = "no-maximize", match = { float = false }, suppress_event = "maximize" })')
     cls = _classes(s)
     big = [x for x in cls if x.lower() not in COMPACT]
     small = [x for x in cls if x.lower() in COMPACT]

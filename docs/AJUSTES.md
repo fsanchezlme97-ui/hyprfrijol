@@ -56,7 +56,7 @@ Red, Sonido, Energía, Sistema y recuperación, Accesibilidad y Acerca del siste
 | 10-look.py | `rounding` (null = según el estilo), `blurQuality`, `blurAuto`, `colorFilter` (shaders/), `highContrast`; desenfoque según `estilo` (SkySoul: muy amplio, suave y algo oscurecido en modo oscuro); sombras según `shadows` y `activeBorder` (`brillo`) |
 | 20-input.py | `kbLayouts`, `kbSwitch`, `kbRepeat*`, `numlock`, `capsEscape`, `focusOnHover`, touchpad, gestos 3/4 dedos |
 | 30-layout.py | `windowMode` + `layout` → `general:layout` (dwindle / master, o scrolling en desplazamiento), `scrollColumnWidth`, `scrollFocusFit`, `scrollOneFull`, `snapEdges` |
-| 35-windows.py | `windowMode` (regla `hf-float-all` del modo flotante; `no-maximize`: las ventanas en mosaico no se maximizan por su cuenta, las flotantes sí), `floatApps` + `floatAppsSize` (reglas `hf-float-apps` / `hf-float-apps-compact`) |
+| 35-windows.py | `windowMode` (regla `hf-float-all` del modo flotante; `no-maximize`, salvo en el modo flotante: las ventanas en mosaico no se maximizan por su cuenta), `floatApps` + `floatAppsSize` (reglas `hf-float-apps` / `hf-float-apps-compact`) |
 | 40-monitors.py | `monitors` {salida: {mode, position, scale, vrr, disabled, mirror}} |
 | 50-rules.py | ventanas Ajustes/Herramientas flotantes; sin efectos a pantalla completa (`gameNoFx`) |
 | 60-binds.py | `keybinds` {descripción: {from, to}} (acciones en `keybind-actions.json`), `overAmplify`, lupa (`magnifier`: sustituye la lupa básica de binds.lua) |

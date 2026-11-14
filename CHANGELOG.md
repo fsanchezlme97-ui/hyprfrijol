@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.4] — 2026-11-14
+
+### Arreglos
+- **Modo flotante: el botón de maximizar de las apps funciona** (Chrome, las apps GTK…), y también el de restaurar.
+  Una regla pensada para el mosaico (que las ventanas no se maximicen por su cuenta) se aplicaba también aquí: se
+  evalúa al abrirse la ventana, antes de que el modo flotante la haga flotar.
+- El botón de minimizar de las propias apps sigue sin hacer nada: Hyprland 0.57 descarta esa petición sin avisar,
+  así que el shell no se puede enterar. Para minimizar: el botón de la pastilla de la ventana, un clic en su icono
+  del dock, o Super + H (Super + Mayús + H la recupera).
+
 ## [0.10.3] — 2026-11-14
 
 ### Arreglos
