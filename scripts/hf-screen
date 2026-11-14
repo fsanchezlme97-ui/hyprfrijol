@@ -1,0 +1,510 @@
+#!/usr/bin/env python3
+"""hf-screen — Helpert ve la pantalla, la señala y la usa (Computer Use), siempre con tu permiso (hf-ai lo confirma).
+
+  hf-screen parse                      analiza la pantalla activa (Screen Parsing): captura (hf-ai peek, que respeta las
+                                       apps privadas) + OCR (tesseract) → elementos con texto numerados (Set-of-Mark) y
+                                       la captura con sus números, para el modelo con visión. → JSON
+  hf-screen show [segundos]            superposición: enseña en la pantalla los elementos numerados del último análisis
+  hf-screen point X Y [--label T] [--box X Y W H] [--secs S]
+                                       cursor fantasma: señala un punto (coordenadas globales de Hyprland)
+  hf-screen hide                       quita la superposición
+  hf-screen resolve '<acción JSON>'    → la acción con "at": [x, y] globales (de "mark" o de "x", "y" 0-1000 sobre la
+                                       última captura analizada); error si no se puede
+  hf-screen do '<acción JSON>'         señala con el cursor fantasma y la hace. Acciones (op):
+       point · click · double · right · move     sobre "mark" N o "x", "y" (0-1000 sobre la captura)
+       type {"text"}                             escribe (pegando fuera de las terminales, como el dictado)
+       key {"keys": "ctrl+s"}                    atajo o tecla (Return, Tab, Escape, flechas…)
+       scroll {"value": "down"|"up", "amount"}   rueda (sobre "mark" o "x", "y" si se dan)
+
+El clic va por el protocolo de puntero virtual de Wayland (zwlr_virtual_pointer_v1, un cliente mínimo aquí abajo) en el
+compositor de $WAYLAND_DISPLAY: sin ydotool ni permisos de /dev/uinput. El cursor se coloca con hl.dsp.cursor.move.
+La superposición (cursor fantasma, resaltado y números) la dibuja modules/puntero/Puntero.qml (qs ipc «puntero»).
+"""
+import json
+import os
+import pathlib
+import re
+import shutil
+import socket
+import struct
+import subprocess
+import sys
+import time
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+HOME = pathlib.Path.home()
+CACHE = HOME / ".cache/hyprfrijol/pantalla"
+LAST = CACHE / "ultima.json"
+MAX_AGE = 180                 # s que vale el último análisis para señalar o hacer clic (hf-ai exige además uno en la misma petición)
+MAX_MARKS = 120
+TERMS = ("kitty", "foot", "alacritty", "wezterm", "ghostty", "org.wezfurlong.wezterm", "com.mitchellh.ghostty",
+         "xterm", "konsole", "gnome-terminal", "org.gnome.ptyxis", "terminator", "tilix", "st", "urxvt")
+KEYS = {"enter": "Return", "intro": "Return", "return": "Return", "tab": "Tab", "esc": "Escape", "escape": "Escape",
+        "space": "space", "espacio": "space", "backspace": "BackSpace", "borrar": "BackSpace", "delete": "Delete",
+        "supr": "Delete", "up": "Up", "down": "Down", "left": "Left", "right": "Right", "arriba": "Up", "abajo": "Down",
+        "izquierda": "Left", "derecha": "Right", "home": "Home", "inicio": "Home", "end": "End", "fin": "End",
+        "pageup": "Prior", "pagedown": "Next", "avpag": "Next", "repag": "Prior"}
+MODS = {"ctrl": "ctrl", "control": "ctrl", "shift": "shift", "mayus": "shift", "mayús": "shift", "alt": "alt",
+        "super": "logo", "logo": "logo", "win": "logo", "meta": "logo"}
+
+
+def out(o, code=0):
+    print(json.dumps(o, ensure_ascii=False))
+    sys.exit(code)
+
+
+def run(cmd, timeout=30, **kw):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, **kw).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def jrun(cmd):
+    try:
+        return json.loads(run(cmd) or "null")
+    except ValueError:
+        return None
+
+
+def hypr(dispatch):
+    subprocess.run(["hyprctl", "dispatch", dispatch], capture_output=True)
+
+
+def qs(*args):
+    subprocess.run(["qs", "-p", str(ROOT / "config/quickshell"), "ipc", "call", "puntero", *map(str, args)],
+                   capture_output=True, timeout=5)
+
+
+# ---------------------------------------------------------------- análisis de la pantalla (Screen Parsing + SoM)
+def focused_monitor():
+    mons = jrun(["hyprctl", "monitors", "-j"]) or []
+    return next((m for m in mons if m.get("focused")), None)
+
+
+def ocr_elements(img, scale):
+    """Palabras de tesseract (TSV) → frases: las de una misma línea se juntan salvo que haya un hueco grande (dos
+    botones en la misma fila son dos elementos). Coordenadas en píxeles de la captura.
+    A escala 1 el texto de las apps es pequeño y tesseract pierde el claro sobre oscuro: se le da en gris y al doble."""
+    f = 2 if scale < 1.5 else 1
+    pre = CACHE / "ocr.png"
+    old = os.umask(0o077)
+    try:
+        ok = subprocess.run(["magick", str(img), "-colorspace", "Gray", "-resize", f"{f * 100}%", str(pre)],
+                            capture_output=True, timeout=30).returncode == 0
+    finally:
+        os.umask(old)
+    tsv = run(["tesseract", str(pre if ok else img), "-", "-l", "spa+eng", "--psm", "11", "tsv"], timeout=60)
+    pre.unlink(missing_ok=True)
+    if not ok:
+        f = 1
+    words = []
+    for ln in tsv.splitlines()[1:]:
+        c = ln.split("\t")
+        if len(c) < 12 or c[0] != "5":
+            continue
+        t = c[11].strip()
+        try:
+            conf = float(c[10])
+            x, y, w, h = (round(int(v) / f) for v in c[6:10])
+        except ValueError:
+            continue
+        if not t or conf < 45 or not re.search(r"\w", t) or h < 6 * scale * 0.8 or h > 90 * scale:
+            continue
+        words.append({"key": (c[2], c[3], c[4]), "t": t, "x": x, "y": y, "w": w, "h": h, "c": conf})
+    els, cur = [], None
+    for wd in words:     # tesseract las da ya en orden de lectura dentro de cada línea
+        if cur and cur["key"] == wd["key"] and wd["x"] - (cur["x"] + cur["w"]) < max(cur["h"], wd["h"]) * 1.1:
+            x2, y2 = max(cur["x"] + cur["w"], wd["x"] + wd["w"]), max(cur["y"] + cur["h"], wd["y"] + wd["h"])
+            cur.update(t=cur["t"] + " " + wd["t"], y=min(cur["y"], wd["y"]), c=min(cur["c"], wd["c"]))
+            cur.update(w=x2 - cur["x"], h=y2 - cur["y"])
+            continue
+        if cur:
+            els.append(cur)
+        cur = dict(wd)
+    if cur:
+        els.append(cur)
+    # fuera el ruido (letras sueltas que el OCR «ve» en fondos e iconos): cuanto más corto, más seguro tiene que estar
+    els = [e for e in els if e["c"] >= (88 if len(e["t"]) == 1 else 70 if len(e["t"]) == 2 else 55 if len(e["t"]) < 4 else 0)]
+    els.sort(key=lambda e: (round((e["y"] + e["h"] / 2) / (14 * scale)), e["x"]))
+    return els[:MAX_MARKS]
+
+
+def draw_marks(img, els, dest, scale):
+    """La captura con un recuadro y un número por elemento (Set-of-Mark), para que el modelo diga «el 12»."""
+    fs = max(11, round(13 * scale))
+    args = ["magick", str(img), "-strokewidth", str(max(1, round(scale))), "-font", "DejaVu-Sans-Bold", "-pointsize", str(fs)]
+    for i, e in enumerate(els, 1):
+        x0, y0, x1, y1 = e["x"] - 2, e["y"] - 2, e["x"] + e["w"] + 2, e["y"] + e["h"] + 2
+        lab = str(i)
+        lw, lh = fs * 0.62 * len(lab) + 6, fs + 4
+        lx, ly = max(0, x0 - 1), max(0, y0 - lh)
+        args += ["-fill", "none", "-stroke", "#FF2D7A", "-draw", f"rectangle {x0},{y0} {x1},{y1}",
+                 "-stroke", "none", "-fill", "#FF2D7A", "-draw", f"rectangle {lx},{ly} {lx + lw:.0f},{ly + lh}",
+                 "-fill", "white", "-draw", f"text {lx + 3},{ly + fs} '{lab}'"]
+    old = os.umask(0o077)
+    try:
+        ok = subprocess.run(args + [str(dest)], capture_output=True, timeout=60).returncode == 0
+    finally:
+        os.umask(old)
+    return ok
+
+
+def parse():
+    if not shutil.which("tesseract"):
+        return {"ok": False, "error": "Falta tesseract (OCR) para analizar la pantalla"}
+    if not shutil.which("magick"):
+        return {"ok": False, "error": "Falta ImageMagick para marcar los elementos"}
+    mon = focused_monitor()
+    if not mon:
+        return {"ok": False, "error": "No sé qué pantalla está activa"}
+    try:
+        cap = json.loads(run([str(ROOT / "scripts/hf-ai"), "peek"], timeout=20) or "{}")
+    except ValueError:
+        cap = {}
+    if not cap.get("path"):
+        return {"ok": False, "error": "No puedo mirar la pantalla: " + (cap.get("skip") or "falló la captura")}
+    scale = float(mon.get("scale") or 1)
+    CACHE.mkdir(parents=True, exist_ok=True)
+    os.chmod(CACHE, 0o700)
+    els = ocr_elements(cap["path"], scale)
+    marked = CACHE / "marcada.png"
+    if not draw_marks(cap["path"], els, marked, scale):
+        marked = pathlib.Path(cap["path"])
+    W, H = int(mon["width"]), int(mon["height"])       # píxeles de la captura (grim -o)
+    ox, oy = int(mon["x"]), int(mon["y"])
+    marks = []
+    for i, e in enumerate(els, 1):
+        marks.append({"n": i, "text": e["t"][:80],
+                      # global (lógico) = origen de la pantalla + píxel / escala
+                      "x": round(ox + e["x"] / scale), "y": round(oy + e["y"] / scale),
+                      "w": max(1, round(e["w"] / scale)), "h": max(1, round(e["h"] / scale)),
+                      # posición 0-1000 sobre la captura (la que ve el modelo)
+                      "cx": round((e["x"] + e["w"] / 2) * 1000 / W), "cy": round((e["y"] + e["h"] / 2) * 1000 / H)})
+    res = {"ok": True, "time": time.time(), "image": cap["path"], "marked": str(marked),
+           "monitor": {"name": mon.get("name"), "x": ox, "y": oy, "w": round(W / scale), "h": round(H / scale), "scale": scale},
+           "marks": marks}
+    old = os.umask(0o077)
+    try:
+        LAST.write_text(json.dumps(res, ensure_ascii=False))
+    finally:
+        os.umask(old)
+    return res
+
+
+def last():
+    try:
+        d = json.loads(LAST.read_text())
+    except (OSError, ValueError):
+        return None
+    return d if time.time() - d.get("time", 0) < MAX_AGE else None
+
+
+def resolve(a):
+    """«mark» N o «x», «y» (0-1000 sobre la captura analizada) → "at" [x, y] globales y "box" del elemento."""
+    a = dict(a)
+    if isinstance(a.get("at"), list) or (a.get("mark") is None and a.get("x") is None):
+        return a                         # ya resuelta al proponerla (un análisis nuevo cambiaría los números)
+    d = last()
+    if not d:
+        raise ValueError("No hay un análisis reciente de la pantalla: mírala antes (consulta «ui»)")
+    m = d["monitor"]
+    if a.get("mark") is not None:
+        try:
+            n = int(a["mark"])
+        except (TypeError, ValueError):
+            raise ValueError("«mark» tiene que ser un número de la captura") from None
+        e = next((e for e in d["marks"] if e["n"] == n), None)
+        if not e:
+            raise ValueError(f"No hay ningún elemento con el número {n}")
+        a["at"] = [e["x"] + e["w"] // 2, e["y"] + e["h"] // 2]
+        a["box"] = [e["x"], e["y"], e["w"], e["h"]]
+        if not str(a.get("label") or "").strip():
+            a["label"] = e["text"]
+    else:
+        try:
+            x, y = float(a["x"]), float(a["y"])
+        except (TypeError, ValueError, KeyError):
+            raise ValueError("«x» e «y» tienen que ser números de 0 a 1000") from None
+        if not (0 <= x <= 1000 and 0 <= y <= 1000):
+            raise ValueError("«x» e «y» van de 0 a 1000 (sobre la captura)")
+        a["at"] = [round(m["x"] + x * m["w"] / 1000), round(m["y"] + y * m["h"] / 1000)]
+    return a
+
+
+# ---------------------------------------------------------------- puntero virtual (Wayland, sin dependencias)
+class Wayland:
+    """Cliente mínimo del protocolo Wayland: registro, zwlr_virtual_pointer_manager_v1 y un puntero virtual."""
+
+    def __init__(self):
+        disp = os.environ.get("WAYLAND_DISPLAY") or "wayland-0"
+        path = disp if disp.startswith("/") else os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), disp)
+        self.s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.s.connect(path)
+        self.s.settimeout(3)
+        self.next, self.buf = 2, b""
+
+    def new(self):
+        self.next += 1
+        return self.next - 1
+
+    def send(self, obj, op, payload=b""):
+        self.s.sendall(struct.pack("<II", obj, (8 + len(payload)) << 16 | op) + payload)
+
+    @staticmethod
+    def string(t):
+        b = t.encode() + b"\0"
+        return struct.pack("<I", len(b)) + b + b"\0" * (-len(b) % 4)
+
+    def roundtrip(self):
+        """wl_display.sync y espera su «done»; devuelve los eventos que llegaron antes."""
+        cb, evs = self.new(), []
+        self.send(1, 0, struct.pack("<I", cb))
+        while True:
+            while len(self.buf) < 8:
+                chunk = self.s.recv(65536)
+                if not chunk:
+                    raise ConnectionError("el compositor cerró la conexión")
+                self.buf += chunk
+            obj, so = struct.unpack_from("<II", self.buf)
+            size, op = so >> 16, so & 0xFFFF
+            while len(self.buf) < size:
+                self.buf += self.s.recv(65536)
+            payload, self.buf = self.buf[8:size], self.buf[size:]
+            if obj == 1 and op == 0:      # wl_display.error
+                oid, code = struct.unpack_from("<II", payload)
+                raise RuntimeError(f"error de Wayland (objeto {oid}, código {code})")
+            if obj == cb:
+                return evs
+            evs.append((obj, op, payload))
+
+    def globals(self):
+        reg = self.new()
+        self.send(1, 1, struct.pack("<I", reg))
+        out = {}
+        for obj, op, p in self.roundtrip():
+            if obj == reg and op == 0:
+                name, ln = struct.unpack_from("<II", p)
+                iface = p[8:8 + ln - 1].decode()
+                ver = struct.unpack_from("<I", p, 8 + ln + (-ln % 4))[0]
+                out[iface] = (name, ver)
+        return reg, out
+
+    def pointer(self):
+        reg, g = self.globals()
+        if "zwlr_virtual_pointer_manager_v1" not in g:
+            raise RuntimeError("el compositor no ofrece puntero virtual (zwlr_virtual_pointer_manager_v1)")
+        name, ver = g["zwlr_virtual_pointer_manager_v1"]
+        mgr = self.new()
+        self.send(reg, 0, struct.pack("<I", name) + self.string("zwlr_virtual_pointer_manager_v1")
+                  + struct.pack("<II", min(ver, 2), mgr))
+        vp = self.new()
+        self.send(mgr, 0, struct.pack("<II", 0, vp))      # asiento por defecto
+        self.roundtrip()
+        return vp
+
+
+def ms():
+    return int(time.monotonic() * 1000) & 0xFFFFFFFF
+
+
+BUTTONS = {"left": 0x110, "right": 0x111, "middle": 0x112}
+
+
+def vp_click(button="left", times=1):
+    wl = Wayland()
+    vp = wl.pointer()
+    for i in range(times):
+        for state in (1, 0):
+            wl.send(vp, 2, struct.pack("<III", ms(), BUTTONS[button], state))
+            wl.send(vp, 4)
+            wl.roundtrip()
+            time.sleep(0.03)
+        if i + 1 < times:
+            time.sleep(0.08)
+    wl.send(vp, 8)
+    wl.roundtrip()
+
+
+def vp_scroll(direction, amount=3):
+    wl = Wayland()
+    vp = wl.pointer()
+    sign = 1 if direction == "down" else -1
+    for _ in range(max(1, min(20, amount))):
+        wl.send(vp, 5, struct.pack("<I", 0))                                     # fuente: rueda
+        wl.send(vp, 7, struct.pack("<IIii", ms(), 0, sign * 15 * 256, sign))     # axis_discrete (vertical)
+        wl.send(vp, 4)
+        wl.roundtrip()
+        time.sleep(0.04)
+    wl.send(vp, 8)
+    wl.roundtrip()
+
+
+# ---------------------------------------------------------------- teclado (wtype) y escritura
+def active_class():
+    return str((jrun(["hyprctl", "activewindow", "-j"]) or {}).get("class") or "").lower()
+
+
+def type_text(text):
+    """Como el dictado: en las terminales con wtype; en lo demás pegando (wtype pierde espacios y tildes en los
+    editores web), sin dejar el texto en el historial del portapapeles y devolviendo lo que había."""
+    if active_class() in TERMS or not shutil.which("wl-copy"):
+        subprocess.run(["wtype", "--", text], capture_output=True)
+        return
+    saved = subprocess.run(["wl-paste", "-n"], capture_output=True).stdout if shutil.which("wl-paste") else None
+    types = run(["wl-paste", "-l"]) if saved is not None else ""
+    subprocess.run(["wl-copy", "--sensitive", "--", text], capture_output=True)
+    time.sleep(0.08)
+    subprocess.run(["wtype", "-M", "ctrl", "-k", "v", "-m", "ctrl"], capture_output=True)
+    time.sleep(0.25)
+    if saved and "x-kde-passwordManagerHint" not in types and run(["wl-paste", "-n"]) == text:
+        subprocess.run(["wl-copy", "--sensitive"], input=saved, capture_output=True)
+
+
+def keys_cmd(combo):
+    """«ctrl+shift+t», «Enter», «F5» → la orden de wtype."""
+    parts = [p.strip().lower() for p in re.split(r"[+ ]+", str(combo)) if p.strip()]
+    if not parts:
+        raise ValueError("Falta la tecla")
+    mods, key = [MODS[p] for p in parts[:-1] if p in MODS], parts[-1]
+    if any(p not in MODS for p in parts[:-1]):
+        raise ValueError(f"Modificador desconocido en «{combo}»")
+    key = KEYS.get(key, key if len(key) == 1 or re.fullmatch(r"f\d{1,2}", key) else None)
+    if not key:
+        raise ValueError(f"Tecla desconocida: «{combo}»")
+    key = key.upper() if re.fullmatch(r"f\d{1,2}", key) else key
+    cmd = ["wtype"]
+    for m in mods:
+        cmd += ["-M", m]
+    cmd += ["-k", key]
+    for m in reversed(mods):
+        cmd += ["-m", m]
+    return cmd
+
+
+def press_keys(combo):
+    subprocess.run(keys_cmd(combo), capture_output=True)
+
+
+# ---------------------------------------------------------------- acciones
+OPS = ("point", "click", "double", "right", "move", "type", "key", "scroll")
+
+
+def describe(a):
+    lab = str(a.get("label") or "").strip()[:60]
+    op = a.get("op")
+    return {"point": "Aquí", "click": "Clic", "double": "Doble clic", "right": "Clic derecho", "move": "Mover aquí",
+            "type": "Escribir", "key": "Pulsar " + str(a.get("keys") or ""), "scroll": "Desplazar"}.get(op, op) \
+        + (f": {lab}" if lab and op not in ("key",) else "")
+
+
+def show_pointer(a, secs=8):
+    x, y = a["at"]
+    bx, by, bw, bh = a.get("box") or [0, 0, 0, 0]
+    c = jrun(["hyprctl", "cursorpos", "-j"]) or {}
+    qs("point", json.dumps({"x": x, "y": y, "box": [bx, by, bw, bh], "label": describe(a), "ms": int(secs * 1000),
+                           "from": [c.get("x", x - 160), c.get("y", y + 120)]}, ensure_ascii=False))
+
+
+def do(a):
+    op = a.get("op")
+    if op not in OPS:
+        raise ValueError(f"Acción desconocida: {op}")
+    a = resolve(a)
+    if "at" in a:
+        show_pointer(a, 3 if op != "point" else 10)
+        if op == "point":
+            return {"ok": True}
+        time.sleep(0.55)                                  # que se vea a dónde va antes de hacerlo
+        x, y = a["at"]
+        hypr(f"hl.dsp.cursor.move({{ x = {int(x)}, y = {int(y)} }})")
+        time.sleep(0.06)
+    elif op in ("point", "click", "double", "right", "move"):
+        raise ValueError("Falta dónde: «mark» o «x», «y»")
+    if op in ("click", "double", "right"):
+        vp_click("right" if op == "right" else "left", 2 if op == "double" else 1)
+    elif op == "type":
+        if "at" in a:                                     # escribir en un campo: primero se enfoca
+            vp_click("left")
+            time.sleep(0.15)
+        text = str(a.get("text") or "")
+        if not text:
+            raise ValueError("Falta el texto que escribir")
+        type_text(text[:2000])
+    elif op == "key":
+        press_keys(a.get("keys") or a.get("value") or "")
+    elif op == "scroll":
+        vp_scroll("up" if str(a.get("value") or "down") == "up" else "down", int(a.get("amount") or 3))
+    return {"ok": True}
+
+
+def selftest():
+    """Comprobaciones sin pantalla: agrupado de palabras, resolución de coordenadas y teclas."""
+    global LAST
+    import tempfile
+    tmp = pathlib.Path(tempfile.mkdtemp())
+    LAST = tmp / "u.json"
+    LAST.write_text(json.dumps({"time": time.time(), "monitor": {"x": 100, "y": 0, "w": 1000, "h": 500, "scale": 2},
+                                "marks": [{"n": 1, "text": "Guardar", "x": 120, "y": 10, "w": 40, "h": 10}]}))
+    r = resolve({"op": "click", "mark": 1})
+    assert r["at"] == [140, 15] and r["label"] == "Guardar", r
+    assert resolve({"op": "click", "x": 500, "y": 1000})["at"] == [600, 500]
+    for bad in ({"op": "click", "mark": 2}, {"op": "click", "x": 1200, "y": 3}, {"op": "click", "mark": "x"}):
+        try:
+            resolve(bad)
+            raise AssertionError(bad)
+        except ValueError:
+            pass
+    assert keys_cmd("ctrl+s") == ["wtype", "-M", "ctrl", "-k", "s", "-m", "ctrl"]
+    assert keys_cmd("Intro") == ["wtype", "-k", "Return"] and keys_cmd("f5") == ["wtype", "-k", "F5"]
+    for bad in ("", "hyper+x", "ctrl+banana"):
+        try:
+            keys_cmd(bad)
+            raise AssertionError(bad)
+        except ValueError:
+            pass
+    assert describe({"op": "click", "label": "Guardar"}) == "Clic: Guardar"
+    print("ok")
+
+
+def main():
+    args = sys.argv[1:]
+    cmd = args[0] if args else "help"
+    try:
+        if cmd == "parse":
+            r = parse()
+            out(r, 0 if r.get("ok") else 1)
+        elif cmd == "show":
+            d = last()
+            if not d:
+                out({"ok": False, "error": "No hay un análisis reciente de la pantalla"}, 1)
+            qs("marks", json.dumps([{k: e[k] for k in ("n", "x", "y", "w", "h")} for e in d["marks"]]),
+               int(float(args[1]) * 1000) if len(args) > 1 else 8000)
+            out({"ok": True, "marks": len(d["marks"])})
+        elif cmd == "point":
+            a = {"op": "point", "at": [int(float(args[1])), int(float(args[2]))]}
+            if "--label" in args:
+                a["label"] = args[args.index("--label") + 1]
+            if "--box" in args:
+                i = args.index("--box")
+                a["box"] = [int(float(v)) for v in args[i + 1:i + 5]]
+            secs = float(args[args.index("--secs") + 1]) if "--secs" in args else 8
+            show_pointer(a, secs)
+            out({"ok": True})
+        elif cmd == "hide":
+            qs("hide")
+            out({"ok": True})
+        elif cmd == "resolve":
+            out({"ok": True, "action": resolve(json.loads(args[1]))})
+        elif cmd == "do":
+            out(do(json.loads(args[1])))
+        elif cmd == "selftest":
+            selftest()
+        else:
+            print(__doc__.strip())
+    except (ValueError, RuntimeError, OSError, IndexError) as e:
+        out({"ok": False, "error": str(e)}, 1)
+
+
+if __name__ == "__main__":
+    main()

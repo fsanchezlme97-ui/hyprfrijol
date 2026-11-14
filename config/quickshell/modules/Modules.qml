@@ -42,6 +42,7 @@ import "tools"
 import "cheatsheet"
 import "media"
 import "dictado"
+import "puntero"
 import "firmar"
 import "tareas"
 import "apps"
@@ -65,6 +66,7 @@ Scope {
     SettingsApp {}
     Tools {}
     Dictado {}
+    Puntero {}       // cursor fantasma y marcas de Helpert sobre la pantalla (scripts/hf-screen)
     Firmar {}
     Tareas {}             // app «Tareas» (su ventana es diferida)
     Apps {}               // Conexiones remotas, Máquinas virtuales y Cola de impresión (ventanas diferidas)

@@ -3,6 +3,24 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.92] — 2026-11-13
+
+### Añadido
+- **Helpert puede usar la pantalla**, siempre con tu permiso: «haz clic en Guardar», «escribe mi correo en ese campo»,
+  «¿dónde está el botón de exportar?». Se desactiva en Ajustes › Asistente de IA › «Usar la pantalla».
+  - **Analiza la pantalla:** lee los botones y textos con OCR, en la propia máquina, y los numera sobre la captura.
+    Gemini (o el modelo local de respaldo) mira esa captura numerada y elige por número. Para iconos sin texto, señala
+    la posición. Las apps privadas siguen bloqueadas.
+  - **Te señala dónde actuará:** un cursor fantasma morado sale de tu cursor hasta el sitio, resalta el elemento y dice
+    qué va a hacer («Clic: Guardar»). No intercepta tus clics.
+  - **Lo hace cuando lo apruebas:** clic, doble clic, clic derecho, escribir, atajos de teclado o rueda. En el panel
+    pulsas Aplicar; en la conversación por voz contestas «sí» a «¿Lo hago?». Nunca lo hace solo, ni con «aprobar
+    siempre», ni desde clientes MCP: lo que pone en una web no puede hacerle pulsar nada.
+  - El clic va directo al compositor (puntero virtual de Wayland), sin ydotool ni permisos especiales.
+
+### Corregido
+- Con todas las ventanas cerradas, el asistente creía que había una app privada a la vista y no miraba la pantalla.
+
 ## [0.9.91] — 2026-11-13
 
 ### Añadido

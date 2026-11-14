@@ -50,6 +50,7 @@
   "aiContextCapture": true,
   "aiTerminal": true,
   "aiControlShell": true,
+  "aiScreenControl": true,
   "aiReadDesktop": true,
   "aiConfirm": true,
   "aiSpotlight": true,

@@ -222,6 +222,9 @@ ColumnLayout {
             SwRow { label: "Ver capturas que adjuntes"; sub: root.prov === "gemini" ? "Gemini recibe la imagen tal cual" : "captura + OCR local (tesseract)"; key: "aiContextCapture"; def: true }
             SwRow { label: "Proponer comandos de terminal"; sub: "nunca los ejecuta sin que pulses"; key: "aiTerminal"; def: true }
             SwRow { label: "Controlar el escritorio"; sub: "ajustes, ventanas, apps, música, volumen, temporizadores… (con Deshacer)"; key: "aiControlShell"; def: true }
+            // scripts/hf-screen: analiza la pantalla (OCR + elementos numerados), señala con un cursor fantasma y hace
+            // clic o escribe con un puntero virtual; cada paso se confirma (hf-ai meta)
+            SwRow { label: "Usar la pantalla"; sub: "señala con un cursor fantasma dónde hará clic o escribirá, y lo hace cuando lo apruebas"; key: "aiScreenControl"; def: true }
             SwRow { label: "Consultar el escritorio"; sub: "ventanas abiertas, avisos, archivos y estado, solo cuando lo necesite"; key: "aiReadDesktop"; def: true }
             SwRow { label: "Confirmar antes de aplicar cambios"; sub: "y siempre se pueden deshacer"; key: "aiConfirm"; def: true }
             SwRow { label: "Responder desde Spotlight"; sub: "escribe ? y tu pregunta"; key: "aiSpotlight"; def: true }

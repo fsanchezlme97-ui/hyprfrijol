@@ -74,9 +74,13 @@ def t_set_settings(a):
 def t_apply_actions(a):
     acts = a.get("actions") or []
     runs = [x for x in acts if isinstance(x, dict) and x.get("type") == "run"]
-    res = apply(acts)
-    if runs:
-        res["note"] = "Las acciones 'run' no se ejecutan por MCP; usa tu propia herramienta de terminal."
+    # usar la pantalla (clics y teclas, scripts/hf-screen) solo con la confirmación del panel o de la voz: nunca por MCP
+    ptr = [x for x in acts if isinstance(x, dict) and x.get("type") == "pointer"]
+    res = apply([x for x in acts if not (isinstance(x, dict) and x.get("type") == "pointer")])
+    notes = (["Las acciones 'run' no se ejecutan por MCP; usa tu propia herramienta de terminal."] if runs else []) \
+        + (["Las acciones 'pointer' (clics y teclas en la pantalla) no se ejecutan por MCP."] if ptr else [])
+    if notes:
+        res["note"] = " ".join(notes)
     return res
 
 

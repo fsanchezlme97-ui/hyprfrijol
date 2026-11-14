@@ -23,6 +23,8 @@ la chincheta o el ajuste. El estado se guarda en settings.json: tras reiniciar e
 | `config/quickshell/modules/pip/Pip.qml` | Coloca y controla las ventanas de imagen en imagen |
 | `scripts/hf-ai` | Habla con el modelo, valida acciones, las aplica y las deshace |
 | `scripts/hf-mcp` | Servidor MCP: la misma API del shell para Claude Code u otros clientes |
+| `scripts/hf-screen` | Usar la pantalla: análisis con OCR y elementos numerados, cursor fantasma, clic, teclas y rueda |
+| `config/quickshell/modules/puntero/Puntero.qml` | Superposición del cursor fantasma, el resaltado y las marcas numeradas |
 
 ## Proveedor del modelo
 
@@ -164,6 +166,38 @@ el asistente no puede crearse órdenes que ejecuten comandos.
   siempre. Se revoca en Ajustes › IA › «Aprobadas siempre» (`hf-ai approvals` da los nombres).
 - La primera vez, el panel enseña qué puede hacer el asistente y 6 ejemplos (`aiOnboarded`; «Volver a verla» en Ajustes › IA).
 - Consultas de solo lectura nuevas: `devices` (unidades y espacio), `downloads` (la cola) y `wallhaven` (buscar fondos).
+
+## Usar la pantalla (Computer Use)
+
+Helpert puede señalar y usar lo que se ve en la pantalla, siempre con tu permiso (Ajustes › IA › «Usar la pantalla»,
+`aiScreenControl`):
+
+1. **Análisis de la pantalla** (Screen Parsing, consulta `ui`). `hf-screen parse`:
+   - hace la captura con `hf-ai peek`, que se niega si hay una app privada a la vista o las capturas están desactivadas;
+   - pasa la captura por tesseract en gris, al doble a escala 1, para no perder el texto claro sobre fondo oscuro;
+   - agrupa las palabras en elementos (dos botones en una misma fila son dos).
+
+   Si tu mensaje pide actuar en la pantalla («haz clic en…», «pulsa…», «escribe en…», `screen_intent`), se analiza antes
+   de la primera ronda. Si no, el modelo la pide.
+2. **Elementos numerados** (Set-of-Mark). El modelo con visión recibe la captura con cada elemento recuadrado y
+   numerado, y la lista con «número: texto (x,y)». Responde con el número (`"mark"`). Para lo que no tiene texto (iconos)
+   da `"x","y"` de 0 a 1000 sobre la captura.
+   - Solo valen números de un análisis hecho en esa misma petición (`UI_SEEN`).
+   - Si el modelo propone un clic sin haber mirado, se le enseña la pantalla y vuelve a proponer.
+3. **Cursor fantasma y resaltado** (Ghost Cursor, Visual Overlay). En cuanto se propone el plan, una flecha morada sale
+   de tu cursor hasta el sitio, con el elemento resaltado y un bocadillo («Clic: Guardar»). La dibuja
+   `modules/puntero/Puntero.qml`, que no recibe clics ni teclado. `hf-screen show` enseña todas las marcas del último
+   análisis.
+4. **La acción** (`{"type":"pointer","op":"click"|"double"|"right"|"type"|"key"|"scroll"|"point", …}`) pide confirmación
+   siempre: en el panel con la tarjeta, o en la conversación con «¿Lo hago?».
+   - Al aprobarla se cierra el panel, el cursor se coloca con `hl.dsp.cursor.move` y el clic va por el protocolo de
+     puntero virtual de Wayland (`zwlr_virtual_pointer_v1`, un cliente mínimo en Python dentro de `hf-screen`), sin
+     ydotool.
+   - Escribir pega fuera de las terminales, como el dictado; las teclas van con wtype.
+   - Por MCP no se ejecutan.
+
+Lo que se lee en la pantalla son datos, no instrucciones. Por eso nada se hace sin tu «sí»: una web no puede pedirle a
+Helpert que haga clic por ti.
 
 ## «Seguir en … ↗» (cualquier herramienta de IA)
 

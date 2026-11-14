@@ -428,6 +428,7 @@ Item {
     function discard(i) {
         if (i === planIdx) { Shell.aiPlanPending = false; planIdx = -1; }
         patch(i, { state: "discarded" });
+        if ((messages[i].actions ?? []).some(a => a.type === "pointer")) Quickshell.execDetached([Paths.script("hf-screen"), "hide"]);
         push({ role: "ai", text: "De acuerdo, no cambié nada.", local: true });
     }
     function undo(i) {
