@@ -1113,6 +1113,58 @@ def keys_free(timeout):
         time.sleep(0.03)
     return True
 
+# Pegar en vez de teclear: wtype inventa un código de tecla para cada carácter y, en los editores de texto enriquecido
+# (ProseMirror/tiptap, Lexical: T3 Code, WhatsApp web, Notion…), según el código que le toque se pierden espacios,
+# signos y tildes («pasasidictoalgo»). Se pega con el portapapeles marcado como sensible (el historial, cliphist, lo
+# ignora) y al acabar el dictado se devuelve lo que había copiado. En las terminales Ctrl+V no pega: ahí, wtype.
+TERMS = ("kitty", "foot", "alacritty", "wezterm", "ghostty", "konsole", "terminal", "xterm", "console", "kgx", "ptyxis",
+         "tilix", "terminator", "st-256color", "urxvt")
+CLIP = {"saved": None}
+
+def pasting():
+    if os.environ.get("HF_DICTATE_TYPE") == "wtype" or not (shutil.which("wl-copy") and shutil.which("wl-paste")):
+        return False
+    try:
+        cls = json.loads(subprocess.run(["hyprctl", "activewindow", "-j"], capture_output=True, text=True,
+                                        timeout=2).stdout or "{}").get("class", "").lower()
+    except Exception:
+        return False
+    return bool(cls) and not any(t in cls for t in TERMS)
+
+def clip_save():
+    """Lo que había en el portapapeles antes del primer pegado (un tipo: texto si lo hay)."""
+    if CLIP["saved"] is not None:
+        return
+    try:
+        types = subprocess.run(["wl-paste", "--list-types"], capture_output=True, text=True, timeout=2).stdout.split()
+        t = next((x for x in ("text/plain;charset=utf-8", "UTF8_STRING", "text/plain") if x in types), types[0] if types else "")
+        data = subprocess.run(["wl-paste", "-n", "-t", t], capture_output=True, timeout=3).stdout if t else b""
+    except Exception:
+        t, data = "", b""
+    CLIP["saved"] = (t, data)
+
+def clip_restore():
+    """shortcut: si copias algo tú mientras dictas, al acabar vuelve lo de antes; habría que vigilar el portapapeles."""
+    if CLIP["saved"] is None:
+        return
+    t, data = CLIP["saved"]; CLIP["saved"] = None
+    time.sleep(0.3)                     # que la ventana acabe de leer el último pegado
+    try:
+        if data:
+            subprocess.run(["wl-copy", "-t", t], input=data, timeout=3)
+        else:
+            subprocess.run(["wl-copy", "--clear"], timeout=3)
+    except Exception:
+        pass
+
+def paste_text(text):
+    clip_save()
+    if subprocess.run(["wl-copy", "--sensitive", "--", text], stderr=subprocess.DEVNULL).returncode != 0:
+        return False
+    ok = subprocess.run(["wtype", "-M", "ctrl", "-k", "v", "-m", "ctrl"], stderr=subprocess.DEVNULL).returncode == 0
+    time.sleep(0.12)                    # que lo lea antes de que el siguiente pegado lo cambie
+    return ok
+
 def retype(old, new, wait=4):
     """Cambia en la ventana «old» (lo último tecleado) por «new»: borra lo que difiere y escribe el resto (wtype), a
     trozos y solo sin modificadoras pulsadas. → lo que queda escrito en la ventana (== new si fue bien)."""
@@ -1126,6 +1178,8 @@ def retype(old, new, wait=4):
         if not keys_free(wait) or not wt(["-k", "BackSpace"] * n):
             return now
         now = now[:-n]
+    if now != new and pasting():
+        return new if keys_free(wait) and paste_text(new[len(now):]) else now
     while now != new:
         piece = new[len(now):len(now) + 10]
         if not keys_free(wait) or not wt(["--", piece]):
@@ -1366,6 +1420,8 @@ class Session:
         return self.live_eng is not self.eng or (not self.busy and self.jobs.empty())
 
     def do_partial(self, pid, pcm):
+        if isinstance(pcm, str):                         # Nemotron: el provisional ya viene reconocido
+            return self.show(pid, pcm)
         if self.live_eng is self.vosk or not self.live or self.errors:
             return
         try:
@@ -1384,7 +1440,7 @@ class Session:
     def show(self, pid, text):
         """Teclea lo provisional de la frase «pid» (corrigiendo lo anterior)."""
         if not self.live_type or not self.released.is_set() or self.pending or self.cancel.is_set() \
-                or self.busy or not self.jobs.empty() or self.eng is self.vosk:
+                or self.busy or not self.jobs.empty() or self.eng is self.vosk and self.eng.name != "nemotron":
             return                                       # con frases por escribir, esperar: si no, se mezclan
         # Estable: las palabras en que coinciden este provisional y el anterior. Cada provisional vuelve a transcribir la
         # frase entera y en las largas cambia palabras de en medio: teclearlo tal cual borraba y reescribía trozos enteros.
@@ -1403,7 +1459,10 @@ class Session:
             elif not self.shown:
                 if n == 0:
                     return
-                target = join_piece(self.typed, " ".join(words[:n]), self.punct)
+                first = " ".join(words[:n])
+                if self.punct and self.eng.name == "nemotron":
+                    first = nemo_text(self.typed, first)
+                target = join_piece(self.typed, first, self.punct)
             else:
                 # Solo se añade al final: si una palabra ya tecleada cambia («amigos» → «amigas») se corrige una vez, al
                 # cerrar la frase; corregirla aquí reescribía cada vez todo lo que venía detrás. Lo nuevo empieza donde
@@ -1730,8 +1789,13 @@ class Session:
                 for b in backlog:
                     done, pt = self.vosk.stream(b)
                     if done is not None:
+                        pid = self.phrase_id + 1
+                        self.closed = pid; self.phrase_id = pid      # sus provisionales tardíos ya no se teclean
+                        with self.cv:
+                            self.partial_job = None
+                        if done or self.shown:                      # (vacía con algo tecleado: settle lo borra)
+                            self.jobs.put((pid, b"", vframes * FRAME_S, last_voice_t, done))
                         if done:
-                            self.jobs.put((0, b"", vframes * FRAME_S, last_voice_t, done))
                             self.phrases_heard += 1
                         vframes = 0; last_pt = ""
                         if self.kind == "comando" and done:
@@ -1739,6 +1803,9 @@ class Session:
                     elif pt and pt != last_pt and self.live:
                         last_pt = pt
                         emit("partial", text=pt)
+                        if self.vosk.name == "nemotron":            # se teclea en otro hilo: no frena el audio
+                            with self.cv:
+                                self.partial_job = (self.phrase_id + 1, pt)
                 backlog.clear()
                 if (self.mode == "continuo" or self.kind == "comando") and live_end:
                     limit = self.silence if (self.phrases_heard or self.cmd_done) else (self.wait0 or max(self.silence, 8.0 if self.kind == "dictado" else 6.0))
@@ -1796,6 +1863,8 @@ class Session:
                         last_partial = time.time()
         if phrase is not None and not self.cancel.is_set() and speech_frames >= 8:
             self.finalize(phrase, speech_frames * FRAME_S, silence_frames * FRAME_S)
+        if self.eng is not None and self.eng is self.vosk:
+            self.ready.wait(timeout=60)         # desde un archivo el audio se acaba antes de que cargue el motor
         # una orden = una frase: con la orden ya oída, lo que siguiera a medias no se manda como otra
         if self.eng is not None and self.eng is self.vosk and self.ready.is_set() and not self.errors and not self.cancel.is_set() \
                 and not (self.kind == "comando" and self.phrases_heard):
@@ -1969,7 +2038,11 @@ def main(argv):
                 emit("error", msg=str(e)); sys.exit(1)
         ses = Session(s, kind="comando" if "--command" in flags else "dictado", mode=opt("--mode"),
                       hold="--hold" in flags, src=src, live_pace="--simulate-live" in flags, tts="--tts" in flags)
-        sys.exit(ses.run())
+        try:
+            rc = ses.run()
+        finally:
+            clip_restore()
+        sys.exit(rc)
     if cmd == "aec":
         print(json.dumps(aec((argv[1:2] or ["status"])[0]), ensure_ascii=False)); return
     if cmd in ("stop", "cancel"):

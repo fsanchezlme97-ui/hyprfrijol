@@ -3,6 +3,23 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.88] — 2026-11-13
+
+### Corregido
+- El dictado ya no se come espacios, signos ni tildes en los editores de texto enriquecido. En la caja de T3 Code,
+  WhatsApp web, Notion y otros editores de ese tipo (ProseMirror/tiptap, Lexical), el texto salía a ratos todo
+  junto: «pasasidictoalgomuy». La causa es que `wtype` asigna a cada carácter un código de tecla inventado, y según el
+  que le toque, esos editores lo pierden; teclear más despacio no lo evitaba. Ahora:
+  - Fuera de las terminales, el texto se **pega**.
+  - Lo pegado va marcado como sensible, así que no entra en el historial del portapapeles.
+  - Al terminar de dictar, el portapapeles vuelve a tener lo que habías copiado.
+  - En las terminales, donde Ctrl+V no pega, se sigue tecleando como antes.
+- Con Nemotron, el dictado vuelve a escribir **en directo**: cada palabra aparece en la ventana en cuanto el modelo la
+  da por segura, y al acabar la frase solo se corrige lo que haya cambiado al final, normalmente nada. Antes la frase
+  solo se veía arriba, en el aviso, y no llegaba a la ventana hasta la pausa.
+- Dictar desde un archivo (`hf-dictate record --file`) con un motor en streaming (Vosk, Nemotron) ya no da «No
+  entendí nada» cuando el audio se acababa antes de que cargase el motor.
+
 ## [0.9.87] — 2026-11-13
 
 ### Añadido
