@@ -175,6 +175,8 @@ Scope {
     // Dónde lo pusimos la última vez (para distinguir un arrastre del usuario de un cambio nuestro)
     property var placed: null
     property string resized: ""
+    property int resizeTries: 0
+    property real lastResize: 0
     property real lastMove: 0
     // Hyprland no avisa cuando una ventana solo cambia de sitio: mientras haya PiP se consulta cada poco
     Timer { running: root.win !== null; interval: 600; repeat: true; onTriggered: HyprClients.refreshGeometry() }   // por el socket, sin hyprctl
@@ -186,12 +188,20 @@ Scope {
         if (String(c.workspace?.name ?? "").startsWith("special"))
             Shell.dispatch('hl.dsp.window.move({ workspace = ' + (root.pipMon?.activeWorkspace?.id ?? 1) + ', follow = false, ' + sel(c) + ' })');
         if (!c.floating) Shell.dispatch('hl.dsp.window.float({ action = "enable", ' + sel(c) + ' })');
-        // Redimensionar una vez por tamaño pedido: si la app no baja de su mínimo, no se insiste (y la posición
-        // ya usa su tamaño real)
+        // Redimensionar hasta 3 veces por tamaño pedido (el navegador, recién abierta, a veces vuelve a poner el suyo);
+        // si la app no baja de su mínimo, se deja (y la posición ya usa su tamaño real)
         const rk = c.address + "|" + t.w + "x" + t.h;
-        if ((c.size?.[0] !== t.w || c.size?.[1] !== t.h) && resized !== rk) {
-            resized = rk;
+        if ((c.size?.[0] !== t.w || c.size?.[1] !== t.h) && (resized !== rk || (resizeTries < 3 && Date.now() - lastResize > 1200))) {
+            if (resized !== rk) { resized = rk; resizeTries = 0; }
+            resizeTries++;
+            lastResize = Date.now();
             Shell.dispatch('hl.dsp.window.resize({ x = ' + t.w + ', y = ' + t.h + ', ' + sel(c) + ' })');
+            // Hyprland (0.57) redimensiona desde el centro y la ventana se desplaza: se vuelve a colocar en la siguiente
+            // pasada, sin tomarlo por un arrastre tuyo (antes eso la dejaba «libre» fuera de su esquina)
+            placed = null;
+            lastMove = Date.now();
+            applyOpacity();
+            return;
         }
         const atT = atTarget(c, t);
         const ours = placed && placed.addr === c.address && placed.x === t.x && placed.y === t.y;

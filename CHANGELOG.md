@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.9.98] — 2026-11-14
+
+### Arreglos
+- **PiP:** vuelve a salir de su tamaño y a quedarse en su esquina. Desde Hyprland 0.57 una ventana flotante se
+  redimensiona desde el centro: al encoger el PiP se desplazaba, el shell lo tomaba por un arrastre tuyo y lo dejaba
+  «libre» donde había caído. Ahora se vuelve a colocar después de cambiarle el tamaño, y el tamaño se pide hasta tres
+  veces (el navegador, recién abierto, a veces vuelve a poner el suyo).
+
 ## [0.9.97] — 2026-11-14
 
 ### Mejoras
