@@ -243,9 +243,16 @@ def resolve(a):
             raise ValueError("«x» e «y» van de 0 a 1000 (sobre la captura)")
         a["at"] = [round(m["x"] + x * m["w"] / 1000), round(m["y"] + y * m["h"] / 1000)]
         px, py = a["at"]
-        e = next((e for e in d["marks"] if e["x"] - 6 <= px <= e["x"] + e["w"] + 6 and e["y"] - 6 <= py <= e["y"] + e["h"] + 6), None)
-        # el nombre sale de lo que hay ahí, nunca del modelo: es lo que ves antes de decir sí
-        a["label"] = e["text"] if e else f"un punto sin texto ({round(x)}, {round(y)})"
+        near = [e for e in d["marks"] if e["x"] - 6 <= px <= e["x"] + e["w"] + 6 and e["y"] - 6 <= py <= e["y"] + e["h"] + 6]
+        e = min(near, key=lambda e: e["w"] * e["h"]) if near else None
+        # el nombre sale de lo que hay ahí, nunca del modelo; y si es un elemento, el clic va a su centro: lo que dice
+        # la tarjeta y donde se hace clic son siempre lo mismo
+        if e:
+            a["at"] = [e["x"] + e["w"] // 2, e["y"] + e["h"] // 2]
+            a["box"] = [e["x"], e["y"], e["w"], e["h"]]
+            a["label"] = e["text"]
+        else:
+            a["label"] = f"un punto sin texto ({round(x)}, {round(y)})"
     return a
 
 
@@ -483,7 +490,8 @@ def selftest():
     r = resolve({"op": "click", "mark": 1})
     assert r["at"] == [140, 15] and r["label"] == "Guardar", r
     assert resolve({"op": "click", "x": 500, "y": 1000})["at"] == [600, 500]
-    assert resolve({"op": "click", "x": 40, "y": 30, "label": "Aceptar"})["label"] == "Guardar"     # sobre la marca
+    r = resolve({"op": "click", "x": 65, "y": 50, "label": "Aceptar"})     # junto a la marca: va a su centro
+    assert r["label"] == "Guardar" and r["at"] == [140, 15], r
     assert resolve({"op": "click", "x": 900, "y": 900, "label": "Aceptar"})["label"].startswith("un punto sin texto")
     for bad in ({"op": "click", "mark": 2}, {"op": "click", "x": 1200, "y": 3}, {"op": "click", "mark": "x"}):
         try:
