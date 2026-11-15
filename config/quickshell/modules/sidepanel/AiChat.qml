@@ -977,7 +977,8 @@ print(json.dumps(out[:300]))
                         Rectangle {
                             id: bubble
                             anchors.right: msg.mine ? parent.right : undefined
-                            width: Math.min(msg.width * (msg.mine ? 0.85 : 0.92), Math.max(body.implicitWidth, rich.visible && rich.wide ? 10000 : 0, extra.implicitWidth, stepsCol.implicitWidth, imgFlow.wantW) + 24)
+                            // las respuestas, a todo lo ancho (su texto lo pinta AiRich, no body: sin esto una corta se quedaba en una columna)
+                            width: Math.min(msg.width * (msg.mine ? 0.85 : 0.92), Math.max(body.implicitWidth, rich.visible || stepsCol.visible ? 10000 : 0, extra.implicitWidth, imgFlow.wantW) + 24)
                             height: inner.implicitHeight + 20
                             // las respuestas, sin burbuja (texto a todo lo ancho, como un documento); las tuyas, en tu color
                             color: msg.mine ? Theme.pc : msg.modelData.error ? Qt.alpha(Theme.danger, 0.08) : "transparent"
@@ -1005,7 +1006,7 @@ print(json.dumps(out[:300]))
                                             required property string modelData
                                             spacing: 8
                                             Icon { anchors.verticalCenter: parent.verticalCenter; name: parent.modelData.startsWith("Se ocult") ? "shield" : "search"; size: 10; color: Theme.tv }
-                                            Txt { text: parent.modelData; size: 11; muted: true; textFormat: Text.PlainText }
+                                            Txt { width: Math.min(implicitWidth, stepsCol.width - 18); text: parent.modelData; size: 11; muted: true; wrapMode: Text.Wrap; textFormat: Text.PlainText }
                                         }
                                     }
                                 }
@@ -1252,7 +1253,7 @@ print(json.dumps(out[:300]))
                 Rectangle {
                     id: liveBubble
                     visible: root.busy && (root.liveText !== "" || root.liveSteps.length > 0)
-                    width: Math.min(msgs.width * 0.92, Math.max(liveRich.implicitWidth, liveStepsCol.implicitWidth, 40) + 24)
+                    width: msgs.width * 0.92
                     height: liveCol.implicitHeight + 20
                     color: Theme.fill2
                     topLeftRadius: 7; topRightRadius: 14; bottomRightRadius: 14; bottomLeftRadius: 4
@@ -1272,7 +1273,7 @@ print(json.dumps(out[:300]))
                                     required property string modelData
                                     spacing: 8
                                     Icon { anchors.verticalCenter: parent.verticalCenter; name: "search"; size: 10; color: Theme.tv }
-                                    Txt { text: parent.modelData; size: 11; muted: true; textFormat: Text.PlainText }
+                                    Txt { width: Math.min(implicitWidth, liveStepsCol.width - 18); text: parent.modelData; size: 11; muted: true; wrapMode: Text.Wrap; textFormat: Text.PlainText }
                                 }
                             }
                         }

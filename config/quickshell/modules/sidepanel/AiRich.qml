@@ -58,8 +58,6 @@ ColumnLayout {
         return out;
     }
 
-    // con código, gráficos o imágenes la burbuja usa todo el ancho
-    readonly property bool wide: parts.some(p => p.kind !== "md")
     // colores de las series: el acento del tema (si tiene color) y una paleta de tonos bien distintos entre sí
     readonly property var seriesColors: {
         const base = Theme.light ? ["#3b6fd8", "#d9485f", "#2f9e6e", "#c98a1b", "#8a5cd1", "#1f9bb5"]

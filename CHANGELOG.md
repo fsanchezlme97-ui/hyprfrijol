@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.27] — 2026-11-15
+
+### Arreglos (Asistente de IA)
+- **Respuestas cortas en vertical:** una respuesta breve sin código ni consultas salía letra a letra en una columna
+  (desde la 0.10.5 la burbuja medía el texto oculto, que ahora va vacío). Las respuestas usan todo el ancho del panel,
+  también mientras se escriben.
+- **Las notas de lo que hizo antes de responder** (consultas, «respondió el respaldo…») se parten en varias líneas en
+  vez de salirse del panel por la derecha.
+
 ## [0.10.26] — 2026-11-15
 
 ### Arreglos (modo Clásico)
