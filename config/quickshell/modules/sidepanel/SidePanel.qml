@@ -183,10 +183,11 @@ PanelWindow {
         function onOpened(v) { if (v === "ia") win.handleArg(Shell.arg); }
         function onAiAskHidden(t) { win.askHidden(t); }
         function onAiCheckIn(reason, image) { win.chatHeld = true; if (!chatLoader.item) win.pendingArg = { checkIn: reason, image: image, hidden: true }; else win.chat.checkIn(reason, image); }
-        function onAiPlanAnswer(yes) { if (chatLoader.item) win.chat.answerPlan(yes); }
+        function onAiPlanAnswer(yes) { if (chatLoader.item && !Shell.locked) win.chat.answerPlan(yes); }
     }
     // Conversación por voz: el chat trabaja con el panel cerrado (y queda en el historial como siempre)
     function askHidden(text) {
+        if (Shell.locked) return;   // con la pantalla bloqueada, nada llega al asistente por voz
         chatHeld = true;
         if (!chatLoader.item) { pendingArg = { ask: text, hidden: true }; return; }
         chat.ask(String(text), "quick");

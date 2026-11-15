@@ -77,8 +77,8 @@ Scope {
         target: root.flow
         ignoreUnknownSignals: true
         function onAuthenticationFailed() { root.busy = false; root.error = "Contraseña incorrecta. Inténtalo de nuevo"; field.text = ""; root.shake(); field.forceActiveFocus(); }
-        function onAuthenticationSucceeded() { root.busy = false; }
-        function onAuthenticationRequestCancelled() { root.busy = false; }
+        function onAuthenticationSucceeded() { root.busy = false; field.text = ""; showPw.on = false; }   // no se queda en memoria hasta la próxima
+        function onAuthenticationRequestCancelled() { root.busy = false; field.text = ""; showPw.on = false; }
         function onIsResponseRequiredChanged() { if (root.flow.isResponseRequired) { root.busy = false; field.forceActiveFocus(); } }
     }
 

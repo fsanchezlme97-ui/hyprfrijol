@@ -82,7 +82,10 @@ ColumnLayout {
     Component {
         id: mdC
         Text {
-            text: parent?.modelData?.text ?? ""
+            // Sin imágenes remotas dentro del texto: el modelo podría meter datos del contexto en la URL y se pedirían
+            // sin clic. Pasan a enlace; las <img> en HTML se quitan.
+            text: String(parent?.modelData?.text ?? "").replace(/!\[([^\]]*)\]\(\s*<?(https?:[^)\s>]+)>?[^)]*\)/gi, "[$1]($2)")
+                .replace(/<img\b[^>]*>/gi, "")
             textFormat: Text.MarkdownText
             wrapMode: Text.Wrap
             color: root.color
@@ -158,13 +161,25 @@ ColumnLayout {
             id: ib
             readonly property var d: parent?.modelData ?? {}
             readonly property string url: /^(https?|file):/.test(d.src ?? "") ? d.src : (String(d.src ?? "").startsWith("/") ? "file://" + d.src : "")
-            implicitHeight: pic.status === Image.Ready ? Math.min(320, width * pic.implicitHeight / Math.max(1, pic.implicitWidth)) + (cap.visible ? cap.implicitHeight + 4 : 0)
+            // Las remotas esperan a un clic: la URL la escribe el modelo y podría llevar datos del contexto
+            readonly property bool remote: /^https?:/i.test(url)
+            property bool allowed: !remote
+            readonly property string host: remote ? (url.match(/^https?:\/\/([^\/?#:]+)/i)?.[1] ?? "") : ""
+            implicitHeight: !allowed ? askB.implicitHeight
+                : pic.status === Image.Ready ? Math.min(320, width * pic.implicitHeight / Math.max(1, pic.implicitWidth)) + (cap.visible ? cap.implicitHeight + 4 : 0)
                 : pic.status === Image.Error || !url ? errT.implicitHeight : 60
+            Btn {
+                id: askB
+                visible: !ib.allowed
+                kind: "tonal"; icon: "image"
+                text: "Cargar imagen de " + ib.host
+                onClicked: ib.allowed = true
+            }
             Image {
                 id: pic
                 width: parent.width
                 height: status === Image.Ready ? Math.min(320, width * implicitHeight / Math.max(1, implicitWidth)) : 0
-                source: ib.url
+                source: ib.allowed ? ib.url : ""
                 asynchronous: true
                 fillMode: Image.PreserveAspectFit
                 horizontalAlignment: Image.AlignLeft

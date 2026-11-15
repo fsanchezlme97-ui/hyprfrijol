@@ -3,6 +3,32 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.5] — 2026-11-14
+
+### Seguridad y privacidad
+- **Asistente:** las imágenes de internet que escriba la IA ya no se cargan solas: sale «Cargar imagen de <sitio>» y
+  esperan a tu clic (la dirección la escribe el modelo y podría llevar datos de lo que ve). Dentro del texto pasan a
+  ser un enlace. Las imágenes de tu equipo se siguen viendo como antes.
+- **Asistente:** si en la conversación entraron datos de fuera (un documento, una captura, una consulta), lo que
+  propone ya no se aplica solo, ni por voz ni con «aprobar siempre»: te pide el sí. Con el portapapeles en el
+  contexto, tampoco lo que no tiene vuelta atrás (abrir webs, descargas).
+- **Asistente:** no puede tocar el escritorio remoto (RDP), el modo seguro, los plugins de Omarchy, las
+  actualizaciones, el montaje automático de memorias, la palabra de activación, el calendario por internet, el
+  buscador web ni el pegado automático. «Abrir en el navegador» solo abre webs. «Deshacer» solo acepta sus propios
+  cambios. Los pasos del plan se muestran como texto tal cual.
+- **Voz:** con la pantalla bloqueada, la conversación y el dictado se cortan y no se pueden empezar; un «sí» dicho
+  con la pantalla bloqueada no aprueba nada.
+- **MCP:** `get_state` no da el título de la ventana si no dejas leer el escritorio o si es una app privada (y lo
+  pasa sin secretos); abrir vistas y mandar avisos respeta «Controlar el shell».
+- **Login:** al bajar la cortina se borra la contraseña que quedara escrita sin enviar. La orden del «Modo juego»
+  solo sale de la configuración del sistema, no de la de tu usuario.
+- **Polkit:** la contraseña se borra del campo al terminar o cancelar, no al llegar la siguiente petición.
+- **Avisos:** el cuerpo ya no carga imágenes, los enlaces solo abren webs y correo, y títulos e historial se
+  muestran como texto tal cual.
+- **Perfil:** el perfil público ya no cuenta cómo se entra a tu equipo (SSH, Tailscale, RustDesk) ni lleva tus
+  tiempos de bloqueo y suspensión, los avisos por app o la bienvenida ya vista. Al aplicar un perfil solo se activan
+  servicios de la lista conocida.
+
 ## [0.10.4] — 2026-11-14
 
 ### Arreglos

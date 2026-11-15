@@ -422,13 +422,14 @@ Glass {
                                     RowLayout {
                                         Layout.fillWidth: true
                                         spacing: 8
-                                        Txt { Layout.fillWidth: true; text: (hr.modelData.app ?? "") + (hr.modelData.summary ? " · " + hr.modelData.summary : ""); weight: Font.Medium; size: 12 }
+                                        Txt { Layout.fillWidth: true; text: (hr.modelData.app ?? "") + (hr.modelData.summary ? " · " + hr.modelData.summary : ""); textFormat: Text.PlainText; weight: Font.Medium; size: 12 }
                                         Txt { text: hr.header ? "" : Notifs.agoT(hr.modelData.t); size: 10.5; muted: true; tabular: true }
                                     }
                                     Txt {
                                         Layout.fillWidth: true
                                         visible: text !== ""
                                         text: hr.modelData.body ?? ""
+                                        textFormat: Text.PlainText   // ya sin etiquetas (Notifs.plain): no volver a interpretarlas
                                         muted: true; size: 11.5
                                         wrapMode: Text.Wrap; maximumLineCount: 2
                                     }

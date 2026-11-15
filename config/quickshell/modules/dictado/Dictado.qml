@@ -72,7 +72,7 @@ Scope {
     readonly property string talkMode: Settings.get("aiTalkMode", "conversacion")
     function convToggle(): void { if (conv) convEnd(false); else convStart(); }
     function convStart(): void {
-        if (conv) return;
+        if (conv || Shell.locked) return;   // con la pantalla bloqueada nadie habla con el asistente
         Quickshell.execDetached([Paths.script("hf-ai"), "voice-warm"]);   // la voz ya cargada para la primera respuesta
         if (Audio.micMuted) { phase = "done"; msg = "Micrófono silenciado"; hider.interval = 1800; hider.restart(); return; }
         if (proc.running) send("cancel");
@@ -154,7 +154,7 @@ Scope {
     readonly property var unmuteRe: /^[¡¿\s]*(vuelve a hablar|ya puedes hablar|h[aá]blame( otra vez| de nuevo)?|activa (la|tu) voz|quita el silencio|con voz|(cont[eé]st|respond)(a|e)?(me)? hablando)[\s.,!¡]*(por favor)?[\s.!]*$/i
 
     function start(k, extra, fromKey): void {
-        if (proc.running) return;
+        if (proc.running || Shell.locked) return;
         kind = k || "dictado";
         levels = Array(12).fill(0); secs = 0; msg = ""; code = ""; latched = !fromKey && mode === "ptt";   // sin atajo: manos libres
         partial = ""; committed = ""; cmdText = ""; cmdMsg = ""; cmdOk = true; ready = false; speaking = false;
@@ -323,7 +323,9 @@ Scope {
         Settings.set("micMode", next);
         if (!proc.running) { phase = "done"; msg = "Micrófono: " + micModes[next]; hider.interval = 1400; hider.restart(); }
     }
-    Connections { target: Shell; function onDictToggle() { root.micAction(); } function onMicCycle() { root.micCycle(); } function onVoiceDo(w) { root.voiceDo(w); } }
+    Connections { target: Shell; function onDictToggle() { root.micAction(); } function onMicCycle() { root.micCycle(); } function onVoiceDo(w) { root.voiceDo(w); }
+        // al bloquear se deja de escuchar: lo que se diga (o un «sí» a un plan pendiente) no debe llegar al asistente
+        function onLockedChanged() { if (Shell.locked) { root.convEnd(false); root.cancel(); } } }
     property bool micHeld: false            // hf:micro pulsado en modo dictado o asistente (al soltar, released())
     Timer { id: hider; interval: 1600; onTriggered: root.phase = "idle" }
     Timer { id: cmdHider; interval: 3000; onTriggered: { root.cmdText = ""; root.cmdMsg = ""; } }

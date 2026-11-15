@@ -79,16 +79,10 @@
   "qt6ct",
   "qtmultimedia",
   "recorder",
-  "remote",
-  "remote-anydesk",
-  "remote-rdp",
-  "remote-rustdesk",
   "screenshot",
   "snapper",
   "sounds",
-  "ssh-server",
   "system-apps",
-  "tailscale",
   "terminal",
   "thumbnailer",
   "translate",
@@ -124,22 +118,13 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.10.3",
+ "hyprfrijol": "v0.10.4",
  "ollama": [
   "gemma4:e4b"
  ],
- "remote": {
-  "acceso": true,
-  "lan": true,
-  "rustdesk": true,
-  "rustdeskPortal": true
- },
- "saved": "2026-11-14 13:45",
+ "saved": "2026-11-14 23:15",
  "services": [
-  "sshd",
   "ufw",
-  "tailscaled",
-  "rustdesk",
   "cups.socket",
   "ollama",
   "bluetooth",
@@ -156,8 +141,7 @@
   "aiFallbackProvider": "ollama",
   "aiHistoryDays": 0,
   "aiModel": "",
-  "aiMuted": false,
-  "aiOnboarded": true,
+  "aiMuted": true,
   "aiProvider": "gemini",
   "aiVoice": true,
   "aiVoiceLocal": false,
@@ -197,7 +181,7 @@
    ],
    "izquierda": []
   },
-  "barPos": "arriba",
+  "barPos": "abajo",
   "barRoundExtra": 0,
   "barStatsShow": [
    "cpu",
@@ -246,10 +230,6 @@
    "tl": "ninguna",
    "tr": "ninguna"
   },
-  "idleDim": 2,
-  "idleLock": 0,
-  "idleScreenOff": 5,
-  "idleSuspend": 0,
   "inactiveOpacity": 0,
   "kbLayouts": [
    "es",
@@ -270,11 +250,6 @@
   "naturalScroll": true,
   "nightLight": "off",
   "nightTemp": 5500,
-  "notifyApps": {
-   "samantha": {
-    "allow": false
-   }
-  },
   "notifyPosition": "auto",
   "numlock": true,
   "osdOffset": 4,
@@ -322,7 +297,6 @@
   "wallpaperRotateMin": 0,
   "wallpaperSource": "carpeta",
   "waveStyle": "barras",
-  "welcomeDone": true,
   "widgets": [
    "clima",
    "sistema",

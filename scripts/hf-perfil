@@ -34,6 +34,8 @@ FILES = ["settings.json", "local.lua", "palettes-user.json", "omarchy-plugins.js
 SERVICES = ["sshd", "ssh", "ufw", "firewalld", "tailscaled", "rustdesk", "cups.socket", "ollama", "bluetooth",
             "libvirtd", "greetd", "power-profiles-daemon", "avahi-daemon", "zerotier-one", "cockpit.socket"]
 USER_SERVICES = ["ydotool"]
+REMOTE_SERVICES = ("sshd", "ssh", "tailscaled", "rustdesk")
+PUBLIC_SKIP = re.compile(r"^(idle(Lock|Suspend|Dim|ScreenOff)|welcomeDone|aiOnboarded|notifyApps)$")
 # Grupos que dan acceso a hardware (teclas de Bongo, impresoras, brillo i2c…). Nunca wheel (eso lo decide quien
 # instala) ni nopasswdlogin (entrar sin contraseña)
 GROUPS = ["video", "audio", "input", "lp", "storage", "i2c", "rfkill", "uucp", "scanner", "libvirt", "kvm", "docker",
@@ -170,8 +172,12 @@ def public(d):
         st = json.loads(d.get("files", {}).get("settings.json") or "{}")
     except ValueError:
         st = {}
-    keep = {k: v for k, v in st.items() if not PRIVATE_KEYS.search(k) and not personal(v)}
-    out = {k: v for k, v in d.items() if k not in ("host", "face", "files", "wallpapers", "system")}   # la zona horaria dice dónde vives
+    # tampoco lo que solo vale para tu equipo: bloqueo y suspensión por inactividad, avisos por app y la bienvenida ya vista
+    keep = {k: v for k, v in st.items() if not PRIVATE_KEYS.search(k) and not personal(v) and not PUBLIC_SKIP.search(k)}
+    out = {k: v for k, v in d.items() if k not in ("host", "face", "files", "wallpapers", "system", "remote")}   # la zona horaria dice dónde vives
+    # ni cómo se entra a tu equipo desde fuera (SSH, Tailscale, RustDesk): quien lo quiera lo activa en Ajustes › Remoto
+    out["services"] = [u for u in d.get("services", []) if u not in REMOTE_SERVICES]
+    out["deps"] = [x for x in d.get("deps", []) if not (x.startswith("remote") or x in ("ssh-server", "tailscale"))]
     return dict(out, settings=keep)
 
 
@@ -238,7 +244,7 @@ def plan(p, yes=False):
     if p.get("apps"):
         steps.append(("Apps del centro de aplicaciones", sh(SCRIPTS / "hf-apps", "install", *p["apps"], *(["--yes"] if yes else []))))
     for u in p.get("services", []):
-        if u not in ("sshd", "ssh", "ufw", "firewalld", "tailscaled", "rustdesk", "greetd"):   # esos, con su paso
+        if u in SERVICES and u not in ("sshd", "ssh", "ufw", "firewalld", "tailscaled", "rustdesk", "greetd"):   # esos, con su paso; nada fuera de la lista
             steps.append((f"Servicio {u}", sh("sudo", "systemctl", "enable", "--now", u)))
     for u in p.get("userServices", []):
         if u in USER_SERVICES and not enabled(u, user=True):

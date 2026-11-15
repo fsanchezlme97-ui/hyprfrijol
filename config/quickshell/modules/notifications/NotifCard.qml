@@ -123,6 +123,7 @@ Item {
                                 if (!root.showApp) return s || a || "Notificación";
                                 return a && s && a !== s ? a + " · " + s : (s || a || "Notificación");
                             }
+                            textFormat: Text.PlainText   // lo pone la app que avisa
                             weight: Font.DemiBold
                         }
                         Rectangle {   // «Urgente»
@@ -150,13 +151,14 @@ Item {
                     Txt {
                         Layout.fillWidth: true
                         visible: text !== ""
-                        text: root.n?.body ?? ""
+                        // negrita, cursiva y enlaces sí; imágenes no (una app podría hacer pedir una URL con solo mostrarse)
+                        text: String(root.n?.body ?? "").replace(/<img\b[^>]*>/gi, "")
                         textFormat: Text.StyledText
                         muted: true
                         wrapMode: Text.Wrap
                         maximumLineCount: root.toast ? 4 : 3
                         lineHeight: 1.15
-                        onLinkActivated: l => Qt.openUrlExternally(l)
+                        onLinkActivated: l => { if (/^(https?|mailto):/i.test(l)) Qt.openUrlExternally(l); }
                     }
                 }
                 IconBtn {

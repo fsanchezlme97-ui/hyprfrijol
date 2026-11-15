@@ -51,7 +51,9 @@ def t_get_state(_):
     ws, _, _ = sh(["hyprctl", "activeworkspace", "-j"])
     try:
         aw = json.loads(w or "{}")
-        out["activeWindow"] = {"class": aw.get("class"), "title": aw.get("title")}
+        # mismas reglas que el panel: sin «leer el escritorio» o con una app privada delante, nada de la ventana
+        if hlai.can_read(s) and not hlai.is_private(aw.get("class"), s):
+            out["activeWindow"] = {"class": aw.get("class"), "title": hlai.redact(aw.get("title") or "", s)[0]}
     except Exception:
         pass
     try:
@@ -93,6 +95,8 @@ def t_wallpaper(a):
 
 
 def t_open_view(a):
+    if not hlai.allowed()[0]:
+        return {"error": "Controlar el shell está desactivado en Ajustes › IA"}
     v = str(a.get("view", ""))
     if v == "":
         sh(QS + ["shell", "close"]); return {"ok": True}
@@ -108,6 +112,8 @@ def t_workspace(a):
 
 
 def t_notify(a):
+    if not hlai.allowed()[0]:
+        return {"error": "Controlar el shell está desactivado en Ajustes › IA"}
     sh(["notify-send", "-a", "Claude", str(a.get("title", "Claude")), str(a.get("body", ""))])
     return {"ok": True}
 

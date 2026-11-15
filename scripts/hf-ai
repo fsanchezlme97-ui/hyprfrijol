@@ -177,7 +177,8 @@ MEDIA_OPS = {"play": "Reproducir", "pause": "Pausar", "play-pause": "Reproducir 
 DENY_KEYS = re.compile(r"^(ai[A-Z]|privateApps$|windowMode$|monitors$|kb|binds?$|keybinds|terminal$|browser$|fileManager$|codeEditor$|textEditor$"
                        r"|office$|taskManager$|volumeMixer$|welcomeDone$|primaryMonitor$|printer|remote|vnc|cockpit|sync"
                        r"|plugins|autostart|lock|idleLock|gpuMode|updatesSnapshot|weatherLat|weatherLon|wallhavenPurity"
-                       r"|voiceCommands|voiceAliases|voiceAiFallback|barCustom|barActions)"
+                       r"|voiceCommands|voiceAliases|voiceAiFallback|barCustom|barActions|rdp|safeMode|omarchy|hfUpdate|updatesMode$|devicesAuto"
+                       r"|dictationWake|calendarIcs|webSearch$|clipboardAutoPaste$)"
                        r"|(Cmd|Command|Exec|Script|Path|Paths|Url|Urls|Key|Keys|Token|Secret|Password|Env)$")
 # Etiquetas de claves frecuentes que no están en SET_KEYS
 KEY_LABELS = {"barHeight": "Alto de la barra", "fontScale": "Tamaño de letra", "uiScale": "Escala de la interfaz",
@@ -718,6 +719,10 @@ def validate(actions):
             elif t == "browser" and a.get("op") in BROWSER_OPS:
                 a["value"] = str(a.get("value") or "")[:300]
                 if a["op"] in ("find", "search", "open") and not a["value"].strip():
+                    continue
+                # abrir: solo webs (file://, smb://, vscode://… irían a xdg-open); «dominio:puerto» vale
+                if a["op"] == "open" and re.match(r"(?i)^[a-z][a-z0-9+.-]*:(?!\d)", a["value"].strip()) \
+                        and not re.match(r"(?i)^https?://", a["value"].strip()):
                     continue
                 ok.append(a)
             elif t == "pointer" and a.get("op") in POINTER_OPS and settings().get("aiScreenControl", True) is not False:
@@ -1260,6 +1265,9 @@ def do_apply(actions, record=True):
     return out
 
 def do_undo(uid):
+    # solo ids de do_apply (fecha-hora-pid): nada de rutas («../x»), que harían ejecutar el «undo» de otro archivo
+    if not re.fullmatch(r"\d{8}-\d{6}-\d+", str(uid)):
+        return {"error": "No encuentro ese cambio para deshacerlo"}
     rec = load(UNDO / f"{uid}.json")
     if not rec:
         return {"error": "No encuentro ese cambio para deshacerlo"}
@@ -3406,6 +3414,10 @@ def do_chat(req, print_request=False):
                 return out
         return {"text": "", "actions": [], "labels": [], "code": "", "steps": steps, "error": str(e)}
     out = parse_reply(raw, s)
+    # Con datos de fuera en la conversación (archivos, capturas, consultas) nada se aplica solo: podrían traer órdenes.
+    # Con el portapapeles en el contexto, tampoco lo que no tiene vuelta atrás (abrir webs, descargas…).
+    if out.get("plan") and (ctx.get("_untrusted") or (ctx.get("clipboard", True) and any(not p.get("undo") for p in out["plan"]))):
+        out["auto"], out["confirm"] = False, True
     out["steps"] = list(dict.fromkeys(steps))
     out["provider"] = prov
     out["model"] = model_name(prov, s)

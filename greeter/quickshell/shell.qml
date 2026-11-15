@@ -287,7 +287,7 @@ ShellRoot {
         if (steam || root.preview) {
             out.splice(1, 0, { key: "game", name: "Modo juego (Steam)", g: "◈", tile: "ter", desk: "gamescope",
                                sub: gs ? "Steam a pantalla completa · gamescope" : "Necesita gamescope (no instalado)",
-                               exec: root.cfg.gameCommand || "gamescope -e -f -- steam -gamepadui -steamos3", disabled: !gs && !root.preview });
+                               exec: root.cfgBase.gameCommand || "gamescope -e -f -- steam -gamepadui -steamos3", disabled: !gs && !root.preview });
         }
         if (safe || root.preview) out.push(safe ?? { key: "hyprfrijol-seguro", name: "HyprFrijol (modo seguro)", sub: "Mínimo, sin shell ni plugins · para reparar", g: "S", tile: "sc", exec: "hf-session --safe", desk: "Hyprland" });
         sessions = out;
@@ -377,7 +377,8 @@ ShellRoot {
     property bool moving: false
     Timer { id: movingTimer; interval: 700; onTriggered: root.moving = false }
     function bump(): void { moving = true; movingTimer.restart(); }
-    onCurtainChanged: bump()
+    // con la cortina bajada no queda nada escrito: si alguien se va sin pulsar Intro, otro no entra con su contraseña
+    onCurtainChanged: { bump(); if (curtain) { password = ""; clearPassword(); } }
     onSessOpenChanged: bump()
     onA11yOpenChanged: bump()
     onPhaseChanged: bump()

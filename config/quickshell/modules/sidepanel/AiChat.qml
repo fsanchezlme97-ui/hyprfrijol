@@ -1004,7 +1004,7 @@ print(json.dumps(out[:300]))
                                             required property string modelData
                                             spacing: 8
                                             Icon { anchors.verticalCenter: parent.verticalCenter; name: parent.modelData.startsWith("Se ocult") ? "shield" : "search"; size: 10; color: Theme.tv }
-                                            Txt { text: parent.modelData; size: 11; muted: true }
+                                            Txt { text: parent.modelData; size: 11; muted: true; textFormat: Text.PlainText }
                                         }
                                     }
                                 }
@@ -1046,9 +1046,12 @@ print(json.dumps(out[:300]))
                                 }
                                 Text {
                                     id: body
-                                    visible: text !== "" && (msg.mine || !!msg.modelData.error)
+                                    visible: text !== ""
                                     Layout.fillWidth: true
-                                    text: msg.modelData.checkIn ? (Settings.get("aiName", "") || "Helpert") + " miró tu pantalla y pasó a saludar" : (msg.modelData.text ?? "")
+                                    // solo tus mensajes y los errores: las respuestas las pinta AiRich. Oculto pero con el
+                                    // texto, el Markdown pedía igual las imágenes remotas de la respuesta
+                                    text: !(msg.mine || !!msg.modelData.error) ? ""
+                                        : msg.modelData.checkIn ? (Settings.get("aiName", "") || "Helpert") + " miró tu pantalla y pasó a saludar" : (msg.modelData.text ?? "")
                                     textFormat: msg.mine ? Text.PlainText : Text.MarkdownText
                                     wrapMode: Text.Wrap
                                     color: msg.mine ? Theme.pcText : msg.modelData.error ? Theme.danger : Theme.t
@@ -1131,6 +1134,7 @@ print(json.dumps(out[:300]))
                                                         Txt {
                                                             Layout.fillWidth: true
                                                             text: stepRow.modelData + (!stepRow.on && !stepRow.pending ? " · omitido" : "")
+                                                            textFormat: Text.PlainText   // lo escribe el modelo: nada de <img>, <font>…
                                                             size: 12; wrapMode: Text.Wrap; elide: Text.ElideNone
                                                             opacity: stepRow.on ? 1 : 0.5
                                                             font.strikeout: !stepRow.on
@@ -1140,6 +1144,7 @@ print(json.dumps(out[:300]))
                                                             visible: (stepRow.info.preview ?? "") !== "" && stepRow.on
                                                             Layout.fillWidth: true
                                                             text: stepRow.info.preview ?? ""
+                                                            textFormat: Text.PlainText
                                                             size: 11; muted: true; font.family: Theme.mono
                                                             wrapMode: Text.WrapAnywhere; elide: Text.ElideNone; maximumLineCount: 3
                                                         }
@@ -1266,7 +1271,7 @@ print(json.dumps(out[:300]))
                                     required property string modelData
                                     spacing: 8
                                     Icon { anchors.verticalCenter: parent.verticalCenter; name: "search"; size: 10; color: Theme.tv }
-                                    Txt { text: parent.modelData; size: 11; muted: true }
+                                    Txt { text: parent.modelData; size: 11; muted: true; textFormat: Text.PlainText }
                                 }
                             }
                         }
