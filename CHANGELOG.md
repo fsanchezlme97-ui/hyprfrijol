@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.10] — 2026-11-15
+
+### Arreglos
+- **Juegos y apps de Windows (Wine / Proton):** sus ventanas se abren flotando, centradas y a su tamaño (o a pantalla
+  completa si el juego lo pide). En mosaico se encajaban en un hueco y Wine seguía dibujando a su tamaño: el contenido
+  quedaba en una esquina, el resto en negro y no respondían a los clics (p. ej. el lanzador de Genshin desde Epic). En
+  el modo «Clásico» no se maximizan. Van sin desenfoque y con tearing permitido, como los juegos de Steam.
+
 ## [0.10.9] — 2026-11-15
 
 ### Arreglos

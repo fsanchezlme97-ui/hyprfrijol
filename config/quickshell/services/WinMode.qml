@@ -265,10 +265,11 @@ Singleton {
     Timer { interval: 600; repeat: true; running: root.smartOn && root.floatingVisible; onTriggered: HyprClients.refreshGeometry() }
 
     // ---------- conversión y colocación ----------
-    // Ventanas que no se tocan: las del shell, web apps, PiP, fijadas, a pantalla completa
+    // Ventanas que no se tocan: las del shell, juegos y apps de Wine / Proton (rules.lua: wine-float), PiP, fijadas,
+    // a pantalla completa
     function keep(c): bool {
         return !c || c.pinned || (c.fullscreen ?? 0) > 0 || (c.workspace?.id ?? 0) <= 0
-            || /^(org\.quickshell|steam_app_.*|gamescope)$/.test(c.class ?? "")
+            || /^(org\.quickshell|steam_app_.*|steam_proton|.*\.exe|gamescope)$/i.test(c.class ?? "")
             || /^([Pp]icture[-\s]?[Ii]n[-\s]?[Pp]icture|[Pp]antalla[-\s]?en[-\s]?[Pp]antalla)/.test(c.title ?? "");
     }
     // Apps que flotan siempre al centro (floatApps, reglas hf-float-apps de config/apply/35-windows.py): al salir

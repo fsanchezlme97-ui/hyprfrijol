@@ -22,10 +22,20 @@ HF.rules.pip = hl.window_rule({
 
 -- (Las apps no maximizan por su cuenta en mosaico y desplazamiento: regla "no-maximize" de config/apply/35-windows.py)
 
+-- Juegos y apps de Windows (Wine / Proton: Genshin desde Epic, HoYoPlay, Battle.net…): flotan centradas a su tamaño.
+-- En mosaico se encajaban en un hueco y Wine seguía dibujando a su tamaño: el contenido en una esquina, el resto negro
+-- y los clics desplazados. Si el juego pide pantalla completa, la tiene. WinMode (Clásico) no las maximiza: keep().
+hl.window_rule({
+    name   = "wine-float",
+    match  = { class = "^(steam_proton|steam_app_.*|.*\\.exe)$" },
+    float  = true,
+    center = true,
+})
+
 -- Juegos: sin desenfoque y con tearing permitido
 hl.window_rule({
     name  = "games",
-    match = { class = "^(steam_app_.*|gamescope)$" },
+    match = { class = "^(steam_app_.*|steam_proton|gamescope)$" },
     immediate = true,
     no_blur   = true,
 })
