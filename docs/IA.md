@@ -90,8 +90,20 @@ scripts/hf-ai chat '{"messages":[{"role":"user","text":"Pon la barra arriba"}],"
 ### IA local con Ollama (respaldo y voz)
 
 Ollama con `ollama-vulkan` usa la gráfica (AMD, Intel o NVIDIA). Con respaldo Ollama (`aiFallbackProvider`), si la
-nube falla o tarda contesta el modelo local; en la voz la espera a Gemini es de 10 s. Con **Voz con el modelo local
-primero** (`aiVoiceLocal`) es al revés: la voz pregunta a Ollama y la nube queda de respaldo.
+nube falla o tarda contesta el modelo local. **Saltar al respaldo** (`aiFallbackWait`, 8 s de serie) es lo que se
+espera al principal en la voz; al escribir, el triple, y las CLI (Claude Code y las demás) tienen el doble en total.
+Con el principal mirando la pantalla (la consulta `ui`), el doble. En la voz, Helpert dice antes de la respuesta que
+contestó el respaldo, y `hf-ai voice-warm` (al empezar la conversación) deja el modelo de Ollama cargado con el mismo
+`num_ctx` que el chat: el respaldo contesta en ~1-2 s tras la espera, no en 10-20 s más. Con **Voz con el modelo
+local primero** (`aiVoiceLocal`) es al revés: la voz pregunta a Ollama y la nube queda de respaldo.
+
+### IA que ya tienes instalada
+
+`hf-ai clis` busca en el `PATH` las IA de terminal (Ajustes › Asistente de IA › Proveedor y permisos › **IA ya
+instalada en este equipo**): `claude` (proveedor `claude-code`), `ollama` (proveedor `ollama`) y Codex CLI, Gemini CLI,
+Qwen Code, opencode, Cursor Agent y `llm` (proveedor `cli`, con `aiCli` = su id). Cada una se elige de principal o de
+respaldo con un clic. Las del proveedor `cli` reciben un turno con el prompt entero (sin imágenes: van por OCR), en
+modo no interactivo, sin aprobar herramientas y en una carpeta temporal vacía; responden con tu cuenta de esa CLI.
 
 Pruebas del 2026-11-12 en una RX 6600 XT (8 GB) con 18 órdenes de voz reales (el prompt de verdad de `hf-ai`,
 temperatura 0). La mediana es el tiempo hasta tener el plan, con el modelo ya cargado; la primera carga son 4-6 s.

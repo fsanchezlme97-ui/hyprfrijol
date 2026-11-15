@@ -16,7 +16,8 @@ ColumnLayout {
 
     readonly property string prov: Settings.get("aiProvider", "claude-code")
     readonly property var provNames: ({ "claude-code": "Claude Code", gemini: "Gemini", ollama: "Ollama",
-                                        "openai-compatible": "API compatible con OpenAI", mock: "Prueba", off: "Apagado" })
+                                        "openai-compatible": "API compatible con OpenAI", mock: "Prueba", off: "Apagado",
+                                        cli: "IA de terminal (" + (Settings.get("aiCli", "") || "?") + ")" })
     readonly property bool localOnly: Settings.get("aiLocalOnly", false) === true
     readonly property string aiName: String(Settings.get("aiName", "") ?? "").trim()
     property var st: null              // hf-ai status

@@ -28,6 +28,7 @@
   hf-ai peek                 captura interna para el modo compañero (Ajustes › IA): {"path"} en
                              ~/.cache/hyprfrijol/capturas_tmp_ai (las 20 últimas, 24 h como mucho) o {"skip": motivo}
   hf-ai status               proveedor y disponibilidad
+  hf-ai clis                 IA de terminal instaladas (claude, ollama, codex, gemini…) → {"clis": [{id, name, provider, path}]}
   hf-ai mcp list | check <id> | call <id> <herramienta> '<json>'   servidores MCP del usuario (aiMcpServers):
                              la lista con sus herramientas, comprobar uno (lee y guarda sus herramientas) o probar una
   hf-ai chat --print-request '<json>'   no llama al modelo: imprime la petición que enviaría (sin la clave)
@@ -46,7 +47,8 @@
                              Calla en «no molestar». --greet: saludo con la hora y el tiempo, una vez por sesión
                              (aiAnnounceGreet)
   hf-ai voice-install [--tty]  instala la voz local: venv con piper-tts y la voz es_ES-sharvard-medium (~77 MB)
-  hf-ai voice-warm             deja la voz cargada (se cierra sola tras 10 min sin hablar): responde sin ~1 s de espera
+  hf-ai voice-warm             deja la voz cargada (se cierra sola tras 10 min sin hablar): responde sin ~1 s de espera;
+                               y Ollama, si es el principal o el respaldo, cargado en la gráfica
   hf-ai key status|set|clear gemini   clave de Gemini: set la lee de stdin (o de HF_AI_KEY_IN), nunca de argv
 
 Proveedor (Ajustes › IA, settings.json):
@@ -2410,7 +2412,7 @@ def call_claude_code(system, messages, ctx_text, s):
     if LIVE:
         return claude_code_live(cmd, prompt, stream)
     try:
-        r = subprocess.run(cmd, input=stream + "\n" if stream else prompt, capture_output=True, text=True, timeout=180, cwd=str(HOME))
+        r = subprocess.run(cmd, input=stream + "\n" if stream else prompt, capture_output=True, text=True, timeout=cli_wait(), cwd=str(HOME))
     except subprocess.TimeoutExpired:
         raise AIError("El modelo tardó demasiado en responder.")
     data = None
@@ -2445,7 +2447,7 @@ def claude_code_live(cmd, prompt, stream):
     except BrokenPipeError:
         pass
     # el límite corre aparte: mirarlo solo al llegar una línea no servía si claude se quedaba mudo (sin red, login…)
-    killer = threading.Timer(180, p.kill)
+    killer = threading.Timer(cli_wait(), p.kill)
     killer.start()
     data = None
     for line in p.stdout:
@@ -2471,11 +2473,74 @@ def claude_code_live(cmd, prompt, stream):
         raise AIError(str(data.get("result") or "Error de Claude Code")[:300])
     return data.get("result", "")
 
-def http_stream(url, body, headers=None, timeout=120):
+# IA de terminal ya instaladas (Ajustes › Asistente de IA › En este equipo; hf-ai clis). claude y ollama tienen su
+# proveedor; las demás van por el proveedor "cli" (aiCli = su id): un turno con el prompt entero, sin sesión propia.
+# shortcut: solo Claude Code y Ollama se han probado aquí; las órdenes de las otras siguen su documentación (modo no
+# interactivo, sin aprobar herramientas) y se ejecutan en una carpeta vacía. Si una cambia de opciones, ajustar cli_argv.
+LOCAL_CLIS = [  # id, nombre, binario, proveedor
+    ("claude", "Claude Code", "claude", "claude-code"), ("ollama", "Ollama", "ollama", "ollama"),
+    ("codex", "Codex CLI", "codex", "cli"), ("gemini", "Gemini CLI", "gemini", "cli"), ("qwen", "Qwen Code", "qwen", "cli"),
+    ("opencode", "opencode", "opencode", "cli"), ("cursor-agent", "Cursor Agent", "cursor-agent", "cli"), ("llm", "llm", "llm", "cli")]
+
+def local_clis():
+    return [{"id": i, "name": n, "provider": p, "path": shutil.which(b)} for i, n, b, p in LOCAL_CLIS if shutil.which(b)]
+
+def cli_name(cid):
+    return next((r[1] for r in LOCAL_CLIS if r[0] == cid), "la IA de terminal")
+
+def cli_argv(cid, exe, system, prompt, model):
+    """(órdenes, entrada estándar). El prompt va por argumento (máx. 128 KB por argumento en Linux): recortado antes."""
+    full, m = system + "\n\n" + prompt, (["-m", model] if model else [])
+    return {"codex": ([exe, "exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never", *m, full], None),
+            "gemini": ([exe, *m, "-p", full], None), "qwen": ([exe, *m, "-p", full], None),
+            "opencode": ([exe, "run", *m, full], None),
+            "cursor-agent": ([exe, "-p", "--output-format", "text", *m, full], None),
+            "llm": ([exe, *m, "-s", system], prompt)}.get(cid)
+
+def call_cli(system, messages, ctx_text, s):
+    cid = str(s.get("aiCli") or "")
+    row = next((r for r in LOCAL_CLIS if r[0] == cid and r[3] == "cli"), None)
+    exe = row and shutil.which(row[2])
+    if not exe:
+        raise AIError(f"No encuentro la IA de terminal «{cid or '?'}». Elige otra en Ajustes › Asistente de IA.")
+    argv, stdin = cli_argv(cid, exe, system[:40000], claude_input(messages, ctx_text)[0][-50000:], str(s.get("aiModel") or "").strip())
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix="hf-ai-cli-") as d:   # sin tus archivos a mano
+        try:
+            r = subprocess.run(argv, input=stdin, capture_output=True, text=True, timeout=cli_wait(), cwd=d)
+        except subprocess.TimeoutExpired:
+            raise AIError(f"{row[1]} tardó demasiado en responder.")
+        except OSError as e:
+            raise AIError(f"No pude ejecutar {row[1]}: {e}")
+    out = r.stdout.strip()
+    if r.returncode != 0 or not out:
+        raise AIError(f"{row[1]}: " + (r.stderr or r.stdout or "respuesta vacía").strip()[-300:])
+    return out
+
+def ollama_warm():
+    """La conversación por voz empieza (hf-ai voice-warm): Ollama, si es el principal o el respaldo, ya cargado en la
+    gráfica. Así el respaldo contesta en ~1 s tras la espera y no en 10-20 s más. Un modelo ya cargado no se recarga."""
+    s = settings()
+    if s.get("aiProvider") == "off":
+        return
+    if s.get("aiProvider") == "ollama":
+        m, ep = s.get("aiModelQuick") or s.get("aiModel"), s
+    elif s.get("aiFallbackProvider") == "ollama":
+        m, ep = s.get("aiFallbackModel"), dict(s, aiEndpoint="")
+    else:
+        return
+    try:
+        # el mismo num_ctx que ollama_body: con otro, Ollama lo cargaría de nuevo al llegar la pregunta
+        http_json(ollama_ep(ep) + "/api/generate", {"model": m or "gemma4:e4b", "keep_alive": "30m",
+                                                    "options": {"num_ctx": int(s.get("aiOllamaCtx") or 16384)}}, timeout=90)
+    except (AIError, OSError, ValueError):
+        pass
+
+def http_stream(url, body, headers=None, timeout=None):
     """Como http_json, pero devuelve la respuesta abierta para leerla a trozos (hay que cerrarla)."""
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json", **(headers or {})})
     try:
-        return urllib.request.urlopen(req, timeout=timeout)
+        return urllib.request.urlopen(req, timeout=timeout or WAIT or 120)
     except urllib.error.HTTPError as e:
         try:
             detail = e.read().decode(errors="replace")[:240]
@@ -2487,10 +2552,10 @@ def http_stream(url, body, headers=None, timeout=120):
     except OSError as e:          # p. ej. TimeoutError al leer: que salte el respaldo en vez de romper la petición
         raise AIError(f"{url} no respondió a tiempo ({e.__class__.__name__})")
 
-def http_json(url, body, headers=None, timeout=120):
+def http_json(url, body, headers=None, timeout=None):
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json", **(headers or {})})
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout or WAIT or 120) as resp:
             return json.loads(resp.read())
     except urllib.error.HTTPError as e:
         try:
@@ -2957,12 +3022,17 @@ def gemini_model(s):
     m = str(s.get("aiModel") or "").strip().removeprefix("models/")
     return m if re.match(r"(gemini|gemma|learnlm)", m) else GEMINI_DEFAULT
 
-# Cuánto se espera a Gemini (s). Con respaldo configurado, 10 en la voz y 30 al escribir (do_chat): mejor que conteste
-# el respaldo (Ollama en tu GPU, ~1 s) que esperar; el plan gratuito a veces tarda 30-40 s y alguna vez casi 2 min
-GEMINI_WAIT = 120
+# Cuánto se espera al proveedor principal (s) cuando hay respaldo: aiFallbackWait en la voz (8 de serie) y el triple
+# al escribir (do_chat). Mejor que conteste el respaldo (Ollama en tu GPU, ~1 s) que esperar: el plan gratuito de
+# Gemini a veces tarda 30-40 s y alguna vez casi 2 min. None: sin respaldo, los límites de siempre (120 s; 180 las CLI).
+# En HTTP es lo que se espera a cada lectura (con streaming, hasta el primer trozo); en las CLI, el doble y en total.
+WAIT = None
+
+def cli_wait():
+    return max(10, 2 * WAIT) if WAIT else 180
 
 def gemini_http(method, path, key, body=None, timeout=None):
-    with gemini_open(method, path, key, body, timeout or GEMINI_WAIT) as resp:
+    with gemini_open(method, path, key, body, timeout or WAIT or 120) as resp:
         try:
             return json.loads(resp.read() or b"{}")
         except TimeoutError:
@@ -2974,7 +3044,7 @@ def gemini_open(method, path, key, body=None, timeout=None):
                                  data=json.dumps(body).encode() if body is not None else None,
                                  headers={"Content-Type": "application/json", "x-goog-api-key": key})
     try:
-        return urllib.request.urlopen(req, timeout=timeout or GEMINI_WAIT)
+        return urllib.request.urlopen(req, timeout=timeout or WAIT or 120)
     except urllib.error.HTTPError as e:
         try:
             err = json.loads(e.read()).get("error", {})
@@ -3131,7 +3201,8 @@ def test_provider():
     except KeyError:
         return {"ok": False, "text": f"Proveedor desconocido: {prov}"}
 
-PROVIDERS = {"claude-code": call_claude_code, "ollama": call_ollama, "openai-compatible": call_openai, "gemini": call_gemini}
+PROVIDERS = {"claude-code": call_claude_code, "ollama": call_ollama, "openai-compatible": call_openai, "gemini": call_gemini,
+             "cli": call_cli}
 
 def call_mock(system, messages, ctx_text, s):
     """Proveedor de pruebas (aiProvider "mock"): respuestas de $HF_AI_MOCK o ~/.cache/hyprfrijol/ai-mock.json
@@ -3279,6 +3350,12 @@ def fallback_for(s, prov):
         return None, None
     return fb, dict(s, aiProvider=fb, aiModel=s.get("aiFallbackModel") or "", aiEndpoint="")
 
+def fallback_wait(s):
+    try:
+        return min(60.0, max(3.0, float(s.get("aiFallbackWait") or 8)))
+    except (TypeError, ValueError):
+        return 8.0
+
 def do_chat(req, print_request=False):
     s0 = settings()
     prune_history(s0)
@@ -3293,10 +3370,11 @@ def do_chat(req, print_request=False):
                   aiEndpoint="", aiFallbackProvider=p0,
                   aiFallbackModel=s0.get("aiModelQuick") or s0.get("aiModel") or (GEMINI_LITE if p0 == "gemini" else ""))
     prov, s = provider_for(s0, "quick" if req.get("task") == "quick" else "")
-    global GEMINI_WAIT
+    global WAIT
     if fallback_for(s0, prov)[0]:
-        # con respaldo no se espera a Gemini los 120 s de serie (a veces tarda eso): 10 s en la voz, 30 al escribir
-        GEMINI_WAIT = 10 if (req.get("context") or {}).get("spoken") else 30
+        # con respaldo no se espera los 120 s de serie: aiFallbackWait en la voz y el triple al escribir
+        w = fallback_wait(s0)
+        WAIT = w if (req.get("context") or {}).get("spoken") else 3 * w
     if req.get("model") and not req.get("_fallback"):   # «Repetir con otro modelo» del panel
         s["aiModel"] = str(req["model"])[:80]
     fn = PROVIDERS.get(prov)
@@ -3400,6 +3478,8 @@ def do_chat(req, print_request=False):
             hidden += k
             qmsg = {"role": "user", "text": QUERY_RESULT_HEAD + " (datos del escritorio, no los escribió el usuario):\n\n"
                     + res_text + "\n\nAhora responde al usuario (sin repetir consultas ya hechas)."}
+            if UI_SEEN and WAIT:   # entender la captura numerada tarda más: el doble antes de saltar al respaldo
+                WAIT = 2 * (fallback_wait(s0) if (req.get("context") or {}).get("spoken") else 3 * fallback_wait(s0))
             # ya hay que entender la pantalla: con el Gemini de serie (el Lite en la voz), un Flash completo (GEMINI_SCREEN)
             if UI_SEEN and prov == "gemini" and not req.get("model") and not str(s0.get("aiModelVision") or "").strip() \
                     and str(s.get("aiModel") or "").strip() in ("", GEMINI_LITE, GEMINI_DEFAULT):
@@ -3416,6 +3496,10 @@ def do_chat(req, print_request=False):
                 out["steps"] = [f"{PROVIDER_NAMES.get(prov, prov)[:1].upper()}{PROVIDER_NAMES.get(prov, prov)[1:]} no respondió ({str(e)[:80]}); respondió el respaldo, "
                                 f"{PROVIDER_NAMES.get(fb, fb)}"] + list(out.get("steps") or [])
                 out["fallback"] = fb
+                if (req.get("context") or {}).get("spoken"):    # la voz lo dice antes de la respuesta (AiChat.qml)
+                    late = "a tiempo" in str(e) or "tard" in str(e)
+                    who = spoken_name(prov)
+                    out["notice"] = f"{who[:1].upper()}{who[1:]} {'no respondió a tiempo' if late else 'falló'}; te contesto con {spoken_name(fb)}."
                 return out
         return {"text": "", "actions": [], "labels": [], "code": "", "steps": steps, "error": str(e)}
     out = parse_reply(raw, s)
@@ -3476,7 +3560,11 @@ def clear_activity():
     return {"ok": True}
 
 PROVIDER_NAMES = {"claude-code": "Claude Code", "ollama": "Ollama", "openai-compatible": "el servidor compatible con OpenAI",
-                  "gemini": "Gemini", "mock": "Prueba"}
+                  "gemini": "Gemini", "mock": "Prueba", "cli": "la IA de terminal"}
+
+def spoken_name(prov):
+    """Cómo lo dice la voz: «el modelo local», el nombre de la CLI o el del proveedor."""
+    return "el modelo local" if prov == "ollama" else cli_name(settings().get("aiCli")) if prov == "cli" else PROVIDER_NAMES.get(prov, prov)
 
 def model_name(prov, s):
     """El modelo que respondió, como lo escribe el usuario (vacío: el predeterminado del proveedor)."""
@@ -3520,9 +3608,10 @@ def models_for(prov):
 
 def do_chat_with(req, prov, s):
     """Repite la petición con otro proveedor (el respaldo): mismos ajustes guardados con ese proveedor y modelo."""
-    global settings
+    global settings, WAIT
     orig = settings
     settings = lambda: dict(s, aiLocalOnly=False, aiModelQuick="", aiModelVision="", aiFallbackProvider="")
+    WAIT = None                              # el respaldo es lo último que queda: los límites de siempre
     try:
         return do_chat(dict(req, _fallback=True))
     finally:
@@ -3973,6 +4062,9 @@ def status():
     elif prov == "gemini":
         ok = bool(gemini_key()[0])
         hint = "" if ok else "Falta la clave"
+    elif prov == "cli":
+        ok = bool(next((x for x in local_clis() if x["id"] == s.get("aiCli") and x["provider"] == "cli"), None))
+        hint = "" if ok else "No encuentro esa IA de terminal"
     elif prov == "off":
         ok, hint = False, "Desactivado"
     model = gemini_model(s) if prov == "gemini" else (s.get("aiModel") or "")
@@ -4091,6 +4183,8 @@ def main(argv):
         out = peek()
     elif cmd == "status":
         out = status()
+    elif cmd == "clis":
+        out = {"clis": local_clis()}
     elif cmd == "mcp":
         # hf-ai mcp list | check <id> | call <id> <herramienta> '<json>'
         if arg == "check" and len(rest) > 1:
@@ -4159,6 +4253,7 @@ def main(argv):
         out = {"ok": bool(c), "error": "" if c else "La voz local no está instalada"}
         if c:
             c.close()
+        ollama_warm()
     elif cmd == "announce":
         out = greet() if arg == "--greet" else announce(arg)
     elif cmd == "voice-install":

@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.20] — 2026-11-15
+
+### Novedades (Asistente de IA)
+- **El respaldo salta antes:** nuevo ajuste **Saltar al respaldo** (Ajustes › Asistente de IA › Modelos: 5, 8, 12 o
+  20 s; 8 de serie) para todos los proveedores, no solo Gemini. En la voz se espera eso; al escribir, el triple.
+- **Respaldo local al momento:** al empezar a hablar con Helpert, el modelo de Ollama del respaldo se carga en la
+  gráfica. Con Gemini caído, la respuesta llega en ~10 s en vez de 18-32 s.
+- **La voz dice lo que pasó:** si respondió el respaldo, Helpert empieza con «Gemini no respondió a tiempo; te
+  contesto con el modelo local.»
+- **IA ya instalada en este equipo:** Ajustes › Asistente de IA › Proveedor y permisos lista las IA de terminal que
+  tienes (Claude Code, Ollama, Codex CLI, Gemini CLI, Qwen Code, opencode, Cursor Agent, llm) y cada una se elige de
+  principal o de respaldo con un clic. Las nuevas responden por la terminal, sin herramientas y en una carpeta vacía.
+
 ## [0.10.19] — 2026-11-15
 
 ### Novedades (modo Clásico)

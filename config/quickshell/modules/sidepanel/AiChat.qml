@@ -348,7 +348,8 @@ Item {
             const waits = conv && n > 0 && !auto && !sudo && !blind;
             if (waits) { root.planIdx = root.messages.length - 1; Shell.aiPlanPending = true; }
             const said = (r.labels ?? []).map(l => ptr ? String(l) : String(l).split(":")[0]).join(". ") + ".";
-            const spoken = (ptr && n ? (r.text ? r.text + " " : "") + "Voy a hacer esto: " + said : r.text || (n ? said : ""))
+            // r.notice: respondió el respaldo («Gemini no respondió a tiempo; te contesto con el modelo local.»)
+            const spoken = (r.notice ? r.notice + " " : "") + (ptr && n ? (r.text ? r.text + " " : "") + "Voy a hacer esto: " + said : r.text || (n ? said : ""))
                 + (waits ? " ¿Lo hago?" : conv && sudo ? " Eso necesita tu contraseña: te lo dejo en el panel."
                    : blind ? " No sé qué hace ese icono: mira en la pantalla dónde señala y, si es el que quieres, apruébalo en el panel." : "");
             // Respuestas silenciadas (aiMuted) en la conversación: la respuesta llega por escrito, en una notificación

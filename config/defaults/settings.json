@@ -62,6 +62,8 @@
   "aiFallbackModel": "",
   "aiOllamaCtx": 16384,
   "aiVoiceLocal": false,
+  "aiFallbackWait": 8,
+  "aiCli": "",
   "aiMuted": false,
   "aiHandoff": "auto",
   "aiHandoffCmd": "",

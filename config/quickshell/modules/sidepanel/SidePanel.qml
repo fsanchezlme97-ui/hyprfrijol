@@ -106,7 +106,8 @@ PanelWindow {
     readonly property string aiLabel: String(Settings.get("aiName", "") ?? "").trim() || "IA"
     // Bajo el nombre: quién responde y su respaldo («Gemini · respaldo Ollama»)
     readonly property var provNames: ({ "claude-code": "Claude Code", claude: "Claude", gemini: "Gemini", ollama: "Ollama", openai: "OpenAI",
-                                        openrouter: "OpenRouter", lmstudio: "LM Studio", mistral: "Mistral", groq: "Groq", deepseek: "DeepSeek" })
+                                        openrouter: "OpenRouter", lmstudio: "LM Studio", mistral: "Mistral", groq: "Groq", deepseek: "DeepSeek",
+                                        cli: Settings.get("aiCli", "") || "Terminal" })
     function provName(k): string { k = String(k ?? ""); return provNames[k] ?? (k ? k.charAt(0).toUpperCase() + k.slice(1) : ""); }
     readonly property string aiSub: {
         const p = provName(Settings.get("aiProvider", "")), f = provName(Settings.get("aiFallbackProvider", ""));

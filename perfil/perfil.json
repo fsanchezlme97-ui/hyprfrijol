@@ -118,11 +118,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.10.18",
+ "hyprfrijol": "v0.10.19",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-15 17:24",
+ "saved": "2026-11-15 17:38",
  "services": [
   "ufw",
   "cups.socket",
@@ -145,7 +145,7 @@
   "aiProvider": "gemini",
   "aiVoice": true,
   "aiVoiceLocal": false,
-  "animPreset": "fluido",
+  "animPreset": "minimalista",
   "animSpeed": 1.5,
   "animado": true,
   "appFontPx": 12,

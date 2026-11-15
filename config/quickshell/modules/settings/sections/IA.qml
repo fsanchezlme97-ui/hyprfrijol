@@ -42,6 +42,29 @@ ColumnLayout {
         stdout: StdioCollector { onStreamFinished: { try { const j = JSON.parse(text); root.voiceLocal = !!j.voiceLocal; root.status = j.available ? "Disponible" : (j.hint || j.error || "No disponible"); } catch (e) { root.status = ""; } } }
     }
     Timer { id: statTimer; interval: 900; onTriggered: { stat.running = false; stat.running = true; } }
+    // IA de terminal instaladas (hf-ai clis): claude → Claude Code, ollama → Ollama, el resto → proveedor "cli" (aiCli)
+    property var clis: []
+    readonly property var termClis: clis.filter(c => c.provider === "cli")
+    readonly property string cliId: Settings.get("aiCli", "")
+    readonly property string cliLabel: (clis.find(c => c.id === cliId)?.name) ?? "Terminal"
+    Process {
+        running: true
+        command: [Paths.script("hf-ai"), "clis"]
+        stdout: StdioCollector { onStreamFinished: { try { root.clis = JSON.parse(text).clis ?? []; } catch (e) {} } }
+    }
+    function isPrimary(c): bool { return root.prov === c.provider && (c.provider !== "cli" || root.cliId === c.id); }
+    function isFallback(c): bool { const f = Settings.get("aiFallbackProvider", ""); return f === c.provider && (c.provider !== "cli" || root.cliId === c.id); }
+    function usePrimary(c): void {
+        const ch = { aiProvider: c.provider, aiModel: "" };
+        if (c.provider === "cli") ch.aiCli = c.id;
+        if (Settings.get("aiFallbackProvider", "") === c.provider) ch.aiFallbackProvider = "";   // no puede ser su propio respaldo
+        Settings.setMany(ch); root.testMsg = ""; statTimer.restart();
+    }
+    function useFallback(c): void {
+        const ch = { aiFallbackProvider: c.provider, aiFallbackModel: "" };
+        if (c.provider === "cli") ch.aiCli = c.id;
+        Settings.setMany(ch);
+    }
 
     // ---- Gemini: clave, modelos y prueba ----
     function refreshGemini(): void {
@@ -99,6 +122,7 @@ ColumnLayout {
     readonly property var models: prov === "claude-code" ? [["", "Predeterminado de Claude Code"], ["haiku", "Haiku (rápido)"], ["sonnet", "Sonnet (equilibrado)"], ["opus", "Opus (el más capaz)"]]
         : prov === "ollama" ? (ollamaModels.length ? ollamaModels.map(m => [m, m]) : [["gemma4:e4b", "gemma4:e4b"]])
         : prov === "gemini" ? (geminiModels.length ? geminiModels : [["gemini-flash-latest", "Gemini Flash (recomendado)"]])
+        : prov === "cli" ? [["", "Predeterminado de " + cliLabel]]
         : [["gpt-4o-mini", "gpt-4o-mini"], ["claude-sonnet-5-5", "claude-sonnet-5-5"]]
     readonly property string curModel: {
         const m = Settings.get("aiModel", "");
@@ -117,10 +141,15 @@ ColumnLayout {
             Seg {
                 Layout.fillWidth: true
                 textSize: 11.5
-                model: [["claude-code", "Claude"], ["gemini", "Gemini"], ["ollama", "Ollama"], ["openai-compatible", "API OpenAI"], ["off", "Apagado"]]
+                model: [["claude-code", "Claude"], ["gemini", "Gemini"], ["ollama", "Ollama"], ["openai-compatible", "API OpenAI"]]
+                    .concat(root.termClis.length || root.prov === "cli" ? [["cli", root.cliLabel]] : []).concat([["off", "Apagado"]])
                 current: root.prov
                 // el modelo de un proveedor no sirve en otro: vuelve al predeterminado
-                onPicked: k => { if (k !== root.prov) Settings.setMany({ aiProvider: k, aiModel: "" }); root.testMsg = ""; root.keyMsg = ""; statTimer.restart(); }
+                onPicked: k => {
+                    if (k !== root.prov) Settings.setMany(Object.assign({ aiProvider: k, aiModel: "" },
+                        k === "cli" && !root.termClis.some(c => c.id === root.cliId) && root.termClis.length ? { aiCli: root.termClis[0].id } : {}));
+                    root.testMsg = ""; root.keyMsg = ""; statTimer.restart();
+                }
             }
             Txt {
                 Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
@@ -128,6 +157,7 @@ ColumnLayout {
                     : root.prov === "gemini" ? "Google Gemini con una clave gratuita de Google AI Studio. Ve las imágenes que adjuntes. En el plan gratuito Google puede usar lo que envías para mejorar sus modelos."
                     : root.prov === "ollama" ? "Todo se queda en tu equipo. Necesita Ollama en marcha y un modelo descargado (ollama pull gemma4:e4b)."
                     : root.prov === "openai-compatible" ? "Cualquier servidor con la API /v1/chat/completions (LM Studio, vLLM, OpenRouter…). La clave se lee de una variable de entorno."
+                    : root.prov === "cli" ? root.cliLabel + " ya instalado en tu equipo, con tu cuenta: responde por la terminal, sin herramientas y en una carpeta vacía. No ve imágenes (van por OCR)."
                     : "El asistente queda apagado: el panel lateral y «?» en Spotlight no responden."
             }
 
@@ -232,6 +262,34 @@ ColumnLayout {
         }
     }
 
+    // IA que ya tienes instalada (hf-ai clis): elegirla de principal o de respaldo con un clic
+    Section {
+        Layout.fillWidth: true
+        title: "IA ya instalada en este equipo"
+        headerRight: Txt { text: root.clis.length ? root.clis.length + (root.clis.length === 1 ? " encontrada" : " encontradas") : ""; size: 11.5; color: Theme.tv }
+        Txt {
+            visible: !root.clis.length
+            Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+            text: "No encuentro ninguna: Claude Code (claude), Ollama, Codex, Gemini CLI, Qwen Code, opencode, Cursor Agent o llm. Si instalas una, sale aquí."
+        }
+        Repeater {
+            model: root.clis
+            InfoRow {
+                required property var modelData
+                required property int index
+                separator: index > 0
+                label: modelData.name
+                sub: modelData.path
+                glyph: modelData.name.split(/[\s-]+/).map(w => w[0]).join("").slice(0, 2).toUpperCase()
+                lit: root.isPrimary(modelData) || root.isFallback(modelData)
+                badge: root.isPrimary(modelData) ? "Principal" : root.isFallback(modelData) ? "Respaldo" : ""
+                badgeStrong: root.isPrimary(modelData)
+                Button { visible: !root.isPrimary(modelData); text: "Usar"; h: 28; onClicked: root.usePrimary(modelData) }
+                Button { visible: !root.isPrimary(modelData) && !root.isFallback(modelData); text: "De respaldo"; h: 28; onClicked: root.useFallback(modelData) }
+            }
+        }
+    }
+
     // Modelos (hf-ai provider_for / fallback_for): modelo por tarea, respaldo si el proveedor falla y modo local
     Section {
         Layout.fillWidth: true
@@ -256,9 +314,11 @@ ColumnLayout {
         LabeledRow {
             label: "Si no responde"; labelWidth: 140
             Seg {
-                model: [["", "Nada"], ["ollama", "Ollama"], ["claude-code", "Claude"], ["gemini", "Gemini"]].filter(x => x[0] !== root.prov)
+                model: [["", "Nada"], ["ollama", "Ollama"], ["claude-code", "Claude"], ["gemini", "Gemini"]]
+                    .concat(root.termClis.length ? [["cli", root.cliLabel]] : []).filter(x => x[0] !== root.prov)
                 current: Settings.get("aiFallbackProvider", "")
-                onPicked: k => Settings.setMany({ aiFallbackProvider: k, aiFallbackModel: "" })
+                onPicked: k => Settings.setMany(Object.assign({ aiFallbackProvider: k, aiFallbackModel: "" },
+                    k === "cli" && !root.termClis.some(c => c.id === root.cliId) ? { aiCli: root.termClis[0].id } : {}))
             }
         }
         LabeledRow {
@@ -270,6 +330,24 @@ ColumnLayout {
                 placeholder: ({ ollama: "gemma4:e4b", "claude-code": "haiku", gemini: "gemini-flash-latest" })[Settings.get("aiFallbackProvider", "")] ?? ""
                 onAccepted: Settings.set("aiFallbackModel", text.trim())
             }
+        }
+        // hf-ai WAIT: lo que se espera al principal antes de preguntar al respaldo (voz; al escribir, el triple)
+        LabeledRow {
+            visible: Settings.get("aiFallbackProvider", "") !== ""
+            label: "Saltar al respaldo"; labelWidth: 140
+            hint: "si no contesta en"
+            Seg {
+                model: [[5, "5 s"], [8, "8 s"], [12, "12 s"], [20, "20 s"]]
+                current: Number(Settings.get("aiFallbackWait", 8))
+                onPicked: k => Settings.set("aiFallbackWait", k)
+            }
+        }
+        Txt {
+            visible: Settings.get("aiFallbackProvider", "") !== ""
+            Layout.fillWidth: true; Layout.leftMargin: 150
+            size: 11; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
+            text: "Por voz; al escribir se espera el triple (" + 3 * Number(Settings.get("aiFallbackWait", 8)) + " s). En la voz, Helpert te dice que contestó el respaldo"
+                + (Settings.get("aiFallbackProvider", "") === "ollama" ? ", y el modelo local se carga al empezar a hablar para que conteste al momento." : ".")
         }
         SwRow {
             visible: Settings.get("aiFallbackProvider", "") === "ollama" && (root.prov === "gemini" || root.prov === "claude-code")
