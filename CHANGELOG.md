@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.13] — 2026-11-15
+
+### Arreglos
+- **Juegos y lanzadores de Windows (Wine / Proton):** opacos. Lanzadores como HoYoPlay (Genshin) dejaban ver a través
+  de toda la ventana lo que había detrás; en Windows son opacos.
+
 ## [0.10.12] — 2026-11-15
 
 ### Seguridad

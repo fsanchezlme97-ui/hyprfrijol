@@ -25,11 +25,14 @@ HF.rules.pip = hl.window_rule({
 -- Juegos y apps de Windows (Wine / Proton: Genshin desde Epic, HoYoPlay, Battle.net…): flotan centradas a su tamaño.
 -- En mosaico se encajaban en un hueco y Wine seguía dibujando a su tamaño: el contenido en una esquina, el resto negro
 -- y los clics desplazados. Si el juego pide pantalla completa, la tiene. WinMode (Clásico) no las maximiza: keep().
+-- Opacas: Wine pasa tal cual la transparencia por píxel de los lanzadores (HoYoPlay) y se veía lo de detrás a través
+-- de toda la ventana (en Windows son opacas). Los menús y avisos de Wine van sin gestionar: no les afecta.
 hl.window_rule({
     name   = "wine-float",
     match  = { class = "^(steam_proton|steam_app_.*|.*\\.exe)$" },
     float  = true,
     center = true,
+    opaque = true,
 })
 
 -- Juegos: sin desenfoque y con tearing permitido
