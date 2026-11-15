@@ -2,7 +2,8 @@
 // StatusNotifierWatcher si no hay otro, así que las apps se registran solas.
 // Ajustes › Barra › Bandeja del sistema:
 //   barTray        (sí)  enseñarla
-//   barTrayMax     (6)   iconos a la vista; el resto, y los «pasivos» (la app pide no molestar), van al «›»
+//   barTrayMax     (3)   iconos a la vista; si hay más, como en Windows, se ocultan todos en el «›», que dice
+//                        cuántas apps hay en segundo plano. Los «pasivos» (la app pide no molestar) siempre van al «›»
 //   barTrayHidden  ([])  ids que el usuario mandó al «›» (menú de cada icono: «Ocultar de la barra»)
 // Iconos y clics: TrayItem.qml · menú con el estilo del shell: TrayMenu.qml.
 import QtQuick
@@ -17,12 +18,11 @@ Item {
     required property var barWindow
     property bool vertical: false
     readonly property var hiddenIds: Settings.get("barTrayHidden", [])
-    readonly property int maxShown: Math.max(0, Number(Settings.get("barTrayMax", 6)) || 0)
+    readonly property int maxShown: Math.max(0, Number(Settings.get("barTrayMax", 3)) || 0)
     readonly property var all: SystemTray.items.values
-    readonly property var shownItems: {
-        const v = all.filter(i => i.status !== Status.Passive && !hiddenIds.includes(i.id));
-        return v.slice(0, maxShown);
-    }
+    readonly property var candidates: all.filter(i => i.status !== Status.Passive && !hiddenIds.includes(i.id))
+    readonly property bool collapsed: candidates.length > maxShown
+    readonly property var shownItems: collapsed ? [] : candidates
     readonly property var extraItems: all.filter(i => !shownItems.includes(i))
     readonly property bool any: all.length > 0
     visible: any
@@ -62,7 +62,11 @@ Item {
                 Txt { visible: !root.vertical; anchors.verticalCenter: parent.verticalCenter; text: root.extraItems.length; size: 10.5; muted: true; tabular: true }
             }
             MouseArea { id: moreMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: over.shown = !over.shown }
-            BarTip { target: moreMa; text: over.visible ? "" : root.extraItems.length === 1 ? "1 icono más" : root.extraItems.length + " iconos más" }
+            BarTip {
+                target: moreMa
+                text: over.visible ? "" : root.collapsed ? (root.all.length === 1 ? "1 app en segundo plano" : root.all.length + " apps en segundo plano")
+                    : root.extraItems.length === 1 ? "1 icono más" : root.extraItems.length + " iconos más"
+            }
         }
     }
 
@@ -98,7 +102,7 @@ Item {
             color: Theme.glassPopup
             border.width: 1
             border.color: Theme.border
-            Txt { x: 10; y: 6; text: "Bandeja"; size: 11; muted: true; weight: Font.DemiBold }
+            Txt { x: 10; y: 6; text: root.collapsed ? "En segundo plano · " + root.all.length : "Bandeja"; size: 11; muted: true; weight: Font.DemiBold }
             Grid {
                 id: og
                 x: 8; y: 26

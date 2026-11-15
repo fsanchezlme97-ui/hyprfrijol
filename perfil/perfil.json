@@ -118,11 +118,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.10.15",
+ "hyprfrijol": "v0.10.16",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-15 16:35",
+ "saved": "2026-11-15 16:38",
  "services": [
   "ufw",
   "cups.socket",
@@ -191,7 +191,7 @@
   "barStatsStyle": "texto",
   "barTransparentEmpty": false,
   "barTrayHidden": [],
-  "barTrayMax": 6,
+  "barTrayMax": 3,
   "barWeatherText": false,
   "blurQuality": "alta",
   "bongoSleep": false,
@@ -199,7 +199,7 @@
   "clipExpireDays": 0,
   "colorMode": "elegir",
   "deskIconSize": "pequeno",
-  "deskIcons": "ordenado",
+  "deskIcons": "todos",
   "deskSort": "tipo",
   "dictationMode": "toggle",
   "dictationModel": "small",

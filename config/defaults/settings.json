@@ -215,7 +215,7 @@
     "ram"
   ],
   "barTray": true,
-  "barTrayMax": 6,
+  "barTrayMax": 3,
   "barTrayHidden": [],
   "barTransparentEmpty": false,
   "barLive": true,

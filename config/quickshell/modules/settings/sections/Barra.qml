@@ -201,14 +201,14 @@ ColumnLayout {
             Pills {
                 Layout.fillWidth: true
                 model: [[0, "Ninguno"], [3, "3"], [4, "4"], [6, "6"], [8, "8"], [12, "12"]]
-                current: Number(Settings.get("barTrayMax", 6))
+                current: Number(Settings.get("barTrayMax", 3))
                 onPicked: v => Settings.set("barTrayMax", v)
             }
         }
         Txt {
             Layout.fillWidth: true
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-            text: "El resto, y los que marques aquí abajo, quedan en el desplegable «›» de la bandeja."
+            text: "Si hay más, todos se ocultan en el desplegable «›», que muestra cuántas apps hay en segundo plano (como en Windows). Los que desmarques aquí abajo van siempre al desplegable."
         }
         Flow {
             Layout.fillWidth: true

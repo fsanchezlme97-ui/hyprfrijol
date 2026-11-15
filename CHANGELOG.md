@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.17] — 2026-11-15
+
+### Cambios
+- **Bandeja del sistema como en Windows:** con más de 3 iconos (Ajustes › Barra › Bandeja del sistema › Iconos a la
+  vista) se ocultan todos en el desplegable «›», que muestra cuántas apps hay en segundo plano. Antes se veían 6 y el
+  resto iba al desplegable.
+
 ## [0.10.16] — 2026-11-15
 
 ### Cambios
