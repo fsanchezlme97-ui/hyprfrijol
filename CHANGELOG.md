@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.16] — 2026-11-15
+
+### Cambios
+- **Iconos de apps:** Firmar documentos (sello), Puntos de restauración (el de Snapper) y Tareas (lista con casillas)
+  usan iconos de app a color en vez de un tipo de archivo, una acción o un símbolo monocromo; SongRec, en el buscador
+  y el dock, el de Mousai (otra app para reconocer canciones).
+
 ## [0.10.15] — 2026-11-15
 
 ### Arreglos

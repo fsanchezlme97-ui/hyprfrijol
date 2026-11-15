@@ -115,8 +115,11 @@ Singleton {
     // Icono de una entrada .desktop. Un nombre en CamelCase (EpicGamesLauncher) lo pone la propia app y suele estar solo
     // en hicolor (su logo sin el estilo del tema); los temas los nombran en minúsculas con guiones: se prueba antes
     // epic-games-launcher, epicgameslauncher y epic-games (sin bajar a una sola palabra, que sería otra app)
+    // Apps de otros cuyo icono queda pobre a tamaño grande; se usa el del tema indicado si existe
+    readonly property var iconAlias: ({ "re.fossplant.songrec": "io.github.seadve.Mousai" })
     function entryIcon(name: string): string {
-        const n = String(name ?? "");
+        const n = String(name ?? ""), a = iconAlias[n];
+        if (a && Quickshell.hasThemeIcon(a)) return Quickshell.iconPath(a);
         if (/^[A-Za-z0-9]*[a-z0-9][A-Z][A-Za-z0-9]*$/.test(n)) {
             const t = n.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase().split("-");
             const pre = t.map((_, i) => t.slice(0, t.length - i).join("-")).filter(x => x.includes("-"));

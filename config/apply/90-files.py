@@ -32,7 +32,7 @@ def _firmar_desktop():
         "[Desktop Entry]\nType=Application\nName=Firmar documentos\n"
         "Comment=Firma PDF e imágenes con tu firma (hyprfrijol)\n"
         f"Exec={ROOT}/scripts/hf-firmar %f\n"
-        "Icon=application-pkcs7-signature\nTerminal=false\nCategories=Office;\n"
+        "Icon=org.gnome.Keysign\nTerminal=false\nCategories=Office;\n"
         "MimeType=application/pdf;image/png;image/jpeg;\nKeywords=firma;firmar;pdf;signature;\n"
     )
     path = HOME / ".local/share/applications/hf-firmar.desktop"
@@ -50,7 +50,7 @@ def _tareas_desktop():
         "[Desktop Entry]\nType=Application\nName=Tareas\n"
         "Comment=Tu lista de pendientes con fecha (hyprfrijol)\n"
         f"Exec={ROOT}/scripts/hf-tareas\n"
-        "Icon=checkbox-checked-symbolic\nTerminal=false\nCategories=Office;Utility;\n"
+        "Icon=org.gnome.Todo\nTerminal=false\nCategories=Office;Utility;\n"
         "Keywords=tareas;pendientes;todo;lista;recordatorio;tasks;\n"
     )
     path = HOME / ".local/share/applications/hf-tareas.desktop"
@@ -71,7 +71,7 @@ def _view_desktops():
          "System;Emulator;", "máquinas virtuales;vm;qemu;kvm;libvirt;virsh;distrobox;contenedor;podman;"),
         ("hf-impresion", "Cola de impresión", "Trabajos esperando para imprimirse", "impresion", "printer",
          "System;Printing;", "imprimir;cola;impresora;trabajos;cups;cancelar;"),
-        ("hf-restauracion", "Puntos de restauración", "Instantáneas del sistema con snapper", "restauracion", "document-revert",
+        ("hf-restauracion", "Puntos de restauración", "Instantáneas del sistema con snapper", "restauracion", "yast-snapper",
          "System;", "restaurar;snapper;snapshot;instantánea;btrfs;punto de restauración;volver atrás;"),
     ]
     for fid, name, comment, view, icon, cats, kw in apps:
