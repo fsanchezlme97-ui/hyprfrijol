@@ -270,7 +270,7 @@ ColumnLayout {
         Txt {
             visible: !root.clis.length
             Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-            text: "No encuentro ninguna: Claude Code (claude), Ollama, Codex, Gemini CLI, Qwen Code, opencode, Cursor Agent o llm. Si instalas una, sale aquí."
+            text: "No encuentro ninguna: Claude Code (claude), Ollama, Codex, Gemini CLI, Qwen Code o llm. Si instalas una, sale aquí."
         }
         Repeater {
             model: root.clis

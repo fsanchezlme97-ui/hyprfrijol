@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.21] — 2026-11-15
+
+### Seguridad (Asistente de IA)
+- **IA de terminal más seguras:** la conversación va siempre por la entrada estándar, nunca en los argumentos (que
+  cualquier proceso puede leer en `/proc`). Quitados opencode y Cursor Agent de «IA ya instalada en este equipo»: en
+  modo no interactivo ejecutan órdenes y editan archivos sin preguntar, y el contexto puede traer texto de fuera
+  (portapapeles, OCR). Quedan Claude Code, Ollama, Codex CLI (solo lectura), Gemini CLI, Qwen Code y llm.
+
 ## [0.10.20] — 2026-11-15
 
 ### Novedades (Asistente de IA)
@@ -13,7 +21,7 @@ antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X
 - **La voz dice lo que pasó:** si respondió el respaldo, Helpert empieza con «Gemini no respondió a tiempo; te
   contesto con el modelo local.»
 - **IA ya instalada en este equipo:** Ajustes › Asistente de IA › Proveedor y permisos lista las IA de terminal que
-  tienes (Claude Code, Ollama, Codex CLI, Gemini CLI, Qwen Code, opencode, Cursor Agent, llm) y cada una se elige de
+  tienes (Claude Code, Ollama, Codex CLI, Gemini CLI, Qwen Code, llm) y cada una se elige de
   principal o de respaldo con un clic. Las nuevas responden por la terminal, sin herramientas y en una carpeta vacía.
 
 ## [0.10.19] — 2026-11-15

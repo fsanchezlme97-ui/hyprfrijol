@@ -101,9 +101,11 @@ local primero** (`aiVoiceLocal`) es al revés: la voz pregunta a Ollama y la nub
 
 `hf-ai clis` busca en el `PATH` las IA de terminal (Ajustes › Asistente de IA › Proveedor y permisos › **IA ya
 instalada en este equipo**): `claude` (proveedor `claude-code`), `ollama` (proveedor `ollama`) y Codex CLI, Gemini CLI,
-Qwen Code, opencode, Cursor Agent y `llm` (proveedor `cli`, con `aiCli` = su id). Cada una se elige de principal o de
-respaldo con un clic. Las del proveedor `cli` reciben un turno con el prompt entero (sin imágenes: van por OCR), en
-modo no interactivo, sin aprobar herramientas y en una carpeta temporal vacía; responden con tu cuenta de esa CLI.
+Qwen Code y `llm` (proveedor `cli`, con `aiCli` = su id). Cada una se elige de principal o de respaldo con un clic.
+Las del proveedor `cli` reciben un turno con el prompt entero por la entrada estándar (nunca en los argumentos, que
+se ven en `/proc`; sin imágenes: van por OCR), en modo no interactivo, sin aprobar herramientas y en una carpeta
+temporal vacía; responden con tu cuenta de esa CLI. opencode y Cursor Agent no están: en modo no interactivo
+ejecutan órdenes y editan archivos sin preguntar, y el contexto puede traer texto de fuera (portapapeles, OCR).
 
 Pruebas del 2026-11-12 en una RX 6600 XT (8 GB) con 18 órdenes de voz reales (el prompt de verdad de `hf-ai`,
 temperatura 0). La mediana es el tiempo hasta tener el plan, con el modelo ya cargado; la primera carga son 4-6 s.

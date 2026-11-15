@@ -28,7 +28,7 @@
   hf-ai peek                 captura interna para el modo compañero (Ajustes › IA): {"path"} en
                              ~/.cache/hyprfrijol/capturas_tmp_ai (las 20 últimas, 24 h como mucho) o {"skip": motivo}
   hf-ai status               proveedor y disponibilidad
-  hf-ai clis                 IA de terminal instaladas (claude, ollama, codex, gemini…) → {"clis": [{id, name, provider, path}]}
+  hf-ai clis                 IA de terminal instaladas (claude, ollama, codex, gemini, qwen, llm) → {"clis": [{id, name, provider, path}]}
   hf-ai mcp list | check <id> | call <id> <herramienta> '<json>'   servidores MCP del usuario (aiMcpServers):
                              la lista con sus herramientas, comprobar uno (lee y guarda sus herramientas) o probar una
   hf-ai chat --print-request '<json>'   no llama al modelo: imprime la petición que enviaría (sin la clave)
@@ -2475,12 +2475,15 @@ def claude_code_live(cmd, prompt, stream):
 
 # IA de terminal ya instaladas (Ajustes › Asistente de IA › En este equipo; hf-ai clis). claude y ollama tienen su
 # proveedor; las demás van por el proveedor "cli" (aiCli = su id): un turno con el prompt entero, sin sesión propia.
-# shortcut: solo Claude Code y Ollama se han probado aquí; las órdenes de las otras siguen su documentación (modo no
-# interactivo, sin aprobar herramientas) y se ejecutan en una carpeta vacía. Si una cambia de opciones, ajustar cli_argv.
+# El contexto puede traer texto de fuera (portapapeles, OCR, webs): solo CLI que en modo no interactivo no ejecutan
+# órdenes ni escriben archivos (Codex con --sandbox read-only; Gemini CLI y Qwen Code sin --yolo dejan fuera las
+# herramientas que piden aprobación; llm no tiene). opencode y Cursor Agent sí las ejecutan solos: fuera.
+# shortcut: solo Claude Code y Ollama se han probado aquí; las órdenes de las otras siguen su documentación. Si una
+# cambia de opciones, ajustar cli_argv.
 LOCAL_CLIS = [  # id, nombre, binario, proveedor
     ("claude", "Claude Code", "claude", "claude-code"), ("ollama", "Ollama", "ollama", "ollama"),
     ("codex", "Codex CLI", "codex", "cli"), ("gemini", "Gemini CLI", "gemini", "cli"), ("qwen", "Qwen Code", "qwen", "cli"),
-    ("opencode", "opencode", "opencode", "cli"), ("cursor-agent", "Cursor Agent", "cursor-agent", "cli"), ("llm", "llm", "llm", "cli")]
+    ("llm", "llm", "llm", "cli")]
 
 def local_clis():
     return [{"id": i, "name": n, "provider": p, "path": shutil.which(b)} for i, n, b, p in LOCAL_CLIS if shutil.which(b)]
@@ -2489,13 +2492,12 @@ def cli_name(cid):
     return next((r[1] for r in LOCAL_CLIS if r[0] == cid), "la IA de terminal")
 
 def cli_argv(cid, exe, system, prompt, model):
-    """(órdenes, entrada estándar). El prompt va por argumento (máx. 128 KB por argumento en Linux): recortado antes."""
+    """(órdenes, entrada estándar). La conversación va siempre por la entrada estándar: en los argumentos cualquier
+    proceso la leería en /proc/<pid>/cmdline."""
     full, m = system + "\n\n" + prompt, (["-m", model] if model else [])
-    return {"codex": ([exe, "exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never", *m, full], None),
-            "gemini": ([exe, *m, "-p", full], None), "qwen": ([exe, *m, "-p", full], None),
-            "opencode": ([exe, "run", *m, full], None),
-            "cursor-agent": ([exe, "-p", "--output-format", "text", *m, full], None),
-            "llm": ([exe, *m, "-s", system], prompt)}.get(cid)
+    go = "Sigue las instrucciones y responde al último mensaje del usuario del texto de arriba."
+    return {"codex": [exe, "exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never", *m, "-"],
+            "gemini": [exe, *m, "-p", go], "qwen": [exe, *m, "-p", go], "llm": [exe, *m]}.get(cid), full
 
 def call_cli(system, messages, ctx_text, s):
     cid = str(s.get("aiCli") or "")
@@ -2503,7 +2505,7 @@ def call_cli(system, messages, ctx_text, s):
     exe = row and shutil.which(row[2])
     if not exe:
         raise AIError(f"No encuentro la IA de terminal «{cid or '?'}». Elige otra en Ajustes › Asistente de IA.")
-    argv, stdin = cli_argv(cid, exe, system[:40000], claude_input(messages, ctx_text)[0][-50000:], str(s.get("aiModel") or "").strip())
+    argv, stdin = cli_argv(cid, exe, system, claude_input(messages, ctx_text)[0], str(s.get("aiModel") or "").strip())
     import tempfile
     with tempfile.TemporaryDirectory(prefix="hf-ai-cli-") as d:   # sin tus archivos a mano
         try:
