@@ -30,7 +30,7 @@ ColumnLayout {
             LabeledRow {
                 label: "Animaciones"; labelWidth: 80
                 Seg {
-                    model: [["fluido", "Fluido"], ["equilibrado", "Equilibrado"], ["cinematico", "Cinemático"], ["rapido", "Rápido"], ["minimo", "Mínimo"], ["ninguno", "Ninguna"]]
+                    model: [["fluido", "Fluido"], ["equilibrado", "Equilibrado"], ["cinematico", "Cinemático"], ["rapido", "Rápido"], ["minimalista", "Minimalista"], ["minimo", "Mínimo"], ["ninguno", "Ninguna"]]
                     current: mov.preset
                     textSize: 11.5
                     onPicked: k => Settings.setMany({ animPreset: k, animado: k !== "ninguno" })
@@ -45,6 +45,7 @@ ColumnLayout {
                     equilibrado: "El de siempre: entrada rápida que frena al final y un rebote corto al abrir ventanas.",
                     cinematico: "Para lucirlo: más largo y amplio. Las ventanas crecen desde lejos con un rebote marcado y los espacios se deslizan con fundido.",
                     rapido: "Ágil y sin rebotes: casi la mitad de largo. Para quien quiere que todo responda ya.",
+                    minimalista: "Discreto y corto, sin rebotes: las ventanas apenas crecen al abrirse y los espacios casi no se desplazan. Va bien con el modo Clásico.",
                     minimo: "Solo fundidos: nada se desplaza ni cambia de tamaño.",
                     ninguno: "Sin animaciones en ventanas, espacios ni paneles."
                 })[mov.preset] ?? ""

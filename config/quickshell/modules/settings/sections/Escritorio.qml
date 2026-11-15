@@ -5,7 +5,7 @@
 // apps en ventana flotante ("floatApps", "floatAppsSize"; ui/FloatApps.qml, 35-windows.py),
 // diseño de mosaico (general:layout), enfocar al pasar el cursor y acoplar a los bordes; nombres e iconos de los
 // espacios ("wsNames", "wsIcons", "wsBarNames" → barra y vista general; ui/WsNames.qml).
-// Flotante como escritorio clásico: botones de ventana del shell ("titleBars"; modules/desktop/TitleBar.qml), apps
+// Flotante como escritorio clásico: barras de título del shell ("titleBars"; modules/desktop/TitleBar.qml), apps
 // que ya traen su barra ("barsOwnFrame", ui/FloatApps.qml), redimensionar desde el borde (resize_on_border, look.lua)
 // y enfocar con clic (20-input.py: follow_mouse = 2 en el modo flotante).
 import QtQuick
@@ -136,14 +136,14 @@ ColumnLayout {
         title: "Ventanas flotantes"
         headerRight: Mono { text: root.winMode === "flotante" ? "modo clásico activo" : "también en espacios flotantes" }
         SwRow { label: "Encajar al soltar en los bordes"; sub: "contra un lado: mitad · en una esquina: cuarto · arriba: toda el área · fuera: recupera su tamaño"; key: "dragSnap"; def: true }
-        SwRow { label: "Recordar dónde estaba cada app"; sub: "al volver a abrirla flotando, en el mismo sitio y con el mismo tamaño"; key: "floatRemember"; def: true }
+        SwRow { label: "Recordar dónde estaba cada app"; sub: "al volver a abrirla flotando: el mismo sitio y tamaño y, en el modo clásico, maximizada o no como la cerraste"; key: "floatRemember"; def: true }
         SwRow {
-            label: "Botones de ventana"; key: "titleBars"; def: true
-            sub: "dentro de la ventana activa, arriba a la derecha, en las apps que no traen los suyos: asa para moverla (doble clic maximiza), minimizar, maximizar y cerrar"
+            label: "Barras de título"; key: "titleBars"; def: true
+            sub: "en las apps que no traen la suya: título en cada ventana y, en la activa, icono, minimizar, maximizar y cerrar (arrastra la barra para moverla; doble clic maximiza)"
         }
         Txt {
             Layout.fillWidth: true
-            text: "Redimensiona arrastrando el borde de la ventana. Alt + Espacio (o clic derecho en los botones) abre el menú de la ventana."
+            text: "Redimensiona arrastrando el borde de la ventana. Alt + Espacio (o clic derecho en la barra) abre el menú de la ventana. En el modo clásico, la barra de arriba hace de barra de tareas, y los diálogos y las ventanas nuevas de una app ya abierta salen centrados sobre ella, sin maximizar."
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }
     }
@@ -179,7 +179,7 @@ ColumnLayout {
             Layout.fillWidth: true
             settingKey: "barsOwnFrame"
             intro: "Estas apps ya dibujan su barra con sus botones (pestañas del navegador, apps de GNOME, editores…), así que no "
-                + "se les añade otra. Si ves una ventana con dos barras, añádela; si ves una sin ninguna, quítala."
+                + "se les añade otra. Las GTK, Chromium / Electron y Firefox se reconocen solas. Si ves una ventana con dos barras, añádela."
             // Mismas clases que los valores por defecto de config/defaults/settings.json (barsOwnFrame)
             groups: [
                 { key: "nav", label: "Navegadores", sub: "Chrome, Chromium, Brave, Edge, Vivaldi, Firefox, Zen", classes: ["google-chrome", "chromium", "brave-browser", "microsoft-edge", "vivaldi-stable", "firefox", "zen", "librewolf"] },

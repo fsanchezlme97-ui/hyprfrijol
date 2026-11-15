@@ -118,11 +118,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.10.17",
+ "hyprfrijol": "v0.10.18",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-15 16:52",
+ "saved": "2026-11-15 17:24",
  "services": [
   "ufw",
   "cups.socket",
@@ -141,7 +141,7 @@
   "aiFallbackProvider": "ollama",
   "aiHistoryDays": 0,
   "aiModel": "",
-  "aiMuted": true,
+  "aiMuted": false,
   "aiProvider": "gemini",
   "aiVoice": true,
   "aiVoiceLocal": false,
@@ -181,7 +181,7 @@
    ],
    "izquierda": []
   },
-  "barPos": "abajo",
+  "barPos": "arriba",
   "barRoundExtra": 0,
   "barStatsShow": [
    "cpu",
@@ -199,7 +199,7 @@
   "clipExpireDays": 0,
   "colorMode": "elegir",
   "deskIconSize": "pequeno",
-  "deskIcons": "todos",
+  "deskIcons": "no",
   "deskSort": "tipo",
   "dictationMode": "toggle",
   "dictationModel": "small",
@@ -304,7 +304,7 @@
    "notas"
   ],
   "widgetsOnDesktop": false,
-  "windowMode": "mosaico",
+  "windowMode": "flotante",
   "workspaceAnim": "auto",
   "wsBarNames": false,
   "wsNumerals": "japonesa"

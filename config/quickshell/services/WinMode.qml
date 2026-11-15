@@ -218,11 +218,78 @@ Singleton {
         if (!c || !isFloat(ws) || isMin(c)) return;
         const k = String(ws);
         if (c.address === topAddr) { if (topMax && !isMax(c)) stackMax[k] = false; }
-        else if (stackMax[k] && !isMax(c) && !keep(c) && opensMax(c)) maximize(c);
+        else if (stackMax[k] && !isMax(c) && !keep(c) && opensMax(c) && !mainOf(c)) maximize(c);   // las secundarias no
         if (isMax(c)) stackMax[k] = true;
         topAddr = c.address; topMax = isMax(c);
     }
-    Connections { target: HyprClients; function onRefreshesChanged() { root.stackStep(); } }
+    Connections { target: HyprClients; function onRefreshesChanged() { root.stackStep(); root.syncBars(); } }
+
+    // ---------- barra de título del modo clásico (ajuste "titleBars") ----------
+    // Hyprland no dibuja barras de título sin plugins, pero sí la de un grupo: cada ventana flotante de un espacio
+    // clásico que no trae barra propia va en su propio grupo (config/apply/35-windows.py: sin agruparse con otras, alto
+    // titleH) y así lleva encima una barra con su título, que reserva su sitio y queda tapada por las ventanas de
+    // encima. Sobre la de la ventana activa, modules/desktop/TitleBar.qml pinta el icono, el título y los botones.
+    // Al salir del modo (o con titleBars apagado) se deshacen. Barra propia: las apps GTK, Chromium / Electron y
+    // Firefox (por las bibliotecas que tiene cargadas el proceso) y las clases de "barsOwnFrame".
+    readonly property int titleH: 28
+    readonly property bool titleBars: Settings.get("titleBars", true) !== false
+    onTitleBarsChanged: HyprClients.refresh()
+    readonly property var ownFrameList: (Settings.get("barsOwnFrame", []) ?? []).map(c => String(c).toLowerCase())
+    property var frames: ({})            // clase en minúsculas → true (dibuja su barra) / false
+    property var toggling: ({})          // dirección → ms del último cambio (hasta que hyprctl lo refleje)
+    function hasOwnFrame(c): bool { const k = String(c.class ?? "").toLowerCase(); return ownFrameList.includes(k) || frames[k] === true; }
+    function hasBar(c): bool { const g = c?.grouped ?? []; return g.length === 1 && HyprClients.norm(g[0]) === HyprClients.norm(c.address); }
+    function wantsBar(c): bool {
+        return titleBars && c.floating && isFloat(c.workspace?.id ?? 0) && !c.pinned && !keepClass(c)
+            && frames[String(c.class ?? "").toLowerCase()] === false && !hasOwnFrame(c);
+    }
+    function syncBars(): void {
+        const now = Date.now(), unknown = {};
+        for (const c of HyprClients.clients) {
+            const ws = c.workspace?.id ?? 0, k = String(c.class ?? "").toLowerCase();
+            // minimizadas (espacio especial) y a pantalla completa: se quedan como están
+            if (ws <= 0 || (c.fullscreen ?? 0) === 2 || !c.mapped || now - (toggling[c.address] ?? 0) < 1500) continue;
+            if (titleBars && isFloat(ws) && k && frames[k] === undefined && !ownFrameList.includes(k) && !keepClass(c)) { unknown[k] = c.pid; continue; }
+            const g = c.grouped ?? [], want = wantsBar(c);
+            if (want && g.length === 0) setBar(c, true);
+            else if (!want && hasBar(c)) setBar(c, false);
+        }
+        if (Object.keys(unknown).length && !frameProbe.running) {
+            frameProbe.args = Object.keys(unknown).map(k => unknown[k] + "\t" + k);
+            frameProbe.running = true;
+        }
+    }
+    function setBar(c, on: bool): void {
+        toggling = Object.assign({}, toggling, { [c.address]: Date.now() });
+        Shell.dispatch('hl.dsp.group.toggle({ ' + win(c.address) + ' })');
+        if (!on) return;
+        // La barra va encima de la ventana: si quedaría bajo la barra del shell, se baja (y se acorta si no cabe)
+        const mon = HyprClients.monitorById(c.monitor);
+        if (!mon) return;
+        const U = HyprClients.usableRect(mon);
+        if (isMax(c)) {           // maximizada: que Hyprland la vuelva a encajar contando la barra
+            Shell.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "unset", ' + win(c.address) + ' })');
+            maximize(c);
+        } else if ((c.at?.[1] ?? 0) - titleH < U.y) {
+            const y = U.y + titleH, h = Math.min(c.size?.[1] ?? 0, U.y + U.h - y);
+            Shell.dispatch('hl.dsp.window.resize({ x = ' + (c.size?.[0] ?? 0) + ', y = ' + h + ', exact = true, ' + win(c.address) + ' })');
+            Shell.dispatch('hl.dsp.window.move({ x = ' + (c.at?.[0] ?? 0) + ', y = ' + y + ', exact = true, ' + win(c.address) + ' })');
+        }
+    }
+    Process {
+        id: frameProbe
+        property var args: []
+        command: ["sh", "-c", 'for a; do p=${a%%\t*}; if grep -qE "libgtk-[34]\\.so|libxul\\.so|v8_context_snapshot|chrome_100_percent\\.pak" "/proc/$p/maps" 2>/dev/null; '
+                  + 'then echo "${a#*\t}\t1"; else echo "${a#*\t}\t0"; fi; done', "sh"].concat(args)
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const f = Object.assign({}, root.frames);
+                for (const l of text.split("\n")) { const i = l.lastIndexOf("\t"); if (i > 0) f[l.slice(0, i)] = l.slice(i + 1) === "1"; }
+                root.frames = f;
+                HyprClients.refresh();
+            }
+        }
+    }
 
     function close(address): void { Shell.dispatch('hl.dsp.window.close({ ' + win(address) + ' })'); HyprClients.refresh(); }
 
@@ -268,8 +335,10 @@ Singleton {
     // Ventanas que no se tocan: las del shell, juegos y apps de Wine / Proton (rules.lua: wine-float), PiP, fijadas,
     // a pantalla completa
     function keep(c): bool {
-        return !c || c.pinned || (c.fullscreen ?? 0) > 0 || (c.workspace?.id ?? 0) <= 0
-            || /^(org\.quickshell|steam_app_.*|steam_proton|.*\.exe|gamescope)$/i.test(c.class ?? "")
+        return !c || c.pinned || (c.fullscreen ?? 0) > 0 || (c.workspace?.id ?? 0) <= 0 || keepClass(c);
+    }
+    function keepClass(c): bool {
+        return /^(org\.quickshell|steam_app_.*|steam_proton|.*\.exe|gamescope)$/i.test(c.class ?? "")
             || /^([Pp]icture[-\s]?[Ii]n[-\s]?[Pp]icture|[Pp]antalla[-\s]?en[-\s]?[Pp]antalla)/.test(c.title ?? "");
     }
     // Apps que flotan siempre al centro (floatApps, reglas hf-float-apps de config/apply/35-windows.py): al salir
@@ -335,6 +404,30 @@ Singleton {
             Shell.dispatch('hl.dsp.window.resize({ x = ' + w + ', y = ' + h + ', exact = true, ' + t + ' })');
         Shell.dispatch('hl.dsp.window.move({ x = ' + x + ', y = ' + y + ', exact = true, ' + t + ' })');
     }
+    // Ventana principal de una que se abre: otra de la misma app (mismo proceso y clase) ya abierta en ese espacio, la
+    // usada más recientemente. Así se reconocen los diálogos que no se declaran modales (GTK 3) y las ventanas nuevas
+    // de una app ya abierta.
+    function mainOf(c): var {
+        return HyprClients.byRecent.find(o => o.address !== c.address && o.pid === c.pid && o.class === c.class
+            && o.workspace?.id === c.workspace?.id && !isMin(o)) ?? null;
+    }
+    // Centrada sobre la ventana principal, con su propio tamaño (dentro del área útil, contando su barra de título)
+    function centerOn(c, main): void {
+        const mon = HyprClients.monitorById(c.monitor) ?? HyprClients.focusedMonitor;
+        if (!mon) return;
+        const U = HyprClients.usableRect(mon), bar = hasBar(main) || wantsBar(c) ? titleH : 0;
+        const w = Math.min(c.size?.[0] ?? 0, U.w), h = Math.min(c.size?.[1] ?? 0, U.h - bar);
+        const mx = main.at[0] + main.size[0] / 2, my = main.at[1] + main.size[1] / 2;
+        let x = Math.round(Math.max(U.x, Math.min(mx - w / 2, U.x + U.w - w)));
+        let y = Math.round(Math.max(U.y + bar, Math.min(my - h / 2, U.y + U.h - h)));
+        // Del mismo tamaño que la principal (otra ventana de la app): un paso en diagonal para que se vea que son dos
+        if (Math.abs(x - main.at[0]) < 24 && Math.abs(y - main.at[1]) < 24) {
+            x = Math.min(x + 32, U.x + U.w - w); y = Math.min(y + 32, U.y + U.h - h);
+        }
+        const t = win(c.address);
+        if (w !== c.size?.[0] || h !== c.size?.[1]) Shell.dispatch('hl.dsp.window.resize({ x = ' + w + ', y = ' + h + ', exact = true, ' + t + ' })');
+        Shell.dispatch('hl.dsp.window.move({ x = ' + x + ', y = ' + y + ', exact = true, ' + t + ' })');
+    }
     // Para Snap (Super + ↓) cuando no hay geometría previa: tamaño cómodo en el centro
     function placeDefault(address: string): void {
         const c = HyprClients.client(address);
@@ -369,8 +462,9 @@ Singleton {
     Component.onCompleted: Qt.callLater(sync)
 
     // ---------- recordar posiciones (Ajustes › Escritorio › «Recordar dónde estaba cada app», floatRemember) ----------
-    // Por clase de app, la última geometría que tuvo flotando (sin contar diálogos pequeños ni maximizadas); al abrirla
-    // de nuevo en un espacio flotante vuelve ahí (dentro del área útil; en cascada si ya hay otra igual en ese sitio).
+    // Por clase de app, la última geometría que tuvo flotando (sin contar diálogos pequeños ni ventanas secundarias) y si
+    // estaba maximizada ("max"); al abrirla de nuevo en un espacio flotante vuelve ahí (dentro del área útil; en cascada
+    // si ya hay otra igual en ese sitio) y, en el modo clásico, maximizada o no como la dejaste.
     // Se guarda en ~/.local/state/hyprfrijol/float-geometry.json.
     readonly property bool remember: Settings.get("floatRemember", true) === true
     property var geom: ({})
@@ -389,10 +483,14 @@ Singleton {
             let changed = false;
             const g = Object.assign({}, root.geom);
             for (const c of HyprClients.clients) {
-                if (!c.floating || root.keep(c) || root.small(c) || !c.class || !c.mapped) continue;
-                if (root.pending.some(p => p.a === c.address)) continue;      // aún colocándose
-                const o = g[c.class], n = { x: c.at[0], y: c.at[1], w: c.size[0], h: c.size[1], mon: c.monitor };
-                if (!o || o.x !== n.x || o.y !== n.y || o.w !== n.w || o.h !== n.h) { g[c.class] = n; changed = true; }
+                if (!c.floating || !c.class || !c.mapped || c.pinned || (c.workspace?.id ?? 0) <= 0 || root.keepClass(c) || root.small(c)) continue;
+                if (root.pending.some(p => p.a === c.address) || root.mainOf(c)) continue;   // aún colocándose · secundaria
+                const o = g[c.class];
+                // maximizada: solo se apunta eso (el tamaño guardado es al que vuelve)
+                if (root.isMax(c)) { if (o?.max !== true) { g[c.class] = Object.assign({}, o ?? {}, { max: true }); changed = true; } continue; }
+                if ((c.fullscreen ?? 0) > 0) continue;
+                const n = { x: c.at[0], y: c.at[1], w: c.size[0], h: c.size[1], mon: c.monitor, max: false };
+                if (!o || o.x !== n.x || o.y !== n.y || o.w !== n.w || o.h !== n.h || o.max !== false) { g[c.class] = n; changed = true; }
             }
             if (changed) { root.geom = g; geomSave.restart(); }
         }
@@ -400,7 +498,7 @@ Singleton {
     // Coloca la ventana donde estaba su app la última vez; false si no hay nada guardado
     function restoreGeom(c): bool {
         const r = remember ? geom[c.class] : null;
-        if (!r) return false;
+        if (!r || r.w === undefined) return false;
         const mon = HyprClients.monitorById(r.mon) ?? HyprClients.monitorById(c.monitor) ?? HyprClients.focusedMonitor;
         if (!mon) return false;
         const U = HyprClients.usableRect(mon);
@@ -453,9 +551,13 @@ Singleton {
                 const c = HyprClients.client(p.a);
                 if (!c) { if (now - p.t < 3000) left.push(p); continue; }   // aún no sale en hyprctl: se reintenta
                 if (c.floating && !root.keep(c)) {
+                    // Ventana secundaria (Preferencias, otra ventana de la misma app): centrada sobre la suya, sin maximizar
+                    const main = root.mainOf(c);
+                    if (main) root.centerOn(c, main);
                     // Primero su sitio de siempre: es el tamaño al que vuelve si la sacas de maximizar
-                    if (root.small(c) || !root.restoreGeom(c)) root.place(c, false, []);
-                    if (root.opensMax(c)) root.maximize(c);
+                    else if (root.small(c) || !root.restoreGeom(c)) root.place(c, false, []);
+                    // Como la cerraste: maximizada salvo que la última vez la dejaras en ventana (floatRemember)
+                    if (!main && root.opensMax(c) && !(root.remember && root.geom[c.class]?.max === false)) root.maximize(c);
                 }
             }
             root.pending = left;

@@ -3,6 +3,25 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.19] — 2026-11-15
+
+### Novedades (modo Clásico)
+- **Barras de título completas:** las apps que no traen la suya (terminales, apps Qt…) llevan barra en cada ventana:
+  la barra de grupo de Hyprland (sin plugins: un grupo por ventana, sin fusionarse) con su título, que reserva su
+  sitio y queda tapada por las ventanas de encima; en la activa, el shell pinta icono, título, minimizar, maximizar y
+  cerrar, y toda la barra mueve la ventana (doble clic maximiza, clic derecho abre el menú). Las apps GTK, Chromium /
+  Electron y Firefox se reconocen solas como apps con barra propia.
+- **Barra de tareas:** en los espacios en modo Clásico, la barra muestra un botón por ventana (y las minimizadas) en
+  lugar del título: clic la trae al frente, en la de delante la minimiza, en una minimizada la restaura; clic central
+  cierra y clic derecho abre el menú de ventana.
+- **Diálogos y ventanas secundarias sin maximizar:** una ventana nueva de una app que ya tiene otra abierta en el
+  espacio (Preferencias, diálogos GTK 3 que no se declaran modales, otra ventana de Archivos) sale centrada sobre ella
+  con su tamaño.
+- **Abrir como la cerraste:** con «Recordar dónde estaba cada app», cada app vuelve maximizada o en ventana según la
+  dejaste la última vez.
+- **Animaciones «Minimalista»** (Ajustes › Animaciones y efectos): cortas y sin rebotes; las ventanas apenas crecen
+  al abrirse y los espacios casi no se desplazan.
+
 ## [0.10.18] — 2026-11-15
 
 ### Novedades

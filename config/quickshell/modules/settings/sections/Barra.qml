@@ -177,7 +177,7 @@ ColumnLayout {
             Layout.fillWidth: true
             spacing: 8
             Repeater {
-                model: [["espacios", "Espacios"], ["titulo", "Título de ventana"], ["musica", "Música"], ["red", "Red"], ["bateria", "Batería"], ["notificaciones", "Notificaciones"], ["reloj", "Reloj"]]
+                model: [["espacios", "Espacios"], ["titulo", "Título o tareas"], ["musica", "Música"], ["red", "Red"], ["bateria", "Batería"], ["notificaciones", "Notificaciones"], ["reloj", "Reloj"]]
                 Chip {
                     required property var modelData
                     readonly property var list: Settings.barModuleList
