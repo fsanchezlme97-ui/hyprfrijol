@@ -10,7 +10,11 @@
   Wine / Proton si wineTweaks está activado (Ajustes › Aplicaciones › Juegos de Windows).
 
 Solo toca el WINEPREFIX del propio proceso y si ya existe (nunca crea ~/.wine) y usa el wine de ese mismo proceso
-(el mismo wineserver). Si algo falla (p. ej. el Proton de Steam dentro de su contenedor) no hace nada.
+(el mismo wineserver). Seguridad: la clase .exe la puede poner cualquier app de X11 y el binario sale de la ruta del
+proceso, así que solo se actúa si el proceso es del usuario, ve los mismos archivos (mismo espacio de montaje) y no es
+un Flatpak: un proceso así ya ejecuta lo que quiera con tus permisos; uno en un sandbox no podrá hacer que se ejecute
+un binario suyo fuera de él. Además el proceso tiene que ser el cargador de Wine (el PID de una ventana de X11 se puede
+falsear). El Proton de Steam (en su contenedor) queda fuera. Si algo falla no hace nada.
 """
 import json, os, pathlib, subprocess, sys, time
 
@@ -45,9 +49,21 @@ def env_of(pid):
             if k == "WINEPREFIX"}
 
 
+def unsandboxed(pid):
+    """Del usuario, en el mismo espacio de montaje que nosotros y sin /.flatpak-info: fuera de cualquier sandbox."""
+    try:
+        if os.stat(f"/proc/{pid}").st_uid != os.getuid():
+            return False
+        if os.readlink(f"/proc/{pid}/ns/mnt") != os.readlink("/proc/self/ns/mnt"):
+            return False
+        return not os.path.exists(f"/proc/{pid}/root/.flatpak-info")
+    except OSError:
+        return False
+
+
 def fix(target):
     pid = pid_of(target)
-    if not pid:
+    if not pid or not unsandboxed(pid):
         return 0
     pfx = env_of(pid).get("WINEPREFIX", "").rstrip("/")
     if not pfx or not (pathlib.Path(pfx) / "user.reg").is_file():
@@ -56,9 +72,14 @@ def fix(target):
     if pfx in done:
         return 0
     try:
-        bindir = pathlib.Path(os.readlink(f"/proc/{pid}/exe")).parent
+        exe = pathlib.Path(os.readlink(f"/proc/{pid}/exe"))
     except OSError:
         return 0
+    # El PID de una ventana de X11 se puede falsear: solo si el proceso es el propio cargador de Wine, así el wine que
+    # se ejecuta está junto al binario con el que ya corre el juego (nunca junto a otro programa cualquiera)
+    if exe.name not in ("wine", "wine64", "wine-preloader", "wine64-preloader"):
+        return 0
+    bindir = exe.parent
     wine = next((bindir / n for n in ("wine", "wine64") if (bindir / n).is_file()), None)
     if not wine:
         return 0

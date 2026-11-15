@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.12] — 2026-11-15
+
+### Seguridad
+- **Ajustar Wine para Hyprland:** solo actúa sobre procesos de Wine tuyos y fuera de cualquier sandbox (Flatpak,
+  contenedores). Una app en un sandbox ya no podría hacerse pasar por una ventana de Wine para que HyprFrijol ejecutara
+  un programa suyo fuera del sandbox.
+
 ## [0.10.11] — 2026-11-15
 
 ### Novedades
