@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.9] — 2026-11-15
+
+### Arreglos
+- **Modo «Clásico»:** Alt + Tab (o un clic) a otra ventana le pasa el maximizado, como en una pila: la de arriba
+  siempre va maximizada; al cerrar la de arriba, la que queda también. Si sacas de maximizar la de arriba, las demás se
+  quedan como las dejes. Las «Apps en ventana flotante» (Nautilus…) siguen flotando encima sin quitarle el maximizado.
+- **Diálogos en el modo «Clásico»:** los diálogos de Abrir, Guardar y demás ya no se maximizan y conservan su tamaño
+  (apps GTK 4 y Qt 6; un diálogo grande de una app GTK 3 aún puede maximizarse).
+- **Onda de la barra:** con la IA escuchando o hablando en silencio se ve una onda fina en vez de nada.
+- **Ventanas inactivas con dos pantallas:** la ventana activa de cada pantalla se pone al momento al cambiar de pantalla,
+  y tras reiniciar el shell ninguna se queda sin atenuar por error.
+
 ## [0.10.8] — 2026-11-15
 
 ### Novedades

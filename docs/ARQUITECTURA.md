@@ -31,7 +31,7 @@ Todo vive en `config/quickshell/`. Cada vista del diseño es un módulo en `modu
 | Notificaciones y OSD | `notificaciones` | `Notifs.qml`, `modules/notifications`, `modules/osd` | `NotificationServer`, `Pipewire` |
 | Panel lateral (asistente de IA) y PiP | `ia` | `modules/sidepanel`, `modules/pip` | `hf-ai` (Claude Code / Ollama / API), `hf-mcp` |
 | Vista general, Alt+Tab, Snap | `vista`, `alttab`, `snap` | `modules/overview`, `alttab`, `snap` | `ScreencopyView`, `services/HyprClients.qml` |
-| Dock (modo flotante: minimizar, maximizar, ocultación inteligente) y escritorio ordenado | — | `modules/desktop` | `FolderListModel` |
+| Dock (modo clásico: minimizar, maximizar, ocultación inteligente) y escritorio ordenado | — | `modules/desktop` | `FolderListModel` |
 | Widgets | `widgets` | `modules/widgets` | Open-Meteo, Moonraker/OctoPrint, `/proc` |
 | Fondos | `fondos` | `modules/wallpapers`, `Wallpaper.qml`, `scripts/hf-wallpaper` | matugen, mpvpaper |
 | Captura y grabación | `captura` | `modules/capture`, `scripts/hf-capture` | grim, slurp, wf-recorder, tesseract |

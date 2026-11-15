@@ -59,6 +59,9 @@ def hypr_lua(s, c):
         out.append('hl.window_rule({ name = "hf-float-all", match = { class = ".*" }, float = true })')
     else:
         out.append('hl.window_rule({ name = "no-maximize", match = { float = false }, suppress_event = "maximize" })')
+    # Modo clásico (general o por espacio): los diálogos modales (Abrir, Guardar…) no se maximizan; WinMode.opensMax()
+    # mira esta etiqueta. Solo la ponen las apps que se declaran modales (GTK 4, Qt 6; GTK 3 no)
+    out.append('hl.window_rule({ name = "hf-dialog", match = { modal = true }, tag = "+hf-dialog" })')
     cls = _classes(s)
     big = [x for x in cls if x.lower() not in COMPACT]
     small = [x for x in cls if x.lower() in COMPACT]

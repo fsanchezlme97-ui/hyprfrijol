@@ -144,7 +144,8 @@ Rectangle {
             ctx.fillStyle = g;
             ctx.strokeStyle = g;
             // Las bandas graves (izquierda) suelen dominar: se reparte la altura con una ligera curva
-            const amp = (i) => Math.pow(Math.min(1, d[i] * 1.15), 0.8);
+            // Con la IA en marcha, un mínimo: en silencio (pausas al hablar, micrófono callado) la onda se seguía viendo
+            const amp = (i) => Math.max(ai ? 0.12 : 0, Math.pow(Math.min(1, d[i] * 1.15), 0.8));
             if (!root.live && root.peak < 0.01) {
                 // Reposo: puntos tenues
                 ctx.globalAlpha = 0.45;

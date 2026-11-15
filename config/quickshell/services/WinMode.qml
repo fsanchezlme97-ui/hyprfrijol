@@ -183,23 +183,46 @@ Singleton {
     // opacidad inactiva 1 por ventana (la enfocada ya no se atenúa). Sin atenuar ni transparencia no cambian nada.
     readonly property var undimmed: {
         if (HyprClients.monitors.length < 2) return [];
+        // La pantalla con el foco, por la ventana activa: monitors[].focused solo se pone al día con la lista completa
+        const am = HyprClients.client(HyprClients.activeAddress)?.monitor ?? HyprClients.focusedMonitor?.id;
         const out = [];
         for (const m of HyprClients.monitors) {
-            if (m.focused) continue;
+            if (m.id === am) continue;
             const c = HyprClients.byRecent.find(c => c.workspace?.id === m.activeWorkspace?.id && !isMin(c));
             if (c) out.push(c.address);
         }
         return out;
     }
-    // shortcut: si el shell se reinicia, las que ya las tenían las conservan hasta que cambie el foco de su pantalla
     property var noDim: []
+    property bool dimSwept: false
     onUndimmedChanged: {
         const prop = (a, k, v) => Shell.dispatch('hl.dsp.window.set_prop({ prop = "' + k + '", value = "' + v + '", ' + win(a) + ' })');
         const set = (a, v) => { prop(a, "no_dim", v); prop(a, "opacity_inactive_override", v); };
+        // Al arrancar el shell no sabe a cuáles se las puso antes: se quitan de todas las demás una vez
+        if (!dimSwept && HyprClients.clients.length) { dimSwept = true; noDim = HyprClients.clients.map(c => c.address); }
         for (const a of noDim) if (!undimmed.includes(a) && HyprClients.client(a)) set(a, "unset");
         for (const a of undimmed) if (!noDim.includes(a)) set(a, "1");
         noDim = undimmed;
     }
+
+    // ---------- modo clásico: la de arriba va maximizada ----------
+    // Hyprland deja una sola ventana maximizada por espacio y, si flotan, enfocar otra no le pasa el maximizado
+    // (misc:on_focus_under_fullscreen solo vale en mosaico). Aquí: si la de arriba de un espacio clásico iba maximizada,
+    // la que enfocas (Alt + Tab, clic, la que queda al cerrar) también se maximiza; las de opensMax() no (diálogos,
+    // floatApps). Si sacas de maximizar la de arriba, el espacio deja de apilar hasta que maximices otra.
+    property var stackMax: ({})          // espacio → la de arriba iba maximizada
+    property string topAddr: ""
+    property bool topMax: false
+    function stackStep(): void {
+        const c = HyprClients.client(HyprClients.activeAddress), ws = c?.workspace?.id ?? 0;
+        if (!c || !isFloat(ws) || isMin(c)) return;
+        const k = String(ws);
+        if (c.address === topAddr) { if (topMax && !isMax(c)) stackMax[k] = false; }
+        else if (stackMax[k] && !isMax(c) && !keep(c) && opensMax(c)) maximize(c);
+        if (isMax(c)) stackMax[k] = true;
+        topAddr = c.address; topMax = isMax(c);
+    }
+    Connections { target: HyprClients; function onRefreshesChanged() { root.stackStep(); } }
 
     function close(address): void { Shell.dispatch('hl.dsp.window.close({ ' + win(address) + ' })'); HyprClients.refresh(); }
 
@@ -252,12 +275,13 @@ Singleton {
     // del modo flotante (o en un espacio en mosaico) no se vuelven a meter en el mosaico
     readonly property var floatApps: (Settings.get("floatApps", []) ?? []).map(c => String(c).toLowerCase())
     function isFloatApp(cls): bool { return floatApps.includes(String(cls ?? "").toLowerCase()); }
-    // Diálogo o utilidad pequeña: flota y conserva su tamaño
-    function small(c): bool { return (c.size?.[0] ?? 0) < 560 && (c.size?.[1] ?? 0) < 420; }
-    // Modo clásico: las ventanas normales se abren maximizadas; los diálogos pequeños, el selector de archivos (portal),
+    // Diálogo (modal: etiqueta hf-dialog de config/apply/35-windows.py) o utilidad pequeña: flota y conserva su tamaño
+    function isDialog(c): bool { return (c.tags ?? []).some(t => String(t).startsWith("hf-dialog")); }
+    function small(c): bool { return isDialog(c) || (c.size?.[0] ?? 0) < 560 && (c.size?.[1] ?? 0) < 420; }
+    // Modo clásico: las ventanas normales se abren maximizadas; los diálogos (small), el selector de archivos (portal),
     // los de rules.lua y las apps de floatApps flotan con su tamaño.
-    // shortcut: Hyprland no dice si una ventana es un diálogo; uno grande de una app (p. ej. sus preferencias) también
-    // se maximiza. Si molesta, mirar el padre (xdg_toplevel parent) cuando hyprctl lo exponga.
+    // shortcut: un diálogo grande de una app GTK 3 (no se declara modal) también se maximiza. Si molesta, mirar el
+    // padre (xdg_toplevel parent) cuando hyprctl lo exponga.
     function opensMax(c): bool {
         return !small(c) && !isFloatApp(c.class)
             && !/^(xdg-desktop-portal-.*|org\.pulseaudio\.pavucontrol|pavucontrol|nm-connection-editor|blueman-manager|polkit.*)$/i.test(c.class ?? "");
