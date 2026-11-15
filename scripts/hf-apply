@@ -490,6 +490,12 @@ def motion_shell(s):
         m[key] = round(m[key] / k)
     if m.get("easeIn") is None:   # el rebote al entrar lo decide el preset (Fluido), no el estilo
         m["easeIn"] = m["ease"]
+    # Lo que tarda Hyprland en mover una ventana (windowsMove: 1 = 100 ms) y su curva: lo que el shell pinta pegado a
+    # una ventana (la barra de título del modo Clásico) la sigue con el mismo ritmo en vez de saltar al final
+    wm = next((a for a in MOTION[p]["anims"] if a[0] == "windowsMove"), None)
+    if wm:
+        m["winMove"] = round(max(0.5, round(wm[1] / k, 2)) * 100)
+        m["winEase"] = list(MOTION[p]["curves"][wm[2]]) + [1, 1]
     m.update(preset=p, speed=k)
     return m
 

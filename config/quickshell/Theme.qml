@@ -8,7 +8,7 @@ pragma Singleton
 //           estilo: Math (Material 3), sólido o con transparencia (cristal: transparente y desenfocado)
 //                    · tonal (cristal con «Reducir transparencia»). La geometría (radios): Ajustes › Apariencia › Redondeo
 //  Estados:    stateTone stHover stPress stDisabled focusRing focusWidth (components/StateLayer.qml)
-//  Movimiento: dur durIn durOut · durShort durMedium durLong durXLong · ease easeIn easeOut (theme.json motion)
+//  Movimiento: dur durIn durOut · durShort durMedium durLong durXLong · ease easeIn easeOut · durWin easeWin (theme.json motion)
 //  Tipografía: font, size(px) — tamaño base 12.5 como en el diseño
 //  Nota: en QML los nombres "on" + mayúscula son manejadores, por eso pText (=onP), pcText (=onPc)…
 import QtQuick
@@ -27,21 +27,21 @@ Singleton {
     readonly property bool highContrast: data.highContrast ?? false     // Ajustes › Accesibilidad (hf-apply ya ajusta c y S)
 
     // Colores
-    readonly property color bg: c.bg
-    readonly property color s1: c.s1
-    readonly property color s3: c.s3
-    readonly property color s4: c.s4
-    readonly property color p: c.p
-    readonly property color pText: c.onP
-    readonly property color pc: c.pc
-    readonly property color pcText: c.onPc
-    readonly property color sc: c.sc
-    readonly property color scText: c.onSc
-    readonly property color ter: c.ter
-    readonly property color t: c.t
-    readonly property color tv: c.tv
-    readonly property color o: c.o
-    readonly property color ov: c.ov
+    property color bg: c.bg
+    property color s1: c.s1
+    property color s3: c.s3
+    property color s4: c.s4
+    property color p: c.p
+    property color pText: c.onP
+    property color pc: c.pc
+    property color pcText: c.onPc
+    property color sc: c.sc
+    property color scText: c.onSc
+    property color ter: c.ter
+    property color t: c.t
+    property color tv: c.tv
+    property color o: c.o
+    property color ov: c.ov
     readonly property color danger: light ? "#B3261E" : "#F2B8B5"
     // Estados del asistente (onda de la barra, bar/Waveform.qml, y puntero): verde, azul y magenta de la paleta del
     // tema (sus colores de terminal, c.ansi, que hf-apply pone siempre); los fijos solo si faltan
@@ -51,20 +51,20 @@ Singleton {
     readonly property color aiSpeak: ansi[5] ?? (light ? "#6D28D9" : "#8B5CF6")
 
     // Estilo
-    readonly property color glass: st.bg
-    readonly property color glassPanel: st.bgPanel
-    readonly property color glassPopup: st.bgPopup
-    readonly property color fill2: st.bg2
-    readonly property color border: st.border
+    property color glass: st.bg
+    property color glassPanel: st.bgPanel
+    property color glassPopup: st.bgPopup
+    property color fill2: st.bg2
+    property color border: st.border
     readonly property int borderWidth: st.borderWidth
-    readonly property color highlight: st.highlight
+    property color highlight: st.highlight
     readonly property color glow: st.glow
     readonly property color shadow: st.shadow
     readonly property color shadowBig: st.shadowBig
-    readonly property color win: st.win
+    property color win: st.win
     // Ventanas grandes (Ajustes, Centro de aplicaciones): con transparencia más opaco que los paneles, para que no se transparente
     // lo de detrás; en Material/tonal, sólido. (hf-apply: S.winSolid)
-    readonly property color winSolid: st.winSolid ?? (glassy ? Qt.alpha(st.win, 0.94) : c.s1)
+    readonly property color winSolid: st.winSolid ?? (glassy ? Qt.alpha(win, 0.94) : s1)
     readonly property int barRadius: st.barRad
     readonly property int panelRadius: st.panelRad
     readonly property int winRadius: st.winRad
@@ -148,15 +148,46 @@ Singleton {
     readonly property var ease: motion.ease ?? [0.05, 0.7, 0.1, 1, 1, 1]
     readonly property var easeOut: motion.easeOut ?? [0.3, 0, 0.8, 0.15, 1, 1]
     readonly property var easeIn: motion.easeIn ?? ease
+    // El movimiento de las ventanas en Hyprland (windowsMove del preset): para seguir a una ventana mientras se anima
+    readonly property int durWin: still ? 0 : (motion.winMove ?? durLong)
+    readonly property var easeWin: motion.winEase ?? ease
 
     function alpha(col, a) { return Qt.alpha(col, a); }
+
+    // Cambio de tema, de paleta o de claro a oscuro: los colores pasan con un fundido (todo el shell a la vez) en vez de
+    // saltar. No al arrancar (de los colores de reserva al tema) ni con «Reducir movimiento».
+    property bool fades: false
+    readonly property int fadeDur: still || !fades ? 0 : Math.round(durIn * 0.9)
+    Behavior on bg { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on s1 { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on s3 { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on s4 { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on p { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on pText { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on pc { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on pcText { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on sc { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on scText { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on ter { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on t { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on tv { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on o { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on ov { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on glass { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on glassPanel { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on glassPopup { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on fill2 { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on border { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on highlight { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Behavior on win { enabled: root.fadeDur > 0; ColorAnimation { duration: root.fadeDur; easing.type: Easing.InOutQuad } }
+    Timer { id: fadeOn; interval: 600; onTriggered: root.fades = true }
 
     FileView {
         path: Paths.state + "/theme.json"
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
-        onLoaded: { try { root.data = JSON.parse(text()); } catch (e) {} }
+        onLoaded: { try { root.data = JSON.parse(text()); } catch (e) {} if (!root.fades) fadeOn.start(); }
     }
 
     // Grafito con transparencia, por si theme.json aún no existe

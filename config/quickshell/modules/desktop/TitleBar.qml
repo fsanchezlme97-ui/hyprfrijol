@@ -51,18 +51,34 @@ PanelWindow {
     // Por el socket de Hyprland desde Quickshell (refreshToplevels), sin lanzar un hyprctl cada 100 ms: se lee lo
     // que trajo la consulta anterior y se pide la siguiente
     property string liveKey: ""
+    function poll(): void {
+        const j = HyprClients.toplevelFor(root.addr)?.lastIpcObject;
+        if (j?.address && j.at && j.size) {
+            const k = JSON.stringify([j.address, j.at, j.size, j.fullscreen]);
+            if (k !== root.liveKey) { root.liveKey = k; root.live = j; }
+        }
+    }
     Timer {
         interval: 100; repeat: true
         running: root.addr !== "" && !drag.active
-        onTriggered: {
-            const j = HyprClients.toplevelFor(root.addr)?.lastIpcObject;
-            if (j?.address && j.at && j.size) {
-                const k = JSON.stringify([j.address, j.at, j.size, j.fullscreen]);
-                if (k !== root.liveKey) { root.liveKey = k; root.live = j; }
-            }
-            Hyprland.refreshToplevels();
+        onTriggered: { root.poll(); Hyprland.refreshToplevels(); }
+    }
+    // Maximizar, flotar o encajar: se pregunta ya (no al siguiente sondeo), para que la barra salga a la vez que la
+    // ventana empieza a animarse y no ~200 ms después
+    Timer { id: pollSoon; interval: 30; onTriggered: root.poll() }
+    Connections {
+        target: Hyprland
+        enabled: root.addr !== "" && !drag.active
+        function onRawEvent(ev) {
+            if (["fullscreen", "changefloatingmode", "movewindowv2"].includes(ev.name)) { Hyprland.refreshToplevels(); pollSoon.restart(); }
         }
     }
+
+    // Seguir a la ventana con animación (pill: Behavior on x/y/width) solo cuando sigue siendo la misma barra
+    property bool glide: false
+    onAddrChanged: { glide = false; glideOn.restart(); }
+    onFullChanged: { glide = false; glideOn.restart(); }
+    Timer { id: glideOn; interval: 60; onTriggered: root.glide = true }
 
     readonly property real sx: screen?.x ?? 0
     readonly property real sy: screen?.y ?? 0
@@ -104,6 +120,11 @@ PanelWindow {
         y: root.full ? gy - root.sy - WinMode.titleH : gy - root.sy + 6
         width: root.full ? (root.geo?.w ?? 0) : row.implicitWidth + 6
         height: root.full ? WinMode.titleH : 26
+        // Hyprland da la geometría final al momento y anima la ventana hasta ella (maximizar, encajar, cambiar de
+        // modo): la barra la sigue con su misma duración y curva. Al arrastrar, o al pasar a otra ventana, va directa.
+        Behavior on x { enabled: root.glide && !drag.active; NumberAnimation { duration: Theme.durWin; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeWin } }
+        Behavior on y { enabled: root.glide && !drag.active; NumberAnimation { duration: Theme.durWin; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeWin } }
+        Behavior on width { enabled: root.glide && !drag.active; NumberAnimation { duration: Theme.durWin; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeWin } }
         radius: root.full ? 10 : Theme.ctl(26)
         bottomLeftRadius: root.full ? 0 : radius
         bottomRightRadius: root.full ? 0 : radius

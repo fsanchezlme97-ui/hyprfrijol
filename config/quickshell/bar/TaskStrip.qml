@@ -29,6 +29,7 @@ RowLayout {
         .reduce((a, w) => !a || w.focusHistoryID < a.focusHistoryID ? w : a, null)?.address ?? ""
     readonly property real each: Math.min(170, (maxWidth - spacing * Math.max(0, wins.length - 1)) / Math.max(1, wins.length))
     readonly property bool iconsOnly: each < 76
+    property var seen: ({})              // direcciones con botón ya mostrado (sin avisar a nadie: solo se lee al crear)
 
     Repeater {
         model: root.wins
@@ -37,11 +38,18 @@ RowLayout {
             required property var modelData
             readonly property bool on: modelData.address === root.front
             readonly property bool min: WinMode.isMin(modelData)
-            Layout.preferredWidth: root.iconsOnly ? 28 : root.each
+            // ventana nueva: el botón crece desde nada (y el resto se aparta) en vez de salir de golpe. Cada refresco
+            // trae una lista nueva y el Repeater rehace todos los botones: los que ya estaban salen ya crecidos
+            property real grow: root.seen[modelData.address] ? 1 : 0
+            Component.onCompleted: { root.seen[modelData.address] = true; grow = 1; }
+            Behavior on grow { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+            Layout.preferredWidth: (root.iconsOnly ? 28 : root.each) * grow
             Layout.preferredHeight: 24
+            clip: grow < 1
             radius: Theme.ctl(24)
             color: on ? Theme.fill2 : ma.containsMouse ? Qt.alpha(Theme.t, 0.06) : "transparent"
-            opacity: min ? 0.55 : 1
+            opacity: (min ? 0.55 : 1) * grow
+            Behavior on opacity { NumberAnimation { duration: Theme.durShort } }
             Behavior on color { ColorAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
             RowLayout {

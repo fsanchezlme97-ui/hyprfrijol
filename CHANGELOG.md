@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.23] — 2026-11-15
+
+### Novedades (transiciones)
+- **Fundido al cambiar de tema:** al pasar de claro a oscuro, de paleta o de tema, todo el shell (barra, dock,
+  paneles, Ajustes) cambia de color con un fundido en vez de saltar, en cualquier modo de ventanas. Sigue al preset
+  de Animaciones y se apaga con «Reducir movimiento».
+- **La barra de título sigue a la ventana (modo Clásico):** al maximizar, restaurar, encajar o cambiar de modo, la
+  barra se desliza con la ventana, con la misma duración y curva que Hyprland, en vez de saltar a su sitio final.
+- **Barra de tareas:** el botón de una ventana nueva crece y los demás se apartan, en vez de aparecer de golpe.
+
 ## [0.10.22] — 2026-11-15
 
 ### Novedades
