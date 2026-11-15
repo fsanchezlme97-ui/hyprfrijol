@@ -41,7 +41,7 @@ ColumnLayout {
             Repeater {
                 model: [["mosaico", "Mosaico", "Se reparten la pantalla, sin taparse"],
                         ["desplazamiento", "Desplazamiento", "Columnas en una cinta que se desplaza de lado"],
-                        ["flotante", "Flotante", "Ventanas libres que se minimizan y maximizan desde el dock"]]
+                        ["flotante", "Clásico", "Se abren maximizadas y se superponen; Alt + Tab trae la que necesitas"]]
                 WinModePreview {
                     required property var modelData
                     Layout.preferredWidth: 1
@@ -94,7 +94,7 @@ ColumnLayout {
         }
         SwRow {
             label: "Enfocar al pasar el cursor"; mono: true; key: "focusOnHover"; def: true
-            sub: root.winMode === "flotante" ? "en el modo flotante se enfoca con clic, como en un escritorio clásico (input:follow_mouse = 2)"
+            sub: root.winMode === "flotante" ? "en el modo clásico se enfoca con clic, como en un escritorio de siempre (input:follow_mouse = 2)"
                                             : "input:follow_mouse = " + (Settings.get("focusOnHover", true) ? 1 : 0)
         }
         SwRow { label: "Imán al arrastrar (bordes y otras ventanas)"; sub: "general:snap:enabled · ventanas flotantes"; mono: true; key: "snapEdges"; def: true }
@@ -134,7 +134,7 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Ventanas flotantes"
-        headerRight: Mono { text: root.winMode === "flotante" ? "modo flotante activo" : "también en espacios flotantes" }
+        headerRight: Mono { text: root.winMode === "flotante" ? "modo clásico activo" : "también en espacios flotantes" }
         SwRow { label: "Encajar al soltar en los bordes"; sub: "contra un lado: mitad · en una esquina: cuarto · arriba: toda el área · fuera: recupera su tamaño"; key: "dragSnap"; def: true }
         SwRow { label: "Recordar dónde estaba cada app"; sub: "al volver a abrirla flotando, en el mismo sitio y con el mismo tamaño"; key: "floatRemember"; def: true }
         SwRow {
@@ -245,7 +245,7 @@ ColumnLayout {
             visible: Settings.get("dockPos", "auto") === "auto"
             text: "A la izquierda, salvo en una pantalla con otra pegada a su izquierda: ahí el cursor se pasaría a la otra en vez de tocar el borde, así que va abajo."
         }
-        SwRow { label: "Mostrar el dock también en mosaico y desplazamiento"; sub: "en el modo flotante se ve siempre"; key: "dockInTiling" }
+        SwRow { label: "Mostrar el dock también en mosaico y desplazamiento"; sub: "en el modo clásico se ve siempre"; key: "dockInTiling" }
         Txt {
             Layout.fillWidth: true
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone

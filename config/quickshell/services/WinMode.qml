@@ -3,7 +3,8 @@ pragma Singleton
 //   "mosaico"        las ventanas se reparten la pantalla (general:layout = "layout": dwindle / master)
 //   "desplazamiento" columnas en una cinta que se desplaza (diseño «scrolling» nativo de Hyprland 0.57;
 //                    ancho y ajuste de columna: "scrollColumnWidth", "scrollFocusFit", "scrollOneFull")
-//   "flotante"       escritorio clásico: todas las ventanas flotan, dock en todos los espacios
+//   "flotante"       «Clásico»: todas las ventanas flotan y las normales se abren maximizadas (se superponen;
+//                    Alt + Tab trae al frente la que necesitas, Super + H minimiza), dock en todos los espacios
 // El antiguo "mixto" se lee como "mosaico"; "layout" = "scrolling" (versiones anteriores) con "mosaico" se lee
 // como "desplazamiento". general:layout y la regla de flotar las ponen config/apply/30-layout.py y 35-windows.py;
 // aquí:
@@ -30,10 +31,10 @@ import ".."
 Singleton {
     id: root
     readonly property var modes: ["mosaico", "desplazamiento", "flotante"]
-    readonly property var labels: ({ mosaico: "Mosaico", desplazamiento: "Desplazamiento", flotante: "Flotante" })
+    readonly property var labels: ({ mosaico: "Mosaico", desplazamiento: "Desplazamiento", flotante: "Clásico" })
     readonly property var hints: ({ mosaico: "Las ventanas se reparten la pantalla",
                                     desplazamiento: "Columnas en una cinta que se desplaza",
-                                    flotante: "Escritorio clásico: las ventanas se mueven libremente" })
+                                    flotante: "Ventanas maximizadas que se superponen; Alt + Tab trae la que necesitas" })
     readonly property var icons: ({ mosaico: "tiles", desplazamiento: "columns", flotante: "float" })
     // Diseño del mosaico (dwindle / master); el antiguo "scrolling" es ahora el modo «Desplazamiento»
     readonly property string tiledLayout: { const l = Settings.get("layout", "dwindle"); return l === "master" ? "master" : "dwindle"; }
@@ -176,6 +177,30 @@ Singleton {
         maxLater.restart();
     }
     Timer { id: maxLater; property string lua: ""; interval: 130; onTriggered: { Shell.dispatch(lua); HyprClients.refresh(); } }
+    // ---------- ventana activa por pantalla (dimInactive, inactiveOpacity) ----------
+    // decoration:dim_inactive e inactive_opacity son globales: con dos pantallas también atenuaban (y volvían translúcida)
+    // la ventana con la que trabajas en la otra. Cada pantalla deja como activa su última ventana enfocada: no_dim y
+    // opacidad inactiva 1 por ventana (la enfocada ya no se atenúa). Sin atenuar ni transparencia no cambian nada.
+    readonly property var undimmed: {
+        if (HyprClients.monitors.length < 2) return [];
+        const out = [];
+        for (const m of HyprClients.monitors) {
+            if (m.focused) continue;
+            const c = HyprClients.byRecent.find(c => c.workspace?.id === m.activeWorkspace?.id && !isMin(c));
+            if (c) out.push(c.address);
+        }
+        return out;
+    }
+    // shortcut: si el shell se reinicia, las que ya las tenían las conservan hasta que cambie el foco de su pantalla
+    property var noDim: []
+    onUndimmedChanged: {
+        const prop = (a, k, v) => Shell.dispatch('hl.dsp.window.set_prop({ prop = "' + k + '", value = "' + v + '", ' + win(a) + ' })');
+        const set = (a, v) => { prop(a, "no_dim", v); prop(a, "opacity_inactive_override", v); };
+        for (const a of noDim) if (!undimmed.includes(a) && HyprClients.client(a)) set(a, "unset");
+        for (const a of undimmed) if (!noDim.includes(a)) set(a, "1");
+        noDim = undimmed;
+    }
+
     function close(address): void { Shell.dispatch('hl.dsp.window.close({ ' + win(address) + ' })'); HyprClients.refresh(); }
 
     // ---------- ocultación inteligente (dock y barra) ----------
@@ -229,15 +254,28 @@ Singleton {
     function isFloatApp(cls): bool { return floatApps.includes(String(cls ?? "").toLowerCase()); }
     // Diálogo o utilidad pequeña: flota y conserva su tamaño
     function small(c): bool { return (c.size?.[0] ?? 0) < 560 && (c.size?.[1] ?? 0) < 420; }
+    // Modo clásico: las ventanas normales se abren maximizadas; los diálogos pequeños, el selector de archivos (portal),
+    // los de rules.lua y las apps de floatApps flotan con su tamaño.
+    // shortcut: Hyprland no dice si una ventana es un diálogo; uno grande de una app (p. ej. sus preferencias) también
+    // se maximiza. Si molesta, mirar el padre (xdg_toplevel parent) cuando hyprctl lo exponga.
+    function opensMax(c): bool {
+        return !small(c) && !isFloatApp(c.class)
+            && !/^(xdg-desktop-portal-.*|org\.pulseaudio\.pavucontrol|pavucontrol|nm-connection-editor|blueman-manager|polkit.*)$/i.test(c.class ?? "");
+    }
+    function maximize(c): void { Shell.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "set", ' + win(c.address) + ' })'); }
 
     function convert(list, on: bool): void {
         const placed = [];
         for (const c of list) {
-            if (keep(c)) continue;
+            // Las maximizadas del modo clásico vuelven a su tamaño para entrar en el mosaico
+            const unmax = !on && c.floating && isMax(c) && !c.pinned && (c.workspace?.id ?? 0) > 0;
+            if (unmax) Shell.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "unset", ' + win(c.address) + ' })');
+            if (keep(c) && !unmax) continue;
             const w = 'window = "address:' + c.address + '"';
             if (on && !c.floating) {
                 Shell.dispatch('hl.dsp.window.float({ action = "enable", ' + w + ' })');
                 place(c, true, placed);
+                if (opensMax(c)) maximize(c);
             } else if (!on && c.floating && !small(c) && !isFloatApp(c.class)) {
                 Shell.dispatch('hl.dsp.window.float({ action = "disable", ' + w + ' })');
             }
@@ -385,8 +423,12 @@ Singleton {
             const now = Date.now(), left = [];
             for (const p of root.pending) {
                 const c = HyprClients.client(p.a);
-                if (c) { if (c.floating && !root.keep(c) && (root.small(c) || !root.restoreGeom(c))) root.place(c, false, []); }
-                else if (now - p.t < 3000) left.push(p);   // aún no sale en hyprctl: se reintenta
+                if (!c) { if (now - p.t < 3000) left.push(p); continue; }   // aún no sale en hyprctl: se reintenta
+                if (c.floating && !root.keep(c)) {
+                    // Primero su sitio de siempre: es el tamaño al que vuelve si la sacas de maximizar
+                    if (root.small(c) || !root.restoreGeom(c)) root.place(c, false, []);
+                    if (root.opensMax(c)) root.maximize(c);
+                }
             }
             root.pending = left;
             if (left.length) retry.restart();

@@ -215,7 +215,7 @@ SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden
 - {"type":"workspace","value":N}             ir al espacio N (el 5 es el espacio flotante)
 - {"type":"window","op":OP,"target":T,"workspace":N}   OP: focus|close|fullscreen|maximize|float|tile|pin|move|minimize|restore;
                                               T: "active" o parte de la clase/título («firefox», «kitty»); workspace solo con move
-- {"type":"winmode","value":"mosaico"|"desplazamiento"|"flotante"}   modo de ventanas (de todo el escritorio)
+- {"type":"winmode","value":"mosaico"|"desplazamiento"|"flotante"}   modo de ventanas (de todo el escritorio; "flotante" es el modo «Clásico»)
 - {"type":"launch","app":"navegador"}       abrir una app instalada (nombre, id .desktop o clase; "navegador" abre el
                                               predeterminado: úsalo si no nombra uno)
 - {"type":"url","value":"https://…"}         abrir una web en el navegador
@@ -393,7 +393,7 @@ def label(a):
     if t == "launch":
         return f"Abrir {a.get('name') or a.get('app')}"
     if t == "winmode":
-        return "Ventanas en " + {"mosaico": "mosaico", "desplazamiento": "desplazamiento (columnas)", "flotante": "modo flotante"}.get(v, str(v))
+        return "Ventanas en " + {"mosaico": "mosaico", "desplazamiento": "desplazamiento (columnas)", "flotante": "modo clásico"}.get(v, str(v))
     if t == "url":
         return "Abrir " + re.sub(r"^https?://(www\.)?", "", str(v))[:40]
     if t == "media":

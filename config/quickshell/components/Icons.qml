@@ -37,7 +37,7 @@ Singleton {
         "dnd": '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
         "moon": '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
         "tiles": '<rect x="3" y="3" width="8" height="18" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>',
-        // Modo de ventanas «Desplazamiento» (columnas en una cinta) y «Flotante» (ventanas libres)
+        // Modo de ventanas «Desplazamiento» (columnas en una cinta) y «Clásico» (ventanas que se superponen)
         "columns": '<rect x="7" y="4" width="10" height="16" rx="2"/><path d="M3 6v12M21 6v12"/>',
         "float": '<rect x="3" y="4" width="12" height="10" rx="2"/><path d="M9 17v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1"/>',
         "monitor": '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',

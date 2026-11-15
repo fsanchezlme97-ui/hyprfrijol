@@ -118,11 +118,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.10.6",
+ "hyprfrijol": "v0.10.7-1-ge3f5915",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-14 23:42",
+ "saved": "2026-11-15 13:55",
  "services": [
   "ufw",
   "cups.socket",
@@ -199,7 +199,7 @@
   "clipExpireDays": 0,
   "colorMode": "elegir",
   "deskIconSize": "pequeno",
-  "deskIcons": "no",
+  "deskIcons": "ordenado",
   "deskSort": "tipo",
   "dictationMode": "toggle",
   "dictationModel": "small",
@@ -230,7 +230,7 @@
    "tl": "ninguna",
    "tr": "ninguna"
   },
-  "inactiveOpacity": 0,
+  "inactiveOpacity": 0.92,
   "kbLayouts": [
    "es",
    "us"
@@ -259,8 +259,8 @@
   "pipAuto": false,
   "pipCorner": "sup-der",
   "pipFree": [
-   0.3677,
-   0.4333
+   -0.1521,
+   0.0067
   ],
   "pipHoverControls": true,
   "pipMargin": 4,

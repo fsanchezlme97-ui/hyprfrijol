@@ -6,7 +6,8 @@
 //   onda    curva suave rellena, simétrica
 //   linea   una sola línea fina que oscila
 // Cada fotograma se acerca al valor de cava con ataque rápido y caída suave, así se mueve fluido y sin retraso.
-// Estados del asistente, cada uno con su color fijo (Theme.aiListen/aiThink/aiSpeak) y en el estilo elegido:
+// Estados del asistente, cada uno con un color de la paleta del tema (Theme.aiListen/aiThink/aiSpeak) y siempre como
+// onda (las barras son solo para el audio del equipo: con «barras» elegido, la voz se dibuja como «onda»):
 //   escucha  verde: el nivel del micrófono (dictado o conversación), lo más reciente en el centro
 //   piensa   azul: una ola que recorre las barras mientras prepara la respuesta (sin animaciones: quieta)
 //   habla    morado: la voz del asistente (cava)
@@ -27,6 +28,7 @@ Rectangle {
     readonly property color stateColor: aiState === "habla" ? Theme.aiSpeak : aiState === "piensa" ? Theme.aiThink : Theme.aiListen
     property real thinkT: 0
     readonly property int n: Cava.count
+    readonly property string drawKind: kind === "barras" && aiState !== "" ? "onda" : kind
     readonly property real gap: kind === "barras" ? 1.6 : 0
     readonly property real bw: kind === "barras" ? 2.6 : 0
     readonly property real waveW: kind === "barras" ? n * (bw + gap) - gap : 200
@@ -45,7 +47,7 @@ Rectangle {
 
     UseCounter { target: Cava; active: root.visible }
 
-    readonly property bool gpuBars: kind === "barras"
+    readonly property bool gpuBars: drawKind === "barras"
     FrameAnimation {
         running: root.visible && (Cava.active || root.peak > 0.002 || root.aiState !== "")
         property real acc: 0
@@ -107,7 +109,7 @@ Rectangle {
         height: root.barsH
         Repeater {
             id: bars
-            model: root.gpuBars ? root.n : 0
+            model: root.kind === "barras" ? root.n : 0   // se quedan aunque la voz pase a onda
             Rectangle {
                 required property int index
                 x: index * (root.bw + root.gap)
@@ -146,11 +148,11 @@ Rectangle {
             if (!root.live && root.peak < 0.01) {
                 // Reposo: puntos tenues
                 ctx.globalAlpha = 0.45;
-                const step = root.kind === "barras" ? root.bw + root.gap : 6;
+                const step = root.drawKind === "barras" ? root.bw + root.gap : 6;
                 for (let x = step / 2; x < w; x += step * 2) { ctx.beginPath(); ctx.arc(x, mid, 1.1, 0, Math.PI * 2); ctx.fill(); }
                 return;
             }
-            if (root.kind === "barras") {
+            if (root.drawKind === "barras") {
                 for (let i = 0; i < n; i++) {
                     const bh = Math.max(2.6, amp(i) * (h - 2));
                     const x = i * (root.bw + root.gap), y = mid - bh / 2, r = root.bw / 2;
@@ -170,7 +172,7 @@ Rectangle {
                     }
                     ctx.lineTo(w, mid);
                 };
-                if (root.kind === "onda") {
+                if (root.drawKind === "onda") {
                     ctx.globalAlpha = 0.9;
                     ctx.beginPath(); curve(-1); curve(1); ctx.fill();
                 } else {
@@ -182,7 +184,7 @@ Rectangle {
         }
     }
     Connections { target: Theme; function onPChanged() { cv.requestPaint(); } function onTerChanged() { cv.requestPaint(); } }
-    onKindChanged: { idlePainted = false; if (gpuBars) Qt.callLater(() => layoutBars(!live)); else cv.requestPaint(); }
+    onDrawKindChanged: { idlePainted = false; if (gpuBars) Qt.callLater(() => layoutBars(!live)); else cv.requestPaint(); }
 
     HoverHandler { id: hover; onHoveredChanged: if (hovered) Shell.preload("musica") }
     MouseArea {

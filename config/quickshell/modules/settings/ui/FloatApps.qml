@@ -19,7 +19,7 @@ ColumnLayout {
     // También edita otras listas de clases con el mismo aspecto (Escritorio › «Apps con su propia barra»: barsOwnFrame)
     property string settingKey: "floatApps"
     property string intro: "Estas apps se abren flotando en el centro de la pantalla en vez de repartirse en el mosaico. "
-        + "Las calculadoras y los reproductores de audio pequeños conservan su tamaño. No cambia el modo flotante ni el PiP."
+        + "Las calculadoras y los reproductores de audio pequeños conservan su tamaño. No cambia el modo clásico ni el PiP."
 
     // Mismas clases que los valores por defecto de config/defaults/settings.json (floatApps)
     property var groups: [

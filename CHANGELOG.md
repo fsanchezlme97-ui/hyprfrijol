@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.8] — 2026-11-15
+
+### Novedades
+- **Modo de ventanas «Clásico»** (antes «Flotante»): las ventanas se abren maximizadas y se superponen; Alt + Tab
+  trae al frente la que necesitas y Super + H la minimiza. Los diálogos, el selector de archivos y las «Apps en
+  ventana flotante» (Nautilus, Loupe…) siguen abriéndose a su tamaño. Al volver al mosaico dejan de estar maximizadas.
+- **Onda de la barra:** escuchar, procesar y hablar usan el verde, el azul y el magenta de la paleta de tu tema (antes
+  eran colores fijos) y se dibujan siempre como onda; las barras quedan solo para el audio del equipo.
+
+### Arreglos
+- **Ventanas inactivas con dos pantallas:** cada pantalla conserva como activa su última ventana enfocada; al trabajar
+  en una, la de la otra ya no se atenúa ni se vuelve translúcida (Ajustes › Animaciones: «Atenuar ventanas inactivas» y «Sin foco»).
+
 ## [0.10.7] — 2026-11-14
 
 ### Rendimiento

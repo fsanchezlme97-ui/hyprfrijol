@@ -222,7 +222,7 @@
   {"f": "Escritorio", "l": "Dock", "t": "card"},
   {"f": "Escritorio", "l": "Mostrar el dock", "t": "row", "g": "Dock"},
   {"f": "Escritorio", "l": "Posición", "t": "row", "g": "Dock"},
-  {"f": "Escritorio", "l": "Mostrar el dock también en mosaico y desplazamiento", "t": "row", "s": "en el modo flotante se ve siempre", "g": "Dock"},
+  {"f": "Escritorio", "l": "Mostrar el dock también en mosaico y desplazamiento", "t": "row", "s": "en el modo clásico se ve siempre", "g": "Dock"},
   {"f": "Escritorio", "l": "Escritorio, iconos y widgets", "t": "card"},
   {"f": "Escritorio", "l": "Iconos del escritorio", "t": "row", "g": "Escritorio, iconos y widgets"},
   {"f": "Escritorio", "l": "Tamaño de los iconos", "t": "row", "g": "Escritorio, iconos y widgets"},
