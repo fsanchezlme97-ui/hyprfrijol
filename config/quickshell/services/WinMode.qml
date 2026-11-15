@@ -167,11 +167,19 @@ Singleton {
         restore(last);
     }
     // Maximizar / restaurar (modo «maximized» de Hyprland: respeta la barra y el dock fijo)
-    function isMax(c): bool { return (c?.fullscreen ?? 0) === 1; }
+    function isMax(c): bool { return (c?.fullscreen ?? 0) === 1 || !!held[c?.address ?? ""]; }   // o maximizada debajo
+    function hyprMax(c): bool { return (c?.fullscreen ?? 0) === 1; }
     function toggleMaximize(address): void {
         const c = HyprClients.client(address);
         if (!c) return;
         if (isMin(c)) restore(c.address);
+        // maximizada debajo (la mantiene grande stackStep): restaurar es volver a su tamaño, sin pasar por Hyprland
+        if (held[c.address]) {
+            const r = held[c.address], h = Object.assign({}, held); delete h[c.address]; held = h;
+            setRect(c.address, r);
+            HyprClients.focusWindow(c.address);
+            return;
+        }
         HyprClients.focusWindow(c.address);
         maxLater.lua = 'hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle", ' + win(c.address) + ' })';
         maxLater.restart();
@@ -205,22 +213,55 @@ Singleton {
         noDim = undimmed;
     }
 
-    // ---------- modo clásico: la de arriba va maximizada ----------
-    // Hyprland deja una sola ventana maximizada por espacio y, si flotan, enfocar otra no le pasa el maximizado
-    // (misc:on_focus_under_fullscreen solo vale en mosaico). Aquí: si la de arriba de un espacio clásico iba maximizada,
-    // la que enfocas (Alt + Tab, clic, la que queda al cerrar) también se maximiza; las de opensMax() no (diálogos,
-    // floatApps). Si sacas de maximizar la de arriba, el espacio deja de apilar hasta que maximices otra.
-    property var stackMax: ({})          // espacio → la de arriba iba maximizada
-    property string topAddr: ""
-    property bool topMax: false
+    // ---------- modo clásico: cada ventana sigue maximizada o no como la dejaste ----------
+    // Hyprland deja una sola ventana maximizada por espacio: al enfocar otra (Alt + Tab, clic, una nueva) le quita el
+    // maximizado a la anterior. Aquí la anterior se queda debajo a tamaño completo, a mano ("held"), y al volver a
+    // enfocarla se maximiza de verdad; si luego la sacas de maximizar, vuelve al tamaño que tenía antes.
+    property var held: ({})              // dirección → {x, y, w, h}: maximizada que quedó debajo (su tamaño normal)
+    property var restoreTo: ({})         // dirección → {x, y, w, h}: al sacarla de maximizar, a este tamaño
+    property string lastAct: ""
+    property var maxRects: ({})          // dirección → {x, y, w, h}: las que Hyprland tenía maximizadas en la última vuelta
+    function rectOf(c): var { return { x: c.at[0], y: c.at[1], w: c.size[0], h: c.size[1] }; }
+    function setRect(a: string, r): void {
+        const t = win(a);
+        Shell.dispatch('hl.dsp.window.resize({ x = ' + r.w + ', y = ' + r.h + ', exact = true, ' + t + ' })');
+        Shell.dispatch('hl.dsp.window.move({ x = ' + r.x + ', y = ' + r.y + ', exact = true, ' + t + ' })');
+    }
     function stackStep(): void {
-        const c = HyprClients.client(HyprClients.activeAddress), ws = c?.workspace?.id ?? 0;
-        if (!c || !isFloat(ws) || isMin(c)) return;
-        const k = String(ws);
-        if (c.address === topAddr) { if (topMax && !isMax(c)) stackMax[k] = false; }
-        else if (stackMax[k] && !isMax(c) && !keep(c) && opensMax(c) && !mainOf(c)) maximize(c);   // las secundarias no
-        if (isMax(c)) stackMax[k] = true;
-        topAddr = c.address; topMax = isMax(c);
+        const act = HyprClients.client(HyprClients.activeAddress)?.address ?? "";
+        const now = {}, h = {};
+        let changed = false;
+        for (const c of HyprClients.clients) {
+            const a = c.address;
+            const here = c.floating && !isMin(c) && isFloat(c.workspace?.id ?? 0);
+            if (hyprMax(c)) { now[a] = rectOf(c); if (held[a]) changed = true; continue; }
+            if (here && held[a]) h[a] = held[a];
+            const was = maxRects[a];
+            if (!was || !here || (c.fullscreen ?? 0) !== 0) continue;
+            if (a === act) {
+                // la sacaste de maximizar (botón, doble clic o la propia app): a su tamaño de antes
+                if (restoreTo[a]) setRect(a, restoreTo[a]);
+            } else {
+                // Hyprland se la quitó al maximizar o enfocar otra: se queda debajo, grande
+                h[a] = restoreTo[a] ?? rectOf(c);
+                setRect(a, was);
+            }
+            delete restoreTo[a];
+        }
+        maxRects = now;
+        // la que enfocas estaba debajo maximizada: otra vez de verdad
+        if (h[act]) { restoreTo[act] = h[act]; delete h[act]; maximize(HyprClients.client(act)); }
+        // Hyprland deja encima de una maximizada las flotantes que enfocaste (y al volver a ella, ni bring_to_top ni
+        // maximizarla otra vez lo quitan): se mandan al fondo, de la más reciente a la más antigua para no
+        // desordenarlas entre sí
+        else if (act !== lastAct && now[act]) {
+            const ws = HyprClients.client(act)?.workspace?.id;
+            for (const o of HyprClients.byRecent)
+                if (o.address !== act && o.workspace?.id === ws && o.floating && !o.pinned)
+                    Shell.dispatch('hl.dsp.window.alter_zorder({ mode = "bottom", ' + win(o.address) + ' })');
+        }
+        lastAct = act;
+        if (changed || JSON.stringify(h) !== JSON.stringify(held)) held = h;
     }
     Connections { target: HyprClients; function onRefreshesChanged() { root.stackStep(); root.syncFrames(); } }
 
@@ -460,7 +501,7 @@ Singleton {
             const g = Object.assign({}, root.geom);
             for (const c of HyprClients.clients) {
                 if (!c.floating || !c.class || !c.mapped || c.pinned || (c.workspace?.id ?? 0) <= 0 || root.keepClass(c) || root.small(c)) continue;
-                if (root.pending.some(p => p.a === c.address) || root.mainOf(c)) continue;   // aún colocándose · secundaria
+                if (root.pending.some(p => p.a === c.address) || root.mainOf(c) || root.held[c.address]) continue;   // aún colocándose · secundaria · maximizada debajo
                 const o = g[c.class];
                 // maximizada: solo se apunta eso (el tamaño guardado es al que vuelve)
                 if (root.isMax(c)) { if (o?.max !== true) { g[c.class] = Object.assign({}, o ?? {}, { max: true }); changed = true; } continue; }

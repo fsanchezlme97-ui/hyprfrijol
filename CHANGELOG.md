@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.26] — 2026-11-15
+
+### Arreglos (modo Clásico)
+- **Cada ventana sigue maximizada o no como la dejaste:** con una maximizada (la terminal) y otra en ventana, al
+  pasar de una a otra ya no se quedaban todas en ventana. Hyprland solo deja una maximizada por espacio: ahora la que
+  pierde el maximizado se queda debajo a tamaño completo y, al volver a ella, está maximizada otra vez (y delante de
+  las que van en ventana). Si la sacas de maximizar, vuelve al tamaño que tenía antes.
+- Ya no se maximiza sola la ventana que enfocas solo porque la de arriba lo estaba.
+
 ## [0.10.25] — 2026-11-15
 
 ### Cambios (modo Clásico)
