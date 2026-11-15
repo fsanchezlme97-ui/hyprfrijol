@@ -119,11 +119,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.10.12-1-g9826380",
+ "hyprfrijol": "v0.10.13-1-g76201bd",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-15 15:17",
+ "saved": "2026-11-15 15:29",
  "services": [
   "ufw",
   "cups.socket",
@@ -267,7 +267,7 @@
   "pipMargin": 4,
   "pipOpacity": 1,
   "pipSize": "pequeno",
-  "protonWayland": true,
+  "protonWayland": false,
   "rounding": 4,
   "roundingShape": "auto",
   "roundness": "sobrio",

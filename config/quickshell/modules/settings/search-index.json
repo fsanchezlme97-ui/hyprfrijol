@@ -93,7 +93,7 @@
   {"f": "Apariencia", "l": "Iconos Papirus con carpetas del color de acento", "t": "row", "g": "Tema en las apps"},
   {"f": "Aplicaciones", "l": "Juegos de Windows", "t": "card"},
   {"f": "Aplicaciones", "l": "Ajustar Wine para Hyprland", "t": "row", "s": "sin la bandeja flotante de Wine ni la franja de título vacía; vale desde el siguiente arranque de cada juego", "g": "Juegos de Windows"},
-  {"f": "Aplicaciones", "l": "Wayland nativo en los juegos de Epic", "t": "row", "s": "sin pasar por X11 (experimental); cierra Epic del todo y vuelve a abrirlo para que cuente", "g": "Juegos de Windows"},
+  {"f": "Aplicaciones", "l": "Wayland nativo en los juegos de Epic", "t": "row", "s": "sin pasar por X11 (experimental: el lanzador de Genshin, HoYoPlay, se queda en blanco); cierra Epic del todo y los juegos abiertos para que cuente", "g": "Juegos de Windows"},
   {"f": "Aplicaciones", "l": "Fuentes de software", "t": "card"},
   {"f": "Aplicaciones", "l": "AUR", "t": "row", "g": "Fuentes de software"},
   {"f": "Aplicaciones", "l": "Flatpak · Flathub", "t": "row", "g": "Fuentes de software"},

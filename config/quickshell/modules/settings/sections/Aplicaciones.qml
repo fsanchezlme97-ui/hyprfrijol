@@ -90,7 +90,7 @@ ColumnLayout {
         }
         SwRow {
             label: "Wayland nativo en los juegos de Epic"; key: "protonWayland"; def: false
-            sub: "sin pasar por X11 (experimental); cierra Epic del todo y vuelve a abrirlo para que cuente"
+            sub: "sin pasar por X11 (experimental: el lanzador de Genshin, HoYoPlay, se queda en blanco); cierra Epic del todo y los juegos abiertos para que cuente"
         }
     }
 
