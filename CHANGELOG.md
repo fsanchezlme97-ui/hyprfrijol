@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.22] — 2026-11-15
+
+### Novedades
+- **12 temas nuevos, cada uno en claro y oscuro (36 en total):** Ayu, Night Owl, Monokai, Nightfox, Iceberg y
+  Vitesse con sus colores (el claro, el oficial si existe: Ayu Light, Light Owl, Dayfox, Iceberg Light, Vitesse
+  Light); Bosque, Vino, Acero y Lima (originales); Limón y Agua pastel. Todos con el texto en AA (4,5:1).
+
 ## [0.10.21] — 2026-11-15
 
 ### Seguridad (Asistente de IA)
