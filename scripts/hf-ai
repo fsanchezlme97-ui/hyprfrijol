@@ -2434,19 +2434,21 @@ def claude_code_live(cmd, prompt, stream):
     if "--verbose" in cmd:
         cmd.remove("--verbose")
     cmd += ["--output-format", "stream-json", "--verbose", "--include-partial-messages"]
+    import tempfile, threading
+    errf = tempfile.TemporaryFile(mode="w+")   # stderr a un archivo: por tubería, más de 64 KB bloqueaban a los dos
     try:
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=str(HOME))
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=errf, text=True, cwd=str(HOME))
     except OSError as e:
         raise AIError(f"No pude ejecutar claude: {e}")
     try:
         p.stdin.write(stream + "\n" if stream else prompt); p.stdin.close()
     except BrokenPipeError:
         pass
-    end = time.monotonic() + 180
+    # el límite corre aparte: mirarlo solo al llegar una línea no servía si claude se quedaba mudo (sin red, login…)
+    killer = threading.Timer(180, p.kill)
+    killer.start()
     data = None
     for line in p.stdout:
-        if time.monotonic() > end:
-            p.kill(); raise AIError("El modelo tardó demasiado en responder.")
         try:
             j = json.loads(line)
         except Exception:
@@ -2458,8 +2460,11 @@ def claude_code_live(cmd, prompt, stream):
                 LIVE.add(d.get("text", ""))
         elif j.get("type") == "result":
             data = j
-    err = p.stderr.read()
     p.wait()
+    killer.cancel()
+    errf.seek(0); err = errf.read(); errf.close()
+    if data is None and p.returncode == -9:
+        raise AIError("El modelo tardó demasiado en responder.")
     if data is None:
         raise AIError((err or "Respuesta vacía de claude").strip()[:300])
     if data.get("is_error"):

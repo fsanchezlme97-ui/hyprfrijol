@@ -9,7 +9,14 @@ import "../.."
 Scope {
     id: root
     readonly property string mode: Settings.get("updatesMode", "avisar")
+    // el último número avisado sobrevive a los reinicios del shell (cada hf-apply): si no, se volvía a avisar
     property int lastNotified: -1
+    FileView {
+        id: notified
+        path: Paths.state + "/updates-notified"
+        printErrors: false
+        onLoaded: root.lastNotified = parseInt(text()) || -1
+    }
     Timer {
         id: bgTimer
         running: root.mode !== "manual"
@@ -28,11 +35,13 @@ Scope {
                 if (root.mode === "auto" && (r.flatpak ?? []).length) Quickshell.execDetached([Paths.script("hf-updates"), "flatpak"]);
                 const n = (r.total ?? 0) - (root.mode === "auto" ? (r.flatpak ?? []).length : 0);
                 if (n > 0 && n > root.lastNotified && Shell.view !== "actualizaciones")
+                    // timeout: notify-send -A espera al cierre del aviso, que no llega si el shell se reinicia
                     Quickshell.execDetached(["sh", "-c",
-                        '[ "$(notify-send -a Actualizaciones -i system-software-update -A open=Ver "$1" "$2")" = open ] && qs -p "$3" ipc call shell open actualizaciones',
+                        '[ "$(timeout 6h notify-send -a Actualizaciones -i system-software-update -A open=Ver "$1" "$2")" = open ] && qs -p "$3" ipc call shell open actualizaciones',
                         "sh", n === 1 ? "1 actualización disponible" : n + " actualizaciones disponibles", r.has?.snapper ? "Con punto de restauración antes de instalar" : "Abre el centro de actualizaciones",
                         Paths.root + "/config/quickshell"]);
                 root.lastNotified = n;
+                notified.setText(String(n));
             }
         }
     }

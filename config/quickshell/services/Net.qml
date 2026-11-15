@@ -21,7 +21,7 @@ Singleton {
     // Al detectarlo avisa una vez con una notificación; openPortal() abre una página http que el portal intercepta.
     property bool portal: false
     function openPortal(): void { Quickshell.execDetached(["xdg-open", "http://neverssl.com"]); }
-    onPortalChanged: if (portal) Quickshell.execDetached(["sh", "-c", 'a=$(notify-send -a Red -i network-wireless -A abrir="Abrir la página de acceso" "Esta red pide iniciar sesión" "Abre la página del portal para conectarte a internet."); [ "$a" = abrir ] && xdg-open http://neverssl.com']);
+    onPortalChanged: if (portal) Quickshell.execDetached(["sh", "-c", 'a=$(timeout 6h notify-send -a Red -i network-wireless -A abrir="Abrir la página de acceso" "Esta red pide iniciar sesión" "Abre la página del portal para conectarte a internet."); [ "$a" = abrir ] && xdg-open http://neverssl.com']);
 
     function refresh(): void { status.running = true; }
     function setWifi(on: bool): void { Quickshell.execDetached(["nmcli", "radio", "wifi", on ? "on" : "off"]); wifiEnabled = on; later.restart(); }

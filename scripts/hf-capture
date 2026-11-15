@@ -171,7 +171,7 @@ case "${1:-}" in
       thumb="$TMPD/rec-thumb.png"
       ffmpeg -y -loglevel error -sseof -0.5 -i "$out" -frames:v 1 "$thumb" 2>/dev/null || thumb=""
       size="$(du -h "$out" | cut -f1)"
-      ( act="$(notify-send -a Captura ${thumb:+-i "$thumb"} -A abrir=Abrir -A carpeta="Abrir carpeta" "Grabación guardada · $size" "$(basename "$out") · copiada para pegar en un chat" 2>/dev/null)"
+      ( act="$(timeout 6h notify-send -a Captura ${thumb:+-i "$thumb"} -A abrir=Abrir -A carpeta="Abrir carpeta" "Grabación guardada · $size" "$(basename "$out") · copiada para pegar en un chat" 2>/dev/null)"
         case "$act" in abrir) xdg-open "$out" ;; carpeta) xdg-open "$(dirname "$out")" ;; esac ) >/dev/null 2>&1 &
       echo "$out"
     else

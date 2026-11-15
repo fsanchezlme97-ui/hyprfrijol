@@ -74,7 +74,7 @@ Singleton {
                 + "|| pw-play /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga 2>/dev/null "
                 + "|| pw-play /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || break; done"]);
         const qs = "qs -p '" + Paths.root + "/config/quickshell' ipc call alarms";
-        Quickshell.execDetached(["sh", "-c", 'a=$(notify-send -u critical -a Alarma -i alarm-clock -A snooze="Posponer 5 min" -A stop=Detener "$1" "$2"); '
+        Quickshell.execDetached(["sh", "-c", 'a=$(timeout 6h notify-send -u critical -a Alarma -i alarm-clock -A snooze="Posponer 5 min" -A stop=Detener "$1" "$2"); '
             + '[ "$a" = snooze ] && ' + qs + ' snooze "$3"', "sh", label || "Alarma", Qt.formatTime(new Date(), "HH:mm"), id]);
     }
     function check(): void {

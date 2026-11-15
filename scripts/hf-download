@@ -504,15 +504,12 @@ def ensure_worker():
 def notify(title, body, folder=""):
     if not shutil.which("notify-send"):
         return
-    def go():
-        try:
-            r = subprocess.run(["notify-send", "-a", "Descargas", "-i", "folder-download"] + (["-A", "open=Abrir carpeta"] if folder else [])
-                               + [title, body], capture_output=True, text=True, timeout=300)
-            if folder and r.stdout.strip() == "open":
-                subprocess.Popen(["xdg-open", folder], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-        except Exception:
-            pass
-    threading.Thread(target=go, daemon=True).start()
+    # en un proceso aparte: con un hilo, el aviso moría con el trabajador (sale a los ~3 s de vaciarse la cola) y
+    # «Abrir carpeta» no hacía nada en la última descarga
+    sh = ('a=$(timeout 300 notify-send -a Descargas -i folder-download ' + ('-A open="Abrir carpeta" ' if folder else '')
+          + '"$1" "$2"); [ -n "$3" ] && [ "$a" = open ] && exec xdg-open "$3"')
+    subprocess.Popen(["sh", "-c", sh, "sh", title, body, folder], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, start_new_session=True)
 
 
 def run_item(it, procs):

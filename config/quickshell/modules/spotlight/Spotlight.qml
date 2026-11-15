@@ -605,7 +605,8 @@ Overlay {
         if (mode === "apps") grid.positionViewAtBeginning();
         const q = query.trim();
         if (q.startsWith("=") || Cat.isArithmetic(q)) calcTimer.restart();
-        if (q.startsWith("/") && q.slice(1).trim()) { filesBusy = true; fileTimer.restart(); } else files = [];
+        if (q.startsWith("/") && q.slice(1).trim()) { filesBusy = true; fileTimer.restart(); }
+        else { fileTimer.stop(); fileProc.running = false; filesBusy = false; files = []; }
     }
     // «?» + Ctrl V: si el portapapeles tiene una imagen se adjunta (hf-ai attach clipboard); si no, se pega el texto
     Process {
@@ -626,22 +627,31 @@ Overlay {
             const expr = spot.query.trim().replace(/^=/, "").trim();
             if (!expr) return;
             if (/[+\-*\/^(,.]$/.test(expr)) { spot.calc = { expr: expr, result: "Expresión incompleta", ok: false }; return; }
+            calcProc.running = false;   // si sigue el anterior, se para: si no, la nueva nunca se calculaba
             calcProc.expr = expr;
-            calcProc.command = ["sh", "-c", 'LC_ALL=C timeout 3 qalc -t -- "$1" 2>/dev/null | head -1', "sh", expr];
+            // la primera línea repite lo pedido: así un resultado que llegue tarde no se pone a otra expresión
+            calcProc.command = ["sh", "-c", 'printf "%s\\n" "$1"; LC_ALL=C timeout 3 qalc -t -- "$1" 2>/dev/null | head -1', "sh", expr];
             calcProc.running = true;
         }
     }
     Timer {
         id: prevTimer; interval: 120
-        onTriggered: if (spot.cur?.kind === "file") { prevProc.path = spot.cur.path; prevProc.command = ["timeout", "15", Paths.script("hf-fileact"), "preview", spot.cur.path]; prevProc.running = true; }
+        onTriggered: if (spot.cur?.kind === "file") {
+            prevProc.running = false;
+            prevProc.path = spot.cur.path;
+            prevProc.command = ["sh", "-c", 'printf "%s\\n" "$1"; exec timeout 15 "$2" preview "$1"', "sh", spot.cur.path, Paths.script("hf-fileact")];
+            prevProc.running = true;
+        }
     }
     Process {
         id: prevProc
         property string path: ""
         stdout: StdioCollector {
             onStreamFinished: {
+                const nl = text.indexOf("\n");
+                if (text.slice(0, nl) !== prevProc.path) return;   // de otro archivo (llegó tarde)
                 let r = null;
-                try { r = JSON.parse(text); } catch (e) {}
+                try { r = JSON.parse(text.slice(nl + 1)); } catch (e) {}
                 if (r) { r.path = prevProc.path; spot.prev = r; }
             }
         }
@@ -651,7 +661,9 @@ Overlay {
         property string expr: ""
         stdout: StdioCollector {
             onStreamFinished: {
-                const r = text.trim();
+                const nl = text.indexOf("\n");
+                if (text.slice(0, nl) !== calcProc.expr) return;   // de otra expresión (llegó tarde)
+                const r = text.slice(nl + 1).trim();
                 const bad = !r || /^error|warning|^\?/i.test(r);
                 spot.calc = { expr: calcProc.expr, result: bad ? "No se puede calcular" : r, ok: !bad };
             }
@@ -663,7 +675,7 @@ Overlay {
             fileProc.running = false;
             fileProc.command = ["sh", "-c",
                 'q="$1"; cd "$HOME" || exit; ' +
-                'if command -v fd >/dev/null; then fd -i --max-results 40 --max-depth 6 --type f --type d -- "$q" "$HOME" 2>/dev/null | ' +
+                'if command -v fd >/dev/null; then fd -i -F --max-results 40 --max-depth 6 --type f --type d -- "$q" "$HOME" 2>/dev/null | ' +
                 '  awk -v q="$(printf %s "$q" | tr A-Z a-z)" "{ n=tolower(\\$0); sub(/\\/$/, \\"\\", n); sub(/.*\\//, \\"\\", n); print (index(n,q)?0:1) \\"\\t\\" \\$0 }" | sort -s -k1,1 | cut -f2-; ' +
                 'else find "$HOME" -maxdepth 5 -not -path "*/.*" -iname "*$q*" 2>/dev/null | head -40; fi',
                 "sh", spot.query.trim().slice(1).trim()];
@@ -673,7 +685,7 @@ Overlay {
     Process {
         id: fileProc
         stdout: StdioCollector {
-            onStreamFinished: { spot.files = text.split("\n").filter(Boolean).slice(0, 40); spot.filesBusy = false; }
+            onStreamFinished: { if (!spot.query.trim().startsWith("/")) return; spot.files = text.split("\n").filter(Boolean).slice(0, 40); spot.filesBusy = false; }
         }
     }
 

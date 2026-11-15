@@ -40,8 +40,9 @@ def hypr_lua(s, c):
     follow = 2 if s.get("windowMode") == "flotante" else (1 if s.get("focusOnHover", True) else 0)
     out = [
         "hl.config({ input = {",
-        f'    kb_layout = "{layouts}", kb_variant = "{variants}", kb_options = "{",".join(opts)}",',
-        f'    repeat_delay = {int(s.get("kbRepeatDelay", 400))}, repeat_rate = {int(s.get("kbRepeatRate", 25))},',
+        # json.dumps: una comilla o una barra en un valor rompía la sintaxis de settings.lua entero (no solo el teclado)
+        f'    kb_layout = {json.dumps(layouts, ensure_ascii=False)}, kb_variant = {json.dumps(variants, ensure_ascii=False)}, kb_options = {json.dumps(",".join(str(o) for o in opts), ensure_ascii=False)},',
+        f'    repeat_delay = {int(_num(s.get("kbRepeatDelay", 400), 100, 3000, 400))}, repeat_rate = {int(_num(s.get("kbRepeatRate", 25), 1, 200, 25))},',
         f'    numlock_by_default = {_b(s.get("numlock", True))}, follow_mouse = {follow},',
         f'    sensitivity = {_num(s.get("mouseSpeed", 0), -1, 1, 0)}, accel_profile = "{"flat" if s.get("mouseAccel") == "flat" else "adaptive"}",',
         f'    left_handed = {_b(s.get("leftHanded", False))}, natural_scroll = {_b(s.get("mouseNatural", False))}, scroll_factor = {_num(s.get("mouseScroll", 1), 0.2, 5, 1)},',

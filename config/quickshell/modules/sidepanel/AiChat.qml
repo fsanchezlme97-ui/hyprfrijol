@@ -1590,7 +1590,7 @@ print(json.dumps(out[:300]))
                 font.pixelSize: Theme.px(12.5)
                 clip: true
                 onAccepted: root.ask(text)
-                Keys.onEscapePressed: Shell.close()
+                // Esc sube al panel (SidePanel): fijado, devuelve el teclado a la ventana; si no, cierra
                 Keys.onPressed: e => { if (e.matches(StandardKey.Paste)) { e.accepted = true; root.pasteImage(); } }
                 Txt {
                     anchors.fill: parent

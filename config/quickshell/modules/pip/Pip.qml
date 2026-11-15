@@ -376,7 +376,8 @@ Scope {
         readonly property bool here: root.win !== null && root.target !== null
             && !String(root.win.workspace?.name ?? "").startsWith("special") && !root.win.fullscreen
             && root.atTarget(root.win, root.target)
-        screen: Shell.screen
+        // en la pantalla del PiP (con pipScreen «secundaria» no es la del foco); lx/ly son de esa pantalla
+        screen: Quickshell.screens.find(s => s.name === root.target?.mon) ?? Shell.screen
         visible: here
         color: "transparent"
         WlrLayershell.layer: WlrLayer.Top

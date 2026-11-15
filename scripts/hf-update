@@ -174,12 +174,14 @@ switch_to() { # switch_to <destino> <nota>
   local to="$1" prev prevd
   prev="$(G rev-parse HEAD)"; prevd="$(G describe --tags --always 2>/dev/null)"
   [ "$(G rev-parse "$to^{commit}" 2>/dev/null)" = "$prev" ] && { say "Ya estás en $to"; return 0; }
+  # copia de tus ajustes ANTES de que la versión nueva los migre: la vuelta atrás cambia el código, no los ajustes
+  [ -x "$REPO/scripts/hf-safe" ] && "$REPO/scripts/hf-safe" snapshot "antes de pasar de $prevd a $to" >/dev/null 2>&1 || true
   G checkout -q --detach "$to" || die "git checkout $to falló"
   printf '%s\t%s\t%s\t%s\t%s\n' "$(date -Iseconds)" "$REPO" "$prev" "$prevd" "$to" >> "$HIST"
   say "HyprFrijol: $prevd → $(G describe --tags --always HEAD)"
   post_update
   rm -f "$LAST"
-  say "Listo. Si algo falla: hf-update rollback (o, desde el login, «HyprFrijol (modo seguro)»)."
+  say "Listo. Si algo falla: hf-update rollback (o, desde el login, «HyprFrijol (modo seguro)»); tus ajustes de antes, con hf-safe list / restore."
 }
 
 apply() {

@@ -3,6 +3,36 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.6] — 2026-11-14
+
+### Arreglos
+- **Avisos:** la hora relativa vuelve a funcionar («hace 5 min», «hace 2 h»); todo lo de hoy decía «ahora».
+- **Avisos con botones** (actualizaciones, alarmas, temporizador, pomodoro, portal de la red, grabaciones): ya no se
+  quedan procesos colgados para siempre si el shell se reinicia con el aviso abierto. El de actualizaciones ya no se
+  repite tras cada reinicio del shell.
+- **Avisos emergentes:** si cierras o pulsas uno con respuesta (WhatsApp, Telegram…) sin mover el ratón, los
+  siguientes vuelven a irse solos.
+- **Actualizar el sistema:** si `pacman -Syu` (o el gestor de tu distro) falla, la terminal ya no se cierra de golpe:
+  dice que algo falló y espera a que pulses Intro.
+- **Captura:** tras «No se encontró texto» se puede seguir anotando (era un aviso que no se iba).
+- **Spotlight:** la calculadora y la vista previa de archivos ya no enseñan el resultado de lo que escribiste antes si
+  tecleas rápido; buscar archivos con `+`, `(` o `[` en el nombre (`/c++`) funciona.
+- **Panel del asistente fijado:** Esc devuelve el teclado a la ventana, como dice el panel.
+- **Bloqueo:** si la comprobación de la contraseña se queda colgada (un lector de huella, un módulo de PAM), a los
+  60 s se puede volver a intentar en vez de quedarse en «Comprobando…». El OSD de volumen no sale con la pantalla
+  bloqueada.
+- **PiP en la pantalla secundaria:** sus botones salen en esa pantalla, no en la del foco.
+- **Tareas, agenda y fijados del portapapeles:** si el archivo se estropea, queda una copia `.roto` antes de que el
+  siguiente cambio lo pise.
+- **Atajo «Bloquear» reasignado** en Ajustes › Teclado: bloquea igual que el de serie.
+- **Descargas:** «Abrir carpeta» del aviso de la última descarga funciona.
+- **Asistente con Claude Code:** si `claude` se queda sin responder (sin red, esperando el login), a los 3 min avisa
+  en vez de quedarse en «Pensando…».
+- **Ajustes mal escritos a mano** (una comilla en la distribución de teclado, un número escrito como texto, un modo
+  de pantalla raro): ya no dejan sin aplicar toda la configuración de Hyprland ni tumban `hf-apply`.
+- **Actualizar HyprFrijol** (`hf-update`): guarda una copia de tus ajustes antes de cambiar de versión, para poder
+  volver a ellos con `hf-safe restore` si haces vuelta atrás.
+
 ## [0.10.5] — 2026-11-14
 
 ### Seguridad y privacidad

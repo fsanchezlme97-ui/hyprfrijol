@@ -110,6 +110,13 @@ def rgba_hypr(h, a=1.0):
     r, g, b = hex_rgb(h)
     return "rgba(%02x%02x%02x%02x)" % (r, g, b, round(a * 255))
 
+def num(s, key, default, cast=float):
+    """Número de un ajuste; si está mal escrito (hf-apply set gapsIn=abc), el valor por defecto en vez de tumbar hf-apply."""
+    try:
+        return cast(s.get(key, default))
+    except (TypeError, ValueError):
+        return default
+
 def _hm(v, default):
     for x in (v, default):
         try:
@@ -172,7 +179,7 @@ def is_light_now(s):
                 return polar == "dia"
             m = now.hour * 60 + now.minute
             return rise <= m < sset if rise <= sset else (m >= rise or m < sset)
-        return int(s.get("lightFrom", 7)) <= now.hour < int(s.get("lightTo", 19))
+        return num(s, "lightFrom", 7, int) <= now.hour < num(s, "lightTo", 19, int)
     return False
 
 def resolve_palette(s):
@@ -452,7 +459,7 @@ def motion_preset(s):
     if s.get("animado", True) is False or s.get("reduceMotion"):
         p = "ninguno"
     try:
-        k = max(0.4, min(2.5, float(s.get("animSpeed", 1.0))))
+        k = max(0.4, min(2.5, num(s, "animSpeed", 1.0)))
     except Exception:
         k = 1.0
     return p, k
@@ -617,11 +624,11 @@ def hypr_lua(c, S, s):
     focus = bool(s.get("_focus"))
     # Opacidad de las ventanas sin foco (inactiveOpacity: 0 = automática, 0.97 con desenfoque; 1 = opacas)
     try:
-        inact_op = float(s.get("inactiveOpacity") or 0)
+        inact_op = num(s, "inactiveOpacity", 0) or 0
     except (TypeError, ValueError):
         inact_op = 0
     inact_op = (0.97 if S["blur"] else 1.0) if not 0.5 <= inact_op <= 1 else round(inact_op, 2)
-    gi, go = (0, 0) if focus else (int(s.get("gapsIn", 4)), int(s.get("gapsOut", 4)))
+    gi, go = (0, 0) if focus else (num(s, "gapsIn", 4, int), num(s, "gapsOut", 4, int))
     anim = motion_preset(s)[0] != "ninguno"
     bsize, act, inact = active_border(c, S, s)
     lines = [
@@ -825,7 +832,7 @@ def main(argv):
     theme = {
         "paletteKey": key, "paletteName": c.get("name", key), "light": bool(c.get("light")),
         "colorMode": s.get("colorMode"), "c": {k: v for k, v in c.items() if k not in ("name", "light")},
-        "S": S, "font": s.get("fontFamily", "Inter"), "fontScale": float(s.get("fontScale", 1.0)),
+        "S": S, "font": s.get("fontFamily", "Inter"), "fontScale": num(s, "fontScale", 1.0),
         "reduceMotion": bool(s.get("reduceMotion")), "highContrast": bool(s.get("highContrast")),
         "motion": motion_shell(s),
     }

@@ -20,7 +20,7 @@ PanelWindow {
     property bool ready: false        // ignora los cambios de los primeros segundos
 
     function show(k) {
-        if (!ready || Shell.view === "bloqueo") return;
+        if (!ready || Shell.locked) return;   // bloqueada: el OSD quedaría debajo del bloqueo
         kind = k; shown = true; hider.restart();
     }
 

@@ -127,7 +127,10 @@ PanelWindow {
                                 // la pila entera se va con su último aviso (los urgentes se quedan)
                                 onTriggered: { for (const x of grp.modelData.items) if (!Notifs.isCritical(x)) Notifs.hidePopup(x); }
                             }
-                            HoverHandler { onHoveredChanged: win.replying = hovered && (card.n?.hasInlineReply ?? false) }
+                            HoverHandler { id: cardHover; onHoveredChanged: win.replying = hovered && (card.n?.hasInlineReply ?? false) }
+                            // destruida con el cursor encima (clic, ×, respuesta enviada) no avisa de hovered=false: sin esto
+                            // «replying» se quedaba en true y ningún aviso más se cerraba solo
+                            Component.onDestruction: if (cardHover.hovered) win.replying = false
                         }
                     }
                 }

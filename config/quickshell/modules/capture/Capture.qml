@@ -240,7 +240,7 @@ Scope {
     Process {
         id: ocr
         stdout: StdioCollector { onStreamFinished: { root.busy = ""; if (text.trim()) Shell.close(); } }
-        onExited: code => { root.busy = code === 0 ? "" : "No se encontró texto"; }
+        onExited: code => { root.busy = ""; if (code !== 0) root.flash("No se encontró texto"); }   // aviso que se va: «busy» bloquearía la anotación
     }
     Process {
         id: iaSaver
@@ -298,7 +298,7 @@ Scope {
     Process {
         id: tsvProc
         stdout: StdioCollector { onStreamFinished: root.parseTsv(text) }
-        onExited: code => { if (code !== 0) root.busy = "No se pudo leer el texto (¿falta tesseract?)"; }
+        onExited: code => { if (code !== 0) { root.busy = ""; root.flash("No se pudo leer el texto (¿falta tesseract?)"); } }
     }
     function parseTsv(text: string): void {
         const rows = text.split("\n");
@@ -331,7 +331,8 @@ Scope {
             out += t; lastBlock = g[0].block;
         }
         words = ws; lines = ls; ocrText = out;
-        busy = ws.length ? "" : "No se encontró texto";
+        busy = "";
+        if (!ws.length) flash("No se encontró texto");
     }
     function lineText(key: string): string { return (lines.find(l => l.key === key) ?? {}).text ?? ""; }
     function pickedText(): string {

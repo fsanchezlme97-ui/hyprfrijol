@@ -182,7 +182,7 @@ Singleton {
         path: root.pinFile
         printErrors: false
         atomicWrites: true
-        onLoaded: { try { root.pins = JSON.parse(text()) || []; } catch (e) { root.pins = []; } }
+        onLoaded: { try { root.pins = JSON.parse(text()) || []; } catch (e) { if (text().trim()) { console.warn("[fijados] no es JSON válido; copia en .roto"); Quickshell.execDetached(["cp", "-f", path, path + ".roto"]); } root.pins = []; } }
         onLoadFailed: root.pins = []
     }
 }

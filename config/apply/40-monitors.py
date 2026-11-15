@@ -1,22 +1,28 @@
 # Pantallas: Settings "monitors" = { "DP-1": { mode, position, scale, transform, vrr, hdr, mirror, disabled } } y uiScale.
 # primaryMonitor: la pantalla principal (el espacio 1 se abre en ella).
 # wsPerMonitor (por defecto true): cada pantalla con sus espacios (1-10, 11-20…; orden y reglas en frijol/workspaces.lua).
-import re
+import json, re
 
 def _q(v):
-    return '"' + str(v).replace('"', '') + '"'
+    return json.dumps(str(v), ensure_ascii=False)   # escapa también «\» (un modo acabado en barra rompía settings.lua entero)
+
+def _scale(v):
+    try:
+        return min(4.0, max(0.25, float(v)))
+    except (TypeError, ValueError):
+        return 1.0
 
 def hypr_lua(s, c):
     out = []
     mons = s.get("monitors") or {}
     for name, m in mons.items():
-        if not re.match(r"^[\w.-]+$", name):
+        if not re.match(r"^[\w.-]+$", name) or not isinstance(m, dict):
             continue
         if m.get("disabled"):
             out.append(f"hl.monitor({{ output = {_q(name)}, disabled = true }})")
             continue
         parts = [f"output = {_q(name)}", f"mode = {_q(m.get('mode') or 'preferred')}",
-                 f"position = {_q(m.get('position') or 'auto')}", f"scale = {float(m.get('scale') or s.get('uiScale', 1))}"]
+                 f"position = {_q(m.get('position') or 'auto')}", f"scale = {_scale(m.get('scale') or s.get('uiScale', 1))}"]
         try:
             tr = int(m.get("transform") or 0)
         except (TypeError, ValueError):

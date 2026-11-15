@@ -105,7 +105,7 @@ Singleton {
         const qs = "qs -p '" + Paths.root + "/config/quickshell' ipc call pomodoro";
         Quickshell.execDetached(autoNext
             ? ["notify-send", "-a", "Pomodoro", "-i", "chronometer", title, body]
-            : ["sh", "-c", 'a=$(notify-send -a Pomodoro -i chronometer -A start=Empezar "$1" "$2"); [ "$a" = start ] && ' + qs + ' resume', "sh", title, body]);
+            : ["sh", "-c", 'a=$(timeout 6h notify-send -a Pomodoro -i chronometer -A start=Empezar "$1" "$2"); [ "$a" = start ] && ' + qs + ' resume', "sh", title, body]);
     }
 
     // Fin del temporizador: alarma (más insistente que el «complete» del pomodoro), aviso urgente con la actividad y
@@ -120,7 +120,7 @@ Singleton {
         const title = (activity || "Se acabó el tiempo");
         const body = "Temporizador de " + mins + " min";
         const qs = "qs -p '" + Paths.root + "/config/quickshell' ipc call pomodoro";
-        Quickshell.execDetached(["sh", "-c", 'a=$(notify-send -u critical -a Temporizador -i alarm-clock -A again=Repetir "$1" "$2"); [ "$a" = again ] && ' + qs + ' resume',
+        Quickshell.execDetached(["sh", "-c", 'a=$(timeout 6h notify-send -u critical -a Temporizador -i alarm-clock -A again=Repetir "$1" "$2"); [ "$a" = again ] && ' + qs + ' resume',
                                  "sh", title, body]);
     }
 

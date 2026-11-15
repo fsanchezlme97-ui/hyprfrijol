@@ -131,7 +131,7 @@ Singleton {
         atomicWrites: true
         watchChanges: true
         onFileChanged: reload()
-        onLoaded: { try { root.local = JSON.parse(text()) || []; } catch (e) { root.local = []; } }
+        onLoaded: { try { root.local = JSON.parse(text()) || []; } catch (e) { if (text().trim()) { console.warn("[agenda] no es JSON válido; copia en .roto"); Quickshell.execDetached(["cp", "-f", path, path + ".roto"]); } root.local = []; } }
         onLoadFailed: root.local = []
     }
 

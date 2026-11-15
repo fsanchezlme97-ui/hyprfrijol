@@ -106,7 +106,7 @@ Singleton {
         atomicWrites: true
         watchChanges: true
         onFileChanged: reload()
-        onLoaded: { try { const v = JSON.parse(text()); root.list = Array.isArray(v) ? v.filter(t => t && t.id) : []; } catch (e) { root.list = []; } }
+        onLoaded: { try { const v = JSON.parse(text()); root.list = Array.isArray(v) ? v.filter(t => t && t.id) : []; } catch (e) { if (text().trim()) { console.warn("[tareas] no es JSON válido; copia en .roto"); Quickshell.execDetached(["cp", "-f", path, path + ".roto"]); } root.list = []; } }
         onLoadFailed: root.list = []
     }
 

@@ -94,6 +94,13 @@ Scope {
             root.password = ""; root.state = ""; root.message = "";
         } }
 
+    // Si PAM no vuelve (un módulo colgado, un lector de huella que no responde), el campo seguiría deshabilitado y no
+    // habría forma de entrar sin matar el shell: a los 60 s se aborta y se puede volver a intentar
+    Timer {
+        interval: 60000
+        running: root.state === "checking"
+        onTriggered: { if (pam.active) pam.abort(); root.fail("No se pudo comprobar. Inténtalo de nuevo"); }
+    }
     PamContext {
         id: pam
         config: root.pamConfig

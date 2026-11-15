@@ -79,7 +79,8 @@ check() {
 run() {
   local snap=0 off=0 a
   for a in "$@"; do case $a in --snapshot) snap=1;; --poweroff) off=1;; esac; done
-  local cmd="set -e; echo; echo '  hyprfrijol · actualización del sistema'; echo;"
+  # set -e corta en el primer fallo; el aviso va en un trap de salida (un «cmd || aviso» no lo veía nunca: set -e sale antes)
+  local cmd="trap 'c=\$?; [ \$c = 0 ] || { echo; echo \"Algo falló (código \$c). Pulsa Intro para cerrar.\"; read -r _; }' EXIT; set -e; echo; echo '  hyprfrijol · actualización del sistema'; echo;"
   if [ "$snap" = 1 ] && have snapper; then
     cmd+=" echo '→ Creando punto de restauración (snapper)…';"
     cmd+=" N=\$(sudo snapper -c root create -c number -p -d 'hyprfrijol: antes de actualizar');"
@@ -106,8 +107,8 @@ run() {
   local term="${TERMINAL:-kitty}"
   have "$term" || term=kitty
   case "$term" in
-    kitty) setsid kitty --class hf-updates --title "Actualizaciones" bash -c "$cmd || { echo; echo 'Algo falló. Pulsa Intro para cerrar.'; read -r _; }" >/dev/null 2>&1 & ;;
-    *)     setsid "$term" -e bash -c "$cmd || { echo; echo 'Algo falló. Pulsa Intro para cerrar.'; read -r _; }" >/dev/null 2>&1 & ;;
+    kitty) setsid kitty --class hf-updates --title "Actualizaciones" bash -c "$cmd" >/dev/null 2>&1 & ;;
+    *)     setsid "$term" -e bash -c "$cmd" >/dev/null 2>&1 & ;;
   esac
 }
 
