@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.25] — 2026-11-15
+
+### Cambios (modo Clásico)
+- **Sin ventanas en la barra de arriba:** las ventanas abiertas están en el dock; la barra enseña solo el título de la
+  activa («Barra › Título», antes «Título o tareas»).
+- **Barra de título en archipiélago, dentro de la ventana:** tres islas arriba de la ventana activa (a la izquierda
+  icono y título, en el centro el asa para moverla, a la derecha minimizar, maximizar y cerrar). Solo salen al acercar
+  el puntero al borde de arriba de la ventana y se van al rato de alejarse; mientras no se ven no tapan nada.
+  Doble clic en el asa maximiza o restaura; clic derecho en cualquier isla abre el menú de ventana.
+- **Fuera las barras de grupo de Hyprland:** ya no se usan para el título; los grupos de una sola ventana que
+  quedaban de antes se deshacen solos.
+
 ## [0.10.24] — 2026-11-15
 
 ### Cambios (Ajustes reordenados)

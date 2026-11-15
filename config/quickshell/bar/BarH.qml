@@ -37,11 +37,8 @@ Item {
         : islands ? Math.min((width - wave.width) / 2, right.x - 26 - wave.width) - 22 - 10
         : waveX
     readonly property real titleMax: compact ? 240 : Math.max(0, Math.min(300, width * 0.3, centerStart - gapC - titleStart))
-    // Barra de tareas del modo clásico (TaskStrip, en lugar del título): algo más de sitio, con el mismo tope de la onda
-    readonly property real tasksMax: compact ? 240 : Math.max(0, Math.min(520, width * 0.4, centerStart - gapC - titleStart))
-    readonly property bool titleOrTasks: title.visible || tasks.visible
 
-    BarPill { id: pillL; bar: root.barWindow; visible: root.islands; x: 0; height: parent.height; width: left.x + left.implicitWidth + (root.titleOrTasks ? 10 : 3) }
+    BarPill { id: pillL; bar: root.barWindow; visible: root.islands; x: 0; height: parent.height; width: left.x + left.implicitWidth + (title.visible ? 10 : 3) }
     BarPill { id: pillC; bar: root.barWindow; visible: root.islands && wave.active && root.waveFits; x: wave.x - 10; height: parent.height; width: wave.width + 20 }
     // Píldora de los chips (si hay alguno) y la del grupo de estado
     readonly property real statusX: right.x + statusBox.x
@@ -59,15 +56,14 @@ Item {
         spacing: 8
         AppsBtn { id: apps; visible: !root.secondary }   // Aplicaciones (Spotlight): logo de la distribución
         Workspaces { id: ws; visible: Settings.barHas("espacios") || root.secondary; screen: root.barWindow.screen }
-        Divider { visible: Settings.barHas("espacios") && root.titleOrTasks }
-        ActiveTitle { id: title; screenName: root.barWindow.screen?.name ?? ""; visible: Settings.barHas("titulo") && text !== "" && root.titleMax >= 48 && !tasks.classic; Layout.leftMargin: 2; Layout.maximumWidth: root.titleMax }
-        TaskStrip { id: tasks; screenName: root.barWindow.screen?.name ?? ""; visible: Settings.barHas("titulo") && classic && wins.length > 0 && root.tasksMax >= 48; maxWidth: root.tasksMax; Layout.maximumWidth: root.tasksMax }
+        Divider { visible: Settings.barHas("espacios") && title.visible }
+        ActiveTitle { id: title; screenName: root.barWindow.screen?.name ?? ""; visible: Settings.barHas("titulo") && text !== "" && root.titleMax >= 48; Layout.leftMargin: 2; Layout.maximumWidth: root.titleMax }
         // Widgets puestos en la isla izquierda (Ajustes › Widgets de la barra)
         RowLayout {
             id: leftZone
             visible: !root.secondary && root.zoneL.length > 0
             spacing: 2
-            Divider { visible: ws.visible || root.titleOrTasks; Layout.leftMargin: 2; Layout.rightMargin: 4 }
+            Divider { visible: ws.visible || title.visible; Layout.leftMargin: 2; Layout.rightMargin: 4 }
             Repeater { model: root.zoneL; delegate: zoneItem }
         }
         OmarchySlot { barWindow: root.barWindow; place: "izquierda"; visible: any && !root.secondary }   // widgets de plugins de Omarchy (omarchyBarSlot)

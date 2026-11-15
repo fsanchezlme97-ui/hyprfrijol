@@ -16,32 +16,6 @@
 # del modo flotante.
 import re
 
-# Barra de título del modo clásico (titleBars): la barra de grupo de Hyprland, con un grupo por ventana (WinMode.qml
-# agrupa al abrirse las que no traen barra propia). Reserva su sitio encima de la ventana y la tapa la ventana que
-# quede encima, sin plugins. El shell pinta encima de la de la ventana activa el icono, el título y los botones
-# (modules/desktop/TitleBar.qml usa el mismo alto: Theme o WinMode.titleH). Sin grupos automáticos ni fusiones al
-# arrastrar: cada ventana sigue suelta.
-TITLE_H = 28
-
-
-def _rgb(h):
-    return "rgb(%s)" % str(h).lstrip("#")[-6:].lower()
-
-
-def _groupbar(s, c):
-    fam = str(s.get("fontFamily") or "Inter")
-    if any(ch in fam for ch in "\"\n\\"):
-        fam = "Inter"
-    bg, fg = c.get("s1", "#202020"), c.get("tv", "#c0c0c0")
-    return ('hl.config({ group = { auto_group = false, drag_into_group = 0, merge_groups_on_drag = false, '
-            'merge_groups_on_groupbar = false, merge_floated_into_tiled_on_groupbar = false, groupbar = { '
-            f'enabled = true, disable_when_only = false, render_titles = true, height = {TITLE_H}, '
-            'indicator_height = 0, gradients = true, rounding = 10, gradient_rounding = 10, round_only_edges = true, '
-            'gradient_round_only_edges = true, keep_upper_gap = false, gaps_in = 0, gaps_out = 0, '
-            f'font_family = "{fam}", font_size = 11, text_padding = 12, text_color = "{_rgb(fg)}", '
-            f'text_color_inactive = "{_rgb(fg)}", ["col.active"] = "{_rgb(bg)}", ["col.inactive"] = "{_rgb(bg)}", '
-            f'["col.locked_active"] = "{_rgb(bg)}", ["col.locked_inactive"] = "{_rgb(bg)}" }} }} }})')
-
 COMPACT = {"org.gnome.calculator", "gnome-calculator", "qalculate-gtk", "galculator", "org.gnome.decibels",
            "io.bassi.amberol", "org.gnome.zenity"}
 
@@ -88,7 +62,6 @@ def hypr_lua(s, c):
     # Modo clásico (general o por espacio): los diálogos modales (Abrir, Guardar…) no se maximizan; WinMode.opensMax()
     # mira esta etiqueta. Solo la ponen las apps que se declaran modales (GTK 4, Qt 6; GTK 3 no)
     out.append('hl.window_rule({ name = "hf-dialog", match = { modal = true }, tag = "+hf-dialog" })')
-    out.append(_groupbar(s, c))
     cls = _classes(s)
     big = [x for x in cls if x.lower() not in COMPACT]
     small = [x for x in cls if x.lower() in COMPACT]

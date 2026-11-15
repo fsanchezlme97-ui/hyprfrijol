@@ -1,18 +1,16 @@
-// Barra de título de la ventana activa en los espacios flotantes, dibujada por el shell (sin plugins de Hyprland). Una
-// por pantalla (la crea Desktop.qml). Dos formas:
-//   - Barra completa: si la ventana lleva la barra de grupo que le pone WinMode (syncBars, apps sin barra propia), se
-//     pinta encima de esa franja: icono de la app, título y minimizar / maximizar / cerrar. Toda ella mueve la ventana.
-//     Las demás ventanas enseñan la barra de Hyprland (su título, más apagada); un clic en ella la trae al frente.
-//   - Pastilla: si aún no la lleva, una pastilla pequeña dentro de la ventana, arriba a la derecha, con un asa para
-//     moverla y los tres botones.
-//   - Asa (o la barra entera): arrastrar mueve la ventana (sin la animación de movimiento mientras dura, para que siga al cursor);
-//     doble clic maximiza o restaura. Clic derecho en la pastilla: menú de ventana (WinMenu.qml).
-//   - Solo en la ventana activa, que en flotante queda encima: la pastilla no tapa otras ventanas.
-//   - No sale en las apps que ya dibujan su barra ("barsOwnFrame": navegadores, GNOME, VS Code…), ni en las del
-//     propio shell, ni a pantalla completa. Se apaga con "titleBars" = false (Ajustes › Escritorio y gestos).
-//   - La geometría se sondea cada 100 ms mientras se ve (Hyprland no avisa al mover o redimensionar una flotante),
-//     por el socket de Hyprland, sin lanzar procesos.
-// Capa "top" a pantalla completa y transparente: solo la pastilla recibe clics (mask); durante un arrastre, toda.
+// Barra de título de la ventana activa en los espacios flotantes (modo Clásico), dibujada por el shell (sin plugins
+// de Hyprland). Una por pantalla (la crea Desktop.qml). Tres islas dentro de la ventana, arriba, como el archipiélago
+// de la barra: a la izquierda icono y título · en el centro el asa para moverla · a la derecha minimizar, maximizar y
+// cerrar. Solo salen al acercar el puntero al borde de arriba de la ventana activa (una franja fina que cruza ese
+// borde) y se van al rato de alejarse; mientras no se ven no tapan nada ni roban clics a la app.
+//   - Asa: arrastrar mueve la ventana (sin la animación de movimiento mientras dura, para que siga al cursor);
+//     doble clic maximiza o restaura. Clic derecho en cualquier isla: menú de ventana (WinMenu.qml).
+//   - No sale en las apps que ya dibujan su barra ("barsOwnFrame" y las GTK, Chromium / Electron y Firefox, que
+//     WinMode reconoce solas), ni en las del propio shell, ni a pantalla completa. Se apaga con "titleBars" = false.
+//   - La geometría se sondea cada 100 ms mientras hay ventana (Hyprland no avisa al mover o redimensionar una
+//     flotante), por el socket de Hyprland, sin lanzar procesos.
+// Capa "top" a pantalla completa y transparente: solo reciben clics la franja del borde y, cuando se ven, las islas
+// (mask); durante un arrastre, toda.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -40,7 +38,6 @@ PanelWindow {
         return c;
     }
     readonly property string addr: target?.address ?? ""
-    readonly property bool full: !!target && WinMode.hasBar(target)        // barra completa (encima de la de Hyprland)
 
     // Geometría al día (sondeo) o, mientras se arrastra, la que pone el propio arrastre
     property var live: null
@@ -63,11 +60,11 @@ PanelWindow {
         running: root.addr !== "" && !drag.active
         onTriggered: { root.poll(); Hyprland.refreshToplevels(); }
     }
-    // Maximizar, flotar o encajar: se pregunta ya (no al siguiente sondeo), para que la barra salga a la vez que la
-    // ventana empieza a animarse y no ~200 ms después
+    // Maximizar, flotar o encajar: se pregunta ya (no al siguiente sondeo), para que las islas sigan a la ventana
+    // mientras se anima y no ~200 ms después
     Timer { id: pollSoon; interval: 30; onTriggered: root.poll() }
     // Solo se anima tras esos eventos (Hyprland anima la ventana): moverla con Super + arrastrar o redimensionarla va
-    // al instante, y una barra animada se quedaría detrás dando tirones con cada sondeo
+    // al instante, y unas islas animadas se quedarían detrás dando tirones con cada sondeo
     property bool animating: false
     Timer { id: animEnd; interval: Theme.durWin + 300; onTriggered: root.animating = false }
     Connections {
@@ -80,12 +77,17 @@ PanelWindow {
             }
         }
     }
-
-    // Seguir a la ventana con animación (pill: Behavior on x/y/width) solo cuando sigue siendo la misma barra
+    // Seguir a la ventana con animación solo cuando sigue siendo la misma; al pasar a otra, directa y escondida
     property bool glide: false
-    onAddrChanged: { glide = false; glideOn.restart(); }
-    onFullChanged: { glide = false; glideOn.restart(); }
+    onAddrChanged: { glide = false; glideOn.restart(); near = false; }
     Timer { id: glideOn; interval: 60; onTriggered: root.glide = true }
+
+    // ── Cuándo se ven: puntero en la franja del borde o en una isla; se van 700 ms después de salir ──
+    readonly property bool hovering: hotHover.hovered || leftHover.hovered || midHover.hovered || rightHover.hovered
+    property bool near: false
+    onHoveringChanged: { if (hovering) { near = true; hideLater.stop(); } else hideLater.restart(); }
+    Timer { id: hideLater; interval: 700; onTriggered: root.near = root.hovering }
+    readonly property bool shown: !!geo && (near || drag.active)
 
     readonly property real sx: screen?.x ?? 0
     readonly property real sy: screen?.y ?? 0
@@ -98,7 +100,15 @@ PanelWindow {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore
     anchors { top: true; bottom: true; left: true; right: true }
-    mask: Region { item: drag.active ? whole : pill }
+    // escondidas, solo la franja; a la vista, también las tres islas (no el hueco entre ellas: es de la app)
+    // (en coordenadas de la capa: una Region con item no sigue al padre cuando este se mueve, y frame se mueve)
+    mask: Region {
+        item: drag.active ? whole : null
+        Region { x: frame.x; y: frame.y + hot.y; width: frame.width; height: hot.height }
+        Region { x: frame.x + islandL.x; y: frame.y + islandL.y; width: root.shown ? islandL.width : 0; height: islandL.height }
+        Region { x: frame.x + islandC.x; y: frame.y + islandC.y; width: root.shown ? islandC.width : 0; height: islandC.height }
+        Region { x: frame.x + islandR.x; y: frame.y + islandR.y; width: root.shown ? islandR.width : 0; height: islandR.height }
+    }
 
     Item { id: whole; anchors.fill: parent }
 
@@ -117,76 +127,78 @@ PanelWindow {
         onTriggered: if (dirty) { dirty = false; Hyprland.dispatch(root.moveLua()); }
     }
 
-    Rectangle {
-        id: pill
-        // barra completa: la franja de encima de la ventana · pastilla: su esquina de arriba a la derecha
-        // (durante el arrastre, donde la lleva el cursor)
-        readonly property real gx: drag.active ? root.dragPos.x : (root.geo?.x ?? 0)
-        readonly property real gy: drag.active ? root.dragPos.y : (root.geo?.y ?? 0)
-        x: root.full ? gx - root.sx : gx - root.sx + (root.geo?.w ?? 0) - width - 6
-        y: root.full ? gy - root.sy - WinMode.titleH : gy - root.sy + 6
-        width: root.full ? (root.geo?.w ?? 0) : row.implicitWidth + 6
-        height: root.full ? WinMode.titleH : 26
-        // Hyprland da la geometría final al momento y anima la ventana hasta ella (maximizar, encajar, cambiar de
-        // modo): la barra la sigue con su misma duración y curva. Al arrastrar, o al pasar a otra ventana, va directa.
+    component Island: Rectangle {
+        implicitHeight: 30
+        radius: Theme.ctl(30)
+        color: Qt.alpha(Theme.s1, 0.94)
+        border.width: 1
+        border.color: Qt.alpha(Theme.ov, 0.7)
+        TapHandler { acceptedButtons: Qt.RightButton; onTapped: Shell.open("ventana") }
+    }
+
+    // La parte de arriba de la ventana (durante el arrastre, donde la lleva el cursor)
+    Item {
+        id: frame
+        x: (drag.active ? root.dragPos.x : (root.geo?.x ?? 0)) - root.sx
+        y: (drag.active ? root.dragPos.y : (root.geo?.y ?? 0)) - root.sy
+        width: root.geo?.w ?? 0
+        height: 44
         Behavior on x { enabled: root.glide && root.animating && !drag.active; NumberAnimation { duration: Theme.durWin; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeWin } }
         Behavior on y { enabled: root.glide && root.animating && !drag.active; NumberAnimation { duration: Theme.durWin; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeWin } }
         Behavior on width { enabled: root.glide && root.animating && !drag.active; NumberAnimation { duration: Theme.durWin; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeWin } }
-        radius: root.full ? 10 : Theme.ctl(26)
-        bottomLeftRadius: root.full ? 0 : radius
-        bottomRightRadius: root.full ? 0 : radius
-        color: root.full ? Theme.s3 : Qt.alpha(Theme.s1, hover.hovered || drag.active ? 0.96 : 0.78)
-        border.width: root.full ? 0 : 1
-        border.color: Qt.alpha(Theme.ov, 0.6)
 
-        // Barra completa: icono y título a la izquierda
-        RowLayout {
-            visible: root.full
-            anchors { left: parent.left; right: row.left; verticalCenter: parent.verticalCenter; leftMargin: 12; rightMargin: 8 }
-            spacing: 8
-            IconImage {
-                implicitSize: 16
-                source: root.target ? HyprClients.iconFor(root.target.class) : ""
-                asynchronous: true
-            }
-            Txt {
-                Layout.fillWidth: true
-                text: (root.target?.title ?? "").replace(/\s+/g, " ").trim()
-                size: 11.5; weight: Font.Medium
-            }
+        // Franja que cruza el borde de arriba: 8 px por fuera y 6 por dentro de la ventana
+        Item {
+            id: hot
+            y: -8; width: parent.width; height: 14
+            HoverHandler { id: hotHover }
         }
-        Behavior on color { ColorAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
-        HoverHandler { id: hover }
-        // clic derecho en cualquier parte de la pastilla: menú de ventana
-        TapHandler { acceptedButtons: Qt.RightButton; onTapped: Shell.open("ventana") }
-
-        // Barra completa: toda la franja es el asa (debajo de los botones)
-        MouseArea {
-            visible: root.full
+        // Las tres islas: bajan un poco y aparecen al acercarse
+        Item {
+            id: islands
             anchors.fill: parent
-            cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.ArrowCursor
-            onPressed: m => drag.press(mapToItem(whole, m.x, m.y))
-            onPositionChanged: m => { if (pressed) drag.moveTo(mapToItem(whole, m.x, m.y)); }
-            onReleased: drag.release()
-            onDoubleClicked: WinMode.toggleMaximize(root.addr)
-        }
+            opacity: root.shown ? 1 : 0
+            visible: opacity > 0
+            transform: Translate { y: root.shown ? 0 : -6; Behavior on y { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } } }
+            Behavior on opacity { NumberAnimation { duration: root.shown ? Theme.durMedium : Theme.durShort } }
 
-        RowLayout {
-            id: row
-            anchors { verticalCenter: parent.verticalCenter; right: root.full ? parent.right : undefined; left: root.full ? undefined : parent.left
-                      leftMargin: 4; rightMargin: 4 }
-            spacing: 0
+            // Izquierda: icono y título (sin sitio, solo el icono)
+            Island {
+                id: islandL
+                x: 6; y: 6
+                width: Math.min(titleRow.implicitWidth + 24, Math.max(42, islandC.x - 12 - x))
+                HoverHandler { id: leftHover }
+                RowLayout {
+                    id: titleRow
+                    anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+                    spacing: 8
+                    IconImage {
+                        implicitSize: 16
+                        source: root.target ? HyprClients.iconFor(root.target.class) : ""
+                        asynchronous: true
+                    }
+                    Txt {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 320
+                        text: (root.target?.title || HyprClients.appName(root.target?.class ?? "")).replace(/\s+/g, " ").trim()
+                        size: 11.5; weight: Font.Medium
+                    }
+                }
+            }
 
-            // Asa para mover (seis puntos; con barra completa, la franja entera)
-            Item {
-                visible: !root.full
-                Layout.preferredWidth: 26; Layout.preferredHeight: 22
+            // Centro: el asa para mover (doble clic maximiza o restaura)
+            Island {
+                id: islandC
+                x: (parent.width - width) / 2; y: 6
+                width: 64
+                color: drag.active || drag.containsMouse ? Qt.alpha(Theme.s3, 0.97) : Qt.alpha(Theme.s1, 0.94)
+                HoverHandler { id: midHover }
                 Icon {
                     anchors.centerIn: parent
-                    size: 14; stroke: 2.4
+                    size: 16; stroke: 2.4
                     color: drag.active || drag.containsMouse ? Theme.t : Theme.tv
-                    svg: '<path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/>'
+                    svg: '<path d="M6 9h.01M12 9h.01M18 9h.01M6 15h.01M12 15h.01M18 15h.01"/>'
                 }
                 MouseArea {
                     id: drag
@@ -208,15 +220,14 @@ PanelWindow {
                             active = true;
                             root.noAnim(true);
                         }
-                        // sin meter la ventana (ni su barra de título) bajo la barra del shell
-                        root.dragPos = Qt.point(startAt.x + p.x - start.x, Math.max(root.sy + root.topLimit + (root.full ? WinMode.titleH : 0), startAt.y + p.y - start.y));
+                        // sin meter la ventana bajo la barra del shell
+                        root.dragPos = Qt.point(startAt.x + p.x - start.x, Math.max(root.sy + root.topLimit, startAt.y + p.y - start.y));
                         mover.dirty = true;
                         if (!mover.running) mover.start();
                     }
                     onPressed: m => press(mapToItem(whole, m.x, m.y))
                     onPositionChanged: m => { if (pressed) moveTo(mapToItem(whole, m.x, m.y)); }
-                    onReleased: release()
-                    function release(): void {
+                    onReleased: {
                         if (active) {
                             mover.stop(); mover.dirty = false;
                             Hyprland.dispatch(root.moveLua());
@@ -230,32 +241,45 @@ PanelWindow {
                 }
             }
 
-            Repeater {
-                model: [
-                    { k: "min", icon: "minus" },
-                    { k: "max", icon: root.geo?.max ? "window" : "maximize" },
-                    { k: "close", icon: "x", danger: true }
-                ]
-                Rectangle {
-                    id: btn
-                    required property var modelData
-                    Layout.preferredWidth: 26; Layout.preferredHeight: 22
-                    radius: Theme.ctl(22)
-                    color: !bma.containsMouse ? "transparent" : btn.modelData.danger ? Qt.alpha(Theme.danger, 0.24) : Theme.s3
-                    Icon {
-                        anchors.centerIn: parent
-                        name: btn.modelData.icon; size: 13
-                        color: btn.modelData.danger && bma.containsMouse ? Theme.danger : Theme.t
-                    }
-                    MouseArea {
-                        id: bma
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onClicked: {
-                            const a = root.addr, k = btn.modelData.k;
-                            if (k === "min") WinMode.minimize(a);
-                            else if (k === "max") WinMode.toggleMaximize(a);
-                            else WinMode.close(a);
+            // Derecha: minimizar, maximizar / restaurar y cerrar
+            Island {
+                id: islandR
+                x: parent.width - width - 6; y: 6
+                width: buttons.implicitWidth + 8
+                HoverHandler { id: rightHover }
+                RowLayout {
+                    id: buttons
+                    anchors.centerIn: parent
+                    spacing: 2
+                    Repeater {
+                        model: [
+                            { k: "min", icon: "minus", tip: "Minimizar" },
+                            { k: "max", icon: root.geo?.max ? "window" : "maximize", tip: root.geo?.max ? "Restaurar" : "Maximizar" },
+                            { k: "close", icon: "x", danger: true, tip: "Cerrar" }
+                        ]
+                        Rectangle {
+                            id: btn
+                            required property var modelData
+                            Layout.preferredWidth: 28; Layout.preferredHeight: 24
+                            radius: Theme.ctl(24)
+                            color: !bma.containsMouse ? "transparent" : btn.modelData.danger ? Qt.alpha(Theme.danger, 0.24) : Theme.s3
+                            Behavior on color { ColorAnimation { duration: Theme.durShort } }
+                            Icon {
+                                anchors.centerIn: parent
+                                name: btn.modelData.icon; size: 13
+                                color: btn.modelData.danger && bma.containsMouse ? Theme.danger : Theme.t
+                            }
+                            MouseArea {
+                                id: bma
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: {
+                                    const a = root.addr, k = btn.modelData.k;
+                                    if (k === "min") WinMode.minimize(a);
+                                    else if (k === "max") WinMode.toggleMaximize(a);
+                                    else WinMode.close(a);
+                                }
+                            }
                         }
                     }
                 }

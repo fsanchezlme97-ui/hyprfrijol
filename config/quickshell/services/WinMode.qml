@@ -222,58 +222,34 @@ Singleton {
         if (isMax(c)) stackMax[k] = true;
         topAddr = c.address; topMax = isMax(c);
     }
-    Connections { target: HyprClients; function onRefreshesChanged() { root.stackStep(); root.syncBars(); } }
+    Connections { target: HyprClients; function onRefreshesChanged() { root.stackStep(); root.syncFrames(); } }
 
     // ---------- barra de título del modo clásico (ajuste "titleBars") ----------
-    // Hyprland no dibuja barras de título sin plugins, pero sí la de un grupo: cada ventana flotante de un espacio
-    // clásico que no trae barra propia va en su propio grupo (config/apply/35-windows.py: sin agruparse con otras, alto
-    // titleH) y así lleva encima una barra con su título, que reserva su sitio y queda tapada por las ventanas de
-    // encima. Sobre la de la ventana activa, modules/desktop/TitleBar.qml pinta el icono, el título y los botones.
-    // Al salir del modo (o con titleBars apagado) se deshacen. Barra propia: las apps GTK, Chromium / Electron y
-    // Firefox (por las bibliotecas que tiene cargadas el proceso) y las clases de "barsOwnFrame".
-    readonly property int titleH: 28
+    // Las islas de modules/desktop/TitleBar.qml (título, asa y botones dentro de la ventana activa) no salen en las
+    // apps que ya dibujan su barra: las GTK, Chromium / Electron y Firefox (por las bibliotecas que tiene cargadas el
+    // proceso, frameProbe) y las clases de "barsOwnFrame".
     readonly property bool titleBars: Settings.get("titleBars", true) !== false
     onTitleBarsChanged: HyprClients.refresh()
     readonly property var ownFrameList: (Settings.get("barsOwnFrame", []) ?? []).map(c => String(c).toLowerCase())
     property var frames: ({})            // clase en minúsculas → true (dibuja su barra) / false
-    property var toggling: ({})          // dirección → ms del último cambio (hasta que hyprctl lo refleje)
+    property var ungrouped: ({})         // dirección → ya se le quitó el grupo de antes (una vez)
     function hasOwnFrame(c): bool { const k = String(c.class ?? "").toLowerCase(); return ownFrameList.includes(k) || frames[k] === true; }
-    function hasBar(c): bool { const g = c?.grouped ?? []; return g.length === 1 && HyprClients.norm(g[0]) === HyprClients.norm(c.address); }
-    function wantsBar(c): bool {
-        return titleBars && c.floating && isFloat(c.workspace?.id ?? 0) && !c.pinned && !keepClass(c)
-            && frames[String(c.class ?? "").toLowerCase()] === false && !hasOwnFrame(c);
-    }
-    function syncBars(): void {
-        const now = Date.now(), unknown = {};
+    function syncFrames(): void {
+        const unknown = {}, ug = Object.assign({}, ungrouped);
         for (const c of HyprClients.clients) {
-            const ws = c.workspace?.id ?? 0, k = String(c.class ?? "").toLowerCase();
-            // minimizadas (espacio especial) y a pantalla completa: se quedan como están
-            if (ws <= 0 || (c.fullscreen ?? 0) === 2 || !c.mapped || now - (toggling[c.address] ?? 0) < 1500) continue;
-            if (titleBars && isFloat(ws) && k && frames[k] === undefined && !ownFrameList.includes(k) && !keepClass(c)) { unknown[k] = c.pid; continue; }
-            const g = c.grouped ?? [], want = wantsBar(c);
-            if (want && g.length === 0) setBar(c, true);
-            else if (!want && hasBar(c)) setBar(c, false);
+            const ws = c.workspace?.id ?? 0, k = String(c.class ?? "").toLowerCase(), g = c.grouped ?? [];
+            // Hasta 0.10.24 la barra era la de un grupo de una sola ventana: se deshace (una vez por ventana)
+            if (g.length === 1 && HyprClients.norm(g[0]) === HyprClients.norm(c.address) && !ug[c.address]) {
+                ug[c.address] = true;
+                Shell.dispatch('hl.dsp.group.toggle({ ' + win(c.address) + ' })');
+            }
+            if (titleBars && ws > 0 && c.floating && isFloat(ws) && k && frames[k] === undefined && !ownFrameList.includes(k) && !keepClass(c))
+                unknown[k] = c.pid;
         }
+        ungrouped = ug;
         if (Object.keys(unknown).length && !frameProbe.running) {
             frameProbe.args = Object.keys(unknown).map(k => unknown[k] + "\t" + k);
             frameProbe.running = true;
-        }
-    }
-    function setBar(c, on: bool): void {
-        toggling = Object.assign({}, toggling, { [c.address]: Date.now() });
-        Shell.dispatch('hl.dsp.group.toggle({ ' + win(c.address) + ' })');
-        if (!on) return;
-        // La barra va encima de la ventana: si quedaría bajo la barra del shell, se baja (y se acorta si no cabe)
-        const mon = HyprClients.monitorById(c.monitor);
-        if (!mon) return;
-        const U = HyprClients.usableRect(mon);
-        if (isMax(c)) {           // maximizada: que Hyprland la vuelva a encajar contando la barra
-            Shell.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "unset", ' + win(c.address) + ' })');
-            maximize(c);
-        } else if ((c.at?.[1] ?? 0) - titleH < U.y) {
-            const y = U.y + titleH, h = Math.min(c.size?.[1] ?? 0, U.y + U.h - y);
-            Shell.dispatch('hl.dsp.window.resize({ x = ' + (c.size?.[0] ?? 0) + ', y = ' + h + ', exact = true, ' + win(c.address) + ' })');
-            Shell.dispatch('hl.dsp.window.move({ x = ' + (c.at?.[0] ?? 0) + ', y = ' + y + ', exact = true, ' + win(c.address) + ' })');
         }
     }
     Process {
@@ -411,15 +387,15 @@ Singleton {
         return HyprClients.byRecent.find(o => o.address !== c.address && o.pid === c.pid && o.class === c.class
             && o.workspace?.id === c.workspace?.id && !isMin(o)) ?? null;
     }
-    // Centrada sobre la ventana principal, con su propio tamaño (dentro del área útil, contando su barra de título)
+    // Centrada sobre la ventana principal, con su propio tamaño (dentro del área útil)
     function centerOn(c, main): void {
         const mon = HyprClients.monitorById(c.monitor) ?? HyprClients.focusedMonitor;
         if (!mon) return;
-        const U = HyprClients.usableRect(mon), bar = hasBar(main) || wantsBar(c) ? titleH : 0;
-        const w = Math.min(c.size?.[0] ?? 0, U.w), h = Math.min(c.size?.[1] ?? 0, U.h - bar);
+        const U = HyprClients.usableRect(mon);
+        const w = Math.min(c.size?.[0] ?? 0, U.w), h = Math.min(c.size?.[1] ?? 0, U.h);
         const mx = main.at[0] + main.size[0] / 2, my = main.at[1] + main.size[1] / 2;
         let x = Math.round(Math.max(U.x, Math.min(mx - w / 2, U.x + U.w - w)));
-        let y = Math.round(Math.max(U.y + bar, Math.min(my - h / 2, U.y + U.h - h)));
+        let y = Math.round(Math.max(U.y, Math.min(my - h / 2, U.y + U.h - h)));
         // Del mismo tamaño que la principal (otra ventana de la app): un paso en diagonal para que se vea que son dos
         if (Math.abs(x - main.at[0]) < 24 && Math.abs(y - main.at[1]) < 24) {
             x = Math.min(x + 32, U.x + U.w - w); y = Math.min(y + 32, U.y + U.h - h);

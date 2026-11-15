@@ -139,11 +139,11 @@ ColumnLayout {
         SwRow { label: "Recordar dónde estaba cada app"; sub: "al volver a abrirla flotando: el mismo sitio y tamaño y, en el modo clásico, maximizada o no como la cerraste"; key: "floatRemember"; def: true }
         SwRow {
             label: "Barras de título"; key: "titleBars"; def: true
-            sub: "en las apps que no traen la suya: título en cada ventana y, en la activa, icono, minimizar, maximizar y cerrar (arrastra la barra para moverla; doble clic maximiza)"
+            sub: "en las apps que no traen la suya: al acercar el puntero al borde de arriba de la ventana activa salen tres islas, con su título, un asa para moverla (doble clic maximiza) y minimizar, maximizar y cerrar"
         }
         Txt {
             Layout.fillWidth: true
-            text: "Redimensiona arrastrando el borde de la ventana. Alt + Espacio (o clic derecho en la barra) abre el menú de la ventana. En el modo clásico, la barra de arriba hace de barra de tareas, y los diálogos y las ventanas nuevas de una app ya abierta salen centrados sobre ella, sin maximizar."
+            text: "Redimensiona arrastrando el borde de la ventana. Alt + Espacio (o clic derecho en la barra) abre el menú de la ventana. En el modo clásico, las ventanas abiertas están en el dock, y los diálogos y las ventanas nuevas de una app ya abierta salen centrados sobre ella, sin maximizar."
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }
     }

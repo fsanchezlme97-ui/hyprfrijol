@@ -214,7 +214,7 @@
   {"f": "Escritorio", "l": "Ventanas flotantes", "t": "card"},
   {"f": "Escritorio", "l": "Encajar al soltar en los bordes", "t": "row", "s": "contra un lado: mitad · en una esquina: cuarto · arriba: toda el área · fuera: recupera su tamaño", "g": "Ventanas flotantes"},
   {"f": "Escritorio", "l": "Recordar dónde estaba cada app", "t": "row", "s": "al volver a abrirla flotando: el mismo sitio y tamaño y, en el modo clásico, maximizada o no como la cerraste", "g": "Ventanas flotantes"},
-  {"f": "Escritorio", "l": "Barras de título", "t": "row", "s": "en las apps que no traen la suya: título en cada ventana y, en la activa, icono, minimizar, maximizar y cerrar (arrastra la barra para moverla; doble clic maximiza)", "g": "Ventanas flotantes"},
+  {"f": "Escritorio", "l": "Barras de título", "t": "row", "s": "en las apps que no traen la suya: al acercar el puntero al borde de arriba de la ventana activa salen tres islas, con su título, un asa para moverla (doble clic maximiza) y minimizar, maximizar y cerrar", "g": "Ventanas flotantes"},
   {"f": "Escritorio", "l": "Apps en ventana flotante", "t": "card"},
   {"f": "Escritorio", "l": "Tamaño de la ventana", "t": "row", "g": "Apps en ventana flotante"},
   {"f": "Escritorio", "l": "Apps con su propia barra", "t": "card"},
