@@ -1,6 +1,6 @@
 // Icono del clima que se mueve según el tiempo (Barra viva, barLive): el sol gira despacio, con cielo parcial asoma
 // tras una nube que va y viene, con cielo cubierto dos nubes se cruzan, cae lluvia o nieve, el rayo destella y la
-// luna tiene una estrella que titila. Lo mueve un Timer a ~12 fotogramas por segundo
+// luna tiene una estrella que titila. Lo mueve un Timer a ~12 fotogramas por segundo (4 sin lluvia, nieve ni tormenta)
 // (no animaciones a 60 fps: la barra entera se repinta en cada fotograma); quieto si live es false (pantalla
 // completa, modo juego, barra oculta) o sin animaciones (Theme.still).
 //   WeatherGlyph { code: Weather.code; day: Weather.isDay; live: chip.visible }
@@ -30,7 +30,8 @@ Item {
     readonly property bool falling: kind === "lluvia" || kind === "nieve" || kind === "tormenta"
     readonly property bool animating: live && !Theme.still && visible
     property int t: 0
-    Timer { interval: 83; repeat: true; running: g.animating; onTriggered: g.t = (g.t + 1) % 100000 }
+    // lo que cae necesita ~12 fps; el sol, las nubes y la estrella se mueven despacio: 4 fps con pasos de 3 (misma velocidad)
+    Timer { interval: g.falling ? 83 : 250; repeat: true; running: g.animating; onTriggered: g.t = (g.t + (g.falling ? 1 : 3)) % 100000 }
 
     // sol: los rayos dan una vuelta cada 30 s
     Icon {

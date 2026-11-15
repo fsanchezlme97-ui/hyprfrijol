@@ -34,10 +34,11 @@ Row {
     // Cuánto pesa un programa para elegir cuáles caben: su parte de CPU más su parte de memoria
     function score(u): real { return u.cpu / 100 + (SysStats.memTotal > 0 ? u.mem / SysStats.memTotal : 0); }
     // Con más de `max`, el peso mínimo para salir (solo cambia qué se ve, no se rehace la lista cada 2 s)
+    // Lo que gasta cada programa, calculado una vez por medida (en el mismo orden que groups)
+    readonly property var uses: { SysStats.procTable; return groups.map(g => usage(g)); }
     readonly property real cut: {
-        SysStats.procTable;
         if (groups.length <= max) return -1;
-        const v = groups.map(g => score(usage(g))).sort((a, b) => b - a);
+        const v = uses.map(u => score(u)).sort((a, b) => b - a);
         return v[max - 1];
     }
     UseCounter { target: SysStats; active: root.visible }
@@ -53,8 +54,9 @@ Row {
         Rectangle {
             id: chip
             required property var modelData
+            required property int index
             readonly property var win: modelData[0]
-            readonly property var use: { SysStats.procTable; return root.usage(modelData); }
+            readonly property var use: root.uses[index] ?? { cpu: 0, mem: 0, n: 0 }
             readonly property string name: HyprClients.appName(win.class ?? "")
             // con más de `max`: los que más gastan, y siempre uno que esté tirando de la CPU aunque gaste poca memoria
             visible: root.cut < 0 || root.score(use) >= root.cut || use.cpu >= 10
@@ -119,9 +121,8 @@ Row {
     }
     Txt {
         readonly property int hidden: {
-            SysStats.procTable;
             if (root.cut < 0) return 0;
-            return root.groups.filter(g => { const u = root.usage(g); return !(root.score(u) >= root.cut || u.cpu >= 10); }).length;
+            return root.uses.filter(u => !(root.score(u) >= root.cut || u.cpu >= 10)).length;
         }
         visible: hidden > 0
         anchors.verticalCenter: parent.verticalCenter

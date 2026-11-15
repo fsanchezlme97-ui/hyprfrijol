@@ -38,8 +38,7 @@ Singleton {
         if (clients[k].title === title) return;
         const next = clients.slice();
         next[k] = Object.assign({}, clients[k], { title: title });
-        clients = next;
-        refreshes++;
+        clients = next;   // sin refreshes++: quien mira el título ya depende de clients (una terminal cambia de título sin parar)
     }
 
     // Cambio de foco (activewindowv2 trae la dirección): se pone la activa y el orden de uso como lo lleva Hyprland

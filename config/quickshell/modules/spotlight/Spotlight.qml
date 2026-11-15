@@ -56,7 +56,8 @@ Overlay {
 
     readonly property var apps: DesktopEntries.applications.values.filter(e => !e.noDisplay)
     readonly property var windows: Hyprland.toplevels.values
-    readonly property var items: mode === "apps" || emojiMode ? [] : build(query, apps, usage, calc, files, windows, Pomodoro.running, Clip.history, Clip.pins, recipes)
+    // Cerrado (se queda cargado: warm) no se rehace con cada ventana o copia nueva; visible sigue durante la animación de cierre
+    readonly property var items: !visible || mode === "apps" || emojiMode ? [] : build(query, apps, usage, calc, files, windows, Pomodoro.running, Clip.history, Clip.pins, recipes)
     readonly property var rows: rowsOf(items)
     readonly property var cur: mode === "apps" ? (gridApps[gsel] ? appItem(gridApps[gsel]) : null)
                                                : items[Math.max(0, Math.min(sel, items.length - 1))] ?? null

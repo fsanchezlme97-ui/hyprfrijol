@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.7] — 2026-11-14
+
+### Rendimiento
+- **Icono del clima (Barra viva):** con sol, nubes o luna se repinta 4 veces por segundo en vez de 12 (se mueve a la
+  misma velocidad); la lluvia, la nieve y la tormenta siguen a 12.
+- **Uso por programa (barra secundaria):** se recorre `/proc` cada 10 s en vez de cada 4, y el gasto de cada programa
+  se calcula una vez por medida en vez de tres.
+- **Iconos del escritorio:** no se mira la carpeta con la pantalla bloqueada ni en el modo concentración.
+- **Spotlight:** cerrado ya no rehace la lista de resultados con cada ventana nueva o cada copia al portapapeles.
+- **Títulos de ventana:** una terminal que cambia de título sin parar ya no hace recalcular el dock, la ocultación
+  inteligente y las miniaturas en cada cambio.
+
 ## [0.10.6] — 2026-11-14
 
 ### Arreglos

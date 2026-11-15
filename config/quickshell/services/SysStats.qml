@@ -167,8 +167,8 @@ Singleton {
               done < /proc/diskstats
               echo "dio $((r * 512)) $((w * 512))"
               [ $((i % 15)) = 0 ] && df -B1 --output=used,size / | { read -r _; read -r u s; echo "disk $u $s"; }
-              # por programa (barra secundaria): cada 4 s basta; con el monitor del sistema abierto, cada 2 s
-              if [ "$detail" = 2 ] || { [ "$detail" = 1 ] && [ $((i % 2)) = 0 ]; }; then
+              # por programa (barra secundaria): cada 10 s basta (recorrer /proc entero cuesta); con el monitor del sistema abierto, cada 2 s
+              if [ "$detail" = 2 ] || { [ "$detail" = 1 ] && [ $((i % 5)) = 0 ]; }; then
                 # tiempo de CPU de cada proceso (el % se calcula entre dos medidas, como top), memoria y padre
                 # Memoria: la propia de cada proceso (residente menos lo compartido, de statm), no el RSS: con el RSS las
                 # bibliotecas y la memoria compartida de Chrome o Electron contaban una vez por proceso y salían gigas de más

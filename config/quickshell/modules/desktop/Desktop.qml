@@ -64,8 +64,9 @@ Scope {
             }
         }
     }
+    // Con la pantalla bloqueada o el modo concentración (escritorio oculto) no se mira; al volver, se mira enseguida
     Timer {
-        running: root.deskMode !== "no"
+        running: root.deskMode !== "no" && !Shell.locked && !Shell.focusMode
         repeat: true; interval: 4000; triggeredOnStart: true
         onTriggered: scan.running = true
     }
