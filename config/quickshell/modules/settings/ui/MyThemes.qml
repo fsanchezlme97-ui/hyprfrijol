@@ -120,39 +120,41 @@ Section {
     }
 
     // Los guardados
-    Flow {
+    HCarousel {
         visible: root.own.length > 0
         Layout.fillWidth: true
-        spacing: 8
-        Repeater {
-            model: root.own
-            ColumnLayout {
-                id: mt
-                required property string modelData
-                width: 178
-                spacing: 4
-                PaletteCard {
-                    Layout.fillWidth: true
-                    key: mt.modelData
-                    pals: root.pals
-                    current: root.current
-                    themeMode: root.themeMode
-                    onPicked: (k, mode) => root.picked(k, mode)
-                }
-                RowLayout {
-                    spacing: 12
-                    Button {
-                        kind: "link"; text: "Editar"
-                        onClicked: root.editSaved(mt.modelData)
+        Row {
+            spacing: 8
+            Repeater {
+                model: root.own
+                ColumnLayout {
+                    id: mt
+                    required property string modelData
+                    width: 178
+                    spacing: 4
+                    PaletteCard {
+                        Layout.fillWidth: true
+                        key: mt.modelData
+                        pals: root.pals
+                        current: root.current
+                        themeMode: root.themeMode
+                        onPicked: (k, mode) => root.picked(k, mode)
                     }
-                    Button {
-                        kind: "link"; text: "Exportar"
-                        onClicked: root.run(["export", mt.modelData],
-                                            j => root.say("Guardado en " + j.file))
-                    }
-                    Button {
-                        kind: "link"; text: "Borrar"
-                        onClicked: root.run(["remove", mt.modelData], () => root.say("Tema borrado."))
+                    RowLayout {
+                        spacing: 12
+                        Button {
+                            kind: "link"; text: "Editar"
+                            onClicked: root.editSaved(mt.modelData)
+                        }
+                        Button {
+                            kind: "link"; text: "Exportar"
+                            onClicked: root.run(["export", mt.modelData],
+                                                j => root.say("Guardado en " + j.file))
+                        }
+                        Button {
+                            kind: "link"; text: "Borrar"
+                            onClicked: root.run(["remove", mt.modelData], () => root.say("Tema borrado."))
+                        }
                     }
                 }
             }

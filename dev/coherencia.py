@@ -5,7 +5,9 @@
   · cada programa que el código busca (command -v X, shutil.which("X")) está en la columna «órdenes» de
     install/packages.tsv, salvo los del sistema y las alternativas que no instalamos nosotros (SISTEMA);
   · cada .qml que usa un singleton (Time., Settings., Battery.…) importa su carpeta: si no, falla solo al usarse
-    («ReferenceError: Time is not defined») y dev/check.sh no lo ve."""
+    («ReferenceError: Time is not defined») y dev/check.sh no lo ve;
+  · config/themes/palettes.json: los 15 roles en hex, parejas oscuro/claro recíprocas (la clara con "variant"),
+    16 colores de terminal si los trae y el texto legible (≥ 4,5:1) sobre las superficies."""
 import json, pathlib, re, sys
 root = pathlib.Path(__file__).resolve().parent.parent
 fail = 0
@@ -70,4 +72,34 @@ if bad:
     print("Usan un singleton sin importar su carpeta:")
     for f, n, d in sorted(bad):
         print(f"  {f}: {n} (import de {d})")
+
+# Paletas del repo
+def _lum(h):
+    v = [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+def _con(a, b):
+    la, lb = sorted((_lum(a), _lum(b)), reverse=True)
+    return (la + 0.05) / (lb + 0.05)
+ROLES = ["bg", "s1", "s3", "s4", "p", "onP", "pc", "onPc", "sc", "onSc", "ter", "t", "tv", "o", "ov"]
+pals = json.loads((root / "config/themes/palettes.json").read_text())
+errs = []
+for k, p in pals.items():
+    hexes = [p.get(r) for r in ROLES] + list(p.get("ansi", []))
+    if not all(isinstance(h, str) and re.fullmatch(r"#[0-9A-Fa-f]{6}", h) for h in hexes):
+        errs.append(f"{k}: faltan roles o no son #RRGGBB")
+        continue
+    if "ansi" in p and len(p["ansi"]) != 16:
+        errs.append(f"{k}: ansi con {len(p['ansi'])} colores (16)")
+    if min(_con(p["t"], p[s]) for s in ("s1", "s3")) < 4.5:
+        errs.append(f"{k}: el texto no llega a 4,5:1 sobre s1/s3")
+    q = pals.get(p.get("pair", ""))
+    if "pair" in p and (not q or q.get("pair") != k or bool(q.get("light")) == bool(p.get("light"))
+                        or bool(p.get("variant")) == bool(q.get("variant"))):
+        errs.append(f"{k}: pareja «{p['pair']}» no recíproca (una oscura y otra clara, solo una con variant)")
+if errs:
+    fail = 1
+    print("Paletas (config/themes/palettes.json):")
+    for e in errs:
+        print("  " + e)
 sys.exit(fail)

@@ -1,7 +1,7 @@
 // Ajustes › Escritorio y gestos — modo de ventanas ("windowMode": mosaico / desplazamiento / flotante, con
 // muestras ui/WinModePreview.qml; services/WinMode.qml, config/apply/30-layout.py y 35-windows.py), columnas del
 // desplazamiento ("scrollColumnWidth", "scrollFocusFit", "scrollOneFull"), dock ("dockBehavior": fijo / auto / inteligente, "dockInTiling"; modules/desktop),
-// espacios ("wsNumerals", "wsShowAll"; bar/Workspaces.qml), iconos del escritorio ("deskIcons", "deskIconSize") y widgets; esquinas calientes (Daemons.qml), gestos del touchpad (hl.gesture),
+// espacios ("wsNumerals", "wsShowAll"; bar/Workspaces.qml), iconos del escritorio ("deskIcons") y widgets; esquinas calientes (Daemons.qml), gestos del touchpad (hl.gesture),
 // apps en ventana flotante ("floatApps", "floatAppsSize"; ui/FloatApps.qml, 35-windows.py),
 // diseño de mosaico (general:layout), enfocar al pasar el cursor y acoplar a los bordes; nombres e iconos de los
 // espacios ("wsNames", "wsIcons", "wsBarNames" → barra y vista general; ui/WsNames.qml).
@@ -268,19 +268,10 @@ ColumnLayout {
                 onPicked: k => Settings.set("deskIcons", k)
             }
         }
-        LabeledRow {
-            label: "Tamaño de los iconos"
-            labelWidth: 150
-            opacity: root.deskIcons === "todos" ? 1 : 0.45
-            Pills {
-                model: [["pequeno", "Pequeño"], ["mediano", "Mediano"], ["grande", "Grande"]]
-                current: Settings.get("deskIconSize", "mediano")
-                onPicked: k => Settings.set("deskIconSize", k)
-            }
-        }
         Txt {
             Layout.fillWidth: true
-            text: "Muestra lo que hay en tu carpeta Escritorio. Doble clic abre · clic derecho lo muestra en la carpeta."
+            text: root.deskIcons === "ordenado" ? "Muestra lo que hay en tu carpeta Escritorio en un panel a la izquierda, por grupos. Clic abre · clic derecho lo muestra en la carpeta."
+                : "Muestra lo que hay en tu carpeta Escritorio, a 32 px y ordenado por tipo. Doble clic abre · clic derecho lo muestra en la carpeta."
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }
         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.ov }

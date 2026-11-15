@@ -63,6 +63,7 @@ ColumnLayout {
     property string palGroup: "todas"
     property string palQuery: ""
     function norm(s) { return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+    onPalShownChanged: palCar.reset()
     readonly property var palShown: palKeys.filter(k => {
         const p = pals[k];
         const g = p.group ?? "";
@@ -287,24 +288,33 @@ ColumnLayout {
                 onPicked: k => root.palGroup = k
             }
             Item { Layout.fillWidth: true }
-            Txt { muted: true; size: 11.5; text: root.palShown.length + " de " + root.palKeys.length }
+            // n de HyprFrijol frente a n del usuario (importados de Omarchy + Mis temas)
+            Txt {
+                readonly property int hf: root.palKeys.filter(k => k in root.basePals).length
+                readonly property int mine: root.palKeys.length - hf
+                muted: true; size: 11.5
+                text: (root.palShown.length < root.palKeys.length - (root.palKeys.filter(k => root.pals[k].group === "propio").length) ? root.palShown.length + " a la vista · " : "")
+                    + hf + " de HyprFrijol" + (mine ? " · " + mine + (mine === 1 ? " tuyo" : " tuyos") : "")
+            }
         }
-        Item {
-            id: palGrid
+        // Sin tope de temas: dos filas que se desplazan en horizontal (ui/HCarousel.qml) si no caben
+        HCarousel {
+            id: palCar
             Layout.fillWidth: true
-            readonly property int cols: Math.max(2, Math.floor((width + 8) / 178))
-            readonly property real cw: (width - (cols - 1) * 8) / cols
-            implicitHeight: palFlow.implicitHeight
-            Flow {
-                id: palFlow
-                width: parent.width
+            Grid {
+                rows: Math.min(2, Math.max(1, root.palShown.length))
+                flow: Grid.TopToBottom
                 spacing: 8
                 Repeater {
                     model: root.palShown
                     PaletteCard {
+                        id: pCard
                         required property string modelData
-                        width: palGrid.cw
+                        width: 170
                         key: modelData
+                        // la elegida, a la vista (al abrir, al filtrar y al elegirla)
+                        onOnChanged: if (on) palCar.reveal(pCard)
+                        Component.onCompleted: if (on) Qt.callLater(() => palCar.reveal(pCard))
                         pals: root.pals
                         current: root.paletteKey
                         themeMode: root.themeMode

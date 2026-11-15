@@ -2,7 +2,7 @@
 // fondo, en la capa inferior (debajo de las ventanas), en columnas desde arriba a la izquierda.
 // Iconos reales del tema (mime / .desktop), miniaturas para imágenes, nombre con sombra suave.
 // Clic: seleccionar · doble clic: abrir (xdg-open) · clic derecho: mostrar en la carpeta.
-// Tamaño: ajuste "deskIconSize" (pequeno / mediano / grande).
+// Siempre a 32 px (como los iconos pequeños de Windows) y por tipo (Desktop.qml sortedFiles).
 import QtQuick
 import QtQuick.Effects
 import Quickshell
@@ -20,10 +20,9 @@ PanelWindow {
     // Hueco a la derecha para los widgets del escritorio (Widgets.qml: 312 + 24)
     readonly property int rightReserve: 0      // (los widgets ya no ocupan la derecha del escritorio)
 
-    readonly property string sizeKey: Settings.get("deskIconSize", "mediano")
-    readonly property int iconSize: sizeKey === "pequeno" ? 40 : sizeKey === "grande" ? 64 : 50
-    readonly property int cellW: iconSize + (sizeKey === "pequeno" ? 44 : 52)
-    readonly property int cellH: iconSize + 50
+    readonly property int iconSize: 32
+    readonly property int cellW: iconSize + 48
+    readonly property int cellH: iconSize + 48
     readonly property int pad: 14
 
     readonly property int rows: Math.max(1, Math.floor((height - pad * 2) / cellH))
@@ -170,7 +169,7 @@ PanelWindow {
                     elide: Text.ElideRight
                     color: "#ffffff"   // sobre el fondo de pantalla, como en cualquier escritorio
                     font.family: Theme.font
-                    font.pixelSize: Theme.px(win.sizeKey === "grande" ? 12.5 : 11.5)
+                    font.pixelSize: Theme.px(11.5)
                     font.weight: Font.DemiBold
                     style: Text.Raised
                     styleColor: Qt.rgba(0, 0, 0, 0.55)

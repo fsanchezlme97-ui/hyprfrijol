@@ -3,6 +3,24 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.18] — 2026-11-15
+
+### Novedades
+- **12 temas nuevos, cada uno en claro y oscuro (24 en total):** Solarized, One, Dracula (de día, Alucard), GitHub y
+  Flexoki con sus colores oficiales; Frijol, Océano, Ámbar y Medianoche (originales); Menta, Durazno y Cielo pastel.
+  Todos con el texto en AA (4,5:1); `dev/coherencia.py` lo comprueba en cada paleta, junto con las parejas.
+- **Sin tope de temas:** la paleta de colores y «Mis temas» se desplazan en horizontal cuando no caben (arrastre,
+  touchpad, flechas a los lados y barra fina; la rueda vertical sigue moviendo la página). La elegida queda a la
+  vista. El contador dice cuántos son de HyprFrijol y cuántos tuyos.
+
+### Cambios
+- **Escritorio ordenado por grupos:** a la izquierda de la pantalla (junto al dock si está ahí).
+- **Iconos clásicos del escritorio:** siempre a 32 px y ordenados por tipo (carpetas, documentos, imágenes, vídeo y
+  audio, otros; dentro, por extensión y nombre). Se quita el ajuste «Tamaño de los iconos».
+
+### Arreglos
+- **Tokyo Night · día:** el texto llega a 4,5:1 (antes lo corregía hf-apply al aplicarla).
+
 ## [0.10.17] — 2026-11-15
 
 ### Cambios

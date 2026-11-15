@@ -130,7 +130,6 @@
   "chargeLimit": 100,
   "deskSort": "tipo",
   "deskIcons": "no",
-  "deskIconSize": "pequeno",
   "deskOrder": {
     "tipo": [
       "Carpetas",

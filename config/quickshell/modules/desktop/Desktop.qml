@@ -1,5 +1,5 @@
 // Escritorio. Ajuste "deskIcons": "todos" (por defecto) = iconos clásicos sobre el fondo en todos los espacios
-// (DeskIcons.qml, capa inferior) · "ordenado" (antes "flotante") = escritorio ordenado por grupos a la derecha ·
+// (DeskIcons.qml, capa inferior) · "ordenado" (antes "flotante") = escritorio ordenado por grupos a la izquierda ·
 // "no". Dock (Dock.qml): donde las ventanas flotan (modo «flotante» de "windowMode", services/WinMode.qml, o la
 // excepción de los ajustes rápidos) y en todos los espacios con "dockInTiling"; "dockBehavior" = fijo / auto /
 // inteligente.
@@ -70,9 +70,11 @@ Scope {
         repeat: true; interval: 4000; triggeredOnStart: true
         onTriggered: scan.running = true
     }
-    // Orden del escritorio clásico: carpetas primero, luego por nombre
-    readonly property var sortedFiles: files.slice().sort((a, b) => (b.dir - a.dir)
-        || a.label.localeCompare(b.label, "es", { numeric: true, sensitivity: "base" }))
+    // Orden del escritorio clásico, siempre por tipo (el orden de los grupos de «Por tipo»: carpetas, documentos,
+    // imágenes, vídeo y audio, otros), luego por extensión y por nombre
+    readonly property var kindOrder: ["dir", "doc", "img", "media", "other"]
+    readonly property var sortedFiles: files.slice().sort((a, b) => (kindOrder.indexOf(kind(a)) - kindOrder.indexOf(kind(b)))
+        || ext(a).localeCompare(ext(b)) || a.label.localeCompare(b.label, "es", { numeric: true, sensitivity: "base" }))
 
     function fileUrl(p: string): string { return "file://" + p.split("/").map(encodeURIComponent).join("/"); }
     // Icono del tema por tipo (nombres freedesktop, del más concreto al genérico)
@@ -272,7 +274,9 @@ Scope {
                 WlrLayershell.namespace: "hf-desk"
                 exclusionMode: ExclusionMode.Normal
                 exclusiveZone: 0
-                anchors { top: true; bottom: true; right: true }
+                anchors { top: true; bottom: true; left: true }
+                // a la izquierda, junto al dock si está ahí y no reserva su franja (como DeskIcons)
+                margins.left: perScreen.dockShown && !perScreen.dockBottom && Settings.get("dockBehavior", "inteligente") !== "fijo" ? 6 + 54 + 4 : 0
                 implicitWidth: 372 + 12
                 mask: Region { item: deskCol }
 
