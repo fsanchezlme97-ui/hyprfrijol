@@ -194,7 +194,7 @@ PanelWindow {
                             anchors.centerIn: parent
                             width: 30; height: 30
                             sourceSize: Qt.size(60, 60)
-                            source: di.modelData.entry?.icon ? Quickshell.iconPath(di.modelData.entry.icon, true) : HyprClients.iconFor(di.modelData.cls)
+                            source: di.modelData.entry?.icon ? HyprClients.entryIcon(di.modelData.entry.icon) : HyprClients.iconFor(di.modelData.cls)
                             visible: status === Image.Ready
                             asynchronous: true
                         }

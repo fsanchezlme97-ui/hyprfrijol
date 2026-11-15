@@ -103,7 +103,7 @@ Scope {
         if (f.dir) return cat(Ctp.forPath(f.n, true));
         if (f.entryIcon) {
             if (f.entryIcon.startsWith("/")) return fileUrl(f.entryIcon);
-            const p = Quickshell.iconPath(f.entryIcon, true);
+            const p = HyprClients.entryIcon(f.entryIcon);
             if (p) return p;
         }
         if (!/\.desktop$/i.test(f.n)) return cat(Ctp.forPath(f.n, false));

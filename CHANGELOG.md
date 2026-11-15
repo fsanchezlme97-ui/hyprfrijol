@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.15] — 2026-11-15
+
+### Arreglos
+- **Iconos de apps con el estilo del tema:** el buscador, el dock y el escritorio usan el icono del tema cuando la app
+  trae el suyo con un nombre en CamelCase (solo en hicolor, sin estilo): Epic Games ya sale con el mismo icono que en
+  la bandeja (Papirus `epic-games`) y no con el escudo blanco.
+
 ## [0.10.14] — 2026-11-15
 
 ### Cambios

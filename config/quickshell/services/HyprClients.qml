@@ -6,7 +6,7 @@ pragma Singleton
 //   HyprClients.monitors  [{ name, id, x, y, width, height, scale, reserved:[l,t,r,b], activeWorkspace:{id} }]
 //   HyprClients.toplevelFor(address) → HyprlandToplevel (para ScreencopyView: .wayland)
 //   HyprClients.usableRect(monitor) → { x, y, w, h } lógico, sin la barra
-//   HyprClients.appName(cls), HyprClients.iconFor(cls), HyprClients.entryFor(cls)
+//   HyprClients.appName(cls), HyprClients.iconFor(cls), HyprClients.entryFor(cls), HyprClients.entryIcon(icono)
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -110,7 +110,20 @@ Singleton {
     }
     function iconFor(cls: string): string {
         const e = entryFor(cls);
-        return e?.icon ? Quickshell.iconPath(e.icon, true) : Quickshell.iconPath(String(cls ?? "").toLowerCase(), true);
+        return e?.icon ? entryIcon(e.icon) : Quickshell.iconPath(String(cls ?? "").toLowerCase(), true);
+    }
+    // Icono de una entrada .desktop. Un nombre en CamelCase (EpicGamesLauncher) lo pone la propia app y suele estar solo
+    // en hicolor (su logo sin el estilo del tema); los temas los nombran en minúsculas con guiones: se prueba antes
+    // epic-games-launcher, epicgameslauncher y epic-games (sin bajar a una sola palabra, que sería otra app)
+    function entryIcon(name: string): string {
+        const n = String(name ?? "");
+        if (/^[A-Za-z0-9]*[a-z0-9][A-Z][A-Za-z0-9]*$/.test(n)) {
+            const t = n.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase().split("-");
+            const pre = t.map((_, i) => t.slice(0, t.length - i).join("-")).filter(x => x.includes("-"));
+            for (const c of [pre[0], n.toLowerCase()].concat(pre.slice(1)))
+                if (Quickshell.hasThemeIcon(c)) return Quickshell.iconPath(c);
+        }
+        return n ? Quickshell.iconPath(n, true) : "";
     }
 
     // Enfocar una ventana desde un panel que tenía el teclado: Hyprland devuelve el foco a la ventana

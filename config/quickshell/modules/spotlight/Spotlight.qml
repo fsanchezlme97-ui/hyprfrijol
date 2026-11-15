@@ -1359,7 +1359,7 @@ Overlay {
         property real size: 24
         property bool selected: false
         readonly property string tone: Cat.CAT_TILE[item.cat] ?? "s4"
-        readonly property string iconSrc: item.appIcon ? Quickshell.iconPath(item.appIcon, true) : ""
+        readonly property string iconSrc: HyprClients.entryIcon(item.appIcon)
         readonly property bool hasImage: (iconSrc !== "" && img.status !== Image.Error) || thumb.status === Image.Ready || catImg.status === Image.Ready
         readonly property bool isColor: item.kind === "clip" && item.clip?.kind === "color"
         implicitWidth: size
