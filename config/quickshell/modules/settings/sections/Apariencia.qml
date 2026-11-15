@@ -344,11 +344,49 @@ ColumnLayout {
         onPicked: (k, mode) => Settings.setMany(mode === "" ? { colorMode: "elegir", palette: k } : { colorMode: "elegir", palette: k, themeMode: mode })
     }
 
-    // Movimiento, ventanas y rendimiento de los efectos: Ajustes › Animaciones y efectos
+    // ---------- Tema en las apps ----------
     Section {
         Layout.fillWidth: true
-        title: "Animaciones y efectos"
-        LinkRow { label: "Movimiento, sombras, resaltado y desenfoque"; section: "animaciones"; sectionLabel: "Animaciones y efectos"; target: "Animaciones" }
+        title: "Tema en las apps"
+        SwRow {
+            separator: false
+            label: "Aplicar el tema a las apps"
+            sub: "Los colores de la paleta y el acento en el terminal, las apps GTK y Qt y btop; cambian al momento"
+            key: "themeApps"; def: false
+        }
+        GridLayout {
+            visible: Settings.get("themeApps", false)
+            Layout.fillWidth: true
+            columns: 2
+            columnSpacing: 24
+            rowSpacing: 0
+            SwRow { Layout.preferredWidth: 1; label: "Terminal (kitty)"; sub: "Esquema completo: 16 colores, selección y pestañas"; key: "themeKitty"; def: true }
+            SwRow { Layout.preferredWidth: 1; label: "Apps GTK y GNOME"; sub: "Nautilus, Loupe, Papers… · libadwaita y GTK 3"; key: "themeGtk"; def: true }
+            SwRow {
+                Layout.preferredWidth: 1
+                label: "Apps Qt"
+                sub: root.qtReady ? "OBS, VLC, qBittorrent… · paleta de qt6ct" : "Falta qt6ct para que las apps Qt lo sigan"
+                key: "themeQt"; def: true
+                trailing: Button {
+                    visible: !root.qtReady
+                    text: "Instalar"
+                    onClicked: { Pkg.install([{ key: "repo", pkg: "qt6ct", name: "qt6ct" }], "Tema de Qt (qt6ct)"); qtCheck.running = true; }
+                }
+            }
+            SwRow { Layout.preferredWidth: 1; label: "btop"; sub: "Tema «hyprfrijol» con los colores de la paleta"; key: "themeBtop"; def: true }
+        }
+        SwRow {
+            label: "Iconos Papirus con carpetas del color de acento"
+            sub: Settings.get("themeIcons", true) ? "Carpetas: " + (root.folderNames[root.folderColor] ?? (root.folderColor || "—")) + " · tema de usuario, sin permisos de administrador" : "No se cambia el tema de iconos"
+            key: "themeIcons"; def: true
+            trailing: Dropdown {
+                visible: Settings.get("themeIcons", true)
+                width: 190
+                model: [["acento", "Según el acento"], ["papirus", "Como Papirus"]].concat(Object.keys(root.folderNames).map(k => [k, root.folderNames[k]]))
+                current: Settings.get("iconFolders", "acento")
+                onPicked: k => Settings.set("iconFolders", k)
+            }
+        }
     }
 
     // ---------- Tipografía ----------
@@ -509,48 +547,10 @@ ColumnLayout {
         Item { implicitHeight: 2 }
         LinkRow { label: "Quitar efectos en juegos"; value: Settings.get("gameNoFx", true) ? "Activado" : "Desactivado"; section: "animaciones"; sectionLabel: "Animaciones y efectos" }
     }
-    // ---------- Tema en las apps ----------
+    // Movimiento, ventanas y rendimiento de los efectos: Ajustes › Animaciones y efectos
     Section {
         Layout.fillWidth: true
-        title: "Tema en las apps"
-        SwRow {
-            separator: false
-            label: "Aplicar el tema a las apps"
-            sub: "Los colores de la paleta y el acento en el terminal, las apps GTK y Qt y btop; cambian al momento"
-            key: "themeApps"; def: false
-        }
-        GridLayout {
-            visible: Settings.get("themeApps", false)
-            Layout.fillWidth: true
-            columns: 2
-            columnSpacing: 24
-            rowSpacing: 0
-            SwRow { Layout.preferredWidth: 1; label: "Terminal (kitty)"; sub: "Esquema completo: 16 colores, selección y pestañas"; key: "themeKitty"; def: true }
-            SwRow { Layout.preferredWidth: 1; label: "Apps GTK y GNOME"; sub: "Nautilus, Loupe, Papers… · libadwaita y GTK 3"; key: "themeGtk"; def: true }
-            SwRow {
-                Layout.preferredWidth: 1
-                label: "Apps Qt"
-                sub: root.qtReady ? "OBS, VLC, qBittorrent… · paleta de qt6ct" : "Falta qt6ct para que las apps Qt lo sigan"
-                key: "themeQt"; def: true
-                trailing: Button {
-                    visible: !root.qtReady
-                    text: "Instalar"
-                    onClicked: { Pkg.install([{ key: "repo", pkg: "qt6ct", name: "qt6ct" }], "Tema de Qt (qt6ct)"); qtCheck.running = true; }
-                }
-            }
-            SwRow { Layout.preferredWidth: 1; label: "btop"; sub: "Tema «hyprfrijol» con los colores de la paleta"; key: "themeBtop"; def: true }
-        }
-        SwRow {
-            label: "Iconos Papirus con carpetas del color de acento"
-            sub: Settings.get("themeIcons", true) ? "Carpetas: " + (root.folderNames[root.folderColor] ?? (root.folderColor || "—")) + " · tema de usuario, sin permisos de administrador" : "No se cambia el tema de iconos"
-            key: "themeIcons"; def: true
-            trailing: Dropdown {
-                visible: Settings.get("themeIcons", true)
-                width: 190
-                model: [["acento", "Según el acento"], ["papirus", "Como Papirus"]].concat(Object.keys(root.folderNames).map(k => [k, root.folderNames[k]]))
-                current: Settings.get("iconFolders", "acento")
-                onPicked: k => Settings.set("iconFolders", k)
-            }
-        }
+        title: "Animaciones y efectos"
+        LinkRow { label: "Movimiento, sombras, resaltado y desenfoque"; section: "animaciones"; sectionLabel: "Animaciones y efectos"; target: "Animaciones" }
     }
 }

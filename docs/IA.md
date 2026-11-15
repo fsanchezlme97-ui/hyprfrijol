@@ -100,12 +100,13 @@ local primero** (`aiVoiceLocal`) es al revés: la voz pregunta a Ollama y la nub
 ### IA que ya tienes instalada
 
 `hf-ai clis` busca en el `PATH` las IA de terminal (Ajustes › Asistente de IA › Proveedor y permisos › **IA ya
-instalada en este equipo**): `claude` (proveedor `claude-code`), `ollama` (proveedor `ollama`) y Codex CLI, Gemini CLI,
-Qwen Code y `llm` (proveedor `cli`, con `aiCli` = su id). Cada una se elige de principal o de respaldo con un clic.
-Las del proveedor `cli` reciben un turno con el prompt entero por la entrada estándar (nunca en los argumentos, que
-se ven en `/proc`; sin imágenes: van por OCR), en modo no interactivo, sin aprobar herramientas y en una carpeta
-temporal vacía; responden con tu cuenta de esa CLI. opencode y Cursor Agent no están: en modo no interactivo
-ejecutan órdenes y editan archivos sin preguntar, y el contexto puede traer texto de fuera (portapapeles, OCR).
+instalada en este equipo**): `claude` (proveedor `claude-code`, con `--tools ""`), `ollama` (proveedor `ollama`) y
+`llm` (proveedor `cli`, `aiCli` = `llm`). Cada una se elige de principal o de respaldo con un clic. `llm` recibe la
+conversación por la entrada estándar (nunca en los argumentos, que se ven en `/proc`) en una carpeta temporal vacía.
+Solo entran IA que no pueden leer archivos, ejecutar órdenes ni salir a la web por su cuenta, porque el contexto puede
+traer texto de fuera (portapapeles, OCR). Fuera, según su documentación: Codex CLI (en solo lectura lee archivos y
+busca en la web de serie), Gemini CLI (lee archivos sin preguntar y no tiene cómo apagar todas sus herramientas), Qwen
+Code (su modo por defecto sin interacción no está claro) y opencode y Cursor Agent (ejecutan órdenes y editan).
 
 Pruebas del 2026-11-12 en una RX 6600 XT (8 GB) con 18 órdenes de voz reales (el prompt de verdad de `hf-ai`,
 temperatura 0). La mediana es el tiempo hasta tener el plan, con el modelo ya cargado; la primera carga son 4-6 s.

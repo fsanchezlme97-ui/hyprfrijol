@@ -195,23 +195,6 @@ ColumnLayout {
 
     Section {
         Layout.fillWidth: true
-        title: "Espacios de trabajo"
-        headerRight: Mono { text: "Super + 1 … 9" }
-        LabeledRow {
-            label: "Numeración"
-            labelWidth: 150
-            Seg {
-                model: WsLabel.styles.map(s => [s[0], s[1] + "  " + [1, 2, 3].map(n => WsLabel.numeral(n, s[0])).join(" ")])
-                current: WsLabel.style
-                onPicked: k => Settings.set("wsNumerals", k)
-            }
-        }
-        SwRow { label: "Mostrar siempre los 9"; sub: "si no, solo los espacios con ventanas y el activo"; key: "wsShowAll"; def: true }
-        SwRow { label: "Espacios por pantalla"; sub: "con varias pantallas, cada una tiene sus espacios del 1 al 10 y Super + número va a los de la pantalla activa"; key: "wsPerMonitor"; def: true }
-    }
-
-    Section {
-        Layout.fillWidth: true
         title: "Dock"
         headerRight: Mono { text: root.winMode === "flotante" || Settings.get("dockInTiling", false) ? "en todos los espacios" : "solo en espacios flotantes" }
         LabeledRow {
@@ -251,6 +234,23 @@ ColumnLayout {
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
             text: "Clic: ir a la app · clic en la app activa: minimizarla · clic en una minimizada: traerla al espacio actual · clic central: nueva ventana · clic derecho: maximizar, minimizar, cerrar y fijar."
         }
+    }
+
+    Section {
+        Layout.fillWidth: true
+        title: "Espacios de trabajo"
+        headerRight: Mono { text: "Super + 1 … 9" }
+        LabeledRow {
+            label: "Numeración"
+            labelWidth: 150
+            Seg {
+                model: WsLabel.styles.map(s => [s[0], s[1] + "  " + [1, 2, 3].map(n => WsLabel.numeral(n, s[0])).join(" ")])
+                current: WsLabel.style
+                onPicked: k => Settings.set("wsNumerals", k)
+            }
+        }
+        SwRow { label: "Mostrar siempre los 9"; sub: "si no, solo los espacios con ventanas y el activo"; key: "wsShowAll"; def: true }
+        SwRow { label: "Espacios por pantalla"; sub: "con varias pantallas, cada una tiene sus espacios del 1 al 10 y Super + número va a los de la pantalla activa"; key: "wsPerMonitor"; def: true }
     }
 
     // Nombres e iconos de los espacios 1–10 (wsNames, wsIcons, wsBarNames) · ui/WsNames.qml

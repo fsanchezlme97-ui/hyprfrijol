@@ -106,6 +106,46 @@ ColumnLayout {
     }
     Section {
         Layout.fillWidth: true
+        title: "Tamaño"
+        headerRight: Mono { text: Settings.barSize + " px · contenido ×" + Settings.barScale.toFixed(2) }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 16
+            Pills {
+                Layout.fillWidth: true
+                model: [[26, "Mini"], [30, "Compacta"], [34, "Normal"], [40, "Grande"], [46, "Muy grande"], [54, "Enorme"]]
+                current: Settings.barSize
+                onPicked: v => Confirm.change("Tamaño de la barra", { barHeight: v })
+            }
+            Stepper { label: "Ajuste fino"; unit: " px"; from: 24; to: 56; step: 2; value: Settings.barSize; onStepped: v => Confirm.change("Tamaño de la barra", { barHeight: v }) }
+        }
+        Txt {
+            Layout.fillWidth: true
+            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+            text: "Iconos, textos y la onda de audio crecen con la barra. Los paneles se abren siempre junto a ella."
+        }
+    }
+    Section {
+        Layout.fillWidth: true
+        title: "Módulos visibles"
+        Flow {
+            Layout.fillWidth: true
+            spacing: 8
+            Repeater {
+                model: [["espacios", "Espacios"], ["titulo", "Título o tareas"], ["musica", "Música"], ["red", "Red"], ["bateria", "Batería"], ["notificaciones", "Notificaciones"], ["reloj", "Reloj"]]
+                Chip {
+                    required property var modelData
+                    readonly property var list: Settings.barModuleList
+                    text: modelData[1]
+                    on: list.includes(modelData[0])
+                    onClicked: Settings.set("barModules", on ? list.filter(x => x !== modelData[0]) : list.concat([modelData[0]]))
+                }
+            }
+        }
+        LinkRow { label: "Clima, sistema, pomodoro, asistente y demás widgets"; section: "barwidgets"; sectionLabel: "Widgets de la barra"; target: "Distribución" }
+    }
+    Section {
+        Layout.fillWidth: true
         title: "Comportamiento"
         LabeledRow {
             label: "Mostrar la barra"; labelWidth: 120
@@ -148,46 +188,6 @@ ColumnLayout {
         SwRow { label: "Barra en las pantallas nuevas"; sub: "sencilla al conectar otra pantalla; si no, sin barra hasta que la elijas"; key: "barAllScreens"; def: true }
         SwRow { label: "Transparente en espacios vacíos"; sub: "la barra se funde con el fondo si no hay ventanas"; key: "barTransparentEmpty" }
         SwRow { label: "Barra viva"; sub: "el icono del clima se mueve con el tiempo que hace y el anillo del pomodoro late al final; quietos en pantalla completa y en modo juego"; key: "barLive"; def: true }
-    }
-    Section {
-        Layout.fillWidth: true
-        title: "Tamaño"
-        headerRight: Mono { text: Settings.barSize + " px · contenido ×" + Settings.barScale.toFixed(2) }
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 16
-            Pills {
-                Layout.fillWidth: true
-                model: [[26, "Mini"], [30, "Compacta"], [34, "Normal"], [40, "Grande"], [46, "Muy grande"], [54, "Enorme"]]
-                current: Settings.barSize
-                onPicked: v => Confirm.change("Tamaño de la barra", { barHeight: v })
-            }
-            Stepper { label: "Ajuste fino"; unit: " px"; from: 24; to: 56; step: 2; value: Settings.barSize; onStepped: v => Confirm.change("Tamaño de la barra", { barHeight: v }) }
-        }
-        Txt {
-            Layout.fillWidth: true
-            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-            text: "Iconos, textos y la onda de audio crecen con la barra. Los paneles se abren siempre junto a ella."
-        }
-    }
-    Section {
-        Layout.fillWidth: true
-        title: "Módulos visibles"
-        Flow {
-            Layout.fillWidth: true
-            spacing: 8
-            Repeater {
-                model: [["espacios", "Espacios"], ["titulo", "Título o tareas"], ["musica", "Música"], ["red", "Red"], ["bateria", "Batería"], ["notificaciones", "Notificaciones"], ["reloj", "Reloj"]]
-                Chip {
-                    required property var modelData
-                    readonly property var list: Settings.barModuleList
-                    text: modelData[1]
-                    on: list.includes(modelData[0])
-                    onClicked: Settings.set("barModules", on ? list.filter(x => x !== modelData[0]) : list.concat([modelData[0]]))
-                }
-            }
-        }
-        LinkRow { label: "Clima, sistema, pomodoro, asistente y demás widgets"; section: "barwidgets"; sectionLabel: "Widgets de la barra"; target: "Distribución" }
     }
     // Bandeja del sistema (bar/Tray.qml): barTray · barTrayMax · barTrayHidden (ids que van al «›»)
     Section {
@@ -233,6 +233,31 @@ ColumnLayout {
     }
     Section {
         Layout.fillWidth: true
+        title: "Indicadores de volumen y brillo"
+        headerRight: Mono { tech: true; text: "OSD · volumen · brillo · Bloq Mayús · micrófono" }
+        LabeledRow {
+            label: "Posición"; labelWidth: 80
+            Seg {
+                model: [["abajo", "Abajo"], ["arriba", "Arriba"], ["centro", "Centro"], ["izquierda", "Izquierda"], ["derecha", "Derecha"], ["inf-der", "Abajo dcha."], ["sup-der", "Arriba dcha."]]
+                current: Settings.get("osdPos", "abajo")
+                onPicked: k => Settings.set("osdPos", k)
+            }
+        }
+        LabeledRow {
+            label: "Distancia"; labelWidth: 80
+            Pills {
+                model: [[4, "4 px"], [8, "8 px"], [14, "14 px"], [24, "24 px"], [48, "48 px"], [96, "96 px"]]
+                current: Settings.get("osdOffset", 14)
+                onPicked: v => Settings.set("osdOffset", v)
+            }
+        }
+        RowLayout {
+            Item { Layout.fillWidth: true }
+            Button { text: "Probar"; onClicked: Quickshell.execDetached(["qs", "-p", Paths.root + "/config/quickshell", "ipc", "call", "osd", "popup", "volumen"]) }
+        }
+    }
+    Section {
+        Layout.fillWidth: true
         title: "Onda de audio"
         headerRight: Sw { checked: Settings.barHas("musica"); onToggled: v => { const l = Settings.barModuleList.filter(m => m !== "musica"); if (v) l.push("musica"); Settings.set("barModules", l); } }
         LabeledRow {
@@ -261,31 +286,6 @@ ColumnLayout {
                     Txt { text: parent.modelData[1]; size: 11.5 }
                 }
             }
-        }
-    }
-    Section {
-        Layout.fillWidth: true
-        title: "Indicadores de volumen y brillo"
-        headerRight: Mono { tech: true; text: "OSD · volumen · brillo · Bloq Mayús · micrófono" }
-        LabeledRow {
-            label: "Posición"; labelWidth: 80
-            Seg {
-                model: [["abajo", "Abajo"], ["arriba", "Arriba"], ["centro", "Centro"], ["izquierda", "Izquierda"], ["derecha", "Derecha"], ["inf-der", "Abajo dcha."], ["sup-der", "Arriba dcha."]]
-                current: Settings.get("osdPos", "abajo")
-                onPicked: k => Settings.set("osdPos", k)
-            }
-        }
-        LabeledRow {
-            label: "Distancia"; labelWidth: 80
-            Pills {
-                model: [[4, "4 px"], [8, "8 px"], [14, "14 px"], [24, "24 px"], [48, "48 px"], [96, "96 px"]]
-                current: Settings.get("osdOffset", 14)
-                onPicked: v => Settings.set("osdOffset", v)
-            }
-        }
-        RowLayout {
-            Item { Layout.fillWidth: true }
-            Button { text: "Probar"; onClicked: Quickshell.execDetached(["qs", "-p", Paths.root + "/config/quickshell", "ipc", "call", "osd", "popup", "volumen"]) }
         }
     }
 }

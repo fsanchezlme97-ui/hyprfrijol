@@ -3,6 +3,30 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.24] — 2026-11-15
+
+### Cambios (Ajustes reordenados)
+Misma regla en cada pantalla: lo de uso diario y el estado primero, luego el aspecto, luego el comportamiento, lo
+avanzado al final y los enlaces a otras pantallas los últimos. Ningún ajuste cambia de nombre ni de pantalla.
+- **Apariencia:** Fondo y estilo · Paleta · Mis temas · **Tema en las apps** (sube) · Tipografía · Redondeo ·
+  Espacios y escala · **Animaciones y efectos** (enlace, al final).
+- **Barra:** Posición · **Tamaño** · **Módulos visibles** · Comportamiento · Bandeja · Indicadores de volumen y brillo
+  · Onda de audio.
+- **Escritorio y gestos:** en «Escritorio», el **Dock** primero y luego Espacios de trabajo y sus nombres.
+- **Asistente de IA › Proveedor y permisos:** **Voz y conversación** antes de Personalidad.
+- **Energía:** Estado de la batería y Tapa y botón de encendido antes que Efectos y Memoria.
+- **Sistema:** Actualizaciones · Respaldo · Tus ajustes · Kernel (al final).
+
+### Arreglos (Asistente de IA)
+- **El respaldo rápido también en el dictado, las recetas y el resumen de avisos:** antes esperaban 120 s al
+  principal; ahora lo que digas en «Saltar al respaldo» (el dictado sigue con el texto tal cual si no llega).
+- **El asistente conoce los 36 temas** (antes solo 12): la lista sale de `palettes.json`.
+- **IA ya instalada: solo las que no pueden leer tus archivos ni salir a la web por su cuenta** (Claude Code, Ollama,
+  llm). Codex CLI, Gemini CLI y Qwen Code no se ofrecen: según su documentación leen archivos o buscan en la web sin
+  preguntar en modo no interactivo, y el contexto puede traer texto de fuera.
+- **Barra de título (modo Clásico):** se anima solo tras maximizar, flotar o cambiar de espacio; al mover la ventana
+  con Super + arrastrar va directa, sin quedarse detrás.
+
 ## [0.10.23] — 2026-11-15
 
 ### Novedades (transiciones)
@@ -38,7 +62,7 @@ antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X
 - **La voz dice lo que pasó:** si respondió el respaldo, Helpert empieza con «Gemini no respondió a tiempo; te
   contesto con el modelo local.»
 - **IA ya instalada en este equipo:** Ajustes › Asistente de IA › Proveedor y permisos lista las IA de terminal que
-  tienes (Claude Code, Ollama, Codex CLI, Gemini CLI, Qwen Code, llm) y cada una se elige de
+  tienes (Claude Code, Ollama, llm; ver 0.10.24) y cada una se elige de
   principal o de respaldo con un clic. Las nuevas responden por la terminal, sin herramientas y en una carpeta vacía.
 
 ## [0.10.19] — 2026-11-15

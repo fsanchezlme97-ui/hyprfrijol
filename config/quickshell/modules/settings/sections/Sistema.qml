@@ -171,20 +171,6 @@ RowLayout {
         spacing: 12
         Section {
             Layout.fillWidth: true
-            title: "Kernel"
-            headerRight: Mono { tech: true; text: "uname -r → " + root.running }
-            // Solo informa: el kernel se elige en el menú de arranque, no aquí
-            Txt { visible: root.kernels.length > 0; text: "Instalados: " + root.kernels.join(" · "); muted: true; size: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-            SwRow {
-                visible: Pkg.family === "arch"
-                label: "Mantener un kernel LTS de respaldo"; sub: "aparece como opción en el arranque"
-                checked: root.kernels.some(k => /lts/.test(k))
-                enabled: !root.kernels.some(k => /lts/.test(k))
-                onToggled: v => { if (v) Pkg.runInTerminal("sudo pacman -S --needed " + (root.kernels.some(k => /cachyos/.test(k)) ? "linux-cachyos-lts linux-cachyos-lts-headers" : "linux-lts linux-lts-headers"), "Kernel LTS"); }
-            }
-        }
-        Section {
-            Layout.fillWidth: true
             title: "Actualizaciones"
             Seg {
                 Layout.fillWidth: true
@@ -298,6 +284,20 @@ RowLayout {
                 text: SettingsIO.msg
                 size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
                 color: SettingsIO.bad ? Theme.danger : Theme.tv
+            }
+        }
+        Section {
+            Layout.fillWidth: true
+            title: "Kernel"
+            headerRight: Mono { tech: true; text: "uname -r → " + root.running }
+            // Solo informa: el kernel se elige en el menú de arranque, no aquí
+            Txt { visible: root.kernels.length > 0; text: "Instalados: " + root.kernels.join(" · "); muted: true; size: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+            SwRow {
+                visible: Pkg.family === "arch"
+                label: "Mantener un kernel LTS de respaldo"; sub: "aparece como opción en el arranque"
+                checked: root.kernels.some(k => /lts/.test(k))
+                enabled: !root.kernels.some(k => /lts/.test(k))
+                onToggled: v => { if (v) Pkg.runInTerminal("sudo pacman -S --needed " + (root.kernels.some(k => /cachyos/.test(k)) ? "linux-cachyos-lts linux-cachyos-lts-headers" : "linux-lts linux-lts-headers"), "Kernel LTS"); }
             }
         }
         Section {

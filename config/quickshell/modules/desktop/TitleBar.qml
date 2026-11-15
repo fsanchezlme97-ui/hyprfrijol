@@ -66,11 +66,18 @@ PanelWindow {
     // Maximizar, flotar o encajar: se pregunta ya (no al siguiente sondeo), para que la barra salga a la vez que la
     // ventana empieza a animarse y no ~200 ms después
     Timer { id: pollSoon; interval: 30; onTriggered: root.poll() }
+    // Solo se anima tras esos eventos (Hyprland anima la ventana): moverla con Super + arrastrar o redimensionarla va
+    // al instante, y una barra animada se quedaría detrás dando tirones con cada sondeo
+    property bool animating: false
+    Timer { id: animEnd; interval: Theme.durWin + 300; onTriggered: root.animating = false }
     Connections {
         target: Hyprland
         enabled: root.addr !== "" && !drag.active
         function onRawEvent(ev) {
-            if (["fullscreen", "changefloatingmode", "movewindowv2"].includes(ev.name)) { Hyprland.refreshToplevels(); pollSoon.restart(); }
+            if (["fullscreen", "changefloatingmode", "movewindowv2"].includes(ev.name)) {
+                Hyprland.refreshToplevels(); pollSoon.restart();
+                root.animating = true; animEnd.restart();
+            }
         }
     }
 
@@ -122,9 +129,9 @@ PanelWindow {
         height: root.full ? WinMode.titleH : 26
         // Hyprland da la geometría final al momento y anima la ventana hasta ella (maximizar, encajar, cambiar de
         // modo): la barra la sigue con su misma duración y curva. Al arrastrar, o al pasar a otra ventana, va directa.
-        Behavior on x { enabled: root.glide && !drag.active; NumberAnimation { duration: Theme.durWin; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeWin } }
-        Behavior on y { enabled: root.glide && !drag.active; NumberAnimation { duration: Theme.durWin; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeWin } }
-        Behavior on width { enabled: root.glide && !drag.active; NumberAnimation { duration: Theme.durWin; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeWin } }
+        Behavior on x { enabled: root.glide && root.animating && !drag.active; NumberAnimation { duration: Theme.durWin; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeWin } }
+        Behavior on y { enabled: root.glide && root.animating && !drag.active; NumberAnimation { duration: Theme.durWin; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeWin } }
+        Behavior on width { enabled: root.glide && root.animating && !drag.active; NumberAnimation { duration: Theme.durWin; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeWin } }
         radius: root.full ? 10 : Theme.ctl(26)
         bottomLeftRadius: root.full ? 0 : radius
         bottomRightRadius: root.full ? 0 : radius

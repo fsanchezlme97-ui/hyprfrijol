@@ -222,18 +222,37 @@ RowLayout {
     Layout.alignment: Qt.AlignTop
     spacing: 12
     Section {
+        visible: root.bat.present === true
         Layout.fillWidth: true
-        title: "Efectos y rendimiento"
-        LinkRow { label: "Calidad del desenfoque, efectos en juegos y con batería"; section: "animaciones"; sectionLabel: "Animaciones y efectos"; target: "Desenfoque y rendimiento" }
-        SwRow { label: "Pantalla de carga al entrar"; sub: "el frijolito y una barrita si el fondo y la barra tardan en cargar"; key: "startSplash"; def: true }
-    }
-    Section {
-        Layout.fillWidth: true
-        title: "Memoria del escritorio"
-        SwRow {
-            label: "Cargar los paneles al abrirlos"
-            sub: "Spotlight, centro de control, vista general… solo ocupan memoria mientras se usan. Apágalo solo para depurar"
-            key: "lazyModules"; def: true
+        title: "Estado de la batería"
+        headerRight: Mono { text: root.bat.name ?? "" }
+        Kv { k: "Salud"; v: root.bat.health > 0 ? Math.round(root.bat.health) + " % de la capacidad original" : "—" }
+        Kv { k: "Ciclos de carga"; v: root.bat.cycles > 0 ? String(root.bat.cycles) : "—" }
+        Kv { k: "Capacidad"; v: root.bat.full > 0 ? (root.bat.full / 1e6).toFixed(1) + " / " + (root.bat.design / 1e6).toFixed(1) + (root.bat.unit === "energy" ? " Wh" : " Ah") : "—" }
+        Kv { k: "Fabricante y modelo"; v: [root.bat.vendor, root.bat.model].filter(Boolean).join(" ") || "—"; bold: false }
+        // Historial diario de la salud (BatteryLog.qml)
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: 4
+            Txt { Layout.fillWidth: true; text: "Salud en el tiempo"; weight: Font.Medium }
+            Txt {
+                visible: root.healthHist.length > 1
+                muted: true; size: 11.5; tabular: true
+                text: root.healthHist.length > 1 ? Math.round(root.healthHist[0].health) + " % → " + Math.round(root.healthHist[root.healthHist.length - 1].health) + " % · " + root.histSpan : ""
+            }
+        }
+        Sparkline {
+            visible: root.healthHist.length > 1
+            Layout.fillWidth: true
+            implicitHeight: 56
+            values: root.healthHist.map(e => e.health)
+            min: Math.max(0, Math.floor(Math.min(...values) / 5) * 5 - 5)
+            max: Math.min(105, Math.ceil(Math.max(...values) / 5) * 5 + 1)
+        }
+        Txt {
+            Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
+            text: root.healthHist.length > 1 ? "Un dato al día · ~/.local/state/hyprfrijol/battery-history.json"
+                : "El historial se irá llenando: se guarda un dato al día mientras el shell está abierto."
         }
     }
     Section {
@@ -280,37 +299,18 @@ RowLayout {
         }
     }
     Section {
-        visible: root.bat.present === true
         Layout.fillWidth: true
-        title: "Estado de la batería"
-        headerRight: Mono { text: root.bat.name ?? "" }
-        Kv { k: "Salud"; v: root.bat.health > 0 ? Math.round(root.bat.health) + " % de la capacidad original" : "—" }
-        Kv { k: "Ciclos de carga"; v: root.bat.cycles > 0 ? String(root.bat.cycles) : "—" }
-        Kv { k: "Capacidad"; v: root.bat.full > 0 ? (root.bat.full / 1e6).toFixed(1) + " / " + (root.bat.design / 1e6).toFixed(1) + (root.bat.unit === "energy" ? " Wh" : " Ah") : "—" }
-        Kv { k: "Fabricante y modelo"; v: [root.bat.vendor, root.bat.model].filter(Boolean).join(" ") || "—"; bold: false }
-        // Historial diario de la salud (BatteryLog.qml)
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.topMargin: 4
-            Txt { Layout.fillWidth: true; text: "Salud en el tiempo"; weight: Font.Medium }
-            Txt {
-                visible: root.healthHist.length > 1
-                muted: true; size: 11.5; tabular: true
-                text: root.healthHist.length > 1 ? Math.round(root.healthHist[0].health) + " % → " + Math.round(root.healthHist[root.healthHist.length - 1].health) + " % · " + root.histSpan : ""
-            }
-        }
-        Sparkline {
-            visible: root.healthHist.length > 1
-            Layout.fillWidth: true
-            implicitHeight: 56
-            values: root.healthHist.map(e => e.health)
-            min: Math.max(0, Math.floor(Math.min(...values) / 5) * 5 - 5)
-            max: Math.min(105, Math.ceil(Math.max(...values) / 5) * 5 + 1)
-        }
-        Txt {
-            Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
-            text: root.healthHist.length > 1 ? "Un dato al día · ~/.local/state/hyprfrijol/battery-history.json"
-                : "El historial se irá llenando: se guarda un dato al día mientras el shell está abierto."
+        title: "Efectos y rendimiento"
+        LinkRow { label: "Calidad del desenfoque, efectos en juegos y con batería"; section: "animaciones"; sectionLabel: "Animaciones y efectos"; target: "Desenfoque y rendimiento" }
+        SwRow { label: "Pantalla de carga al entrar"; sub: "el frijolito y una barrita si el fondo y la barra tardan en cargar"; key: "startSplash"; def: true }
+    }
+    Section {
+        Layout.fillWidth: true
+        title: "Memoria del escritorio"
+        SwRow {
+            label: "Cargar los paneles al abrirlos"
+            sub: "Spotlight, centro de control, vista general… solo ocupan memoria mientras se usan. Apágalo solo para depurar"
+            key: "lazyModules"; def: true
         }
     }
     }

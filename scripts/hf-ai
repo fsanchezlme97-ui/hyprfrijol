@@ -28,7 +28,7 @@
   hf-ai peek                 captura interna para el modo compañero (Ajustes › IA): {"path"} en
                              ~/.cache/hyprfrijol/capturas_tmp_ai (las 20 últimas, 24 h como mucho) o {"skip": motivo}
   hf-ai status               proveedor y disponibilidad
-  hf-ai clis                 IA de terminal instaladas (claude, ollama, codex, gemini, qwen, llm) → {"clis": [{id, name, provider, path}]}
+  hf-ai clis                 IA de terminal instaladas que se pueden usar sin herramientas (claude, ollama, llm) → {"clis": [{id, name, provider, path}]}
   hf-ai mcp list | check <id> | call <id> <herramienta> '<json>'   servidores MCP del usuario (aiMcpServers):
                              la lista con sus herramientas, comprobar uno (lee y guarda sus herramientas) o probar una
   hf-ai chat --print-request '<json>'   no llama al modelo: imprime la petición que enviaría (sin la clave)
@@ -206,7 +206,7 @@ def settable(k, d=None):
 
 SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden: puedes encadenar varios pasos):
 - {"type":"set","key":K,"value":V}  ajustes del escritorio. Claves principales: transparencia (true|false),
-  colorMode (auto|elegir|mono), palette (grafito|oxocarbon|ciruela|rosa|catppuccin-mocha|rose-pine|nord|tokyo-night|gruvbox|everforest|kanagawa|lila;
+  colorMode (auto|elegir|mono), palette (@PALETTES@;
   implica colorMode "elegir"), themeMode (oscuro|claro|auto), animPreset (fluido|equilibrado|cinematico|rapido|minimalista|minimo|ninguno),
   shadows (ninguna|suaves|marcadas), activeBorder (sutil|color|brillo|ninguno), barPos (abajo|arriba|izquierda),
   barMode (fija|flotante), animado, reduceTransparency, reduceMotion, nightLight, clock24 (bool), gapsIn (0-30),
@@ -359,6 +359,14 @@ def system_prompt_base(s=None):
         "Para comandos de terminal útiles añade AL FINAL un bloque\n```hf-actions\n[{\"type\":\"run\",\"command\":\"…\"}]\n```\n"
         "que solo se ejecuta si el usuario lo confirma." + FORMAT_DOC + ("\n\n" + read if read else ""))
 
+def palette_keys():
+    """Los temas de config/themes/palettes.json, uno por pareja (el oscuro; el claro sale con themeMode)."""
+    try:
+        pals = json.loads((ROOT / "config/themes/palettes.json").read_text())
+        return "|".join(k for k, v in pals.items() if v.get("pair") and not v.get("light")) or "grafito"
+    except (OSError, ValueError):
+        return "grafito"
+SCHEMA_DOC = SCHEMA_DOC.replace("@PALETTES@", palette_keys())
 SYSTEM = SYSTEM_BASE + SCHEMA_DOC   # compatibilidad (hf-mcp y otros)
 
 def _app_name(a):
@@ -2475,15 +2483,13 @@ def claude_code_live(cmd, prompt, stream):
 
 # IA de terminal ya instaladas (Ajustes › Asistente de IA › En este equipo; hf-ai clis). claude y ollama tienen su
 # proveedor; las demás van por el proveedor "cli" (aiCli = su id): un turno con el prompt entero, sin sesión propia.
-# El contexto puede traer texto de fuera (portapapeles, OCR, webs): solo CLI que en modo no interactivo no ejecutan
-# órdenes ni escriben archivos (Codex con --sandbox read-only; Gemini CLI y Qwen Code sin --yolo dejan fuera las
-# herramientas que piden aprobación; llm no tiene). opencode y Cursor Agent sí las ejecutan solos: fuera.
-# shortcut: solo Claude Code y Ollama se han probado aquí; las órdenes de las otras siguen su documentación. Si una
-# cambia de opciones, ajustar cli_argv.
+# El contexto puede traer texto de fuera (portapapeles, OCR, webs): solo IA que no pueden leer archivos, ejecutar
+# órdenes ni salir a la web por su cuenta (Claude Code va con --tools ""; llm no tiene herramientas si no se le dan).
+# Fuera, verificado en su documentación (2026-11-15): Codex CLI (en solo lectura lee archivos y busca en la web de
+# serie), Gemini CLI (lee archivos sin preguntar; nada para apagar todas sus herramientas), Qwen Code (su modo por
+# defecto sin interacción no está claro) y opencode y Cursor Agent (ejecutan órdenes y editan sin preguntar).
 LOCAL_CLIS = [  # id, nombre, binario, proveedor
-    ("claude", "Claude Code", "claude", "claude-code"), ("ollama", "Ollama", "ollama", "ollama"),
-    ("codex", "Codex CLI", "codex", "cli"), ("gemini", "Gemini CLI", "gemini", "cli"), ("qwen", "Qwen Code", "qwen", "cli"),
-    ("llm", "llm", "llm", "cli")]
+    ("claude", "Claude Code", "claude", "claude-code"), ("ollama", "Ollama", "ollama", "ollama"), ("llm", "llm", "llm", "cli")]
 
 def local_clis():
     return [{"id": i, "name": n, "provider": p, "path": shutil.which(b)} for i, n, b, p in LOCAL_CLIS if shutil.which(b)]
@@ -2494,10 +2500,7 @@ def cli_name(cid):
 def cli_argv(cid, exe, system, prompt, model):
     """(órdenes, entrada estándar). La conversación va siempre por la entrada estándar: en los argumentos cualquier
     proceso la leería en /proc/<pid>/cmdline."""
-    full, m = system + "\n\n" + prompt, (["-m", model] if model else [])
-    go = "Sigue las instrucciones y responde al último mensaje del usuario del texto de arriba."
-    return {"codex": [exe, "exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never", *m, "-"],
-            "gemini": [exe, *m, "-p", go], "qwen": [exe, *m, "-p", go], "llm": [exe, *m]}.get(cid), full
+    return {"llm": [exe, *(["-m", model] if model else [])]}.get(cid), system + "\n\n" + prompt
 
 def call_cli(system, messages, ctx_text, s):
     cid = str(s.get("aiCli") or "")
@@ -3666,6 +3669,8 @@ def dictation_fix(text, vocab="", before=""):
     fn = PROVIDERS.get(prov)
     if prov == "off" or not fn:
         raise AIError("El asistente está desactivado")
+    global WAIT
+    WAIT = fallback_wait(s0)      # si tarda, el dictado sigue con el texto tal cual (no hay respaldo que esperar)
     instr = DICTFIX_PROMPT
     vocab = re.sub(r"\s+", " ", str(vocab or "")).strip()[:600]
     before = re.sub(r"\s+", " ", str(before or "")).strip()[-300:]
@@ -3688,12 +3693,15 @@ def transform_text(instr, text):
     fn = PROVIDERS.get(prov)
     if prov == "off" or not fn:
         raise AIError("El asistente está desactivado")
+    global WAIT
+    WAIT = fallback_wait(s0) if fallback_for(s0, prov)[0] else None   # con respaldo, no los 120 s de serie
     try:
         return (fn(instr, [{"role": "user", "text": text}], "", s) or "").strip()
     except AIError:
         fb, sfb = fallback_for(s0, prov)
         if not fb:
             raise
+        WAIT = None
         return (PROVIDERS[fb](instr, [{"role": "user", "text": text}], "", sfb) or "").strip()
 
 DIGEST_PROMPT = ("Estos son avisos (notificaciones) del escritorio que llegaron mientras el usuario no miraba. Resúmelos "
@@ -3729,12 +3737,15 @@ def digest(items, local_only=False):
     prov, s = provider_for(s0, "quick")
     s["_temp"] = 0.2
     msgs = [{"role": "user", "text": text}]
+    global WAIT
+    WAIT = fallback_wait(s0) if fallback_for(s0, prov)[0] else None   # con respaldo, no los 120 s de serie
     try:
         out, used = (PROVIDERS[prov](DIGEST_PROMPT, msgs, "", s) or "").strip(), prov
     except (AIError, KeyError) as e:
         fb, sfb = fallback_for(s0, prov)
         if not fb or (local_only and fb != "ollama"):
             return {"text": "", "local": False, "error": str(e)[:200]}
+        WAIT = None
         try:
             out, used = (PROVIDERS[fb](DIGEST_PROMPT, msgs, "", sfb) or "").strip(), fb
         except AIError as e2:
