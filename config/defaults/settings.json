@@ -424,6 +424,8 @@
   "alarms": [],
   "bongoSleep": false,
   "dimInactive": false,
+  "wineTweaks": true,
+  "protonWayland": false,
   "dragSnap": true,
   "floatRemember": true,
   "lazyModules": true,

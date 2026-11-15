@@ -433,6 +433,9 @@ Singleton {
             if (ev.name === "configreloaded") { Qt.callLater(root.reapplyRules); return; }
             if (ev.name !== "openwindow") return;
             const [addr, wsName, cls] = ev.data.split(",");
+            // Juegos y apps de Windows: ajustes de su prefijo de Wine para Hyprland (scripts/hf-wine, una vez por prefijo)
+            if (Settings.get("wineTweaks", true) !== false && /^(steam_proton|steam_app_\d+|.*\.exe)$/i.test(cls ?? ""))
+                Quickshell.execDetached([Paths.script("hf-wine"), "fix", "0x" + addr]);
             const ws = parseInt(wsName);
             if (!(ws > 0)) return;
             const want = root.isFloat(ws), base = root.baseFloat(ws, root.mode);

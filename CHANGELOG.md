@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.11] — 2026-11-15
+
+### Novedades
+- **Ajustes › Aplicaciones › Juegos de Windows:**
+  - **Ajustar Wine para Hyprland** (activado): la primera vez que se abre un juego o app de Wine / Proton se ajusta su
+    prefijo para que no salga la bandeja flotante de Wine (una ventanita con el icono de la app) ni una franja vacía
+    arriba que descuadraba los clics. Cuenta desde el siguiente arranque de cada juego.
+  - **Wayland nativo en los juegos de Epic** (experimental, apagado): Wine dibuja directamente en Wayland, sin X11.
+    Hay que cerrar Epic del todo y volver a abrirlo.
+- **gamescope** (paquete opcional) sigue siendo la forma de usar el «Modo juego (Steam)»; en Steam también vale como
+  opción de lanzamiento por juego: `gamescope -f -- %command%`.
+
 ## [0.10.10] — 2026-11-15
 
 ### Arreglos

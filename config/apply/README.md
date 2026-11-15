@@ -24,6 +24,6 @@ Una extensión rota solo deja un comentario `-- x.py: error …`, no rompe el re
 | `16-gtk.py` | themeApps (+ themeGtk) → colores de libadwaita (gtk-adw.css) y gsettings color-scheme / accent-color / gtk-theme |
 | `70-plugins.py` | plugins {id: {on, …}} → opciones de los plugins de hyprpm activados (catálogo en config/tools/plugins.json), con guarda si no están cargados |
 | `85-idle.py` | idleDim, idleLock, idleScreenOff, idleSuspend, lockOnSuspend → hypridle.conf (no devuelve Lua) |
-| `90-files.py` | efectos fuera de Hyprland: reduce-motion, gtk.css (themeApps + themeGtk), cursor grande |
+| `90-files.py` | efectos fuera de Hyprland: reduce-motion, gtk.css (themeApps + themeGtk), cursor grande, protonWayland (copia del lanzador de Epic con `PROTON_ENABLE_WAYLAND=1`) |
 
 Probar: `scripts/hf-apply --no-reload && Hyprland --verify-config --config config/hypr/hyprland.lua`

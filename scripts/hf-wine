@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""hf-wine — Wine / Proton a gusto de Hyprland.
+
+  hf-wine fix <dirección|pid>   ajustes del prefijo de esa ventana (o proceso) de Wine, una vez por prefijo:
+      HKCU\\Software\\Wine\\Explorer   ShowSystray = 0   sin la bandeja flotante de Wine (no hay bandeja de X11;
+                                                       salía una ventanita de 160×20 con el icono de la app)
+      HKCU\\Software\\Wine\\X11 Driver Decorated = N     Hyprland no pone marco a las ventanas de X11: Wine ya no
+                                                       reserva la barra de título (franja en blanco y clics movidos)
+  Valen desde el siguiente arranque del juego. Lo llama el shell (services/WinMode.qml) al abrirse una ventana de
+  Wine / Proton si wineTweaks está activado (Ajustes › Aplicaciones › Juegos de Windows).
+
+Solo toca el WINEPREFIX del propio proceso y si ya existe (nunca crea ~/.wine) y usa el wine de ese mismo proceso
+(el mismo wineserver). Si algo falla (p. ej. el Proton de Steam dentro de su contenedor) no hace nada.
+"""
+import json, os, pathlib, subprocess, sys, time
+
+STATE = pathlib.Path(os.environ.get("XDG_STATE_HOME") or pathlib.Path.home() / ".local/state") / "hyprfrijol"
+DONE = STATE / "wine-fixed"
+KEYS = [(r"HKCU\Software\Wine\Explorer", "ShowSystray", "REG_DWORD", "0"),
+        (r"HKCU\Software\Wine\X11 Driver", "Decorated", "REG_SZ", "N")]
+
+
+def pid_of(target):
+    if target.isdigit():
+        return int(target)
+    for _ in range(10):                              # la ventana recién abierta puede tardar en salir en hyprctl
+        try:
+            cl = json.loads(subprocess.run(["hyprctl", "clients", "-j"], capture_output=True, text=True, timeout=5).stdout)
+        except Exception:
+            cl = []
+        for c in cl:
+            if c.get("address") == target:
+                return c.get("pid")
+        time.sleep(0.3)
+    return None
+
+
+def env_of(pid):
+    try:
+        raw = pathlib.Path(f"/proc/{pid}/environ").read_bytes()
+    except OSError:
+        return {}
+    # solo lo que hace falta: el entorno de un juego puede llevar credenciales del lanzador
+    return {k: v for k, _, v in (x.decode(errors="replace").partition("=") for x in raw.split(b"\0") if x)
+            if k == "WINEPREFIX"}
+
+
+def fix(target):
+    pid = pid_of(target)
+    if not pid:
+        return 0
+    pfx = env_of(pid).get("WINEPREFIX", "").rstrip("/")
+    if not pfx or not (pathlib.Path(pfx) / "user.reg").is_file():
+        return 0
+    done = DONE.read_text().splitlines() if DONE.exists() else []
+    if pfx in done:
+        return 0
+    try:
+        bindir = pathlib.Path(os.readlink(f"/proc/{pid}/exe")).parent
+    except OSError:
+        return 0
+    wine = next((bindir / n for n in ("wine", "wine64") if (bindir / n).is_file()), None)
+    if not wine:
+        return 0
+    env = dict(os.environ, WINEPREFIX=pfx, WINEDEBUG="-all")
+    for key, name, kind, value in KEYS:
+        try:
+            r = subprocess.run([str(wine), "reg", "add", key, "/v", name, "/t", kind, "/d", value, "/f"],
+                               env=env, capture_output=True, timeout=30)
+        except Exception:
+            return 0
+        if r.returncode != 0:
+            return 0
+    STATE.mkdir(parents=True, exist_ok=True)
+    with DONE.open("a") as f:
+        f.write(pfx + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "fix":
+        sys.exit(fix(sys.argv[2]))
+    print(__doc__.strip(), file=sys.stderr)
+    sys.exit(2)

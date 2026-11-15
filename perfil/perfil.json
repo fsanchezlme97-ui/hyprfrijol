@@ -43,6 +43,7 @@
   "fonts-mono",
   "fonts-noto",
   "fs-drivers",
+  "gamescope",
   "git",
   "glib-tools",
   "greetd",
@@ -118,11 +119,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.10.9-1-gf60fdc3",
+ "hyprfrijol": "v0.10.10-1-g845b93d",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-15 14:41",
+ "saved": "2026-11-15 14:58",
  "services": [
   "ufw",
   "cups.socket",
@@ -266,6 +267,7 @@
   "pipMargin": 4,
   "pipOpacity": 1,
   "pipSize": "pequeno",
+  "protonWayland": true,
   "rounding": 4,
   "roundingShape": "auto",
   "roundness": "sobrio",

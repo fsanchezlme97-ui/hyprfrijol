@@ -2,6 +2,7 @@
 #  · reduceMotion → ~/.local/state/hyprfrijol/reduce-motion (lo lee hf-wallpaper)
 #  · themeApps    → importa los colores en GTK 3/4 (themeGtk; línea marcada, se quita al desactivarlo)
 #  · bigCursor    → XCURSOR_SIZE/HYPRCURSOR_SIZE (hl.env) — devuelve líneas
+#  · protonWayland → copia del lanzador de Epic con PROTON_ENABLE_WAYLAND=1 (Wine en Wayland nativo para sus juegos)
 import pathlib
 
 HOME = pathlib.Path.home()
@@ -84,7 +85,40 @@ def _view_desktops():
         except Exception:
             pass
 
+EPIC = "epic-games-launcher.desktop"
+PW_MARK = "X-HF-ProtonWayland=true"
+
+def _proton_wayland(on):
+    """Copia de usuario del lanzador de Epic que arranca con PROTON_ENABLE_WAYLAND=1. Un hl.env no llegaría: el shell
+    lanza las apps con su propio entorno. Se rehace desde la del sistema en cada hf-apply y se borra al desactivarlo;
+    una copia que no es nuestra (sin la marca) no se toca."""
+    user = HOME / ".local/share/applications" / EPIC
+    try:
+        mine = user.exists() and PW_MARK in user.read_text(errors="replace")
+        src = next((d / EPIC for d in (pathlib.Path("/usr/share/applications"), pathlib.Path("/usr/local/share/applications"))
+                    if (d / EPIC).is_file()), None)
+        if not on or not src:
+            if mine:
+                user.unlink()
+            return
+        if user.exists() and not mine:
+            return
+        out = []
+        for l in src.read_text(errors="replace").splitlines():
+            if l.startswith("Exec=") and "PROTON_ENABLE_WAYLAND" not in l:
+                l = "Exec=env PROTON_ENABLE_WAYLAND=1 " + l[5:]
+            out.append(l)
+            if l.strip() == "[Desktop Entry]":
+                out.append(PW_MARK)
+        text = "\n".join(out) + "\n"
+        if not user.exists() or user.read_text(errors="replace") != text:
+            user.parent.mkdir(parents=True, exist_ok=True)
+            user.write_text(text)
+    except Exception:
+        pass
+
 def hypr_lua(s, c):
+    _proton_wayland(s.get("protonWayland") is True)
     _firmar_desktop()
     _tareas_desktop()
     _view_desktops()

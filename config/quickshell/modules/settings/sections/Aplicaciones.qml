@@ -77,6 +77,23 @@ ColumnLayout {
         }
     }
 
+    // ---------- juegos de Windows (Wine / Proton) ----------
+    // wineTweaks: scripts/hf-wine (lo lanza services/WinMode.qml) · protonWayland: config/apply/90-files.py (copia del
+    // lanzador de Epic con PROTON_ENABLE_WAYLAND=1). gamescope (Modo juego) es un paquete opcional de install/packages.tsv.
+    Section {
+        Layout.fillWidth: true
+        title: "Juegos de Windows"
+        headerRight: Mono { text: "Wine · Proton" }
+        SwRow {
+            label: "Ajustar Wine para Hyprland"; key: "wineTweaks"; def: true
+            sub: "sin la bandeja flotante de Wine ni la franja de título vacía; vale desde el siguiente arranque de cada juego"
+        }
+        SwRow {
+            label: "Wayland nativo en los juegos de Epic"; key: "protonWayland"; def: false
+            sub: "sin pasar por X11 (experimental); cierra Epic del todo y vuelve a abrirlo para que cuente"
+        }
+    }
+
     // ---------- fuentes de software ----------
     Section {
         Layout.fillWidth: true
