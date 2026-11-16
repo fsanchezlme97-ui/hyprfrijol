@@ -316,6 +316,20 @@ def can_read(s=None):
 
 PERSONA_MAX = 2000
 
+# Por voz whisper escribe el nombre como le suena («Jarper», «járper», «har per»…): se corrige antes de que llegue al
+# modelo. Solo palabras completas: «harpa» o «arpegio» no se tocan.
+NAME_RE = re.compile(r"\b[hj]?[aá]r ?pe(?:r)?\b", re.I)
+
+def norm_name(text):
+    return NAME_RE.sub("Harper", text) if isinstance(text, str) else text
+
+def _selftest_name():
+    assert norm_name("Jarper, pon la barra arriba") == "Harper, pon la barra arriba"
+    assert norm_name("oye járper qué hora es") == "oye Harper qué hora es"
+    assert norm_name("jar per abre ajustes") == "Harper abre ajustes"
+    assert norm_name("harper") == "Harper"
+    assert norm_name("toca la harpa") == "toca la harpa" and norm_name("un arpegio") == "un arpegio"
+
 def persona_doc(s=None):
     """Ajustes › IA › Personalidad: nombre (aiName) e instrucciones propias (aiPersona). Se AÑADEN al prompt base;
     la IA no puede cambiarlas (DENY_KEYS ^ai[A-Z])."""
@@ -325,7 +339,7 @@ def persona_doc(s=None):
     out = []
     if name:
         out.append(f"Te llamas «{name}». Si te preguntan tu nombre, ese es; si el usuario empieza con «{name}, …», "
-                   "te está hablando a ti.")
+                   "te está hablando a ti. Por voz tu nombre puede llegar mal escrito.")
     if pers:
         out.append("Instrucciones del usuario sobre tu personalidad y tu manera de hablar (tono, idioma, largo de las "
                    "respuestas, trato…). Síguelas, salvo en las reglas de acciones, permisos y formato de arriba, que "
@@ -3386,6 +3400,9 @@ def do_chat(req, print_request=False):
     if not fn:
         return {"error": f"Proveedor desconocido: {prov}"}
     ctx = req.get("context") or {}
+    for m in req.get("messages") or [] if (s0.get("aiName") or "").strip() == "Harper" else []:
+        if isinstance(m, dict) and m.get("role") == "user":
+            m["text"] = norm_name(m.get("text"))
     info = ctx.get("windowInfo") or {}
     cap = attached_image(ctx)
     msgs0, nimg = message_images(list(req.get("messages") or []), ctx, s)
@@ -4136,6 +4153,7 @@ def main(argv):
         _selftest_redact()
         _selftest_handoff()
         _selftest_reply()
+        _selftest_name()
         out = {"ok": True}
     elif cmd == "undo":
         out = do_undo(arg)
