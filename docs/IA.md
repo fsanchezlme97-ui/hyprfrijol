@@ -216,6 +216,14 @@ Harper puede señalar y usar lo que se ve en la pantalla, siempre con tu permiso
    numerado, y la lista con «número: texto (x,y)». Responde con el número (`"mark"`). Para lo que no tiene texto (iconos)
    da `"x","y"` de 0 a 1000 sobre la captura.
    - Solo valen números de un análisis hecho en esa misma petición (`UI_SEEN`).
+   - **Sin elegir a ciegas.** Si el elemento tiene gemelos (el mismo texto en otra fila: dos correos de «Juan Pérez»),
+     `hf-screen resolve` mira lo que pediste (`HINT`, tu último mensaje). Si una palabra tuya está en la fila de uno solo
+     («lo de la cena»), o dices «el último» o «el primero», elige ese, y la tarjeta enseña su fila entera («Juan Pérez ·
+     Cena viernes»). Si no, el plan se para: los candidatos salen numerados en la pantalla y en el panel («¿Cuál?», un
+     botón por cada uno). Lo decide el código, no el modelo. El pendiente se guarda 5 min en
+     `~/.cache/hyprfrijol/ai-choice.json`. «el 2», «el segundo», «el de la factura» o el botón lo completan sin volver a
+     preguntar al modelo; cualquier otro mensaje lo descarta. El modelo no puede marcar un paso como ya elegido
+     (`picked` y `choices` se quitan de lo que escribe), y `do_apply` nunca aplica un paso que espera elección.
    - Si el modelo propone un clic sin haber mirado, se le enseña la pantalla y vuelve a proponer.
 3. **Cursor fantasma y resaltado** (Ghost Cursor, Visual Overlay). En cuanto se propone el plan, una flecha morada sale
    de tu cursor hasta el sitio, con el elemento resaltado y un bocadillo («Clic: Guardar»). La dibuja

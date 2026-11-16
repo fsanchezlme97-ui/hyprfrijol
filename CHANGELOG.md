@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.30] — 2026-11-16
+
+### Cambios (Asistente de IA)
+- **Harper ya no elige a ciegas en la pantalla.** Si lo que va a pulsar aparece más de una vez (dos correos de la misma
+  persona), te pregunta «¿Cuál?». Numera los candidatos en la pantalla y en el panel, con el resto de su fila
+  («Juan Pérez · Factura noviembre»). Contestas con el botón, con «el 2» o con «el de la factura». Si tu mensaje ya
+  lo dejaba claro («responde a Juan lo de la cena», «el último»), elige ese sin preguntar y la tarjeta dice cuál.
+
+### Seguridad (Asistente de IA)
+- **Archivos más protegidos:** Harper no lee, enseña ni abre nada oculto (carpetas y archivos que empiezan por punto,
+  como `.config` o `.env`) ni archivos con nombre de credencial (`id_rsa`, `*.kdbx`, `*.pem`, `*.key`…).
+- **Abrir un archivo pide confirmación** y solo abre documentos, imágenes, audio, vídeo y texto (nada de HTML, SVG ni
+  ofimática con macros). Enseñarlo en su carpeta sigue sin preguntar.
+
 ## [0.10.29] — 2026-11-16
 
 ### Novedades (Asistente de IA)

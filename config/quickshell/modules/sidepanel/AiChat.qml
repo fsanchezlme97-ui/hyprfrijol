@@ -333,7 +333,8 @@ Item {
                         actions: r.actions ?? [], labels: r.labels ?? [], plan: r.plan ?? [],
                         // filtro de secretos de hf-ai: se avisa cuántos datos sensibles no salieron del equipo
                         steps: (r.steps ?? []).concat(r.redacted ? [(r.redacted === 1 ? "Se ocultó 1 dato sensible" : "Se ocultaron " + r.redacted + " datos sensibles") + " del contexto"] : []),
-                        code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto, model: r.model ?? "" });
+                        code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto, model: r.model ?? "",
+                        choices: r.choices ?? [] });
             // Se aplica ya, con Deshacer: sin confirmación (Ajustes › IA), todo «aprobado siempre» (aiAlwaysApprove) o, en la
             // conversación por voz, si todo se puede deshacer (abrir apps y webs, música, ajustes…). Lo que no tiene vuelta
             // atrás (cerrar ventanas, borrar avisos, comandos) pregunta «¿Lo hago?» y se contesta hablando (Dictado.qml);
@@ -1045,6 +1046,22 @@ print(json.dumps(out[:300]))
                                     visible: !msg.mine && !msg.modelData.error && (msg.modelData.text ?? "") !== ""
                                     Layout.fillWidth: true
                                     text: visible ? (msg.modelData.text ?? "") : ""
+                                }
+                                // «¿Cuál?» (hf-ai ask_choice): un botón por sitio posible, con los mismos números que se
+                                // ven en la pantalla; elegir sigue el plan con ese (también vale escribir «el 2»)
+                                Flow {
+                                    visible: (msg.modelData.choices?.length ?? 0) > 0
+                                    Layout.fillWidth: true
+                                    spacing: 6
+                                    Repeater {
+                                        model: msg.modelData.choices ?? []
+                                        SmallBtn {
+                                            required property var modelData
+                                            readonly property string lab: String(modelData.label ?? "")
+                                            text: modelData.n + " · " + (lab.length > 38 ? lab.slice(0, 38) + "…" : lab)
+                                            onClicked: { root.patch(msg.index, { choices: [] }); root.ask("el " + modelData.n); }
+                                        }
+                                    }
                                 }
                                 Text {
                                     id: body

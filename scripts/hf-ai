@@ -149,6 +149,7 @@ POINTER_OPS = {"click": "Clic", "double": "Doble clic", "right": "Clic derecho",
                "type": "Escribir", "key": "Pulsar", "scroll": "Desplazar"}
 QUERY_IMAGES = []                         # capturas que trae una consulta («ui»): van al modelo con visión en la ronda siguiente
 UI_SEEN = []                              # análisis «ui» hechos en ESTA petición: solo sus números de elemento valen
+HINT = [""]                               # lo último que pidió el usuario: hf-screen elige con ello entre elementos gemelos
 # Solo frases claras de usar la pantalla (cada coincidencia sube una captura): lo demás lo pide el modelo si hace falta
 SCREEN_INTENT = re.compile(r"\b(haz(me)? (un )?(doble )?clic|dale (un )?clic|clica|cliquea|(pulsa|presiona|toca) (en|sobre) |"
                            r"(pulsa|presiona) (el|la) (boton|enlace|casilla|pestana|icono)|escribe (en|dentro de) (el|la|ese|esa|este|esta) "
@@ -442,6 +443,12 @@ def _app_name(a):
 
 # ---- archivos (acción «file» y consulta «read_file»): solo la carpeta personal y las unidades montadas
 FILE_DENY = (".ssh", ".gnupg", ".config/hyprfrijol/secrets", ".local/share/keyrings", ".password-store")
+FILE_SECRET = re.compile(r"(?i)^(id_[a-z0-9]+(\.pub)?|.*\.(kdbx|kdb|pem|key|p12|pfx|gpg|asc|keystore|jks|ovpn)|"
+                         r"credentials?(\..*)?|secrets?(\..*)?|.*token.*\.(json|txt))$")
+# «open» solo abre lo que es para leer o ver: documentos, imágenes, audio, vídeo y texto (lista blanca por tipo MIME)
+OPEN_MIME = re.compile(r"^(text/|image/|audio/|video/|application/(pdf|epub\+zip|rtf|json|vnd\.oasis\.opendocument\.|"
+                       r"vnd\.openxmlformats-officedocument\.|msword|vnd\.ms-excel|vnd\.ms-powerpoint))")
+OPEN_MIME_NO = re.compile(r"html|svg|[/+]xml$|javascript|x-sh|x-python|x-perl|x-ruby|macroenabled", re.I)
 FILE_NO_OPEN = {".desktop", ".sh", ".bash", ".zsh", ".fish", ".py", ".pl", ".rb", ".appimage", ".run", ".bin", ".exe",
                 ".bat", ".cmd", ".msi", ".jar", ".deb", ".rpm", ".flatpakref", ".command"}
 
@@ -509,8 +516,16 @@ def file_ok(path, op="reveal"):
     rel = rp.relative_to(root).as_posix() if rp != root else ""
     if any(rel == d or rel.startswith(d + "/") for d in FILE_DENY):
         return None
-    if op == "open" and (rp.is_dir() or rp.suffix.lower() in FILE_NO_OPEN or os.access(rp, os.X_OK)):
+    # nada oculto (.config, .env, .mozilla…: ahí viven claves y sesiones) ni con nombre de credencial
+    if any(part.startswith(".") for part in pathlib.PurePosixPath(rel).parts) or FILE_SECRET.search(rp.name):
         return None
+    if op == "open":
+        if rp.is_dir() or rp.suffix.lower() in FILE_NO_OPEN or os.access(rp, os.X_OK):
+            return None
+        import mimetypes
+        mime = mimetypes.guess_type(rp.name)[0] or ""
+        if not (OPEN_MIME.match(mime) and not OPEN_MIME_NO.search(mime)):
+            return None
     return str(rp)
 
 def _selftest_files():
@@ -534,6 +549,18 @@ def _selftest_files():
         assert file_ok(h / "tool", "open") is None and file_ok(h / "tool", "reveal")
         assert file_ok(h / "run.sh", "open") is None and file_ok(h / "app.desktop", "open") is None
         assert file_ok(h, "open") is None
+        for bad in (".env", "id_rsa", "banco.kdbx", "server.pem", "credentials.json", "pagina.html", "dibujo.svg",
+                    "macro.docm", "x.unknownext"):
+            (h / bad).write_text("x")
+            assert file_ok(h / bad, "open") is None, bad
+        for bad in (".env", "id_rsa", "banco.kdbx"):
+            assert file_ok(h / bad, "reveal") is None, bad
+        (h / ".config").mkdir()
+        (h / ".config/notas.txt").write_text("x")
+        assert file_ok(h / ".config/notas.txt") is None
+        for good in ("foto.jpg", "nota.txt", "hoja.xlsx", "libro.epub", "cancion.mp3"):
+            (h / good).write_text("x")
+            assert file_ok(h / good, "open"), good
         (h / "proyecto").mkdir()
         (h / "proyecto/README.md").write_text("x")
         (h / "otro").mkdir()
@@ -550,7 +577,8 @@ def _selftest_files():
         assert validate([{"type": "file", "path": str(h / "doc.pdf")}])[0]["op"] == "open"
         assert validate([{"type": "file", "path": str(h)}])[0]["op"] == "reveal"
         assert label({"type": "file", "op": "reveal", "path": "/x/doc.pdf"}) == "Abrir la carpeta de doc.pdf"
-        assert meta({"type": "file", "op": "open", "path": "/x/doc.pdf"})["confirm"] is False
+        assert meta({"type": "file", "op": "open", "path": "/x/doc.pdf"})["confirm"] is True
+        assert meta({"type": "file", "op": "reveal", "path": "/x/doc.pdf"})["confirm"] is False
         assert run_query({"type": "read_file", "path": str(h / ".ssh/id_ed25519")}, {}, {})[1].startswith("No puedo")
     finally:
         HOME = old
@@ -755,7 +783,7 @@ def meta(a):
         or (t == "media" and a.get("value") == "stop") or (t == "device" and a.get("op") in ("eject", "eject-all")) \
         or (t == "download_ctl" and a.get("op") == "cancel") or t in ("youtube", "browser", "mcp", "pointer", "file")
     # abrir webs, reproducir música y las teclas del navegador no piden confirmación (salvo cerrar la pestaña)
-    quiet = t in ("url", "youtube", "file") or (t == "browser" and a.get("op") != "close-tab")
+    quiet = t in ("url", "youtube") or (t == "file" and a.get("op") == "reveal") or (t == "browser" and a.get("op") != "close-tab")
     if t == "mcp":                       # se confirma siempre (se le mandan datos a un servidor de fuera)
         ro = (mcp_tool(str(a.get("server") or ""), str(a.get("tool") or "")) or {}).get("readOnly")
         return {"label": label(a), "undo": False, "confirm": True, "kind": approve_kind(a), "preview": preview(a),
@@ -932,7 +960,8 @@ def validate(actions):
                     continue
                 ok.append(a)
             elif t == "pointer" and a.get("op") in POINTER_OPS and settings().get("aiScreenControl", True) is not False:
-                a = {k: a[k] for k in ("type", "op", "mark", "x", "y", "at", "box", "t", "text", "keys", "value", "amount", "label") if k in a}
+                a = {k: a[k] for k in ("type", "op", "mark", "x", "y", "at", "box", "t", "text", "keys", "value", "amount", "label",
+                                       "picked", "choices") if k in a}
                 # sin posición (escribir o teclas en la ventana activa) no hay nada que nombrar: nada del modelo
                 a["label"] = str(a.get("label") or "")[:60] if "at" in a else ""
                 if a["op"] == "type":
@@ -954,7 +983,7 @@ def validate(actions):
                     a["label"] = ""          # lo pone hf-screen con lo que se lee ahí, no el modelo
                     if not UI_SEEN:          # números de otra captura (o inventados): no se acepta sin mirar antes
                         continue
-                    r = json.loads(run([str(ROOT / "scripts/hf-screen"), "resolve", json.dumps(a)], timeout=10) or "{}")
+                    r = json.loads(run([str(ROOT / "scripts/hf-screen"), "resolve", json.dumps(a), HINT[0]], timeout=10) or "{}")
                     if not r.get("ok"):
                         continue
                     a = r["action"]
@@ -1433,7 +1462,7 @@ def undo_record(r):
 def do_apply(actions, record=True):
     if not allowed()[0]:
         return {"error": "Controlar el shell está desactivado en Ajustes › IA", "undo": None, "labels": []}
-    actions = [a for a in validate(actions) if a.get("type") != "run"]
+    actions = [a for a in validate(actions) if a.get("type") != "run" and not a.get("choices")]
     before = snapshot() if record else None
     # los ajustes van juntos (un solo hf-apply); el resto, en el orden del plan
     changes = {a["key"]: a["value"] for a in actions if a["type"] == "set"}
@@ -3487,15 +3516,15 @@ def actions_json(body):
 
 def parse_reply(raw, s=None):
     shell, term = allowed(s)
-    actions, code = [], ""
+    actions = []
     # Las formas sueltas (un objeto, uno por línea) solo en un bloque hf-actions; en un ```json``` cualquiera (un ejemplo,
     # texto copiado de una web) solo vale la lista de siempre, para que un JSON de muestra no se vuelva un plan
     m = re.search(r"```(?:hf-actions|hl-actions)\s*(.*?)\s*```", raw, re.S) or re.search(r"```json\s*(\[.*?\])\s*```", raw, re.S)
     if m:
         asked = actions_json(m.group(1))
         # las coordenadas resueltas («at») solo las pone hf-screen con un análisis de esta petición, nunca el modelo
-        asked = [{k: v for k, v in a.items() if k not in ("at", "box", "t")} if isinstance(a, dict) and a.get("type") == "pointer" else a
-                 for a in (asked or [])]
+        asked = [{k: v for k, v in a.items() if k not in ("at", "box", "t", "picked", "choices")}
+                 if isinstance(a, dict) and a.get("type") == "pointer" else a for a in (asked or [])]
         actions = validate(asked)
         raw = (raw[:m.start()] + raw[m.end():]).strip()
         if asked and not actions:   # no quedó ninguna (p. ej. una app que no está): no anunciar pasos que no hay
@@ -3504,19 +3533,114 @@ def parse_reply(raw, s=None):
             raw = why if not raw or raw.rstrip().endswith(":") else f"{raw} {why}"
     raw = re.sub(r"```hf-query.*?```", "", raw, flags=re.S).strip()
     raw = re.sub(r"!\[[^\]]*\]\([^)]*marcada\.png\)\s*", "", raw).strip()   # la captura numerada que algún modelo repite
+    if (ask := ask_choice(actions)):    # varios sitios posibles (dos correos de la misma persona): «¿cuál?»
+        return ask
     runs = [a for a in actions if a["type"] == "run"] if term else []
     actions = [a for a in actions if a["type"] != "run"] if shell else []
-    if runs:
-        code = "\n".join(a["command"] for a in runs)
+    return plan_out(raw, actions, s, "\n".join(a["command"] for a in runs))
+
+def plan_out(text, actions, s=None, code=""):
+    """La respuesta con su plan, para el panel (tarjeta, «aprobar siempre», cursor fantasma en el primer clic)."""
     plan = [meta(a) for a in actions]
     first = next((a for a in actions if a["type"] == "pointer" and "at" in a), None)
     if first:                            # el cursor fantasma enseña dónde actuará mientras esperas para decir sí o no
         subprocess.Popen([str(ROOT / "scripts/hf-screen"), "do", json.dumps(dict(first, op="point"), ensure_ascii=False)],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     always = set((s or settings()).get("aiAlwaysApprove") or [])
-    return {"text": raw.strip(), "actions": actions, "labels": [p["label"] for p in plan], "plan": plan,
+    return {"text": text.strip(), "actions": actions, "labels": [p["label"] for p in plan], "plan": plan,
             "confirm": any(p["confirm"] for p in plan), "code": code, "error": None,
             "auto": bool(plan) and all(p["kind"] in always and not p["confirm"] for p in plan)}
+
+# ---- «¿cuál?»: un paso de pantalla con gemelos (hf-screen resolve → "choices") espera a que el usuario elija
+CHOICE = HOME / ".cache/hyprfrijol/ai-choice.json"
+CHOICE_TTL = 300
+NUM_WORDS = {"uno": 1, "primero": 1, "primera": 1, "dos": 2, "segundo": 2, "segunda": 2, "tres": 3, "tercero": 3,
+             "tercera": 3, "cuatro": 4, "cuarto": 4, "cuarta": 4, "cinco": 5, "quinto": 5, "quinta": 5}
+
+def _fold(text):
+    import unicodedata
+    t = unicodedata.normalize("NFD", str(text).lower())
+    return " ".join(re.findall(r"\w+", "".join(c for c in t if not unicodedata.combining(c))))
+
+def ask_choice(actions):
+    """Si un paso trae "choices", guarda el plan, numera los candidatos en pantalla y devuelve la pregunta."""
+    i = next((k for k, a in enumerate(actions) if a.get("type") == "pointer" and a.get("choices")), None)
+    if i is None:
+        return None
+    a = actions[i]
+    cands = []
+    for c in a["choices"][:9]:
+        x, y, w, h = (int(v) for v in c["box"])
+        cands.append({**{k: v for k, v in a.items() if k != "choices"}, "at": [x + w // 2, y + h // 2], "box": [x, y, w, h],
+                      "label": str(c.get("row") or a.get("label") or "")[:60], "picked": True})
+    old = os.umask(0o077)
+    try:
+        CHOICE.parent.mkdir(parents=True, exist_ok=True)
+        CHOICE.write_text(json.dumps({"t": time.time(), "actions": actions, "i": i, "cands": cands}, ensure_ascii=False))
+    finally:
+        os.umask(old)
+    qs_call("puntero", "marks", json.dumps([{"n": k + 1, "x": c["box"][0], "y": c["box"][1], "w": c["box"][2], "h": c["box"][3]}
+                                            for k, c in enumerate(cands)]), "20000")
+    rows = "\n".join(f"{k + 1}. {c['label']}" for k, c in enumerate(cands))
+    return {"text": f"Hay {len(cands)} sitios que encajan. ¿Cuál?\n\n{rows}", "actions": [], "labels": [], "plan": [],
+            "confirm": False, "code": "", "error": None, "auto": False,
+            "choices": [{"n": k + 1, "label": c["label"]} for k, c in enumerate(cands)]}
+
+def pick_choice(text):
+    """La respuesta a «¿cuál?» («el 2», «el segundo», «el de la cena», «el último») → el plan con ese paso, o None.
+    El pendiente se borra en cuanto llega otro mensaje, se entienda o no."""
+    try:
+        d = json.loads(CHOICE.read_text())
+    except (OSError, ValueError):
+        return None
+    CHOICE.unlink(missing_ok=True)
+    if time.time() - float(d.get("t") or 0) > CHOICE_TTL:
+        return None
+    cands, h = d["cands"], _fold(text)
+    if len(h.split()) > 12:              # una frase larga es otra petición, no la respuesta
+        return None
+    n = next((int(w) for w in h.split() if w.isdigit()), None) or next((NUM_WORDS[w] for w in h.split() if w in NUM_WORDS), None)
+    if n is None and re.search(r"\b(ultimo|ultima|de abajo)\b", h):
+        n = len(cands)
+    if n is None:
+        shared = set(_fold(cands[0]["label"]).split()) & set(_fold(cands[-1]["label"]).split())
+        for w in (w for w in h.split() if len(w) >= 4 and w not in shared):
+            hit = [k for k, c in enumerate(cands) if w in _fold(c["label"]).split()]
+            if len(hit) == 1:
+                n = hit[0] + 1
+                break
+    if not n or not 1 <= n <= len(cands):
+        return None
+    acts = d["actions"]
+    return acts[:d["i"]] + [cands[n - 1]] + acts[d["i"] + 1:]
+
+def _selftest_choice():
+    global CHOICE
+    import tempfile
+    old, CHOICE = CHOICE, pathlib.Path(tempfile.mkdtemp()) / "c.json"
+    real_qs = globals()["qs_call"]
+    globals()["qs_call"] = lambda *a: None
+    try:
+        a = {"type": "pointer", "op": "click", "label": "Juan Pérez", "at": [50, 107], "box": [10, 100, 80, 14], "t": time.time(),
+             "choices": [{"n": 1, "row": "Juan Pérez · Factura noviembre", "box": [10, 100, 80, 14]},
+                         {"n": 3, "row": "Juan Perez · Cena viernes", "box": [10, 200, 80, 14]}]}
+        r = ask_choice([a, {"type": "pointer", "op": "key", "keys": "r"}])
+        assert r["actions"] == [] and [c["n"] for c in r["choices"]] == [1, 2] and "¿Cuál?" in r["text"], r
+        got = pick_choice("el 2")
+        assert got[0]["at"] == [50, 207] and got[0]["picked"] and "choices" not in got[0] and got[1]["keys"] == "r", got
+        assert pick_choice("el 2") is None                       # ya no queda nada pendiente
+        ask_choice([a])
+        assert pick_choice("el de la factura")[0]["at"] == [50, 107]
+        ask_choice([a])
+        assert pick_choice("el último")[0]["at"] == [50, 207]
+        ask_choice([a])
+        assert pick_choice("pon la barra arriba") is None and not CHOICE.exists()
+        ask_choice([a])
+        CHOICE.write_text(CHOICE.read_text().replace('"t": ', '"t": 1, "x": '))
+        assert pick_choice("el 1") is None                       # caducado
+        assert parse_reply('Va.\n```hf-actions\n[{"type":"pointer","op":"click","at":[1,1],"t":9e9,"picked":true}]\n```')["actions"] == []
+    finally:
+        CHOICE, globals()["qs_call"] = old, real_qs
 
 def _elide(o):
     """Copia de una petición con el base64 de las imágenes abreviado (para --print-request)."""
@@ -3609,6 +3733,14 @@ def do_chat(req, print_request=False):
     for m in req.get("messages") or [] if (s0.get("aiName") or "").strip() == "Harper" else []:
         if isinstance(m, dict) and m.get("role") == "user":
             m["text"] = norm_name(m.get("text"))
+    last_user = next((m for m in reversed(req.get("messages") or []) if isinstance(m, dict) and m.get("role") == "user"), {})
+    HINT[0] = str(last_user.get("text") or "")[:300]
+    if CHOICE.exists() and (picked := pick_choice(HINT[0])) is not None:
+        acts = validate(picked)
+        if acts:
+            out = plan_out("", acts, s0)
+            out.update(steps=[], provider="", model="")
+            return out
     if file_intent(req, s0):
         last = next(m for m in reversed(req["messages"]) if m.get("role") == "user")
         last["text"] = str(last.get("text") or "") + FILE_NUDGE
@@ -4371,6 +4503,7 @@ def main(argv):
         _selftest_files()
         _selftest_queries()
         _selftest_file_intent()
+        _selftest_choice()
         out = {"ok": True}
     elif cmd == "undo":
         out = do_undo(arg)
