@@ -171,10 +171,12 @@ ColumnLayout {
                 return n.length === 4 && n[2] > 0 && n[3] > 0 ? n : [0, 0, 400, 200];
             }
             // los marcadores por los colores del tema de ahora: si cambias de tema, el esquema cambia con él
-            readonly property string themed: raw.replace(/__G1__/g, root.hex(Qt.lighter(Theme.pc, Theme.light ? 1.06 : 1.25)))
-                .replace(/__G2__/g, root.hex(Theme.pc)).replace(/__SH__/g, root.hex(Theme.p)).replace(/__P__/g, root.hex(Theme.p))
-                .replace(/__O__/g, root.hex(Theme.ov)).replace(/__T__/g, root.hex(Theme.t)).replace(/__M__/g, root.hex(Theme.tv))
-                .replace(/__F__/g, Theme.font.replace(/[^\w -]/g, ""))
+            readonly property var colors: ({
+                "__G1__": root.hex(Qt.lighter(Theme.pc, Theme.light ? 1.06 : 1.25)), "__G2__": root.hex(Theme.pc),
+                "__SH__": root.hex(Theme.p), "__P__": root.hex(Theme.p), "__O__": root.hex(Theme.ov),
+                "__T__": root.hex(Theme.t), "__M__": root.hex(Theme.tv), "__F__": Theme.font.replace(/[^\w -]/g, "")
+            })
+            readonly property string themed: raw.replace(/__(G1|G2|SH|P|O|T|M|F)__/g, k => colors[k])
             property string done: ""
             implicitHeight: svgCol.implicitHeight + 16
             radius: Theme.r(12)
@@ -196,7 +198,7 @@ ColumnLayout {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: Quickshell.execDetached([Paths.script("hf-ai"), "open-svg", sv.themed])
+                        onClicked: Quickshell.execDetached([Paths.script("hf-ai"), "open-svg", sv.raw, JSON.stringify(sv.colors)])
                     }
                 }
                 Row {
@@ -212,7 +214,7 @@ ColumnLayout {
                                 anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                 onClicked: {
                                     Quickshell.execDetached(modelData[1] === "" ? ["wl-copy", "--", sv.themed]
-                                                                               : [Paths.script("hf-ai"), modelData[1], sv.themed]);
+                                                                               : [Paths.script("hf-ai"), modelData[1], sv.raw, JSON.stringify(sv.colors)]);
                                     sv.done = modelData[1] === "open-svg" ? "" : modelData[0];
                                     doneT.restart();
                                 }

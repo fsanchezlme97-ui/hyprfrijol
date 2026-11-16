@@ -3730,7 +3730,8 @@ def diagrams_in(text):
     def sub(m):
         svg = clean_svg(m.group(1))
         return f"```svg\n{svg}\n```" if svg else f"```xml\n{m.group(1)}\n```"
-    text = re.sub(r"```(?:hf-diagram|svg)\s*(.*?)\s*```", sub, text, flags=re.S)
+    # la valla igual que la lee AiRich.qml (```([\w+.#-]*) y en minúsculas): todo lo que dibuje como esquema pasa por aquí
+    text = re.sub(r"```(?:hf-diagram|svg)(?![\w+.#-])[ \t]*\n?(.*?)\s*```", sub, text, flags=re.S | re.I)
     m = re.search(r"!\[[^\]]*\]\(\s*hf-diagram[^<]*(<.*>)[^>]*$", text, re.S) or re.search(r"(?m)^hf-diagram\s*(<.*>)", text, re.S)
     if m and "```svg" not in text:      # sin el bloque, como imagen o suelto: se rescata lo que parezca SVG
         body = m.group(1)
@@ -3738,12 +3739,29 @@ def diagrams_in(text):
         text = text[:m.start()].rstrip() + (f"\n```svg\n{svg}\n```" if svg else "")
     return text
 
-def save_svg(svg, open_it=False):
-    """«Guardar» / «Abrir en grande» de un esquema ya con los colores del tema (lo manda AiRich.qml): se comprueba otra
-    vez que no traiga nada activo y se guarda en Imágenes/Harper."""
-    svg = str(svg or "")
-    if not svg.lstrip().startswith("<svg") or len(svg) > SVG_MAX * 2 \
-            or re.search(r"<script|<foreignObject|javascript:|<!(DOCTYPE|ENTITY)|(xlink:)?href\s*=\s*[\"'](?!#)|@import", svg, re.I):
+SVG_TOKENS = ("__G1__", "__G2__", "__SH__", "__P__", "__O__", "__T__", "__M__", "__F__")
+
+def themed_svg(raw, colors):
+    """El esquema del panel (con marcadores) → limpio OTRA VEZ con la lista blanca y con los colores del tema puestos.
+    Lo que llega de AiRich no se da por bueno: se abre en el navegador, donde un on*= sí se ejecutaría."""
+    svg = clean_svg(raw)
+    if not svg:
+        return None
+    try:
+        colors = json.loads(colors) if isinstance(colors, str) else (colors or {})
+    except ValueError:
+        colors = {}
+    for k in SVG_TOKENS:
+        v = str(colors.get(k, "")) if isinstance(colors, dict) else ""
+        ok = re.fullmatch(r"[\w -]{1,60}", v) if k == "__F__" else re.fullmatch(r"#[0-9a-fA-F]{6}", v)
+        svg = svg.replace(k, v if ok else ("sans-serif" if k == "__F__" else "#808080"))
+    return svg
+
+def save_svg(raw, colors="{}", open_it=False):
+    """«Guardar» / «Abrir en grande» de un esquema (lo manda AiRich.qml con los colores aparte): se guarda en
+    Imágenes/Harper."""
+    svg = themed_svg(raw, colors)
+    if not svg:
         return {"ok": False, "error": "No es un esquema de Harper"}
     pics = run(["xdg-user-dir", "PICTURES"]).strip() if shutil.which("xdg-user-dir") else ""
     d = pathlib.Path(pics or HOME / "Imágenes") / "Harper"
@@ -3782,7 +3800,19 @@ def _selftest_svg():
     assert diagrams_in("```hf-diagram\nno es svg\n```") == "```xml\nno es svg\n```"
     assert "hf-g" in diagrams_in('```svg\n<svg viewBox="0 0 9 9"><script>x</script><rect/></svg>\n```') \
         and "script" not in diagrams_in('```svg\n<svg viewBox="0 0 9 9"><script>x</script><rect/></svg>\n```')
-    assert not save_svg('<svg><script>1</script></svg>')["ok"] and not save_svg("<html/>")["ok"]
+    assert not save_svg("<html/>")["ok"]
+    # lo que vuelve del panel se limpia otra vez: un on*= o un <script> no llegan al archivo que abre el navegador
+    raw = clean_svg('<svg viewBox="0 0 9 9"><rect class="box" x="1" y="1" width="5" height="5"/></svg>')
+    assert clean_svg(raw) == raw                                  # limpiar dos veces no cambia nada
+    evil = raw.replace("<rect ", '<rect onload="alert(1)" ').replace("</svg>", "<script>alert(1)</script></svg>")
+    th = themed_svg(evil, '{"__P__": "#6c5ce7", "__T__": "red;}*{x:url(http://x)", "__F__": "Inter"}')
+    assert "onload" not in th and "<script" not in th and "#6c5ce7" in th and "http" not in th.split("</style>")[-1] \
+        and "url(http" not in th and "__" not in th and "Inter" in th, th
+    # vallas que AiRich lee como esquema también pasan por la limpieza
+    for fence in ("```SVG\n", "```Svg ", "```svg\n", "```HF-DIAGRAM\n"):
+        out = diagrams_in(fence + '<svg viewBox="0 0 9 9" onload="x()"><rect class="box"/><g id="hf-g"/></svg>\n```')
+        assert "onload" not in out and out.startswith("```svg\n<svg"), (fence, out)
+    assert diagrams_in("```svgx\n<b/>\n```") == "```svgx\n<b/>\n```"
     # alias, marco y rescate (lo que escribió gemma4 en las pruebas)
     g = clean_svg('<svg viewBox="0 0 100 50"><label x="60" y="45">Módem</label><arrow x="110" y="45" width="30" height="0"/>'
                   '<node x="200" y="45"/><line x1="0" y1="0" x2="10" y2="0" stroke="dashed"/></svg>')
@@ -4780,7 +4810,7 @@ def main(argv):
     elif cmd == "activity":                 # registro del asistente: activity [n] | activity clear
         out = clear_activity() if arg == "clear" else activity(int(arg) if arg.isdigit() else 200)
     elif cmd in ("save-svg", "open-svg"):    # «Guardar» / «Abrir en grande» de un esquema del panel
-        out = save_svg(arg, open_it=cmd == "open-svg")
+        out = save_svg(arg, rest[1] if len(rest) > 1 else "{}", open_it=cmd == "open-svg")
     elif cmd == "selftest":
         _selftest_redact()
         _selftest_handoff()

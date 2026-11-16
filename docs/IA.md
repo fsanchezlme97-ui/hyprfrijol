@@ -205,8 +205,10 @@ texto. El modelo no elige colores: escribe un SVG sencillo con piezas con clase 
   redondas, flechas con punta y borde del color principal en `accent`. Los colores van como marcadores (`__P__`…)
   que `AiRich.qml` cambia por los del tema al dibujarlo: si cambias de tema, el esquema cambia con él.
 - **En el panel:** Qt SVG (sin red ni JavaScript; las animaciones se ven quietas). Debajo, «Guardar» (en
-  `Imágenes/Harper`), «Copiar» y «Abrir en grande» (`hf-ai save-svg` / `open-svg`, que vuelven a comprobar que el SVG
-  no traiga nada activo).
+  `Imágenes/Harper`), «Copiar» y «Abrir en grande» (`hf-ai save-svg` / `open-svg`). El panel les pasa el esquema
+  con marcadores y los colores aparte: hf-ai lo vuelve a limpiar con la lista blanca y solo acepta colores `#rrggbb`,
+  porque el archivo puede acabar en un navegador. Las vallas se reconocen igual que en `AiRich.qml` (sin distinguir
+  mayúsculas), así que todo lo que el panel dibuja como esquema ha pasado por `clean_svg`.
 
 ### Archivos
 

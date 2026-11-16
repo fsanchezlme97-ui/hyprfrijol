@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.32] — 2026-11-16
+
+### Seguridad
+- **Guardar y «Abrir en grande» de los esquemas** vuelven a limpiar el dibujo antes de escribir el archivo, en vez de
+  fiarse de lo que manda el panel. Antes, un bloque ```` ```SVG ```` en mayúsculas no pasaba por la limpieza y podía
+  llevar un `onload=` que se ejecutaría al abrirlo en el navegador.
+
 ## [0.10.31] — 2026-11-16
 
 ### Novedades (Asistente de IA)
