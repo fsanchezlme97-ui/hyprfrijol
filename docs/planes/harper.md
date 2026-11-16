@@ -17,15 +17,16 @@ explicar.
    También puede leerlo para resumirlo o contestar preguntas sobre él.
 3. **Pantalla.** Cuando hay más de un sitio que encaja con lo que se pide (varios correos de la misma persona),
    Harper no elige a ciegas: los numera en pantalla y pregunta cuál, salvo que el mensaje ya lo deje claro.
-4. **Imágenes con código.** Cuando se le pide un dibujo, o cuando un dibujo ayuda a explicar algo, Harper responde
-   con un SVG (estático o animado) que el panel muestra en la conversación. No en cada respuesta.
+4. **Imágenes con código, con calidad tipo Spline.** Cuando se le pide un dibujo, o cuando un dibujo ayuda a explicar
+   algo, Harper responde con un esquema (SVG con estilo) o una ilustración 3D que el panel muestra en la conversación.
+   No en cada respuesta. gemma4 solo describe qué dibujar; el aspecto (luz, degradados, sombras, colores del tema) lo
+   pone HyprFrijol.
 
 ## Fuera de alcance
 
 - Unirlo con EcoFlow AI (llama-swap, Qwen 35B, FLUX, Kokoro, ComfyUI).
-- Imágenes por difusión, p5.js, Three.js, Zdog, Spline, HyperFrames y Remotion. Con gemma4, p5 y Zdog salieron
-  rotos en la prueba (ver «Enfoques»); SVG salió bien. Las librerías se pueden añadir más tarde para proveedores
-  grandes sin rehacer esto.
+- Imágenes por difusión, código libre en p5.js/Zdog/Three.js, escenas de Spline, HyperFrames y Remotion. Con gemma4,
+  el código libre en p5 y Zdog salió roto en la prueba (ver «Enfoques»).
 - Indexar los archivos (RAG) o buscar por contenido. La búsqueda es por nombre.
 - Cambiar la voz (sigue Piper «sharvard») o la palabra de activación del dictado (sigue «Distro»).
 
@@ -51,11 +52,14 @@ explicar.
 Prueba del 2026-11-16 con gemma4:e4b (temperatura 0,4): SVG de un gato bajo la luna, 14 s, reconocible; p5.js de
 estrellas fugaces, 11 s, no hizo lo pedido; Zdog de una casita, 9 s, pantalla en blanco.
 
-- **A. Solo SVG (elegido).** Es lo que gemma4 hace bien, es ligero y no necesita librerías ni red.
-- B. SVG + p5/Zdog/Three según el modelo. Más código y mantenimiento para algo que con gemma4 no se usaría.
-- C. Plantillas que el modelo rellena. Quedan bonitas y no fallan, pero solo hacen lo que traen.
+- A. SVG escrito a mano por el modelo. Funciona, pero queda plano: lejos de Spline.
+- B. Código libre en p5/Zdog/Three. Con gemma4 sale roto.
+- C. Plantillas que el modelo rellena. Quedan bien, pero solo hacen lo que traen.
+- **D. El modelo describe y HyprFrijol dibuja (elegido, en sus dos formas).** Esquemas: SVG con piezas con nombre a
+  las que HyprFrijol pone el estilo. Ilustraciones: una escena 3D en JSON que dibuja un visor ya hecho con luz y
+  materiales tipo Spline. gemma4 escribe JSON bien (ya lo hace con `hf-actions`).
 
-El usuario eligió A, con la condición de que dibuje solo cuando haga falta para explicar o se le pida.
+Condiciones del usuario: calidad tipo Spline, y dibujar solo cuando haga falta para explicar o se le pida.
 
 ## Diseño
 
@@ -107,35 +111,57 @@ El usuario eligió A, con la condición de que dibuje solo cuando haga falta par
   o si dice «el último» o «el primero». En ese caso elige ese y lo dice en la etiqueta del paso.
 - El prompt se queda como está: la decisión la toma `hf-ai`, no gemma4.
 
-### 4. Imágenes con código (SVG)
+### 4. Imágenes con código (esquemas SVG con estilo + 3D)
 
-- Prompt (unas 3 líneas): dibujar solo si se pide un dibujo, esquema o ilustración, o si un dibujo explica algo
-  mucho mejor que el texto. Formato: un bloque de código `svg` con un SVG completo, `viewBox`, sin texto largo
-  dentro, animación con CSS o SMIL si aporta.
-- `hf-ai` limpia el SVG antes de que llegue al panel: quita `<script>`, `<foreignObject>`, atributos `on*`, y
-  `href`/`xlink:href`/`url()` que no sean `#ancla` o `data:`. Máximo 100 KB. Si no es un SVG válido, se queda como
-  bloque de código normal.
-- `AiRich.qml`: un tipo nuevo `svg`, que se dibuja a lo ancho del panel con su proporción. Debajo, tres botones:
-  - «Guardar», a `$(xdg-user-dir PICTURES)/Harper/AAAAMMDD-HHMMSS.svg` (en español, `~/Imágenes`);
-  - «Copiar», el código;
-  - «Abrir en grande», con el visor predeterminado.
-- Render: con Qt (`Image` con el SVG como `data:`), que no tiene red ni JavaScript. Si las animaciones no se mueven
-  ahí, el que construye prueba Qt SVG animado (6.7+). Si tampoco, se muestra estático y la animación se ve en
-  «Abrir en grande». No se mete WebEngine solo para esto.
+Prompt (pocas líneas): dibujar solo si se pide un dibujo, esquema o ilustración, o si un dibujo explica algo mucho
+mejor que el texto. Dos formatos; el modelo elige.
+
+**Esquemas: bloque `hf-diagram` (SVG con estilo).**
+- El modelo escribe un SVG sencillo con piezas con clase: `box`, `pill`, `node`, `arrow`, `line`, `label`, `muted`,
+  `accent`… Sin colores propios (si los pone, se quitan).
+- `hf-ai` lo limpia: quita `<script>`, `<foreignObject>`, atributos `on*`, `style` y `fill`/`stroke` sueltos, y
+  `href`/`xlink:href`/`url()` que no sean `#ancla`. Máximo 100 KB. Si no es válido, se queda como bloque de código.
+- Después inyecta una hoja de estilo y unos `<defs>` hechos a mano, que dan el aspecto tipo Spline: degradados
+  suaves con el color del tema (`Theme`), sombras difusas (`feGaussianBlur`), esquinas redondas, relieve sutil y
+  flechas con punta propia. Si la clase `flow` está en una línea, la animación es un trazo que avanza.
+- Se dibuja con Qt (`Image` con el SVG como `data:`), sin red ni JavaScript. Si los filtros o la animación no salen
+  en Qt SVG, el estilo usa solo lo que Qt dibuja (degradados en lugar de desenfoque) y la animación queda para
+  «Abrir en grande».
+
+**Ilustraciones: bloque `hf-scene` (JSON → 3D).**
+- Esquema cerrado que `hf-ai` valida: objetos (`sphere`, `box`, `rounded-box`, `cylinder`, `cone`, `torus`, `capsule`,
+  `plane`, `text3d` si el visor lo permite), cada uno con `pos`, `rot`, `scale`, `color` (`accent`, `primary`,
+  `secondary`, `soft`, `dark` o un color del tema) y `anim` (`spin`, `float`, `pulse`). Escena: `camera`
+  (`front`, `iso`, `top`), `background` (`theme`, `soft`, `none`). Máximo 40 objetos. Lo desconocido se descarta.
+- Visor: **Qt Quick 3D** dentro del panel. Luz de estudio suave, sombras, materiales mate y pastel
+  (`PrincipledMaterial`), suelo con sombra de contacto, y se gira con el ratón. QtWebEngine no se puede cargar
+  dentro de Quickshell 0.3.x (por eso las apps web salieron del panel en la 0.8.8), así que no se usa Three.js.
+- **Pendiente de verificar al empezar esta parte:** `qt6-quick3d` no está instalado. Es una dependencia nueva (se
+  añade a `install/packages.tsv` en todas las distros) y hay que confirmar que Quickshell 0.3.2 la carga. Si no la
+  carga, el respaldo es el patrón de `hf-webapp`: Three.js en una ventana `qml6` aparte, con una captura fija en el
+  panel. Esta decisión se le consulta al usuario antes de construir.
+
+**Común a los dos.** Debajo de cada dibujo, tres botones:
+- «Guardar» (SVG, o PNG del 3D, en `$(xdg-user-dir PICTURES)/Harper/AAAAMMDD-HHMMSS.*`);
+- «Copiar» (el código o el JSON);
+- «Abrir en grande».
+
+Mientras se dibuja, la tarjeta reserva el espacio, para que el panel no salte.
 
 ## Pruebas
 
 - `dev/` (asserts, como el resto):
   - normalización del nombre por voz;
   - validación de rutas de `file` (fuera de `$HOME`, `.ssh`, ejecutables);
-  - limpieza del SVG (script, `on*`, href externo);
+  - limpieza del SVG (script, `on*`, href externo, colores propios);
+  - validación del JSON de escena (tipos, límites, lo desconocido fuera);
   - desambiguación con una lista de elementos de prueba (duplicados → pregunta; con asunto en el mensaje → sin
     pregunta).
 - A mano, en la sesión anidada (`dev/try.sh`):
   - icono a 12-14 px;
   - «¿dónde está…?» y «ábrelo»;
   - responder a un correo con dos del mismo remitente;
-  - «dibújame cómo funciona un…».
+  - «dibújame cómo funciona un…» (esquema) y «dibújame un planeta con anillos» (3D).
 
 ## Orden
 
@@ -147,6 +173,7 @@ El usuario eligió A, con la condición de que dibuje solo cuando haga falta par
 ## Lo que queda al que construye
 
 - El trazo exacto del icono.
+- La hoja de estilo del SVG y la iluminación del 3D (el listón es Spline: suave, limpio, pastel).
 - La tolerancia de «misma fila» (en coordenadas 0-1000).
 - La frase de cada etiqueta y de la tarjeta «¿Cuál?».
 - Si `read_file` comparte código con los adjuntos o los llama directamente.
