@@ -153,6 +153,7 @@ contra este esquema (todo lo demás se descarta) y genera las etiquetas en espa�
 | `wallhaven` | `{"type":"wallhaven","op":"add","id":"abc123"}` (`set`) | Añadir el fondo abc123 de Wallhaven a mis fondos |
 | `youtube` | `{"type":"youtube","query":"Walk Foo Fighters","service":"youtube"}` (`music`, `spotify`) | Reproducir «Walk Foo Fighters» en YouTube |
 | `browser` | `{"type":"browser","op":"new-tab"}` (`close-tab`, `back`, `reload`, `scroll-down`, `find`/`search`/`open` con `value`…) | Nueva pestaña |
+| `file` | `{"type":"file","op":"reveal","path":"/home/…/informe.pdf"}` (`open`) | Abrir la carpeta de informe.pdf |
 
 Claves de `set`: `estilo`, `colorMode`, `palette`, `themeMode`, `barPos`, `barMode`, `animado`,
 `reduceTransparency`, `reduceMotion`, `gapsIn`, `gapsOut`, `pipSize`, `pipCorner`, `deskSort`.
@@ -181,6 +182,23 @@ el asistente no puede crearse órdenes que ejecuten comandos.
   siempre. Se revoca en Ajustes › IA › «Aprobadas siempre» (`hf-ai approvals` da los nombres).
 - La primera vez, el panel enseña qué puede hacer el asistente y 6 ejemplos (`aiOnboarded`; «Volver a verla» en Ajustes › IA).
 - Consultas de solo lectura nuevas: `devices` (unidades y espacio), `downloads` (la cola) y `wallhaven` (buscar fondos).
+
+### Archivos
+
+- **Buscar** (`files {"query","ext"}`): por nombre en la carpeta personal (`fd`, o `find` sin él). Con varias palabras
+  («README hyprfrijol») busca las que estén todas en la ruta; si no hay, cada una en el nombre, por coincidencias. Da
+  ruta, fecha y tamaño, lo más nuevo primero (30 como mucho).
+- **Leer** (`read_file {"path"}`): el texto (como un adjunto: PDF, DOCX, ODT, texto; 24 000 caracteres) para resumirlo
+  o contestar sobre él, con el filtro de secretos.
+- **Abrir** (acción `file`): `reveal` enseña el archivo en su carpeta (Nautilus `--select`; una carpeta se abre ella
+  misma) y `open` lo abre con su app. Sin deshacer (no cambia nada) y sin confirmación; se puede «aprobar siempre».
+- Límites (`file_ok`): la ruta real (sin enlaces) dentro de `$HOME` o `/run/media/$USER`; fuera `.ssh`, `.gnupg`,
+  `.password-store`, los llaveros y los secretos de hyprfrijol. `open` nunca ejecuta: ejecutables, `.desktop`, `.sh`,
+  `.AppImage` y similares solo se enseñan en su carpeta.
+- Con modelos pequeños (gemma4), si el mensaje habla de un archivo («¿dónde está…?», «búscame…», «resúmeme el…»),
+  `hf-ai` le añade una nota con los dos pasos (`FILE_NUDGE`, no se ve ni se guarda en el registro); si aun así no
+  busca, busca él con las palabras del mensaje; si propone abrir algo que se pidió resumir, se lo lee; y acepta las
+  consultas escritas sin comillas o dentro del bloque de acciones.
 
 ## Usar la pantalla (Computer Use)
 

@@ -3,6 +3,22 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.29] — 2026-11-16
+
+### Novedades (Asistente de IA)
+- **Harper encuentra tus archivos:** «¿dónde está el README de hyprfrijol?», «búscame el pdf de la factura». Busca por
+  nombre en tu carpeta personal y te da la ruta, con lo más nuevo primero. Con varias palabras busca las que estén
+  todas en la ruta.
+- **Y los abre si se lo pides:** «ábrelo» lo abre con su app, y «ábreme su carpeta» enseña dónde está. Nunca ejecuta
+  nada: los programas y scripts solo se enseñan en su carpeta. No sale de tu carpeta personal ni de las memorias USB, y
+  no entra en `.ssh`, `.gnupg` ni en los llaveros.
+- **Resúmenes de archivos:** «resúmeme el CHANGELOG», «¿qué dice el contrato?». Lo busca, lo lee y te lo resume, sin
+  que tengas que arrastrarlo al panel.
+
+### Arreglos (Asistente de IA)
+- Con modelos pequeños (gemma4) estas preguntas salen a la primera: `hf-ai` le recuerda los pasos, busca él si el
+  modelo no lo hace, y entiende las consultas que el modelo escribe sin el formato exacto.
+
 ## [0.10.28] — 2026-11-16
 
 ### Cambios (Asistente de IA)

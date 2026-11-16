@@ -154,6 +154,56 @@ SCREEN_INTENT = re.compile(r"\b(haz(me)? (un )?(doble )?clic|dale (un )?clic|cli
                            r"(pulsa|presiona) (el|la) (boton|enlace|casilla|pestana|icono)|escribe (en|dentro de) (el|la|ese|esa|este|esta) "
                            r"(campo|cuadro|caja|buscador|barra)|senalame)")
 
+# «¿dónde está…?», «búscame el pdf…»: los modelos pequeños contestan «no tengo acceso» en vez de usar la consulta
+# files; se les recuerda en el mismo mensaje (no cambia lo que ve el usuario)
+FILE_INTENT = re.compile(r"\b(donde (esta|estan|tengo|guarde|deje|quedo|quedaron|puse|descargue|baje)\b|"
+                         r"(busca|buscame|encuentra|encuentrame|localiza) (el|la|los|las|un|una|mi|mis|ese|esa) |"
+                         r"(archivo|fichero|documento|carpeta|pdf)s? (que|de|del|con|llamad)|"
+                         r"(resume|resumeme|resumir|leeme|lee|que dice|que pone) (el|la|los|las|mi|mis|ese|esa|este|esta) )")
+FILE_NUDGE = ("\n\n[Nota del sistema: es sobre un archivo o carpeta del equipo. Paso 1: busca con "
+              "```hf-query\n[{\"type\":\"files\",\"query\":\"<una palabra del nombre>\"}]\n``` (añade \"ext\" si la dice). "
+              "Paso 2, si hay que leerlo o resumirlo: ```hf-query\n[{\"type\":\"read_file\",\"path\":\"<ruta>\"}]\n```. "
+              "Después contesta (la ruta, o el resumen). Ábrelo solo si lo pide.]")
+
+def file_intent(req, s):
+    if not can_read(s):
+        return False
+    last = next((m for m in reversed(req.get("messages") or []) if m.get("role") == "user"), {})
+    import unicodedata
+    t = unicodedata.normalize("NFD", str(last.get("text") or "").lower())
+    return bool(FILE_INTENT.search("".join(c for c in t if not unicodedata.combining(c))))
+
+READ_INTENT = re.compile(r"\b(resume|resumeme|resumir|resumen|leeme|lee|que dice|que pone|explicame|de que (va|trata))\b")
+OPEN_INTENT = re.compile(r"\b(abre|abrelo|abrela|abreme|abrir|ensename|muestrame|llevame|ve a)\b")
+
+def read_instead(req, raw):
+    """{"type":"read_file",…} si el usuario pidió leer o resumir (no abrir) y el modelo propone abrir un archivo."""
+    last = next((m for m in reversed(req.get("messages") or []) if m.get("role") == "user"), {})
+    import unicodedata
+    t = unicodedata.normalize("NFD", str(last.get("text") or "").replace(FILE_NUDGE, "").lower())
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    if not READ_INTENT.search(t) or OPEN_INTENT.search(t):
+        return None
+    m = re.search(r"```(?:hf-actions)?\s*(.*?)\s*```", raw, re.S)
+    a = next((a for a in actions_json(m.group(1)) if isinstance(a, dict) and a.get("type") == "file"), None) if m else None
+    return {"type": "read_file", "path": a["path"]} if a and isinstance(a.get("path"), str) else None
+
+def _selftest_file_intent():
+    s = {"aiReadDesktop": True}
+    yes = ["¿Dónde está el CHANGELOG?", "búscame el pdf de la factura", "dónde guardé las fotos de la boda",
+           "encuentra mi currículum", "el archivo que bajé ayer"]
+    yes += ["resúmeme el CHANGELOG de hyprfrijol", "¿qué dice el contrato?"]
+    no = ["pon la barra arriba", "¿qué hora es?", "dibuja un gato"]
+    assert all(file_intent({"messages": [{"role": "user", "text": x}]}, s) for x in yes)
+    assert not any(file_intent({"messages": [{"role": "user", "text": x}]}, s) for x in no)
+    assert not file_intent({"messages": [{"role": "user", "text": yes[0]}]}, {"aiReadDesktop": False})
+    raw = 'Voy.\n```hf-actions\n[{"type":"file","op":"open","path":"/x/CHANGELOG.md"}]\n```'
+    ask = lambda q: {"messages": [{"role": "user", "text": q}]}
+    assert read_instead(ask("resúmeme el CHANGELOG"), raw) == {"type": "read_file", "path": "/x/CHANGELOG.md"}
+    assert read_instead(ask("ábreme el CHANGELOG"), raw) is None
+    assert read_instead(ask("lee el CHANGELOG y ábrelo"), raw) is None
+    assert read_instead(ask("resúmeme el CHANGELOG"), "Listo.") is None
+
 def screen_intent(req, s):
     """¿El último mensaje pide usar o señalar algo de la pantalla? (y está permitido)"""
     if s.get("aiScreenControl", True) is False or s.get("aiContextCapture", True) is False or not can_read(s) \
@@ -258,6 +308,9 @@ SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden
                                               key ("keys":"ctrl+s"|"Enter"|"Tab"…) · scroll ("value":"down"|"up"). El usuario
                                               lo ve señalado con un cursor fantasma y lo confirma siempre; los pasos, en orden.
                                               Solo lo que se ve ahora en la captura: tras un clic que cambie la pantalla, para.
+- {"type":"file","op":"reveal"|"open","path":"/ruta/absoluta"}   enseñar un archivo en su carpeta o abrirlo con su app
+                                              (rutas de la consulta files; solo si te piden abrirlo o ir a él).
+                                              «abre su carpeta» / «llévame a donde está» → "reveal" con la ruta del archivo
 - {"type":"run","command":"…"}               comando de terminal; el usuario debe confirmarlo antes
 Ejemplos del formato exacto (los ajustes SIEMPRE con "type":"set"; "quitar"/"desactivar" es false):
 «barra a la izquierda» → [{"type":"set","key":"barPos","value":"izquierda"}]
@@ -271,8 +324,9 @@ QUERY_DOC = """Consultas (solo lectura; se ejecutan solas y te devuelvo el resul
 ```
 Tipos: windows (ventanas abiertas) · active_window (la ventana activa y su texto por OCR) · screen (texto de la pantalla
 por OCR) · ui (analiza la pantalla para usarla: la captura con los botones y textos numerados y su lista; antes de
-señalar o hacer clic con «pointer») · notifications (avisos sin leer e historial) · files {"query":"informe","ext":"pdf"} (buscar en la carpeta
-personal) · apps {"query":"editor"} (apps instaladas) · settings {"filter":"barra"} (claves de ajustes y su valor) ·
+señalar o hacer clic con «pointer») · notifications (avisos sin leer e historial) · files {"query":"informe","ext":"pdf"} (buscar por nombre en la carpeta
+personal: ruta, fecha y tamaño, lo más nuevo primero; si preguntan dónde está algo, da la ruta) · read_file {"path":"…"}
+(el texto de un archivo, para resumirlo o contestar sobre él) · apps {"query":"editor"} (apps instaladas) · settings {"filter":"barra"} (claves de ajustes y su valor) ·
 system (volumen, brillo, batería, música, no molestar, cafeína, modo de ventanas) · timers (temporizadores en marcha) ·
 devices (memorias USB, tarjetas SD y discos, con su espacio) · downloads (la cola de descargas) ·
 wallhaven {"query":"montañas","sorting":"toplist"|"random"} (buscar fondos en wallhaven.cc) ·
@@ -386,6 +440,121 @@ SYSTEM = SYSTEM_BASE + SCHEMA_DOC   # compatibilidad (hf-mcp y otros)
 def _app_name(a):
     return str(a.get("target") or a.get("app") or "").strip()
 
+# ---- archivos (acción «file» y consulta «read_file»): solo la carpeta personal y las unidades montadas
+FILE_DENY = (".ssh", ".gnupg", ".config/hyprfrijol/secrets", ".local/share/keyrings", ".password-store")
+FILE_NO_OPEN = {".desktop", ".sh", ".bash", ".zsh", ".fish", ".py", ".pl", ".rb", ".appimage", ".run", ".bin", ".exe",
+                ".bat", ".cmd", ".msi", ".jar", ".deb", ".rpm", ".flatpakref", ".command"}
+
+def human_size(n):
+    for u in ("B", "KB", "MB", "GB"):
+        if n < 1024 or u == "GB":
+            return f"{n:.0f} {u}" if u == "B" else f"{n:.1f} {u}".replace(".", ",")
+        n /= 1024
+
+FILE_STOP = set("""a al algo ayer de del donde el ella en ese esa eso esta este esto estan guarde deje quedo quedaron
+puse descargue baje hoy la las lo los me mi mis para por que un una uno unos unas y o archivo archivos fichero ficheros
+documento documentos carpeta carpetas busca buscame encuentra encuentrame localiza resume resumeme resumir resumen
+lee leeme dice pone tengo solo ultima ultimo version abre abrelo abreme sobre con equipo ordenador""".split())
+
+def file_words(text):
+    """Palabras de búsqueda de un nombre: sin tildes, sin las palabras de relleno, como mucho 3."""
+    import unicodedata
+    t = unicodedata.normalize("NFD", str(text).lower().replace(FILE_NUDGE, ""))
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    return [w for w in re.findall(r"[\w.\-]+", t) if len(w) >= 3 and w not in FILE_STOP][:3]
+
+def find_files(query, ext=""):
+    """Archivos de la carpeta personal cuyo nombre o ruta tiene las palabras de «query» (y la extensión «ext»):
+    primero los que las tienen todas en la ruta; si no hay, cada palabra por separado en el nombre, ordenados por
+    cuántas coinciden. Lo más nuevo primero. → filas «ruta · fecha · tamaño», o None si no hay qué buscar."""
+    import itertools
+    words = [w for w in re.findall(r"[\w.\-áéíóúñü]+", query.lower()) if len(w) >= 2][:3]
+    ext = re.sub(r"[^\w]", "", ext)[:8]
+    if not words and not ext:
+        return None
+    def fd(pattern, full=False):
+        if shutil.which("fd"):
+            cmd = ["fd", "-i", "--max-results", "300", "--changed-within", "3650d"] + (["-p"] if full else []) \
+                + (["-e", ext] if ext else []) + [pattern, str(HOME)]
+        else:                            # sin fd: find, solo por el nombre
+            cmd = ["find", str(HOME), "-not", "-path", "*/.*", "-iregex", f".*{pattern}.*{('.' + ext) if ext else ''}"]
+        return [x for x in run(cmd, timeout=8).split("\n") if x]
+    if len(words) > 1:                   # todas en la ruta, en cualquier orden («README hyprfrijol»)
+        found = fd("|".join(".*".join(map(re.escape, pm)) for pm in itertools.permutations(words)), full=True)
+        if not found:
+            found = list(dict.fromkeys(x for w in words for x in fd(re.escape(w))))
+    else:
+        found = fd(re.escape(words[0]) if words else ".")
+    hits = []
+    for x in found:
+        try:
+            st = os.stat(x)
+        except OSError:
+            continue
+        hits.append((sum(w in x.lower() for w in words), st.st_mtime, x, st.st_size))
+    hits.sort(reverse=True)
+    return [f"{x} · {time.strftime('%Y-%m-%d %H:%M', time.localtime(m))} · {human_size(n)}" for _, m, x, n in hits[:30]]
+
+def file_ok(path, op="reveal"):
+    """La ruta real (sin enlaces) si se puede mostrar («reveal») o abrir con su app («open»); None si no.
+    «open» nunca ejecuta: fuera los ejecutables y los lanzadores; esos solo se enseñan en su carpeta."""
+    try:
+        rp = pathlib.Path(os.path.expanduser(str(path))).resolve(strict=True)
+    except (OSError, RuntimeError, ValueError):
+        return None
+    roots = [HOME.resolve(), pathlib.Path("/run/media") / (os.environ.get("USER") or HOME.name)]
+    root = next((r for r in roots if rp == r or r in rp.parents), None)
+    if root is None:
+        return None
+    rel = rp.relative_to(root).as_posix() if rp != root else ""
+    if any(rel == d or rel.startswith(d + "/") for d in FILE_DENY):
+        return None
+    if op == "open" and (rp.is_dir() or rp.suffix.lower() in FILE_NO_OPEN or os.access(rp, os.X_OK)):
+        return None
+    return str(rp)
+
+def _selftest_files():
+    global HOME
+    import tempfile
+    old, h = HOME, pathlib.Path(tempfile.mkdtemp())
+    HOME = h
+    try:
+        (h / "doc.pdf").write_text("x")
+        (h / ".ssh").mkdir()
+        (h / ".ssh/id_ed25519").write_text("x")
+        (h / "run.sh").write_text("echo")
+        (h / "tool").write_text("x")
+        (h / "tool").chmod(0o755)
+        (h / "app.desktop").write_text("x")
+        (h / "l").symlink_to("/etc/passwd")
+        assert file_ok(h / "doc.pdf", "open") == str((h / "doc.pdf").resolve())
+        assert file_ok(h / "doc.pdf", "reveal") and file_ok(h, "reveal")
+        assert file_ok(h / "nada.pdf") is None and file_ok("/etc/passwd") is None and file_ok(h / "l") is None
+        assert file_ok(h / ".ssh/id_ed25519") is None and file_ok(h / ".ssh") is None
+        assert file_ok(h / "tool", "open") is None and file_ok(h / "tool", "reveal")
+        assert file_ok(h / "run.sh", "open") is None and file_ok(h / "app.desktop", "open") is None
+        assert file_ok(h, "open") is None
+        (h / "proyecto").mkdir()
+        (h / "proyecto/README.md").write_text("x")
+        (h / "otro").mkdir()
+        (h / "otro/README.md").write_text("x")
+        rows = find_files("README proyecto")
+        assert rows and rows[0].startswith(str(h / "proyecto/README.md")), rows
+        assert find_files("readme") and find_files("") is None and find_files("zzqq") == []
+        assert file_words("¿Dónde está el README de hyprfrijol?") == ["readme", "hyprfrijol"]
+        assert file_words("resúmeme el pdf de la factura") == ["pdf", "factura"]
+        assert human_size(512) == "512 B" and human_size(1536) == "1,5 KB" and human_size(3 * 1024 ** 3) == "3,0 GB"
+        assert validate([{"type": "file", "op": "open", "path": str(h / "doc.pdf")}]) == \
+            [{"type": "file", "op": "open", "path": str((h / "doc.pdf").resolve())}]
+        assert validate([{"type": "file", "op": "rm", "path": str(h / "doc.pdf")}]) == []
+        assert validate([{"type": "file", "path": str(h / "doc.pdf")}])[0]["op"] == "open"
+        assert validate([{"type": "file", "path": str(h)}])[0]["op"] == "reveal"
+        assert label({"type": "file", "op": "reveal", "path": "/x/doc.pdf"}) == "Abrir la carpeta de doc.pdf"
+        assert meta({"type": "file", "op": "open", "path": "/x/doc.pdf"})["confirm"] is False
+        assert run_query({"type": "read_file", "path": str(h / ".ssh/id_ed25519")}, {}, {})[1].startswith("No puedo")
+    finally:
+        HOME = old
+
 def label(a):
     t = a.get("type")
     v = a.get("value")
@@ -420,6 +589,11 @@ def label(a):
         return "Ventanas en " + {"mosaico": "mosaico", "desplazamiento": "desplazamiento (columnas)", "flotante": "modo clásico"}.get(v, str(v))
     if t == "url":
         return "Abrir " + re.sub(r"^https?://(www\.)?", "", str(v))[:40]
+    if t == "file":
+        name = pathlib.Path(str(a.get("path") or "")).name
+        if a.get("op") == "reveal":
+            return f"Abrir la carpeta {name}" if os.path.isdir(str(a.get("path") or "")) else f"Abrir la carpeta de {name}"
+        return f"Abrir {name}"
     if t == "media":
         return MEDIA_OPS.get(v, "Música")
     if t == "volume":
@@ -537,6 +711,8 @@ def preview(a, s=None):
             return a.get("desktop") or ""
         if t == "url":
             return str(a.get("value"))[:80]
+        if t == "file":
+            return str(a.get("path") or "").replace(str(HOME), "~", 1)[:120]
     except Exception:
         return ""
     return ""
@@ -549,7 +725,8 @@ KIND_LABELS = {"wallpaper": "Cambiar el fondo", "workspace": "Ir a otro espacio"
                "device:open": "Abrir unidades", "download_ctl:pause": "Pausar descargas", "download_ctl:resume": "Reanudar descargas",
                "download_ctl:retry": "Reintentar descargas", "wallhaven:add": "Añadir fondos de Wallhaven",
                "wallhaven:set": "Poner fondos de Wallhaven",
-               "unsplash:add": "Añadir fotos de Unsplash", "unsplash:set": "Poner fotos de Unsplash", "youtube": "Reproducir canciones y vídeos"}
+               "unsplash:add": "Añadir fotos de Unsplash", "unsplash:set": "Poner fotos de Unsplash", "youtube": "Reproducir canciones y vídeos",
+               "file:reveal": "Enseñar archivos en su carpeta", "file:open": "Abrir archivos"}
 
 def kind_label(kind):
     """Nombre en español de una clave de aiAlwaysApprove (para la lista de Ajustes › IA)."""
@@ -568,7 +745,7 @@ def approve_kind(a):
     t = a.get("type")
     if t == "set":
         return "set:" + str(a.get("key"))
-    op = a.get("op") if t in ("window", "device", "download_ctl", "wallhaven", "unsplash", "browser") else None
+    op = a.get("op") if t in ("window", "device", "download_ctl", "wallhaven", "unsplash", "browser", "file") else None
     return f"{t}:{op}" if op else str(t)
 
 def meta(a):
@@ -576,9 +753,9 @@ def meta(a):
     t = a.get("type")
     irreversible = (t == "window" and a.get("op") == "close") or t in ("notifications", "url", "run") \
         or (t == "media" and a.get("value") == "stop") or (t == "device" and a.get("op") in ("eject", "eject-all")) \
-        or (t == "download_ctl" and a.get("op") == "cancel") or t in ("youtube", "browser", "mcp", "pointer")
+        or (t == "download_ctl" and a.get("op") == "cancel") or t in ("youtube", "browser", "mcp", "pointer", "file")
     # abrir webs, reproducir música y las teclas del navegador no piden confirmación (salvo cerrar la pestaña)
-    quiet = t in ("url", "youtube") or (t == "browser" and a.get("op") != "close-tab")
+    quiet = t in ("url", "youtube", "file") or (t == "browser" and a.get("op") != "close-tab")
     if t == "mcp":                       # se confirma siempre (se le mandan datos a un servidor de fuera)
         ro = (mcp_tool(str(a.get("server") or ""), str(a.get("tool") or "")) or {}).get("readOnly")
         return {"label": label(a), "undo": False, "confirm": True, "kind": approve_kind(a), "preview": preview(a),
@@ -651,6 +828,11 @@ def validate(actions):
                     ok.append({"type": "url", "value": w})
             elif t == "url" and isinstance(a.get("value"), str) and re.match(r"^https?://\S+$", a["value"]):
                 ok.append(a)
+            elif t == "file" and a.get("op") in ("reveal", "open", None):
+                if a.get("op") is None:      # los modelos pequeños a veces no lo ponen: un archivo se abre, una carpeta se enseña
+                    a["op"] = "reveal" if os.path.isdir(os.path.expanduser(str(a.get("path") or ""))) else "open"
+                if (rp := file_ok(a.get("path") or "", a["op"])):
+                    ok.append({"type": "file", "op": a["op"], "path": rp})
             elif t == "winmode" and a.get("value") in ("mosaico", "desplazamiento", "flotante"):
                 ok.append(a)
             elif t == "media" and a.get("value") in MEDIA_OPS:
@@ -1084,6 +1266,12 @@ def exec_action(a):
         return {"kind": "winmode", "mode": prev} if prev in ("mosaico", "desplazamiento", "flotante") else None
     elif t == "url":
         subprocess.Popen(["xdg-open", v], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    elif t == "file":
+        rp = pathlib.Path(a["path"])
+        # una carpeta se abre ella misma; un archivo, su carpeta con él seleccionado
+        cmd = ["xdg-open", str(rp)] if a["op"] == "open" or rp.is_dir() else (["nautilus", "--select", str(rp)]
+                                                                            if shutil.which("nautilus") else ["xdg-open", str(rp.parent)])
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     elif t == "media":
         run(["playerctl", v])
         back = {"play": "pause", "pause": "play", "play-pause": "play-pause", "next": "previous", "previous": "next"}.get(v)
@@ -1326,7 +1514,7 @@ def do_undo(uid):
 
 # ---------------------------------------------------------------- consultas (solo lectura, para la IA)
 QUERY_LABELS = {"windows": "Miró las ventanas abiertas", "active_window": "Leyó la ventana activa",
-                "screen": "Leyó la pantalla", "notifications": "Revisó las notificaciones", "files": "Buscó archivos",
+                "screen": "Leyó la pantalla", "notifications": "Revisó las notificaciones", "files": "Buscó archivos", "read_file": "Leyó un archivo",
                 "apps": "Buscó apps instaladas", "settings": "Consultó los ajustes", "system": "Miró el estado del sistema",
                 "timers": "Miró los temporizadores", "devices": "Miró las unidades conectadas",
                 "downloads": "Miró la cola de descargas", "wallhaven": "Buscó fondos en Wallhaven",
@@ -1425,17 +1613,18 @@ def run_query(q, ctx=None, s=None):
     if t == "notifications":
         return lab, run(QS + ["ipc", "call", "notifs", "recent", "20"]) or "{}"
     if t == "files":
-        qq = re.sub(r"[^\w .\-áéíóúñü]", "", str(q.get("query") or ""), flags=re.I).strip()[:60]
-        ext = re.sub(r"[^\w]", "", str(q.get("ext") or ""))[:8]
-        if not qq and not ext:
+        rows = find_files(str(q.get("query") or ""), str(q.get("ext") or ""))
+        if rows is None:
             return lab, "Falta qué buscar"
-        if shutil.which("fd"):
-            cmd = ["fd", "-i", "--max-results", "30", "--changed-within", "3650d"] + (["-e", ext] if ext else []) \
-                + [re.escape(qq) if qq else ".", str(HOME)]
-        else:
-            cmd = ["find", str(HOME), "-not", "-path", "*/.*", "-iname", f"*{qq}*{('.' + ext) if ext else ''}"]
-        out = run(cmd, timeout=8).split("\n")
-        return lab, "\n".join(x for x in out if x)[:3500] or "Sin resultados"
+        return lab, "\n".join(rows)[:3500] or "Sin resultados"
+    if t == "read_file":
+        rp = file_ok(q.get("path") or "")
+        if not rp or pathlib.Path(rp).is_dir():
+            return lab, "No puedo leer ese archivo (no existe, es una carpeta o está fuera de la carpeta personal)"
+        txt = read_doc(rp)
+        if txt is None:
+            return lab, "No pude sacar texto de ese archivo"
+        return lab, redact(txt.strip()[:DOC_MAX], s)[0] or "(el archivo está vacío)"
     if t == "apps":
         return lab, json.dumps([{"app": e["id"], "name": e["name"]} for e in find_app(q.get("query") or "", many=True)], ensure_ascii=False) or "[]"
     if t == "settings":
@@ -3253,14 +3442,31 @@ QUERY_RESULT_HEAD = "Resultados de tus consultas"
 MAX_ROUNDS = 3
 
 def parse_queries(raw):
-    m = re.search(r"```hf-query\s*(\[.*?\])\s*```", raw, re.S)
+    # el bloque ```hf-query [ … ]```; los modelos pequeños a veces lo escriben sin las comillas o con un objeto suelto
+    m = re.search(r"```hf-query\s*(.*?)\s*```", raw, re.S) \
+        or re.search(r"^[ \t]*hf-query[ \t]*\n?[ \t]*(\[.*?\]|\{[^{}]*\})[ \t]*$", raw, re.S | re.M)
     if not m:
-        return None, raw
-    try:
-        qs = [q for q in json.loads(m.group(1)) if isinstance(q, dict) and q.get("type") in QUERY_LABELS][:6]
-    except Exception:
-        qs = []
+        # y a veces meten las consultas en el bloque de acciones: si todo lo que hay en él son consultas, lo son
+        m = re.search(r"```(?:hf-actions|hl-actions)\s*(.*?)\s*```", raw, re.S)
+        acts = actions_json(m.group(1)) if m else []
+        only = set(QUERY_LABELS) - set(re.findall(r'"type":"(\w+)"', SCHEMA_DOC))
+        if not acts or not all(isinstance(a, dict) and a.get("type") in only for a in acts):
+            return None, raw
+    qs = [q for q in actions_json(m.group(1)) if isinstance(q, dict) and q.get("type") in QUERY_LABELS][:6]
     return qs, (raw[:m.start()] + raw[m.end():]).strip()
+
+def _selftest_queries():
+    f = {"type": "files", "query": "boda"}
+    assert parse_queries('Busco.\n```hf-query\n[{"type":"files","query":"boda"}]\n```') == ([f], "Busco.")
+    assert parse_queries('Busco.\n\nhf-query\n[ {"type":"files","query":"boda"} ]') == ([f], "Busco.")
+    assert parse_queries('Busco.\nhf-query\n{"type":"files","query":"boda"}')[0] == [f]
+    assert parse_queries('```hf-query\n{"type":"files","query":"boda"}\n```')[0] == [f]
+    assert parse_queries("Escribe hf-query en la terminal")[0] is None
+    assert parse_queries('```hf-query\n[{"type":"rm"}]\n```')[0] == []
+    r = {"type": "read_file", "path": "/x"}
+    assert parse_queries('Voy.\n```hf-actions\n[{"type":"read_file","path":"/x"}]\n```') == ([r], "Voy.")
+    assert parse_queries('```hf-actions\n[{"type":"read_file","path":"/x"},{"type":"dnd","value":true}]\n```')[0] is None
+    assert parse_queries('```hf-actions\n[{"type":"notifications","op":"clear"}]\n```')[0] is None
 
 def actions_json(body):
     """Las acciones de un bloque hf-actions: la lista que pide el formato o, como escriben los modelos pequeños, una
@@ -3403,6 +3609,9 @@ def do_chat(req, print_request=False):
     for m in req.get("messages") or [] if (s0.get("aiName") or "").strip() == "Harper" else []:
         if isinstance(m, dict) and m.get("role") == "user":
             m["text"] = norm_name(m.get("text"))
+    if file_intent(req, s0):
+        last = next(m for m in reversed(req["messages"]) if m.get("role") == "user")
+        last["text"] = str(last.get("text") or "") + FILE_NUDGE
     info = ctx.get("windowInfo") or {}
     cap = attached_image(ctx)
     msgs0, nimg = message_images(list(req.get("messages") or []), ctx, s)
@@ -3481,6 +3690,11 @@ def do_chat(req, print_request=False):
             if queries is None and not UI_SEEN and rnd < MAX_ROUNDS and '"type":"pointer"' in re.sub(r"\s", "", raw) \
                     and settings().get("aiScreenControl", True) is not False:
                 queries = [{"type": "ui"}]   # quiere usar la pantalla sin haberla mirado: se la enseño y vuelve a proponer
+            if queries is None and rnd < MAX_ROUNDS and (rf := read_instead(req, raw)):
+                queries = [rf]               # pidió leerlo o resumirlo y el modelo propone abrirlo: se le da el texto
+            if queries is None and rnd == 0 and file_intent(req, s) and "```" not in raw \
+                    and (fw := file_words(next(m for m in reversed(req["messages"]) if m.get("role") == "user").get("text") or "")):
+                queries = [{"type": "files", "query": " ".join(fw)}]   # pregunta por un archivo y el modelo no lo buscó
             if queries is None or rnd == MAX_ROUNDS:
                 break
             if LIVE:
@@ -3545,7 +3759,7 @@ def log_activity(req, out, secs, src):
     try:
         s = settings()
         last = next((m for m in reversed(req.get("messages") or []) if m.get("role") == "user"), {})
-        q = redact(str(last.get("text") or "")[:160], s)[0] if s.get("aiHistory", True) is not False else ""
+        q = redact(str(last.get("text") or "").replace(FILE_NUDGE, "")[:160], s)[0] if s.get("aiHistory", True) is not False else ""
         e = {"t": time.time(), "src": src, "provider": out.get("provider") or out.get("fallback") or "", "model": out.get("model") or "",
              "fallback": out.get("fallback") or "", "secs": round(secs, 1), "error": (out.get("error") or "")[:300],
              "q": q, "steps": (out.get("steps") or [])[:6], "labels": (out.get("labels") or [])[:8]}
@@ -4154,6 +4368,9 @@ def main(argv):
         _selftest_handoff()
         _selftest_reply()
         _selftest_name()
+        _selftest_files()
+        _selftest_queries()
+        _selftest_file_intent()
         out = {"ok": True}
     elif cmd == "undo":
         out = do_undo(arg)
