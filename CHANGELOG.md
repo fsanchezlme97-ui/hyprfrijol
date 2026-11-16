@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.34] — 2026-11-16
+
+### Seguridad
+- **Un «sí» ya no vale para algo que no sabías.** Si después de que Harper pregunte aparece una ventana sensible
+  (correo, banco…), el «sí» no hace la captura: vuelve a preguntar, nombrando la ventana.
+- **El saludo del modo compañero termina siempre preguntando por la pantalla** («¿Quieres que mire tu pantalla para
+  ayudarte?»), con los botones Sí / No. Antes, el saludo lo escribía el modelo y un «sí» a otra pregunta («¿te ayudo
+  con el código?») acababa en una captura.
+
 ## [0.10.33] — 2026-11-16
 
 ### Novedades (Asistente de IA)

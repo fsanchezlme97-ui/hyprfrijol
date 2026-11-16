@@ -4115,19 +4115,20 @@ def _canned(text, **kw):
 
 YES_NO = [{"n": 1, "label": "Sí, mírala", "say": "sí"}, {"n": 2, "label": "No", "say": "no"}]
 
-def save_screen_ask(req, kind):
+def save_screen_ask(req, kind, why=None):
     msgs = [dict(m, text=str(m.get("text") or "").replace(FILE_NUDGE, "")) if isinstance(m, dict) else m
             for m in (req.get("messages") or [])]
     old = os.umask(0o077)
     try:
         SCREEN_ASK.parent.mkdir(parents=True, exist_ok=True)
-        SCREEN_ASK.write_text(json.dumps({"t": time.time(), "kind": kind, "req": dict(req, messages=msgs)}, ensure_ascii=False))
+        SCREEN_ASK.write_text(json.dumps({"t": time.time(), "kind": kind, "why": why, "req": dict(req, messages=msgs)},
+                                         ensure_ascii=False))
     finally:
         os.umask(old)
 
 def ask_screen(req, why):
     """«¿Puedo mirar tu pantalla?»: la petición espera en SCREEN_ASK y se repite tal cual si dices que sí."""
-    save_screen_ask(req, "replay")
+    save_screen_ask(req, "replay", why)
     text = (f"Tienes algo sensible a la vista ({why}). ¿Puedo hacer una captura de tu pantalla igualmente?" if why
             else "Para esto necesito mirar tu pantalla. ¿Puedo hacer una captura?")
     return _canned(text, choices=YES_NO, ask="screen")
@@ -4181,6 +4182,12 @@ def converse(req, s):
     SCREEN_ASK.unlink(missing_ok=True)
     if pend and time.time() - float(pend.get("t") or 0) < SCREEN_ASK_TTL:
         yn = yes_no(text)
+        if yn is True and (w := sensitive_visible(s)) is not None and w != pend.get("why"):
+            # apareció algo sensible desde que se preguntó: el «sí» no lo sabía; se pregunta otra vez, nombrándolo
+            if pend.get("kind") == "look":
+                save_screen_ask(req, "look", w)
+                return _canned(f"Ahora tienes algo sensible a la vista ({w}). ¿Miro tu pantalla igualmente?", choices=YES_NO, ask="screen")
+            return ask_screen(pend.get("req") or {}, w)
         if yn is True and pend.get("kind") == "look":            # visita del compañero: ahora sí mira
             shot = peek(force=True)
             if not shot.get("path"):
@@ -4204,7 +4211,7 @@ def _selftest_converse():
     import tempfile
     old_ask, SCREEN_ASK = SCREEN_ASK, pathlib.Path(tempfile.mkdtemp()) / "a.json"
     g = globals()
-    real = {k: g[k] for k in ("visible_clients", "peek", "do_chat")}
+    real = {k: g[k] for k in ("visible_clients", "peek", "do_chat", "_do_chat")}
     try:
         s = {"aiScreenAsk": "siempre"}
         g["visible_clients"] = lambda: [{"class": "firefox", "title": "Recibidos - Gmail"}]
@@ -4230,6 +4237,7 @@ def _selftest_converse():
             assert declined(d, "") and declined(d, offer), d
         assert declined("no", offer) and declined("nada", offer) and not declined("no", "¿Te ha quedado claro?")
         assert not declined("no gracias, pero ábreme firefox", offer) and not declined("no entiendo", offer)
+        g["visible_clients"] = lambda: [{"class": "kitty", "title": "nvim"}]   # nada sensible a la vista
         # converse: sin pendiente
         conv = [{"role": "ai", "text": offer}, {"role": "user", "text": "no, gracias"}]
         assert converse({"messages": conv}, s)["end"] is True
@@ -4258,6 +4266,24 @@ def _selftest_converse():
         assert out["msgs"][-1]["images"] == ["/tmp/x.png"] and len(out["msgs"]) == 3, out
         save_screen_ask(visit, "look")
         assert converse({"messages": [{"role": "user", "text": "no"}]}, s)["end"] is True
+        # algo sensible apareció después de preguntar: el «sí» no captura, se pregunta otra vez nombrándolo
+        g["visible_clients"] = lambda: [{"class": "thunderbird", "title": "Recibidos"}]
+        save_screen_ask(visit, "look", None)
+        r = converse({"messages": [{"role": "user", "text": "sí"}]}, s)
+        assert "Thunderbird" in r["text"] and r["choices"] and "msgs" not in r, r
+        out = converse({"messages": [{"role": "user", "text": "sí"}]}, s)       # ahora el «sí» ya sabe qué hay
+        assert out["msgs"][-1]["images"] == ["/tmp/x.png"], out
+        ask_screen(u("haz clic"), "")
+        r = converse({"messages": [{"role": "user", "text": "vale"}]}, s)
+        assert r["ask"] == "screen" and "Thunderbird" in r["text"] and json.loads(SCREEN_ASK.read_text())["why"] == "Thunderbird", r
+        out = converse({"messages": [{"role": "user", "text": "sí"}]}, s)
+        assert out["ctx"]["screenOk"] is True, out
+        # el saludo del compañero acaba siempre preguntando por la pantalla
+        g["do_chat"], g["_do_chat"] = real["do_chat"], lambda q, pr=False: {"text": "¡Hola! ¿Te ayudo con el código?", "error": None}
+        g["visible_clients"] = lambda: [{"class": "kitty", "title": "nvim"}]
+        out = do_chat(visit)
+        assert out["text"] == "¡Hola! ¿Quieres que mire tu pantalla para ayudarte?" and out["choices"] == YES_NO, out
+        assert json.loads(SCREEN_ASK.read_text())["kind"] == "look"
     finally:
         SCREEN_ASK = old_ask
         g.update(real)
@@ -4267,7 +4293,14 @@ def do_chat(req, print_request=False):
     last = next((m for m in reversed(req.get("messages") or []) if isinstance(m, dict) and m.get("role") == "user"), {})
     if last.get("lookAsk") and not print_request and not out.get("error") and str(out.get("text") or "").strip() \
             and not re.fullmatch(r"\W*SKIP\W*", str(out.get("text") or ""), re.I):
-        save_screen_ask(req, "look")     # el compañero saludó sin mirar: «sí» → captura y ayuda concreta
+        why = sensitive_visible()        # el compañero saludó sin mirar: «sí» → captura y ayuda concreta
+        txt = str(out.get("text") or "").rstrip()
+        q = (f"Tienes algo sensible a la vista ({why}). ¿Quieres igualmente que mire tu pantalla para ayudarte?" if why
+             else "¿Quieres que mire tu pantalla para ayudarte?")
+        # el saludo lo escribe el modelo: la pregunta por la pantalla la pone hf-ai, para que el «sí» sea a eso
+        out = dict(out, text=re.sub(r"[^.!?]*\?\s*$", "", txt).rstrip() + " " + q if why or "pantalla" not in txt[-120:].lower()
+                   else txt, choices=YES_NO, ask="screen")
+        save_screen_ask(req, "look", why)
     return out
 
 def _do_chat(req, print_request=False):

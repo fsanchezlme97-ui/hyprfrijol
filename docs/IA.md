@@ -194,10 +194,13 @@ el asistente no puede crearse órdenes que ejecuten comandos.
   - **ventanas sensibles** (`aiSensitiveWindows`: correo, banca, pagos, mensajería, inicios de sesión…, por la clase o
     el título): con una a la vista pregunta siempre y dice por qué, en los dos modos y aunque se lo pidas tú;
   - pedirlo tú («mira mi pantalla», «¿qué ves?», «+ Captura», el atajo de la ventana actual) ya es el permiso;
+  - si al contestar «sí» hay una ventana sensible que la pregunta no nombraba (apareció después), no captura: vuelve a
+    preguntar nombrándola;
   - la pregunta espera 5 minutos (`~/.cache/hyprfrijol/ai-screen-ask.json`); cualquier otro mensaje la descarta;
   - también vale para lo que se pide por MCP: sin permiso, la herramienta de pantalla no captura.
-- **Modo compañero:** sin permiso, saluda y ofrece ayuda sin mirar, y pregunta si puede mirar; con «sí» hace la
-  captura y propone algo concreto.
+- **Modo compañero:** sin permiso, saluda y ofrece ayuda sin mirar. La pregunta por la pantalla la añade hf-ai al
+  final del saludo, con los botones Sí / No, para que el «sí» sea a eso y no a otra cosa que dijera el modelo. Con «sí»
+  hace la captura y propone algo concreto.
 - **«No, gracias»** («estoy bien», «ahora no», «no hace falta»…) se entiende siempre como una negativa; un «no» o un
   «nada» a secas, solo justo después de una oferta. Harper contesta «Vale, aquí estoy si me necesitas.», sin llamar al
   modelo; la conversación por voz termina y la siguiente visita del compañero tarda el doble.
