@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.31] — 2026-11-16
+
+### Novedades (Asistente de IA)
+- **Harper dibuja esquemas** cuando se lo pides o cuando un dibujo explica algo mejor que el texto («hazme un esquema
+  del ciclo de una petición web»). Las respuestas normales siguen sin dibujos.
+- **Con aspecto cuidado, tipo Spline:** degradados suaves, sombra difusa, esquinas redondas y flechas con punta, con
+  los colores de tu tema. El modelo solo dice qué va dónde; el estilo lo pone HyprFrijol, así que también se ven bien
+  con gemma4.
+- Debajo de cada esquema: **Guardar** (en Imágenes › Harper), **Copiar** y **Abrir en grande**.
+
+### Seguridad
+- Los dibujos pasan por una lista blanca: sin scripts, enlaces, estilos ni nada que cargue de fuera.
+
 ## [0.10.30] — 2026-11-16
 
 ### Cambios (Asistente de IA)

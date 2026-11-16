@@ -5,6 +5,8 @@
 //   ```hf-chart {…}```  gráfico: {"type":"bar"|"line"|"pie", "title", "labels":[…], "series":[{"name","values":[…]}],
 //                   "unit"} (hf-ai explica el formato al modelo; si el JSON no vale, se ve como código)
 //   ![alt](url)     imagen (http(s) o ruta local) en una línea propia; clic → se abre fuera
+//   ```svg …```     esquema de Harper (hf-ai clean_svg: limpio y con estilo, con marcadores __P__… que aquí pasan a los
+//                   colores del tema); Guardar / Copiar / Abrir en grande. Un SVG sin ese estilo se ve como código
 //   AiRich { text: "…"; color: Theme.t; width: … }
 import QtQuick
 import QtQuick.Layouts
@@ -19,7 +21,7 @@ ColumnLayout {
     property color color: Theme.t
     spacing: 8
 
-    // [{ kind: "md"|"code"|"chart"|"img", text, lang, chart, src, alt }]
+    // [{ kind: "md"|"code"|"chart"|"img"|"svg", text, lang, chart, src, alt }]
     readonly property var parts: {
         const out = [];
         const src = String(text ?? "");
@@ -52,6 +54,10 @@ ColumnLayout {
                     continue;
                 }
             }
+            if (lang === "svg" && body.indexOf('id="hf-g"') > 0) {   // solo los que limpió hf-ai
+                out.push({ kind: "svg", text: body });
+                continue;
+            }
             out.push({ kind: "code", lang: lang, text: body });
         }
         prose(src.slice(last));
@@ -72,7 +78,7 @@ ColumnLayout {
             required property var modelData
             Layout.fillWidth: true
             sourceComponent: modelData.kind === "code" ? codeC : modelData.kind === "chart" ? chartC
-                : modelData.kind === "img" ? imgC : mdC
+                : modelData.kind === "img" ? imgC : modelData.kind === "svg" ? svgC : mdC
         }
     }
 
@@ -147,6 +153,72 @@ ColumnLayout {
                     selectionColor: Qt.alpha(Theme.p, 0.4)
                     font.family: Theme.mono
                     font.pixelSize: Theme.px(11.5)
+                }
+            }
+        }
+    }
+
+    // ---------- esquema (```svg``` de hf-ai)
+    function hex(c) { const h = v => ("0" + Math.round(v * 255).toString(16)).slice(-2); return "#" + h(c.r) + h(c.g) + h(c.b); }
+    Component {
+        id: svgC
+        Rectangle {
+            id: sv
+            readonly property string raw: parent?.modelData?.text ?? ""
+            readonly property var vb: {
+                const m = raw.match(/viewBox="([^"]+)"/);
+                const n = m ? m[1].trim().split(/[ ,]+/).map(Number) : [];
+                return n.length === 4 && n[2] > 0 && n[3] > 0 ? n : [0, 0, 400, 200];
+            }
+            // los marcadores por los colores del tema de ahora: si cambias de tema, el esquema cambia con él
+            readonly property string themed: raw.replace(/__G1__/g, root.hex(Qt.lighter(Theme.pc, Theme.light ? 1.06 : 1.25)))
+                .replace(/__G2__/g, root.hex(Theme.pc)).replace(/__SH__/g, root.hex(Theme.p)).replace(/__P__/g, root.hex(Theme.p))
+                .replace(/__O__/g, root.hex(Theme.ov)).replace(/__T__/g, root.hex(Theme.t)).replace(/__M__/g, root.hex(Theme.tv))
+                .replace(/__F__/g, Theme.font.replace(/[^\w -]/g, ""))
+            property string done: ""
+            implicitHeight: svgCol.implicitHeight + 16
+            radius: Theme.r(12)
+            color: Theme.fill2
+            Timer { id: doneT; interval: 1600; onTriggered: sv.done = "" }
+            Column {
+                id: svgCol
+                x: 8; y: 8
+                width: parent.width - 16
+                spacing: 6
+                Image {
+                    width: parent.width
+                    height: Math.min(380, width * sv.vb[3] / sv.vb[2])
+                    source: "data:image/svg+xml;utf8," + encodeURIComponent(sv.themed)
+                    sourceSize.width: Math.round(width * 2)
+                    fillMode: Image.PreserveAspectFit
+                    asynchronous: true
+                    smooth: true
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Quickshell.execDetached([Paths.script("hf-ai"), "open-svg", sv.themed])
+                    }
+                }
+                Row {
+                    spacing: 14
+                    Repeater {
+                        model: [["Guardar", "save-svg"], ["Copiar", ""], ["Abrir en grande", "open-svg"]]
+                        Txt {
+                            required property var modelData
+                            text: sv.done === modelData[0] ? (modelData[1] === "" ? "Copiado" : "Guardado en Imágenes › Harper") : modelData[0]
+                            size: 10.5; muted: !lnk.containsMouse
+                            MouseArea {
+                                id: lnk
+                                anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    Quickshell.execDetached(modelData[1] === "" ? ["wl-copy", "--", sv.themed]
+                                                                               : [Paths.script("hf-ai"), modelData[1], sv.themed]);
+                                    sv.done = modelData[1] === "open-svg" ? "" : modelData[0];
+                                    doneT.restart();
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

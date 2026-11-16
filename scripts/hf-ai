@@ -345,6 +345,16 @@ mejor en un gráfico (comparar, evolución, reparto) o el usuario lo pide, añad
 (type: bar | line | pie; pie usa solo la primera serie; números, no texto). Para enseñar una imagen escribe en una
 línea sola ![descripción](https://… o /ruta/local.png); solo direcciones reales que conozcas (por ejemplo las que
 devuelve una consulta), nunca inventadas. No uses gráficos ni imágenes si no aportan.
+Dibujos: SOLO si piden un dibujo, esquema o diagrama, o si uno explica algo mucho mejor que el texto (cómo se conecta o
+fluye algo). Un bloque ```hf-diagram con un <svg viewBox="0 0 400 220"> (ancho 300-600) hecho de piezas con clase:
+box (rect, caja) · pill (rect, etiqueta) · node (circle) · accent (súmala a lo importante: class="box accent") ·
+arrow (line o path, con flecha) · line (sin flecha) · dashed · dot · label (text, centrado en x,y) · title · small · muted.
+Sin colores ni style: el aspecto lo pone el panel. Cada caja lleva su <text> encima. Ejemplo:
+```hf-diagram
+<svg viewBox="0 0 400 120"><rect class="box" x="20" y="35" width="120" height="50"/><text class="label" x="80" y="65">Router</text>
+<line class="arrow" x1="140" y1="60" x2="250" y2="60"/><rect class="box accent" x="260" y="35" width="120" height="50"/>
+<text class="label" x="320" y="65">Equipo</text></svg>
+```
 """
 
 SYSTEM_BASE = """Eres el asistente de hyprfrijol, un escritorio Hyprland en Linux. Respondes en español, breve y claro
@@ -3514,6 +3524,279 @@ def actions_json(body):
         out += v if isinstance(v, list) else [v] if isinstance(v, dict) else []
     return out
 
+# ---------------------------------------------------------------- esquemas (```hf-diagram```)
+# El modelo dibuja con piezas con nombre (cajas, nodos, flechas…) y sin colores; aquí se limpia con lista blanca y se le
+# pone el estilo (degradados suaves, sombra difusa, esquinas redondas, flechas con punta). Los colores van como
+# marcadores (__P__…) que AiRich.qml cambia por los del tema al dibujarlo: un esquema viejo sigue el tema actual.
+SVG_TAGS = {"svg", "g", "rect", "circle", "ellipse", "line", "polyline", "polygon", "path", "text", "tspan", "title", "desc",
+            "animate", "animateTransform", "animateMotion", "set"}
+SVG_ANIM = {"animate", "animateTransform", "animateMotion", "set"}
+SVG_ATTRS = {"id", "class", "x", "y", "x1", "y1", "x2", "y2", "cx", "cy", "r", "rx", "ry", "width", "height", "d", "points",
+             "transform", "viewBox", "text-anchor", "font-size", "font-weight", "opacity", "dx", "dy"}
+SVG_ANIM_ATTRS = {"attributeName", "attributeType", "values", "from", "to", "by", "dur", "begin", "end", "repeatCount",
+                  "keyTimes", "keySplines", "calcMode", "type", "additive", "accumulate", "fill", "path", "rotate"}
+SVG_CLASSES = {"box", "pill", "node", "accent", "arrow", "line", "dashed", "flow", "label", "title", "small", "muted", "dot"}
+SVG_MAX = 100_000
+DIAGRAM_STYLE = """<defs>
+<linearGradient id="hf-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="__G1__"/><stop offset="1" stop-color="__G2__"/></linearGradient>
+<filter id="hf-sh" x="-25%" y="-25%" width="150%" height="170%"><feGaussianBlur in="SourceAlpha" stdDeviation="{sh}"/><feOffset dy="{sh}" result="b"/><feFlood flood-color="__SH__" flood-opacity="0.32"/><feComposite in2="b" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<marker id="hf-tip" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 1L9 5L1 9z" fill="__P__"/></marker>
+</defs>
+<style>
+rect,circle,ellipse,polygon{{fill:url(#hf-g);stroke:__O__;stroke-width:{s15}}}
+path,line,polyline{{fill:none;stroke:__O__;stroke-width:{s2};stroke-linecap:round}}
+.box,.pill,.node{{fill:url(#hf-g);stroke:__O__;stroke-width:{s15};filter:url(#hf-sh)}}
+.accent{{stroke:__P__;stroke-width:{s25}}}
+.arrow{{fill:none;stroke:__P__;stroke-width:{s25};stroke-linecap:round;stroke-linejoin:round;marker-end:url(#hf-tip)}}
+.line{{fill:none;stroke:__O__;stroke-width:{s2};stroke-linecap:round}}
+.dashed,.flow{{stroke-dasharray:{d6} {d6}}}
+.dot{{fill:__P__;stroke:none}}
+text,.label{{fill:__T__;font-family:__F__;font-size:{f14}px;text-anchor:middle}}
+.title{{font-size:{f18}px;font-weight:600}}
+.small{{font-size:{f11}px;fill:__M__}}
+.muted{{opacity:0.55}}
+</style>"""
+
+SVG_ALIAS = {"label": ("text", "label"), "text": ("text", ""), "arrow": ("line", "arrow"), "box": ("rect", "box"),
+             "pill": ("rect", "pill"), "node": ("circle", "node")}
+
+def alias(el, tag):
+    """<arrow x y width height> → <line class="arrow" x1…>; <node x y> → <circle class="node" cx cy r>; etc."""
+    import xml.etree.ElementTree as ET
+    new, cls = SVG_ALIAS[tag]
+    a = {k.rsplit("}", 1)[-1]: v for k, v in el.attrib.items()}
+    f = lambda k, d=0.0: float(a[k]) if re.fullmatch(r"-?[\d.]+", str(a.get(k, ""))) else d
+    if tag == "arrow" and "x1" not in a:
+        a.update(x1=f"{f('x'):g}", y1=f"{f('y'):g}", x2=f"{f('x') + f('width'):g}", y2=f"{f('y') + f('height'):g}")
+    if tag == "node" and "cx" not in a:
+        a.update(cx=f"{f('x'):g}", cy=f"{f('y'):g}", r=a.get("r") or "28")
+    if cls:
+        a["class"] = (a.get("class", "") + " " + cls).strip()
+    out = ET.Element(new, a)
+    out.text, out.tail = el.text, el.tail
+    out.extend(list(el))
+    return out
+
+def svg_bbox(svg):
+    """Caja (x0, y0, x1, y1) de lo dibujado, contando los translate() de los <g>; None si hay otras transformaciones
+    (no se toca el marco) o no hay nada medible. El texto se estima (≈0,6 em por letra, centrado)."""
+    pts = []
+    def num(e, k):
+        try:
+            return float(e.get(k) or 0)
+        except ValueError:
+            return 0.0
+    def walk(e, tx, ty):
+        tr = e.get("transform") or ""
+        if tr:
+            m = re.fullmatch(r"\s*translate\(\s*(-?[\d.]+)(?:[ ,]+(-?[\d.]+))?\s*\)\s*", tr)
+            if not m:
+                raise ValueError("transformación")
+            tx, ty = tx + float(m.group(1)), ty + float(m.group(2) or 0)
+        tag = e.tag
+        if tag == "rect":
+            pts.extend([(tx + num(e, "x"), ty + num(e, "y")), (tx + num(e, "x") + num(e, "width"), ty + num(e, "y") + num(e, "height"))])
+        elif tag in ("circle", "ellipse"):
+            rx, ry = (num(e, "r"), num(e, "r")) if tag == "circle" else (num(e, "rx"), num(e, "ry"))
+            pts.extend([(tx + num(e, "cx") - rx, ty + num(e, "cy") - ry), (tx + num(e, "cx") + rx, ty + num(e, "cy") + ry)])
+        elif tag == "line":
+            pts.extend([(tx + num(e, "x1"), ty + num(e, "y1")), (tx + num(e, "x2"), ty + num(e, "y2"))])
+        elif tag in ("polyline", "polygon", "path"):
+            v = [float(x) for x in re.findall(r"-?\d+(?:\.\d+)?", e.get("points") or e.get("d") or "")]
+            if tag == "path" and re.search(r"[a-z]", re.sub(r"[eE]", "", e.get("d") or "")):
+                v = []                   # comandos relativos: no se miden (se queda el resto)
+            pts.extend((tx + v[i], ty + v[i + 1]) for i in range(0, len(v) - 1, 2))
+        elif tag == "text":
+            size = 18 if "title" in (e.get("class") or "") else 11 if "small" in (e.get("class") or "") else 14
+            w = 0.6 * size * len("".join(e.itertext()))
+            x, y = tx + num(e, "x"), ty + num(e, "y")
+            pts.extend([(x - w / 2, y - size), (x + w / 2, y + size * 0.3)])
+        for ch in e:
+            if ch.tag not in SVG_ANIM:
+                walk(ch, tx, ty)
+    try:
+        walk(svg, 0.0, 0.0)
+    except ValueError:
+        return None
+    if len(pts) < 2:
+        return None
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    return min(xs), min(ys), max(xs), max(ys)
+
+def clean_svg(src):
+    """SVG del modelo → SVG seguro y con estilo (con los marcadores de color), o None si no vale.
+    Lista blanca de etiquetas, atributos y clases; fuera colores propios, estilos, enlaces, scripts y entidades."""
+    import xml.etree.ElementTree as ET
+    src = str(src or "").strip()
+    # sin DTD no hay entidades (ni externas ni en bomba): con eso el ElementTree de serie basta, sin defusedxml
+    if not src or len(src) > SVG_MAX or re.search(r"<!(DOCTYPE|ENTITY)", src, re.I):
+        return None
+    src = re.sub(r"^<\?xml[^>]*\?>\s*", "", src)
+    def dedup(m):                        # «y1="…" … y1="…"» en la misma etiqueta es XML roto: vale el primero…
+        tag = m.group(0)
+        seen = set()
+        def one(a):
+            k = a.group(1)
+            if k in seen:                # …salvo x1/y1 repetido sin x2/y2: el segundo era el final de la línea
+                k2 = k[0] + "2" if k in ("x1", "y1") else ""
+                if k2 and k2 not in seen and not re.search(rf"\s{k2}\s*=", tag):
+                    seen.add(k2)
+                    return f" {k2}={a.group(2)}"
+                return ""
+            seen.add(k)
+            return a.group(0)
+        return re.sub(r'\s([\w:-]+)\s*=\s*("[^"]*"|\'[^\']*\')', one, tag)
+    src = re.sub(r"<[A-Za-z][^<>]*>", dedup, src)
+    try:
+        root = ET.fromstring(src)
+    except ET.ParseError:
+        return None
+    local = lambda tag: tag.rsplit("}", 1)[-1] if isinstance(tag, str) else ""
+    if local(root.tag) != "svg":
+        return None
+    count = [0]
+    bad_val = re.compile(r"url\(|javascript:|expression\(|@import|[<>]", re.I)
+
+    def copy(el):
+        tag = local(el.tag)
+        if tag in SVG_ALIAS:              # <label>, <arrow>, <box>… (los modelos pequeños usan la clase como etiqueta)
+            el = alias(el, tag)
+            tag = local(el.tag)
+        if tag not in SVG_TAGS or count[0] > 400:
+            return None
+        count[0] += 1
+        out = ET.Element(tag)
+        for k, v in el.attrib.items():
+            k = local(k)
+            if (k in SVG_ATTRS or (tag in SVG_ANIM and k in SVG_ANIM_ATTRS)) and not bad_val.search(v) and len(v) < 4000:
+                if k == "class":
+                    v = " ".join(c for c in v.split() if c in SVG_CLASSES)
+                    if not v:
+                        continue
+                if tag in SVG_ANIM and k == "fill" and v not in ("freeze", "remove"):
+                    continue
+                out.set(k, v)
+        if el.get("stroke") in ("dashed", "arrow", "line"):     # stroke="dashed": quería la clase
+            out.set("class", (out.get("class", "") + " " + el.get("stroke")).strip())
+        cls = set((out.get("class") or "").split())
+        if tag == "rect" and "rx" not in out.attrib:
+            if "pill" in cls:
+                try:
+                    out.set("rx", str(float(out.get("height") or 0) / 2))
+                except ValueError:
+                    pass
+            elif cls & {"box", "node"}:
+                out.set("rx", "14")
+        if tag in ("text", "tspan", "title", "desc"):
+            out.text = (el.text or "")[:200]
+        for ch in el:
+            c = copy(ch)
+            if c is not None:
+                out.append(c)
+            if tag in ("text", "tspan") and ch.tail:
+                (c if c is not None else out).tail = ch.tail[:200]
+        return out
+
+    svg = copy(root)
+    box = svg_bbox(svg)
+    if box:                              # el marco es lo que hay dibujado (los modelos se salen o dejan medio vacío)
+        x0, y0, x1, y1 = box
+        svg.set("viewBox", f"{x0 - 16:g} {y0 - 16:g} {x1 - x0 + 32:g} {y1 - y0 + 40:g}")
+    vb = svg.get("viewBox") or ""
+    if not re.fullmatch(r"\s*-?[\d.]+[ ,]+-?[\d.]+[ ,]+[\d.]+[ ,]+[\d.]+\s*", vb):
+        try:
+            vb = f"0 0 {float(svg.get('width'))} {float(svg.get('height'))}"
+        except (TypeError, ValueError):
+            return None
+    nums = [float(x) for x in re.split(r"[ ,]+", vb.strip())]
+    if nums[2] <= 0 or nums[3] <= 0 or nums[2] > 4000 or nums[3] > 4000:
+        return None
+    for k in ("width", "height", "x", "y"):
+        svg.attrib.pop(k, None)
+    svg.set("viewBox", " ".join(f"{n:g}" for n in nums))
+    svg.set("xmlns", "http://www.w3.org/2000/svg")
+    body = ET.tostring(svg, encoding="unicode")
+    if count[0] < 2:                     # un <svg> vacío no es un esquema
+        return None
+    k = max(1.0, nums[2] / 440)          # el panel mide ~360 px: lo que sea más ancho que 440 se vería diminuto
+    f = lambda v: f"{v * k:.3g}"
+    style = DIAGRAM_STYLE.format(sh=f(5), s15=f(1.5), s25=f(2.5), s2=f(2), f14=f(14), f18=f(18), f11=f(11), d6=f(6))
+    i = body.index(">") + 1
+    return body[:i] + style + body[i:]
+
+def diagrams_in(text):
+    """Cambia cada ```hf-diagram … ``` por ```svg …``` limpio y con estilo (AiRich lo dibuja); si no vale, se queda como
+    código para que se vea qué escribió el modelo."""
+    def sub(m):
+        svg = clean_svg(m.group(1))
+        return f"```svg\n{svg}\n```" if svg else f"```xml\n{m.group(1)}\n```"
+    text = re.sub(r"```(?:hf-diagram|svg)\s*(.*?)\s*```", sub, text, flags=re.S)
+    m = re.search(r"!\[[^\]]*\]\(\s*hf-diagram[^<]*(<.*>)[^>]*$", text, re.S) or re.search(r"(?m)^hf-diagram\s*(<.*>)", text, re.S)
+    if m and "```svg" not in text:      # sin el bloque, como imagen o suelto: se rescata lo que parezca SVG
+        body = m.group(1)
+        svg = clean_svg(body if body.lstrip().startswith("<svg") else f"<svg>{body}</svg>")
+        text = text[:m.start()].rstrip() + (f"\n```svg\n{svg}\n```" if svg else "")
+    return text
+
+def save_svg(svg, open_it=False):
+    """«Guardar» / «Abrir en grande» de un esquema ya con los colores del tema (lo manda AiRich.qml): se comprueba otra
+    vez que no traiga nada activo y se guarda en Imágenes/Harper."""
+    svg = str(svg or "")
+    if not svg.lstrip().startswith("<svg") or len(svg) > SVG_MAX * 2 \
+            or re.search(r"<script|<foreignObject|javascript:|<!(DOCTYPE|ENTITY)|(xlink:)?href\s*=\s*[\"'](?!#)|@import", svg, re.I):
+        return {"ok": False, "error": "No es un esquema de Harper"}
+    pics = run(["xdg-user-dir", "PICTURES"]).strip() if shutil.which("xdg-user-dir") else ""
+    d = pathlib.Path(pics or HOME / "Imágenes") / "Harper"
+    d.mkdir(parents=True, exist_ok=True)
+    f = d / (time.strftime("%Y%m%d-%H%M%S") + ".svg")
+    f.write_text(svg)
+    if open_it:
+        subprocess.Popen(["xdg-open", str(f)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    return {"ok": True, "path": str(f)}
+
+def _selftest_svg():
+    ok = clean_svg('<svg viewBox="0 0 300 100"><rect class="box" x="10" y="10" width="100" height="50"/>'
+                   '<text class="label" x="60" y="40">Hola</text><path class="arrow" d="M110 35H200"/></svg>')
+    assert ok and "hf-g" in ok and 'rx="14"' in ok and ">Hola<" in ok and "marker-end" in ok and "__P__" in ok, ok
+    assert "{{" not in ok and "}}" not in ok and ".arrow{fill:none" in ok and "font-size:14px" in ok, ok
+    wide = clean_svg('<svg viewBox="0 0 880 100"><rect class="box" x="0" y="0" width="880" height="50"/></svg>')
+    assert "font-size:29px" in wide, re.findall(r"font-size:[\d.]+px", wide)       # marco 912 → ×2,07
+    evil = clean_svg('<svg viewBox="0 0 10 10" onload="x()"><script>alert(1)</script><foreignObject><b>x</b></foreignObject>'
+                     '<rect class="box hacked" style="fill:red" fill="red" x="1" y="1" width="5" height="5"/>'
+                     '<a href="http://x"><circle r="2"/></a><rect fill="url(http://x)" width="1" height="1" x="0" y="0"/>'
+                     '<style>@import url(http://x);</style><use href="http://x#a"/></svg>')
+    for bad in ("onload", "script", "foreignObject", "red", "hacked", "http://x", "@import", "<use", "<a "):
+        assert bad not in evil.split("<style>")[0] + evil.split("</style>")[-1], (bad, evil)
+    assert clean_svg('<svg width="200" height="80"><g><title>x</title></g></svg>').count('viewBox="0 0 200 80"') == 1
+    assert 'viewBox="-15 -15 40 48"' in clean_svg('<svg width="200" height="80"><circle class="node" cx="5" cy="5" r="4"/></svg>')
+    d = clean_svg('<svg viewBox="0 0 9 9"><line class="arrow" x1="1" y1="2" x2="3" y1="4"/><rect y1="1" y1="2" y2="3"/></svg>')
+    assert 'y1="2"' in d and 'y2="4"' in d and d.count('y1="1"') == 1 and 'y2="3"' in d, d
+    assert clean_svg("hola") is None and clean_svg("<svg></svg>") is None and clean_svg("<div/>") is None
+    assert clean_svg('<!DOCTYPE x [<!ENTITY a "b">]><svg viewBox="0 0 1 1"><rect/></svg>') is None
+    assert clean_svg("<svg viewBox='0 0 1 1'>" + "<rect/>" * 30000 + "</svg>") is None          # más de 100 KB
+    a = clean_svg('<svg viewBox="0 0 9 9"><rect class="pill" x="0" y="0" width="8" height="4"><animate attributeName="x" '
+                  'values="0;1" dur="2s" fill="red" repeatCount="indefinite"/></rect></svg>')
+    assert 'rx="2.0"' in a and 'repeatCount="indefinite"' in a and 'fill="red"' not in a, a
+    txt = diagrams_in("Mira:\n```hf-diagram\n<svg viewBox='0 0 9 9'><rect class='box'/></svg>\n```\nfin")
+    assert txt.startswith("Mira:\n```svg\n<svg") and txt.endswith("```\nfin"), txt
+    assert diagrams_in("```hf-diagram\nno es svg\n```") == "```xml\nno es svg\n```"
+    assert "hf-g" in diagrams_in('```svg\n<svg viewBox="0 0 9 9"><script>x</script><rect/></svg>\n```') \
+        and "script" not in diagrams_in('```svg\n<svg viewBox="0 0 9 9"><script>x</script><rect/></svg>\n```')
+    assert not save_svg('<svg><script>1</script></svg>')["ok"] and not save_svg("<html/>")["ok"]
+    # alias, marco y rescate (lo que escribió gemma4 en las pruebas)
+    g = clean_svg('<svg viewBox="0 0 100 50"><label x="60" y="45">Módem</label><arrow x="110" y="45" width="30" height="0"/>'
+                  '<node x="200" y="45"/><line x1="0" y1="0" x2="10" y2="0" stroke="dashed"/></svg>')
+    assert 'class="label">Módem<' in g and 'x1="110"' in g and 'x2="140"' in g and 'class="arrow"' in g \
+        and 'cx="200"' in g and 'class="node"' in g and 'class="dashed"' in g, g
+    vb = [float(x) for x in re.search(r'viewBox="([^"]+)"', g).group(1).split()]
+    assert vb[0] < 0 and vb[0] + vb[2] > 228, vb          # el nodo (x 200, r 28) entra en el marco
+    g = clean_svg('<svg viewBox="0 0 400 100"><g transform="translate(20, 40)"><rect class="box" x="510" y="0" width="120" height="50"/></g></svg>')
+    vb = [float(x) for x in re.search(r'viewBox="([^"]+)"', g).group(1).split()]
+    assert vb[0] == 514 and vb[2] == 152, vb
+    r = diagrams_in('Mira. ![Red](hf-diagram {"type":"svg"}><rect x="10" y="10" width="100" height="70" class="box" /> '
+                    '<label x="60" y="45">Módem</label>)')
+    assert r.startswith("Mira.\n```svg\n<svg") and ">Módem<" in r, r
+
 def parse_reply(raw, s=None):
     shell, term = allowed(s)
     actions = []
@@ -3532,6 +3815,7 @@ def parse_reply(raw, s=None):
             why = f"No encuentro «{apps[0]}» instalada en este equipo." if apps else "No pude preparar eso en este equipo."
             raw = why if not raw or raw.rstrip().endswith(":") else f"{raw} {why}"
     raw = re.sub(r"```hf-query.*?```", "", raw, flags=re.S).strip()
+    raw = diagrams_in(raw)
     raw = re.sub(r"!\[[^\]]*\]\([^)]*marcada\.png\)\s*", "", raw).strip()   # la captura numerada que algún modelo repite
     if (ask := ask_choice(actions)):    # varios sitios posibles (dos correos de la misma persona): «¿cuál?»
         return ask
@@ -4495,6 +4779,8 @@ def main(argv):
                         "labels": [label(a) for a in rec.get("actions") or []]})
     elif cmd == "activity":                 # registro del asistente: activity [n] | activity clear
         out = clear_activity() if arg == "clear" else activity(int(arg) if arg.isdigit() else 200)
+    elif cmd in ("save-svg", "open-svg"):    # «Guardar» / «Abrir en grande» de un esquema del panel
+        out = save_svg(arg, open_it=cmd == "open-svg")
     elif cmd == "selftest":
         _selftest_redact()
         _selftest_handoff()
@@ -4504,6 +4790,7 @@ def main(argv):
         _selftest_queries()
         _selftest_file_intent()
         _selftest_choice()
+        _selftest_svg()
         out = {"ok": True}
     elif cmd == "undo":
         out = do_undo(arg)

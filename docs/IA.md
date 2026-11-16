@@ -183,6 +183,31 @@ el asistente no puede crearse órdenes que ejecuten comandos.
 - La primera vez, el panel enseña qué puede hacer el asistente y 6 ejemplos (`aiOnboarded`; «Volver a verla» en Ajustes › IA).
 - Consultas de solo lectura nuevas: `devices` (unidades y espacio), `downloads` (la cola) y `wallhaven` (buscar fondos).
 
+### Esquemas (dibujos con código)
+
+Harper dibuja **solo si se lo pides** (un dibujo, esquema o diagrama) o si un esquema explica algo mucho mejor que el
+texto. El modelo no elige colores: escribe un SVG sencillo con piezas con clase y el estilo lo pone HyprFrijol.
+
+- **Piezas** (bloque ```` ```hf-diagram ````): `box`, `pill`, `node`, `accent` (lo importante), `arrow`, `line`,
+  `dashed`, `dot`, `label`, `title`, `small`, `muted`.
+- **Limpieza** (`clean_svg`, lista blanca):
+  - fuera `<script>`, `<foreignObject>`, `on*`, `style`, colores propios, enlaces y `url()`;
+  - sin DTD ni entidades;
+  - 100 KB y 400 piezas como mucho;
+  - un ```` ```svg ```` escrito a mano pasa por la misma limpieza.
+- **Arreglos para gemma4:**
+  - etiquetas inventadas (`<label>`, `<arrow>`, `<box>`, `<node>`, `<pill>`) se convierten en lo que querían decir;
+  - atributos repetidos: vale el primero, y un `x1`/`y1` repetido sin `x2`/`y2` pasa a ser el final de la línea;
+  - el SVG metido en una imagen markdown se rescata.
+- **Marco y tamaño:** el marco se recalcula con lo que hay dibujado (los modelos se salen o dejan medio vacío). La
+  letra, los trazos y la sombra crecen con el ancho, para que un esquema ancho se lea en el panel (~360 px).
+- **Estilo** (aspecto tipo Spline): degradado suave del color de contenedor del tema, sombra difusa teñida, esquinas
+  redondas, flechas con punta y borde del color principal en `accent`. Los colores van como marcadores (`__P__`…)
+  que `AiRich.qml` cambia por los del tema al dibujarlo: si cambias de tema, el esquema cambia con él.
+- **En el panel:** Qt SVG (sin red ni JavaScript; las animaciones se ven quietas). Debajo, «Guardar» (en
+  `Imágenes/Harper`), «Copiar» y «Abrir en grande» (`hf-ai save-svg` / `open-svg`, que vuelven a comprobar que el SVG
+  no traiga nada activo).
+
 ### Archivos
 
 - **Buscar** (`files {"query","ext"}`): por nombre en la carpeta personal (`fd`, o `find` sin él). Con varias palabras
