@@ -1,4 +1,4 @@
-// Modo compañero (Ajustes › Asistente de IA, aiCompanion, apagado por defecto): de vez en cuando Helpert mira la pantalla
+// Modo compañero (Ajustes › Asistente de IA, aiCompanion, apagado por defecto): de vez en cuando Harper mira la pantalla
 // (hf-ai peek → ~/.cache/hyprfrijol/capturas_tmp_ai) y empieza él la conversación por voz: ofrece ayuda, pregunta cómo
 // vas o comenta lo que ve, como un amigo. Si no ve nada que decir (SKIP) no dice nada.
 //
@@ -21,7 +21,7 @@ import "../../services"
 Item {
     id: root
     property bool busy: false                    // dictando (Dictado.qml)
-    signal visiting()                            // Dictado.companionTalk(): la conversación espera a Helpert
+    signal visiting()                            // Dictado.companionTalk(): la conversación espera a Harper
     readonly property bool on: Settings.get("aiCompanion", false) === true
     readonly property real base: ({ poco: 90, normal: 45, amenudo: 20 })[Settings.get("aiCompanionFreq", "normal")] ?? 45
 

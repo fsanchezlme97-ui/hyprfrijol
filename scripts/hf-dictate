@@ -20,7 +20,7 @@ Motor (dictationEngine; «auto» = Nemotron si está instalado; si no Parakeet; 
         graba hasta «stop» (por stdin, SIGUSR1 o `hf-dictate stop`); --command: una orden de voz (hf-voice);
         --hold: no escribe hasta «release» por stdin (modo mantener: las teclas del atajo siguen pulsadas);
         --file: lee el audio de un archivo en lugar del micrófono (pruebas; --simulate-live lo da a tiempo real).
-        --tts: empieza con Helpert hablando (conversación): no se cierra por silencio y solo una voz clara y
+        --tts: empieza con Harper hablando (conversación): no se cierra por silencio y solo una voz clara y
         sostenida cuenta; entonces emite {"ev":"barge"} (el shell lo calla) y sigue como un turno normal.
         Con HF_DICTATE_AEC=1 graba del micrófono sin eco (hf-dictate aec on) si está cargado.
         stdin admite líneas: stop · cancel · release · hold (teclas del atajo pulsadas: no escribir) · tts on · tts off. Imprime eventos en líneas JSON (los lee modules/dictado):
@@ -31,7 +31,7 @@ Motor (dictationEngine; «auto» = Nemotron si está instalado; si no Parakeet; 
   hf-dictate toggle [--command]  sin el shell: empieza o, si ya graba, para (avisos con notify-send)
   hf-dictate stop | cancel       para la grabación en curso (y transcribe) / la descarta
   hf-dictate aec on|off|status   cancelador de eco de PipeWire (webrtc) para la conversación: micrófono «hf-aec-source»;
-                                 lo que suena por «hf-aec-sink» (la voz de Helpert, hf-ai speak) no se oye en él
+                                 lo que suena por «hf-aec-sink» (la voz de Harper, hf-ai speak) no se oye en él
   hf-dictate status              {engine, bin, server, model, modelOk, models, vosk…, recorder, typer, gpu…}
   hf-dictate warm | unload       carga el modelo en whisper-server / lo descarga ya
   hf-dictate transcribe <wav>    imprime el texto (pruebas)
@@ -1232,7 +1232,7 @@ def aec_on():
     return any(len(f) > 1 and f[1] == AEC_SRC for f in pa_names("sources"))
 
 def aec(cmd):
-    """Cancelador de eco para hablar con Helpert sin auriculares: su voz suena por AEC_SINK y el micrófono AEC_SRC la
+    """Cancelador de eco para hablar con Harper sin auriculares: su voz suena por AEC_SINK y el micrófono AEC_SRC la
     resta. Solo existe mientras dura la conversación (Dictado.qml lo carga y lo quita); no cambia los dispositivos
     por defecto."""
     if not shutil.which("pactl"):
@@ -1283,7 +1283,7 @@ def frame_db(b):
 class Session:
     def __init__(self, s, kind="dictado", mode=None, hold=False, src=None, live_pace=False, tts=False):
         self.s = s
-        # Helpert hablando (conversación): solo cuenta una voz clara y sostenida, que lo interrumpe (ev «barge»)
+        # Harper hablando (conversación): solo cuenta una voz clara y sostenida, que lo interrumpe (ev «barge»)
         self.tts = threading.Event()
         if tts:
             self.tts.set()
@@ -1701,9 +1701,9 @@ class Session:
         t0 = tmax0 = time.time()
         ppid = os.getppid()
         barge = 0
-        eref, tts_n, was_tts = -90.0, 0, False                      # nivel del eco de Helpert (picos: sube ≤10 dB/s, cae ~1,7 dB/s) y tramos oídos
-        tpre = collections.deque(maxlen=50)        # 1,5 s del micro mientras habla Helpert
-        # interrumpir a Helpert: dB por encima del suelo y tramos de 30 ms seguidos. Con el cancelador de eco su voz
+        eref, tts_n, was_tts = -90.0, 0, False                      # nivel del eco de Harper (picos: sube ≤10 dB/s, cae ~1,7 dB/s) y tramos oídos
+        tpre = collections.deque(maxlen=50)        # 1,5 s del micro mientras habla Harper
+        # interrumpir a Harper: dB por encima del suelo y tramos de 30 ms seguidos. Con el cancelador de eco su voz
         # apenas llega; sin él (altavoces) hace falta hablar claramente más alto que lo que el micro oye de ellos
         barge_db, barge_n = (4.0, 10) if self.aec else (10.0, 12)
         live_end = self.src is None or self.live_pace     # se corta por silencio (y en pruebas a tiempo real)
@@ -1748,7 +1748,7 @@ class Session:
             v = max(0.0, min(1.0, (db + 55) / 45))     # −55 dBFS → 0 · −10 dBFS → 1
             self.peak = max(self.peak, v)
             if self.tts.is_set():
-                # Helpert habla: el turno no corre (ni el silencio ni el máximo) y su voz no abre frases
+                # Harper habla: el turno no corre (ni el silencio ni el máximo) y su voz no abre frases
                 if not was_tts:                 # empieza a hablar: se vuelve a aprender su eco
                     eref, tts_n, barge, was_tts = -90.0, 0, 0, True
                 last_voice_t = tmax0 = time.time()

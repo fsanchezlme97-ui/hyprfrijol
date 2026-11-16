@@ -16,8 +16,8 @@ Singleton {
         "clipboard": '<rect x="8" y="3" width="8" height="4" rx="1"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>',
         // Cafeína (no apagar la pantalla): taza con vapor
         "coffee": '<path d="M4 10h13v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 11.5h1.5a2.5 2.5 0 0 1 0 5H16.5"/><path d="M8 3.5c-.8 1 .8 2 0 3.5M12 3.5c-.8 1 .8 2 0 3.5"/>',
-        // IA (barra, Spotlight, panel lateral, Ajustes): bocadillo de chat con una chispa pequeña dentro; neutro, sin marca de proveedor
-        "ai": '<path d="M6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5h-6.2L7 20.2V17h-.5A2.5 2.5 0 0 1 4 14.5v-8A2.5 2.5 0 0 1 6.5 4z"/><path d="M12 7.2l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z" fill="currentColor" stroke-width="1.2"/>',
+        // IA (barra, Spotlight, panel lateral, Ajustes): las gafas de Harper, con cejas y un prompt «>_» en las lentes
+        "ai": '<circle cx="6.9" cy="14" r="4.3"/><circle cx="17.1" cy="14" r="4.3"/><path d="M11.2 13.6q.8-.9 1.6 0"/><path d="M2.6 14H1.2M21.4 14h1.4"/><path d="M3.6 7.6q3.2-2.6 6.6-.4M13.8 6.6q3.4-1.6 6.6 1"/><path d="M5.5 12.4l1.7 1.6-1.7 1.6"/><path d="M15.6 15.7h3"/>',
         "sparkle": '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
         "wifi": '<path d="M2.5 9.2a14 14 0 0 1 19 0"/><path d="M5.6 12.6a9.5 9.5 0 0 1 12.8 0"/><path d="M8.8 16a5 5 0 0 1 6.4 0"/><circle cx="12" cy="19.4" r="1.3" fill="currentColor" stroke="none"/>',
         "volume": '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>',

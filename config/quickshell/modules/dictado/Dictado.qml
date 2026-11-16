@@ -1,7 +1,7 @@
 // Dictado y comandos de voz (local, como SuperWhisper): atajos globales hf:dictado (Super + Alt + D), hf:comando
 // (Super + Alt + V) y hf:hablar (Super + Alt + H). Hablar con el asistente (aiTalkMode): «conversacion» (por defecto)
-// la activa y la desactiva: escucha, al callarte (aiConvSilence s) se lo pasa al asistente, Helpert contesta en voz
-// alta y vuelve a escuchar, hasta que la desactivas (o dices «adiós» / «eso es todo»). Mientras Helpert habla sigue
+// la activa y la desactiva: escucha, al callarte (aiConvSilence s) se lo pasa al asistente, Harper contesta en voz
+// alta y vuelve a escuchar, hasta que la desactivas (o dices «adiós» / «eso es todo»). Mientras Harper habla sigue
 // escuchando (aiConvInterrupt): si le hablas, se calla y tu frase es el turno siguiente; para no oírse a sí mismo,
 // durante la conversación su voz y el micrófono pasan por el cancelador de eco de PipeWire (hf-dictate aec). «pulsar»: una sola pregunta por pulsación (contesta con voz si aiVoice). Modo «ptt»: hablar mientras se mantiene (un toque corto deja el micrófono abierto hasta volver a
 // pulsar); «toggle»: cada pulsación empieza/termina; «continuo»: empieza al pulsar y para solo tras unos segundos
@@ -50,16 +50,16 @@ Scope {
     readonly property bool conv: Shell.aiConversation
     property string convState: ""           // escucha | piensa | habla
     property int convMisses: 0              // turnos seguidos sin oír nada (3 = se da por terminada)
-    property bool convProactive: false      // la empezó Helpert (modo compañero): si no contestas, se va sin despedirse
+    property bool convProactive: false      // la empezó Harper (modo compañero): si no contestas, se va sin despedirse
     onConvChanged: {
         if (conv) { aecOff.stop(); if (convBarge) Quickshell.execDetached([Paths.script("hf-dictate"), "aec", "on"]); }
         else { convTest = false; convFiles = []; convState = ""; convProactive = false; convLater.stop(); thinkTimer.stop(); replyTimer.stop(); aecOff.restart(); }
     }
-    // Interrumpir a Helpert hablando (Ajustes › Asistente de IA › Conversación)
+    // Interrumpir a Harper hablando (Ajustes › Asistente de IA › Conversación)
     readonly property bool convBarge: Settings.get("aiConvInterrupt", true) !== false
     // El cancelador de eco se quita al acabar, cuando ya no suena el «Hasta luego»
     Timer { id: aecOff; interval: 4000; onTriggered: if (root.conv) return; else if (Shell.aiSpeaking) restart(); else Quickshell.execDetached([Paths.script("hf-dictate"), "aec", "off"]) }
-    // Modo compañero: Helpert ya está pensando qué decir (AiChat.checkIn); al terminar de hablar, escucha una vez
+    // Modo compañero: Harper ya está pensando qué decir (AiChat.checkIn); al terminar de hablar, escucha una vez
     function companionTalk(): void {
         if (conv || proc.running) return;
         Quickshell.execDetached([Paths.script("hf-ai"), "voice-warm"]);   // mientras piensa qué decir
@@ -92,7 +92,7 @@ Scope {
     // Pruebas (IPC conversationFiles): cada turno lee el siguiente audio en lugar del micrófono; al acabarse, termina
     property var convFiles: []
     property bool convTest: false
-    // Con Helpert hablando (y convBarge) se escucha igual con --tts: hf-dictate solo avisa («barge») si le hablas
+    // Con Harper hablando (y convBarge) se escucha igual con --tts: hf-dictate solo avisa («barge») si le hablas
     function convListen(): void {
         const talking = Shell.aiSpeaking;
         if (!conv || (talking && !convBarge)) return;
@@ -107,9 +107,9 @@ Scope {
         if (convTest) { const f = convFiles[0]; convFiles = convFiles.slice(1); start("ia", ["--file", f, "--simulate-live"].concat(tts)); }
         else start("ia", tts);
     }
-    // Entre turnos, un respiro: que no se oiga el final de la voz de Helpert
+    // Entre turnos, un respiro: que no se oiga el final de la voz de Harper
     Timer { id: convLater; interval: 600; onTriggered: root.convListen() }
-    // Si tarda, Helpert avisa de que sigue en ello (y la respuesta lo corta al llegar)
+    // Si tarda, Harper avisa de que sigue en ello (y la respuesta lo corta al llegar)
     Timer { id: thinkTimer; interval: 4000; onTriggered: if (root.conv && root.convState === "piensa") Quickshell.execDetached([Paths.script("hf-ai"), "speak", "Un momento."]) }
     // La respuesta llegó pero no sonó (sin voz instalada, texto vacío…): se vuelve a escuchar igual
     Timer { id: replyTimer; interval: 8000; onTriggered: if (root.conv && root.convState === "habla" && !Shell.aiSpeaking) root.convListen() }
@@ -378,7 +378,7 @@ Scope {
         function conversation(): void { root.convToggle(); }  // activar / desactivar la conversación por voz
         // pruebas: una conversación con estos audios (rutas separadas por comas) como turnos tuyos
         function conversationFiles(paths: string): void { if (root.conv) return; root.convFiles = paths.split(",").filter(p => p); root.convTest = true; root.convStart(); }
-        function checkIn(): void { companion.visit(true); }   // modo compañero: que Helpert pase a saludar ya (pruebas)
+        function checkIn(): void { companion.visit(true); }   // modo compañero: que Harper pase a saludar ya (pruebas)
         function companionState(): string { return companion.state(); }
         function conversationState(): string { return root.conv ? root.convState || "activa" : "apagada"; }
         function command(): void { root.toggle("comando"); }
@@ -424,9 +424,9 @@ Scope {
                                          : isCmd ? "command" : "mic"
         readonly property string mmss: Math.floor(root.secs / 60) + ":" + String(Math.floor(root.secs % 60)).padStart(2, "0")
         // texto principal y secundario de la píldora
-        // en conversación sin tu voz en curso (también mientras Helpert habla y se le escucha por si le interrumpes)
+        // en conversación sin tu voz en curso (también mientras Harper habla y se le escucha por si le interrumpes)
         readonly property bool convIdle: root.conv && (root.phase === "idle" || (root.phase === "rec" && root.convState === "habla"))
-        readonly property string mainText: convIdle ? (root.convState === "piensa" ? "Pensando…" : root.convState === "habla" ? (Settings.get("aiName", "") || "Helpert") + " te responde…" : "")
+        readonly property string mainText: convIdle ? (root.convState === "piensa" ? "Pensando…" : root.convState === "habla" ? (Settings.get("aiName", "") || "Harper") + " te responde…" : "")
             : root.cmdText !== "" && root.phase !== "error" ? root.cmdText
             : root.phase === "rec" ? (root.partial || (root.committed ? root.committed.trim().slice(-120) : ""))
             : root.phase === "trans" ? (root.partial || "Transcribiendo…")

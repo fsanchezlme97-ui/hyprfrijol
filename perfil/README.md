@@ -1,7 +1,7 @@
 # Perfil del proyecto
 
 `perfil.json` es el equipo de referencia de HyprFrijol **sin datos personales**: paquetes y apps, servicios,
-acceso remoto (SSH, cortafuegos, Tailscale, RustDesk), voz de Helpert, modelos de dictado y de Ollama, login y los
+acceso remoto (SSH, cortafuegos, Tailscale, RustDesk), voz de Harper, modelos de dictado y de Ollama, login y los
 ajustes de aspecto y comportamiento. Se rehace con `hf-perfil publicar` en cada versión.
 
 Para dejar un equipo nuevo igual: `./install.sh --perfil` (o `hf-perfil aplicar perfil/perfil.json`; con

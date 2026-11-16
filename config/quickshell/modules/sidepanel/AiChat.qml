@@ -286,13 +286,13 @@ Item {
         send();
     }
 
-    // Modo compañero (Shell.aiCheckIn ← Companion.qml): Helpert mira la captura y habla él primero; si no ve nada que
+    // Modo compañero (Shell.aiCheckIn ← Companion.qml): Harper mira la captura y habla él primero; si no ve nada que
     // valga la pena decir contesta SKIP y todo se borra sin ruido (ni mensaje ni voz)
     property bool checkingIn: false
     function checkIn(reason, image) {
         if (busy) { Shell.aiConversation = false; return; }
         const m = { role: "user", checkIn: true,
-                    text: "[Visita de " + (Settings.get("aiName", "") || "Helpert") + ", sin que yo lo pida] " + reason + "\n"
+                    text: "[Visita de " + (Settings.get("aiName", "") || "Harper") + ", sin que yo lo pida] " + reason + "\n"
                         + (image ? "Mira la captura de mi pantalla y" : "") + " Háblame como un amigo que pasa a saludar: según lo que veas, ofrece una ayuda concreta, "
                         + "pregúntame cómo voy o si necesito algo, o comenta lo que ves con naturalidad. Una o dos frases, sin repetir lo de visitas "
                         + "anteriores. Si no hay nada que valga la pena decir ahora, responde solo SKIP." };
@@ -1053,7 +1053,7 @@ print(json.dumps(out[:300]))
                                     // solo tus mensajes y los errores: las respuestas las pinta AiRich. Oculto pero con el
                                     // texto, el Markdown pedía igual las imágenes remotas de la respuesta
                                     text: !(msg.mine || !!msg.modelData.error) ? ""
-                                        : msg.modelData.checkIn ? (Settings.get("aiName", "") || "Helpert") + " miró tu pantalla y pasó a saludar" : (msg.modelData.text ?? "")
+                                        : msg.modelData.checkIn ? (Settings.get("aiName", "") || "Harper") + " miró tu pantalla y pasó a saludar" : (msg.modelData.text ?? "")
                                     textFormat: msg.mine ? Text.PlainText : Text.MarkdownText
                                     wrapMode: Text.Wrap
                                     color: msg.mine ? Theme.pcText : msg.modelData.error ? Theme.danger : Theme.t

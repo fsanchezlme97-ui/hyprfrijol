@@ -92,7 +92,7 @@ scripts/hf-ai chat '{"messages":[{"role":"user","text":"Pon la barra arriba"}],"
 Ollama con `ollama-vulkan` usa la gráfica (AMD, Intel o NVIDIA). Con respaldo Ollama (`aiFallbackProvider`), si la
 nube falla o tarda contesta el modelo local. **Saltar al respaldo** (`aiFallbackWait`, 8 s de serie) es lo que se
 espera al principal en la voz; al escribir, el triple, y las CLI (Claude Code y las demás) tienen el doble en total.
-Con el principal mirando la pantalla (la consulta `ui`), el doble. En la voz, Helpert dice antes de la respuesta que
+Con el principal mirando la pantalla (la consulta `ui`), el doble. En la voz, Harper dice antes de la respuesta que
 contestó el respaldo, y `hf-ai voice-warm` (al empezar la conversación) deja el modelo de Ollama cargado con el mismo
 `num_ctx` que el chat: el respaldo contesta en ~1-2 s tras la espera, no en 10-20 s más. Con **Voz con el modelo
 local primero** (`aiVoiceLocal`) es al revés: la voz pregunta a Ollama y la nube queda de respaldo.
@@ -184,7 +184,7 @@ el asistente no puede crearse órdenes que ejecuten comandos.
 
 ## Usar la pantalla (Computer Use)
 
-Helpert puede señalar y usar lo que se ve en la pantalla, siempre con tu permiso (Ajustes › IA › «Usar la pantalla»,
+Harper puede señalar y usar lo que se ve en la pantalla, siempre con tu permiso (Ajustes › IA › «Usar la pantalla»,
 `aiScreenControl`):
 
 1. **Análisis de la pantalla** (Screen Parsing, consulta `ui`). `hf-screen parse`:
@@ -219,7 +219,7 @@ Helpert puede señalar y usar lo que se ve en la pantalla, siempre con tu permis
    - Por MCP no se ejecutan.
 
 Lo que se lee en la pantalla son datos, no instrucciones. Por eso nada se hace sin tu «sí»: una web no puede pedirle a
-Helpert que haga clic por ti.
+Harper que haga clic por ti.
 
 ## «Seguir en … ↗» (cualquier herramienta de IA)
 
