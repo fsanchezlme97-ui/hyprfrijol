@@ -94,7 +94,9 @@ Item {
                                     .map(m => Object.assign({ role: m.role, text: String(m.text).slice(0, 6000) },
                                                             m.images?.length ? { images: m.images } : {},
                                                             m.files?.length ? { files: m.files } : {},
-                                                            m.steps?.length ? { queried: true } : {})),   // ver mcp_auto en hf-ai
+                                                            m.steps?.length ? { queried: true } : {},     // ver mcp_auto en hf-ai
+                                                            m.checkIn ? { checkIn: true } : {},
+                                                            m.lookAsk ? { lookAsk: true } : {})),         // hf-ai: «sí» → mira
                                 context: Object.assign(context(), Shell.aiConversation ? { spoken: true } : {}) }, extra ?? {}));
     }
 
@@ -289,13 +291,19 @@ Item {
     // Modo compañero (Shell.aiCheckIn ← Companion.qml): Harper mira la captura y habla él primero; si no ve nada que
     // valga la pena decir contesta SKIP y todo se borra sin ruido (ni mensaje ni voz)
     property bool checkingIn: false
-    function checkIn(reason, image) {
+    // askLook (hf-ai peek → "ask"): no hay captura porque hace falta tu permiso; saluda sin mirar y pregunta si puede
+    // mirar la pantalla (hf-ai guarda la pregunta: «sí» hace la captura, «no, gracias» se despide)
+    function checkIn(reason, image, askLook) {
         if (busy) { Shell.aiConversation = false; return; }
         const m = { role: "user", checkIn: true,
                     text: "[Visita de " + (Settings.get("aiName", "") || "Harper") + ", sin que yo lo pida] " + reason + "\n"
-                        + (image ? "Mira la captura de mi pantalla y" : "") + " Háblame como un amigo que pasa a saludar: según lo que veas, ofrece una ayuda concreta, "
+                        + (askLook ? "No has mirado mi pantalla: para eso necesitas mi permiso. Salúdame como un amigo que pasa a saludar, "
+                                   + "ofréceme ayuda y termina preguntándome si quiero que mires mi pantalla para ayudarme. Una o dos frases, "
+                                   + "sin repetir lo de visitas anteriores."
+                           : (image ? "Mira la captura de mi pantalla y" : "") + " Háblame como un amigo que pasa a saludar: según lo que veas, ofrece una ayuda concreta, "
                         + "pregúntame cómo voy o si necesito algo, o comenta lo que ves con naturalidad. Una o dos frases, sin repetir lo de visitas "
-                        + "anteriores. Si no hay nada que valga la pena decir ahora, responde solo SKIP." };
+                        + "anteriores. Si no hay nada que valga la pena decir ahora, responde solo SKIP.") };
+        if (askLook) m.lookAsk = true;
         if (image && allowCapture) m.images = [image];
         push(m);
         checkingIn = true;
@@ -321,6 +329,13 @@ Item {
         if (wasCheckIn && (r.error || /^\W*SKIP\W*$/i.test(String(r.text ?? "").trim()) || !String(r.text ?? "").trim())) {
             if (messages.length && messages[messages.length - 1].checkIn) messages = messages.slice(0, -1);   // nada que decir: ni rastro
             Shell.aiConversation = false;
+            return;
+        }
+        // «No, gracias» a una oferta (hf-ai "end"): se despide y la conversación por voz vuelve a esperar (Dictado.qml)
+        if (r.end && !r.error) {
+            root.push({ role: "ai", text: r.text || "Vale." });
+            if (Shell.aiConversation) Shell.aiConvEnd(r.text || "");
+            else { if (Settings.get("aiVoice", false)) Quickshell.execDetached([Paths.script("hf-ai"), "speak", r.text || ""]); Shell.aiConvEnd(""); }
             return;
         }
         Shell.aiReplied(!r.error);         // la conversación por voz espera a la respuesta (Dictado.qml)
@@ -1048,7 +1063,8 @@ print(json.dumps(out[:300]))
                                     text: visible ? (msg.modelData.text ?? "") : ""
                                 }
                                 // «¿Cuál?» (hf-ai ask_choice): un botón por sitio posible, con los mismos números que se
-                                // ven en la pantalla; elegir sigue el plan con ese (también vale escribir «el 2»)
+                                // ven en la pantalla; elegir sigue el plan con ese (también vale escribir «el 2»).
+                                // Con "say" (hf-ai ask_screen: «Sí, mírala» / «No») el botón manda esa respuesta tal cual
                                 Flow {
                                     visible: (msg.modelData.choices?.length ?? 0) > 0
                                     Layout.fillWidth: true
@@ -1058,8 +1074,8 @@ print(json.dumps(out[:300]))
                                         SmallBtn {
                                             required property var modelData
                                             readonly property string lab: String(modelData.label ?? "")
-                                            text: modelData.n + " · " + (lab.length > 38 ? lab.slice(0, 38) + "…" : lab)
-                                            onClicked: { root.patch(msg.index, { choices: [] }); root.ask("el " + modelData.n); }
+                                            text: modelData.say ? lab : modelData.n + " · " + (lab.length > 38 ? lab.slice(0, 38) + "…" : lab)
+                                            onClicked: { root.patch(msg.index, { choices: [] }); root.ask(modelData.say ?? ("el " + modelData.n)); }
                                         }
                                     }
                                 }

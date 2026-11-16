@@ -183,6 +183,30 @@ el asistente no puede crearse órdenes que ejecuten comandos.
 - La primera vez, el panel enseña qué puede hacer el asistente y 6 ejemplos (`aiOnboarded`; «Volver a verla» en Ajustes › IA).
 - Consultas de solo lectura nuevas: `devices` (unidades y espacio), `downloads` (la cola) y `wallhaven` (buscar fondos).
 
+### Conversación
+
+- **Permiso para mirar la pantalla** (Ajustes › Asistente de IA › Privacidad › «Mirar la pantalla»):
+  - antes de capturar (consultas `screen`/`ui`, la ventana activa sin captura guardada, las visitas del compañero),
+    Harper pregunta «¿Puedo hacer una captura?» con los botones Sí / No, y espera; también vale contestar escrito o por
+    voz;
+  - `aiScreenAsk`: `siempre` (por defecto) pregunta antes de cada captura; `sensible` solo con una ventana sensible a
+    la vista;
+  - **ventanas sensibles** (`aiSensitiveWindows`: correo, banca, pagos, mensajería, inicios de sesión…, por la clase o
+    el título): con una a la vista pregunta siempre y dice por qué, en los dos modos y aunque se lo pidas tú;
+  - pedirlo tú («mira mi pantalla», «¿qué ves?», «+ Captura», el atajo de la ventana actual) ya es el permiso;
+  - la pregunta espera 5 minutos (`~/.cache/hyprfrijol/ai-screen-ask.json`); cualquier otro mensaje la descarta;
+  - también vale para lo que se pide por MCP: sin permiso, la herramienta de pantalla no captura.
+- **Modo compañero:** sin permiso, saluda y ofrece ayuda sin mirar, y pregunta si puede mirar; con «sí» hace la
+  captura y propone algo concreto.
+- **«No, gracias»** («estoy bien», «ahora no», «no hace falta»…) se entiende siempre como una negativa; un «no» o un
+  «nada» a secas, solo justo después de una oferta. Harper contesta «Vale, aquí estoy si me necesitas.», sin llamar al
+  modelo; la conversación por voz termina y la siguiente visita del compañero tarda el doble.
+- **«Repite»** («¿qué dijiste?», «otra vez», «¿cómo?») vuelve a decir la última respuesta sin llamar al modelo.
+- **Seguir el hilo:** una respuesta corta (hasta 4 palabras) a un mensaje que acababa en pregunta le llega al modelo con
+  esa pregunta al lado. Así un «no» a «¿Te ha quedado claro?» se entiende como «explícamelo de otra forma». El prompt
+  lleva además unas reglas de conversación: no volver a presentarse, contestar con una frase corta a las gracias y no
+  cerrar siempre con una pregunta.
+
 ### Esquemas (dibujos con código)
 
 Harper dibuja **solo si se lo pides** (un dibujo, esquema o diagrama) o si un esquema explica algo mucho mejor que el

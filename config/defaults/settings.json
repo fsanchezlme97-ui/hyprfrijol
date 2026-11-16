@@ -70,6 +70,8 @@
   "aiHandoffLabel": "",
   "aiLocalOnly": false,
   "aiRedactSecrets": true,
+  "aiScreenAsk": "siempre",
+  "aiSensitiveWindows": ["thunderbird", "betterbird", "geary", "evolution", "mailspring", "gmail", "outlook", "correo", "bandeja de entrada", "inbox", "proton mail", "banco", "bank", "banca", "paypal", "bbva", "santander", "interbank", "scotiabank", "revolut", "binance", "coinbase", "wallet", "whatsapp", "telegram", "signal", "contraseña", "password", "iniciar sesión", "sign in", "login", "hacienda", "sunat", "impuestos"],
   "privateApps": ["keepassxc", "bitwarden", "1password", "seahorse", "kwalletmanager", "enpass", "proton pass"],
   "aiAlwaysApprove": [],
   "aiOnboarded": false,

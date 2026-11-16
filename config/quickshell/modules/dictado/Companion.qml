@@ -1,6 +1,8 @@
 // Modo compañero (Ajustes › Asistente de IA, aiCompanion, apagado por defecto): de vez en cuando Harper mira la pantalla
 // (hf-ai peek → ~/.cache/hyprfrijol/capturas_tmp_ai) y empieza él la conversación por voz: ofrece ayuda, pregunta cómo
-// vas o comenta lo que ve, como un amigo. Si no ve nada que decir (SKIP) no dice nada.
+// vas o comenta lo que ve, como un amigo. Si no ve nada que decir (SKIP) no dice nada. Sin permiso para mirar
+// (aiScreenAsk, ventanas sensibles) peek no captura: Harper saluda sin mirar y pregunta si puede. «No, gracias»
+// (Shell.aiConvEnd) aplaza la siguiente visita el doble.
 //
 // Cuándo (un repaso por minuto, sin medir nada más que /proc/loadavg y /proc/meminfo):
 //   · Nunca: bloqueado, «no molestar», ausente (3 min sin tocar nada), pantalla completa (juegos, vídeos),
@@ -105,8 +107,12 @@ Item {
         if (Settings.get("aiCompanionLook", true) === false) { go(""); return; }
         peek.running = true;
     }
-    Connections { target: Shell; function onAiCompanionNow() { root.visit(true, ""); } }
-    function go(image): void { root.visiting(); Shell.aiCheckIn(why, image); }
+    Connections {
+        target: Shell
+        function onAiCompanionNow() { root.visit(true, ""); }
+        function onAiConvEnd(f) { root.lastVisit = Date.now() + root.interval(); }   // no quería ayuda: tarda el doble
+    }
+    function go(image, askLook): void { root.visiting(); Shell.aiCheckIn(why, image, askLook === true); }
     Process {
         id: peek
         command: [Paths.script("hf-ai"), "peek"]
@@ -115,6 +121,7 @@ Item {
                 let j = {};
                 try { j = JSON.parse(text); } catch (e) {}
                 if (j.path) root.go(j.path);
+                else if (j.ask !== undefined) root.go("", true);                       // sin permiso: saluda y pregunta
                 else root.lastVisit = Date.now() - root.interval() + 10 * 60000;   // app privada a la vista…: en 10 min
             }
         }

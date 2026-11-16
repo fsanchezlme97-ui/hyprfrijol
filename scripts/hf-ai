@@ -411,9 +411,17 @@ def persona_doc(s=None):
                    "mandan siempre:\n" + pers)
     return ("\n\n" + "\n\n".join(out)) if out else ""
 
+# Cómo conversar: los modelos pequeños (gemma4) pierden el hilo con respuestas cortas («no» a «¿te quedó claro?»)
+CONVERSATION_DOC = """
+
+Conversación: sigue el hilo. Una respuesta corta del usuario («no», «sí», «¿y eso?», «el segundo») contesta a tu último
+mensaje: entiéndela con él. Si preguntaste si quedó claro y dice que no, explícalo de otra forma, más sencilla. No digas
+«no entendí» si la conversación ya lo aclara. No te presentes ni saludes otra vez a mitad de conversación. A las gracias,
+una frase corta. Acaba con una pregunta solo si de verdad hace falta. Si cambia de tema, síguelo."""
+
 def system_prompt(s=None):
     s = s or settings()
-    return system_prompt_base(s) + mcp_doc(s) + persona_doc(s)
+    return system_prompt_base(s) + CONVERSATION_DOC + mcp_doc(s) + persona_doc(s)
 
 def system_prompt_base(s=None):
     s = s or settings()
@@ -1594,6 +1602,8 @@ def run_query(q, ctx=None, s=None):
     no = query_allowed(t, s, ctx)
     if no:
         return lab, no
+    if t in ("screen", "ui") and screen_ask(s, ctx) is not None:     # también por MCP: sin permiso no hay captura
+        return lab, "No miro la pantalla sin el permiso del usuario (Ajustes › Asistente de IA › Privacidad)."
     if t == "windows":
         act = jrun(["hyprctl", "activewindow", "-j"]).get("address")
         ws = [{"class": c.get("class"), "title": "" if is_private(c.get("class"), s) else (c.get("title") or "")[:90], "workspace": (c.get("workspace") or {}).get("name"),
@@ -1612,7 +1622,7 @@ def run_query(q, ctx=None, s=None):
         if s.get("aiContextCapture", True) is not False and shutil.which("tesseract"):
             saved = load(WINDOW_INFO, {}) or {}
             img = str(WINDOW_CAP) if saved.get("address") == w["address"] and WINDOW_CAP.is_file() \
-                and time.time() - WINDOW_CAP.stat().st_mtime < 900 else window_capture(w)
+                and time.time() - WINDOW_CAP.stat().st_mtime < 900 else window_capture(w) if screen_ask(s, ctx) is None else None
             if img:
                 out["text"] = run(["tesseract", img, "-", "-l", "spa+eng"], timeout=30)[:5000]
         return lab, json.dumps(out, ensure_ascii=False)
@@ -2156,12 +2166,14 @@ def _selftest_redact():
 # nunca con una app privada a la vista ni con las capturas desactivadas; se guardan en una carpeta solo tuya y se borran.
 CAP_TMP = HOME / ".cache/hyprfrijol/capturas_tmp_ai"
 
-def peek():
+def peek(force=False):
     s = settings()
     if s.get("aiContextCapture", True) is False:
         return {"skip": "las capturas del asistente están desactivadas"}
     if private_visible(s):
         return {"skip": "hay una app privada a la vista"}
+    if not force and (why := screen_ask(s)) is not None:
+        return {"ask": why}              # el compañero saluda sin mirar y pregunta (lookAsk en AiChat.qml)
     CAP_TMP.mkdir(parents=True, exist_ok=True)
     os.chmod(CAP_TMP, 0o700)
     old = sorted(CAP_TMP.glob("*.png"), key=lambda f: f.stat().st_mtime, reverse=True)
@@ -4019,7 +4031,246 @@ def fallback_wait(s):
     except (TypeError, ValueError):
         return 8.0
 
+# ---------------------------------------------------------------- conversación: permiso, negativas, «repite»
+# Mirar la pantalla (consultas «screen»/«ui», la ventana activa sin captura guardada, las visitas del compañero) pide
+# permiso según aiScreenAsk: "siempre" (por defecto) pregunta antes de cada captura; "sensible" solo si hay a la vista
+# una ventana de aiSensitiveWindows (correo, banca, pagos, mensajería…). Con una de esas pregunta SIEMPRE, aunque se lo
+# pidas tú. «Mira mi pantalla» o «¿qué ves?» ya son permiso (salvo ventana sensible). El «sí»/«no» se contesta escrito,
+# con los botones o por voz; la pregunta espera en SCREEN_ASK (5 min) y cualquier otro mensaje la descarta.
+SENSITIVE_WINDOWS = ["thunderbird", "betterbird", "geary", "evolution", "mailspring", "gmail", "outlook", "correo",
+                     "bandeja de entrada", "inbox", "proton mail", "banco", "bank", "banca", "paypal", "bbva", "santander",
+                     "interbank", "scotiabank", "revolut", "binance", "coinbase", "wallet", "whatsapp", "telegram", "signal",
+                     "contraseña", "password", "iniciar sesión", "sign in", "login", "hacienda", "sunat", "impuestos"]
+SCREEN_ASK = HOME / ".cache/hyprfrijol/ai-screen-ask.json"
+SCREEN_ASK_TTL = 300
+LOOK_RE = re.compile(r"\b(mira|mirame|lee|leeme|revisa|analiza|observa|captura|echa(le)? un (vistazo|ojo))\b[^.?!]{0,25}"
+                     r"\b(pantalla|pantallazo)\b|\bque (ves|hay|sale|aparece) en (mi |la )?pantalla\b|^(y )?que ves\b")
+YES_W = (r"(si|vale|ok|okay|okey|claro|adelante|hazlo|dale|de acuerdo|perfecto|venga|por favor|procede|yes|sure|"
+         r"mirala|miralo|mira|puedes|correcto|afirmativo|exacto|eso|hazla|toma(la)?)")
+YES_RE = re.compile(rf"{YES_W}( (y |e )?{YES_W})*")
+NO_RE = re.compile(r"(no|nope|cancela|dejalo|mejor no|ni hablar|olvidalo|para nada)( .*)?")
+FILLER_RE = re.compile(r"(m+h*m*|h?m+|e+h*|a+h+|u+m+|bueno|pues|este|oye|mira|a ver)")
+# «No, gracias» y compañía: siempre son una negativa. Un «no» o un «nada» a secas, solo si Harper acaba de ofrecer algo.
+DECLINE_STRONG = re.compile(
+    r"(no )?(muchas )?gracias (no|estoy bien|todo bien|asi esta bien|por ahora no|de momento no)|"
+    r"no( muchas)? gracias( estoy bien| todo bien| por ahora| de momento)?|"
+    r"(estoy|todo) bien( gracias)?|(ya )?no (hace falta|es necesario|necesito (nada|ayuda))( gracias)?|"
+    r"(ahora|por ahora|de momento|ahorita) no( gracias)?|no por (ahora|el momento)( gracias)?|"
+    r"(mejor|quiza|quizas) (luego|despues|mas tarde)( gracias)?|nada (gracias|por ahora)|no quiero nada( gracias)?")
+DECLINE_WEAK = re.compile(r"no|nop|nope|nel|nada|mejor no|no quiero|tampoco|luego|despues|para nada")
+OFFER_RE = re.compile(r"\b(quieres|quiere|quisieras|te gustaria|necesitas|necesita|te ayudo|te echo|le echo|"
+                      r"puedo (ayudarte|ayudar|mirar|echar|hacer|buscar|ver)|te (busco|preparo|paso|pongo|abro|lo|la)|"
+                      r"algo mas|alguna otra cosa|en que (te )?puedo|mirar tu pantalla|como vas|como lo llevas)\b")
+REPEAT_RE = re.compile(r"(repite(lo|me|melo)?|repitelo|(me lo )?(puedes|podrias) repetir|otra vez|"
+                       r"que (dijiste|has dicho|decias)|no te (escuche|oi|entendi)|como( dices| dijiste)?|perdona|perdon|que)"
+                       r"( por favor)?( otra vez)?")
+BYE_TEXT = "Vale, aquí estoy si me necesitas."
+
+def sensitive_apps(s=None):
+    v = (s or settings()).get("aiSensitiveWindows")
+    return [str(x).lower() for x in v if str(x).strip()] if isinstance(v, list) else SENSITIVE_WINDOWS
+
+def visible_clients():
+    """Las ventanas que saldrían en una captura (espacio activo o especial abierto de cada pantalla); None si
+    Hyprland no responde."""
+    mons = jrun(["hyprctl", "monitors", "-j"])
+    cl = jrun(["hyprctl", "clients", "-j"])
+    if not isinstance(mons, list) or not isinstance(cl, list):
+        return None
+    vis = {(m.get(k) or {}).get("id") for m in mons for k in ("activeWorkspace", "specialWorkspace")}
+    return [c for c in cl if c.get("mapped", True) and not c.get("hidden") and (c.get("workspace") or {}).get("id") in vis]
+
+def sensitive_visible(s=None, cl=None):
+    """La palabra de aiSensitiveWindows que encaja con la clase o el título de una ventana a la vista («Gmail»),
+    "" si no se puede saber (cuenta como sensible), o None si no hay ninguna."""
+    cl = visible_clients() if cl is None else cl
+    if cl is None:
+        return ""
+    words = sensitive_apps(s)
+    for c in cl:
+        hay = _fold(f"{c.get('class') or ''} {c.get('title') or ''}")
+        w = next((w for w in words if re.search(rf"\b{re.escape(_fold(w))}\b", hay)), None)
+        if w:
+            return w[:1].upper() + w[1:]
+    return None
+
+def look_request(req):
+    last = next((m for m in reversed((req or {}).get("messages") or []) if isinstance(m, dict) and m.get("role") == "user"), {})
+    return bool(LOOK_RE.search(_fold(str(last.get("text") or "").replace(FILE_NUDGE, ""))))
+
+def screen_ask(s, ctx=None, req=None, sens=False):
+    """None: se puede capturar ya. Texto: hay que preguntar antes (la ventana sensible a la vista, o "")."""
+    if (ctx or {}).get("screenOk"):
+        return None
+    w = sensitive_visible(s) if sens is False else sens
+    if w is not None:
+        return w
+    if str(s.get("aiScreenAsk") or "siempre") == "sensible" or look_request(req):
+        return None
+    return ""
+
+def _canned(text, **kw):
+    return {"text": text, "actions": [], "labels": [], "plan": [], "confirm": False, "code": "", "error": None,
+            "auto": False, "steps": [], "provider": "", "model": "", **kw}
+
+YES_NO = [{"n": 1, "label": "Sí, mírala", "say": "sí"}, {"n": 2, "label": "No", "say": "no"}]
+
+def save_screen_ask(req, kind):
+    msgs = [dict(m, text=str(m.get("text") or "").replace(FILE_NUDGE, "")) if isinstance(m, dict) else m
+            for m in (req.get("messages") or [])]
+    old = os.umask(0o077)
+    try:
+        SCREEN_ASK.parent.mkdir(parents=True, exist_ok=True)
+        SCREEN_ASK.write_text(json.dumps({"t": time.time(), "kind": kind, "req": dict(req, messages=msgs)}, ensure_ascii=False))
+    finally:
+        os.umask(old)
+
+def ask_screen(req, why):
+    """«¿Puedo mirar tu pantalla?»: la petición espera en SCREEN_ASK y se repite tal cual si dices que sí."""
+    save_screen_ask(req, "replay")
+    text = (f"Tienes algo sensible a la vista ({why}). ¿Puedo hacer una captura de tu pantalla igualmente?" if why
+            else "Para esto necesito mirar tu pantalla. ¿Puedo hacer una captura?")
+    return _canned(text, choices=YES_NO, ask="screen")
+
+def words_of(text):
+    w = _fold(str(text or "").replace(FILE_NUDGE, "")).split()
+    while w and FILLER_RE.fullmatch(w[0]) and len(w) > 1:
+        w.pop(0)
+    return " ".join(w)
+
+def yes_no(text):
+    """True (sí), False (no) u None (otra cosa): «sí, mírala», «vale», «no, gracias», «mejor no»…"""
+    h = words_of(text)
+    if not h:
+        return None
+    if NO_RE.fullmatch(h) and len(h.split()) <= 6 or DECLINE_STRONG.fullmatch(h):
+        return False
+    return True if YES_RE.fullmatch(h) else None
+
+def declined(text, last_ai):
+    """¿Rechaza lo que Harper le ofrecía? «No, gracias», «estoy bien», «ahora no»; un «no» a secas solo tras una oferta."""
+    h = words_of(text)
+    if DECLINE_STRONG.fullmatch(h):
+        return True
+    a = str(last_ai or "").strip()
+    return bool(DECLINE_WEAK.fullmatch(h)) and a.endswith("?") and bool(OFFER_RE.search(_fold(a[-200:])))
+
+def reply_hint(msgs):
+    """«No» a «¿Te ha quedado claro?»: con el contexto delante, gemma4 no lo relaciona con su pregunta. Una respuesta
+    corta (≤ 4 palabras) a un mensaje que acababa en pregunta lleva esa pregunta al lado (solo para el modelo)."""
+    if len(msgs) < 2 or msgs[-1].get("role") != "user" or msgs[-2].get("role") != "ai":
+        return msgs
+    a, u = str(msgs[-2].get("text") or "").strip(), str(msgs[-1].get("text") or "").strip()
+    q = re.search(r"(¿[^¿?]{1,150}\?)\s*$", a)
+    if not q or not u or len(u.split()) > 4:
+        return msgs
+    return msgs[:-1] + [dict(msgs[-1], text=f"{u}\n\n(Es mi respuesta a tu pregunta: «{q.group(1)}»)")]
+
+def converse(req, s):
+    """Lo que se contesta sin el modelo: el «sí»/«no» a mirar la pantalla, «no, gracias» a una oferta (fin de la
+    conversación por voz: "end") y «repite». None: va al modelo."""
+    msgs = [m for m in (req.get("messages") or []) if isinstance(m, dict)]
+    if not msgs or msgs[-1].get("role") != "user" or msgs[-1].get("images") or msgs[-1].get("files"):
+        return None
+    text = str(msgs[-1].get("text") or "")
+    prev = next((m for m in reversed(msgs[:-1]) if m.get("role") == "ai"), {})
+    try:
+        pend = json.loads(SCREEN_ASK.read_text())
+    except (OSError, ValueError):
+        pend = None
+    SCREEN_ASK.unlink(missing_ok=True)
+    if pend and time.time() - float(pend.get("t") or 0) < SCREEN_ASK_TTL:
+        yn = yes_no(text)
+        if yn is True and pend.get("kind") == "look":            # visita del compañero: ahora sí mira
+            shot = peek(force=True)
+            if not shot.get("path"):
+                return _canned(f"No pude mirar la pantalla: {shot.get('skip') or 'falló la captura'}.")
+            m = dict(msgs[-1], text="Sí, mira mi pantalla (te adjunto la captura) y ofréceme una ayuda concreta según lo que veas. "
+                                    "Una o dos frases.", images=[shot["path"]])
+            return do_chat(dict(req, messages=msgs[:-1] + [m]))
+        if yn is True:                                          # la petición que esperaba, ahora con permiso
+            old = pend.get("req") or {}
+            return do_chat(dict(old, context={**(req.get("context") or {}), "screenOk": True}))
+        if yn is False:
+            return _canned(BYE_TEXT, end=True) if pend.get("kind") == "look" else _canned("Vale, no miro tu pantalla.")
+    if declined(text, prev.get("text")):
+        return _canned(BYE_TEXT, end=True)
+    if prev.get("text") and REPEAT_RE.fullmatch(words_of(text)):
+        return _canned(str(prev["text"]))
+    return None
+
+def _selftest_converse():
+    global SCREEN_ASK
+    import tempfile
+    old_ask, SCREEN_ASK = SCREEN_ASK, pathlib.Path(tempfile.mkdtemp()) / "a.json"
+    g = globals()
+    real = {k: g[k] for k in ("visible_clients", "peek", "do_chat")}
+    try:
+        s = {"aiScreenAsk": "siempre"}
+        g["visible_clients"] = lambda: [{"class": "firefox", "title": "Recibidos - Gmail"}]
+        assert sensitive_visible(s) == "Gmail" and sensitive_visible({"aiSensitiveWindows": ["banco"]}) is None
+        g["visible_clients"] = lambda: [{"class": "kitty", "title": "nvim"}]
+        assert sensitive_visible(s) is None and sensitive_visible(s, None) is None
+        g["visible_clients"] = lambda: None
+        assert sensitive_visible(s) == ""                       # Hyprland no responde: se pregunta
+        u = lambda t: {"messages": [{"role": "user", "text": t}]}
+        assert screen_ask(s, {}, u("haz clic en responder"), sens=None) == ""
+        assert screen_ask(s, {}, u("mira mi pantalla y dime qué ves"), sens=None) is None
+        assert screen_ask(s, {}, u("¿qué ves?"), sens=None) is None
+        assert screen_ask({"aiScreenAsk": "sensible"}, {}, u("haz clic"), sens=None) is None
+        assert screen_ask({"aiScreenAsk": "sensible"}, {}, u("mira mi pantalla"), sens="Gmail") == "Gmail"
+        assert screen_ask(s, {"screenOk": True}, u("haz clic"), sens="Gmail") is None
+        for y in ("sí", "Sí, mírala", "vale, adelante", "mm, claro", "sí por favor"):
+            assert yes_no(y) is True, y
+        for n in ("no", "No, gracias", "mejor no", "ahora no", "no, déjalo"):
+            assert yes_no(n) is False, n
+        assert yes_no("¿qué hora es?") is None and yes_no("sí, pero ábreme firefox") is None
+        offer = "Veo que estás con el correo. ¿Quieres que te ayude a ordenarlo?"
+        for d in ("no gracias", "No, muchas gracias.", "estoy bien", "ahora no", "no hace falta", "nada, gracias"):
+            assert declined(d, "") and declined(d, offer), d
+        assert declined("no", offer) and declined("nada", offer) and not declined("no", "¿Te ha quedado claro?")
+        assert not declined("no gracias, pero ábreme firefox", offer) and not declined("no entiendo", offer)
+        # converse: sin pendiente
+        conv = [{"role": "ai", "text": offer}, {"role": "user", "text": "no, gracias"}]
+        assert converse({"messages": conv}, s)["end"] is True
+        assert converse({"messages": [{"role": "ai", "text": "Son las 10."}, {"role": "user", "text": "¿qué dijiste?"}]}, s)["text"] == "Son las 10."
+        assert converse({"messages": [{"role": "user", "text": "repite"}]}, s) is None          # nada que repetir
+        assert converse({"messages": [{"role": "user", "text": "¿qué hora es?"}]}, s) is None
+        h = reply_hint([{"role": "ai", "text": "Es la guía de Internet. ¿Te ha quedado claro?"}, {"role": "user", "text": "no"}])
+        assert h[-1]["text"] == "no\n\n(Es mi respuesta a tu pregunta: «¿Te ha quedado claro?»)", h
+        assert reply_hint([{"role": "ai", "text": "Hecho."}, {"role": "user", "text": "no"}])[-1]["text"] == "no"
+        # pregunta de permiso y respuesta
+        r = ask_screen(u("haz clic en responder"), "")
+        assert r["ask"] == "screen" and [c["say"] for c in r["choices"]] == ["sí", "no"] and SCREEN_ASK.exists()
+        g["do_chat"] = lambda q: {"text": "ok", "ctx": q.get("context"), "msgs": q.get("messages")}
+        out = converse({"messages": [{"role": "user", "text": "haz clic en responder"}, {"role": "ai", "text": r["text"]},
+                                     {"role": "user", "text": "sí"}], "context": {"spoken": True}}, s)
+        assert out["ctx"] == {"spoken": True, "screenOk": True} and len(out["msgs"]) == 1 and not SCREEN_ASK.exists(), out
+        ask_screen(u("haz clic"), "Gmail")
+        assert converse({"messages": [{"role": "user", "text": "no"}]}, s)["text"] == "Vale, no miro tu pantalla."
+        ask_screen(u("haz clic"), "")
+        assert converse({"messages": [{"role": "user", "text": "¿qué hora es?"}]}, s) is None and not SCREEN_ASK.exists()
+        # visita del compañero: «sí» mira, «no, gracias» se despide
+        visit = {"messages": [{"role": "user", "text": "[Visita]", "checkIn": True, "lookAsk": True}]}
+        save_screen_ask(visit, "look")
+        g["peek"] = lambda force=False: {"path": "/tmp/x.png"} if force else {"ask": ""}
+        out = converse({"messages": visit["messages"] + [{"role": "ai", "text": "¡Hola! ¿Miro tu pantalla?"}, {"role": "user", "text": "vale"}]}, s)
+        assert out["msgs"][-1]["images"] == ["/tmp/x.png"] and len(out["msgs"]) == 3, out
+        save_screen_ask(visit, "look")
+        assert converse({"messages": [{"role": "user", "text": "no"}]}, s)["end"] is True
+    finally:
+        SCREEN_ASK = old_ask
+        g.update(real)
+
 def do_chat(req, print_request=False):
+    out = _do_chat(req, print_request)
+    last = next((m for m in reversed(req.get("messages") or []) if isinstance(m, dict) and m.get("role") == "user"), {})
+    if last.get("lookAsk") and not print_request and not out.get("error") and str(out.get("text") or "").strip() \
+            and not re.fullmatch(r"\W*SKIP\W*", str(out.get("text") or ""), re.I):
+        save_screen_ask(req, "look")     # el compañero saludó sin mirar: «sí» → captura y ayuda concreta
+    return out
+
+def _do_chat(req, print_request=False):
     s0 = settings()
     prune_history(s0)
     if (s0.get("aiProvider") or "claude-code") == "off":
@@ -4055,6 +4306,8 @@ def do_chat(req, print_request=False):
             out = plan_out("", acts, s0)
             out.update(steps=[], provider="", model="")
             return out
+    if not print_request and (out := converse(req, s0)) is not None:
+        return out
     if file_intent(req, s0):
         last = next(m for m in reversed(req["messages"]) if m.get("role") == "user")
         last["text"] = str(last.get("text") or "") + FILE_NUDGE
@@ -4066,6 +4319,7 @@ def do_chat(req, print_request=False):
     vision = (nimg or cap) and provider_vision(prov, s)
     if cap and vision:    # «+ Captura» con visión: va la captura en vez de su OCR
         msgs0, nimg = message_images(list(req.get("messages") or []), {**ctx, "images": list(ctx.get("images") or []) + [cap]}, s)
+    msgs0 = reply_hint(msgs0)
     base_ctx = gather(ctx, ocr=not (cap and vision))
     if info.get("title") and ctx.get("window", True) and not is_private(info.get("class"), s):
         base_ctx = f"El usuario abrió el asistente desde la ventana: {info.get('class', '')} — {info['title']}\n\n" + base_ctx
@@ -4143,6 +4397,11 @@ def do_chat(req, print_request=False):
                 queries = [{"type": "files", "query": " ".join(fw)}]   # pregunta por un archivo y el modelo no lo buscó
             if queries is None or rnd == MAX_ROUNDS:
                 break
+            if any(isinstance(q, dict) and q.get("type") in ("screen", "ui") for q in queries) \
+                    and query_allowed("ui", s, ctx) is None:
+                if (why := screen_ask(s, ctx, req)) is not None:
+                    return ask_screen(req, why)
+                ctx = {**ctx, "screenOk": True}   # permiso para esta petición (run_query lo vuelve a mirar)
             if LIVE:
                 LIVE.reset()
             results = []
@@ -4821,6 +5080,7 @@ def main(argv):
         _selftest_file_intent()
         _selftest_choice()
         _selftest_svg()
+        _selftest_converse()
         out = {"ok": True}
     elif cmd == "undo":
         out = do_undo(arg)
@@ -4830,7 +5090,7 @@ def main(argv):
                "auto": bool(acts) and all(meta(a)["kind"] in set(settings().get("aiAlwaysApprove") or []) and not meta(a)["confirm"] for a in acts)}
     elif cmd == "query":
         q = json.loads(arg) if arg.strip().startswith("{") else {"type": arg, **({"query": rest[1], "filter": rest[1]} if len(rest) > 1 else {})}
-        lab, res = run_query(q, {"window": True})
+        lab, res = run_query(q, {"window": True, "screenOk": True})   # la escribes tú en la terminal
         out = {"label": lab, "result": res}
     elif cmd == "tool":
         out = tool_call(arg, json.loads(rest[1]) if len(rest) > 1 else {})

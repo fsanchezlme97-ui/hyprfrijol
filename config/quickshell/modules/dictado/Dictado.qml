@@ -81,12 +81,12 @@ Scope {
         convProactive = false;
         convLater.restart();
     }
-    function convEnd(bye): void {
+    function convEnd(bye, words): void {
         if (!conv) return;
         Shell.aiConversation = false;
         convState = ""; convLater.stop(); thinkTimer.stop(); replyTimer.stop();
         if (proc.running) send("cancel");
-        Quickshell.execDetached([Paths.script("hf-ai"), "speak", bye ? "Hasta luego." : "--stop"]);
+        Quickshell.execDetached([Paths.script("hf-ai"), "speak", bye ? (words || "Hasta luego.") : "--stop"]);
         phase = "done"; msg = "Conversación terminada"; hider.interval = 1400; hider.restart();
     }
     // Pruebas (IPC conversationFiles): cada turno lee el siguiente audio en lugar del micrófono; al acabarse, termina
@@ -125,6 +125,7 @@ Scope {
                 else convLater.restart();
             }
         }
+        function onAiConvEnd(f) { if (root.conv) { thinkTimer.stop(); root.convEnd(true, f); } }   // «no, gracias»
         function onAiReplied(ok) {
             if (!root.conv || root.convState !== "piensa") return;
             thinkTimer.stop();

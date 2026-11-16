@@ -3,6 +3,21 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.33] — 2026-11-16
+
+### Novedades (Asistente de IA)
+- **Harper pide permiso antes de mirar tu pantalla:** «¿Puedo hacer una captura?», con los botones **Sí** / **No** (o
+  contestando por voz), y espera. Si se lo pides tú («mira mi pantalla», «+ Captura») no vuelve a preguntar.
+- En **Ajustes › Asistente de IA › Privacidad › Mirar la pantalla** eliges entre preguntar **siempre** o **solo con
+  ventanas sensibles**. Con una ventana de correo, banco, pagos o mensajería a la vista pregunta siempre y dice por
+  qué, en los dos modos. La lista de palabras sensibles se puede editar.
+- **El modo compañero** ya no hace la captura antes de saludar: te ofrece ayuda sin mirar y pregunta si puede.
+- **«No, gracias»** («estoy bien», «ahora no», «no hace falta») cierra la conversación por voz con un «Vale, aquí
+  estoy si me necesitas», y el compañero tarda el doble en volver.
+- **«Repite»** o «¿qué dijiste?» repiten la última respuesta al momento.
+- **Sigue mejor el hilo:** un «no» a «¿Te ha quedado claro?» le hace explicarlo de otra forma, en vez de contestar
+  «no entendí». Ya no se vuelve a presentar a mitad de la conversación y a las gracias contesta con una frase corta.
+
 ## [0.10.32] — 2026-11-16
 
 ### Seguridad

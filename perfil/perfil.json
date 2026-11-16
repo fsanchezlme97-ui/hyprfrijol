@@ -118,12 +118,12 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.10.31",
+ "hyprfrijol": "v0.10.32",
  "ollama": [
   "qwen3.5:9b",
   "gemma4:e4b"
  ],
- "saved": "2026-11-16 10:52",
+ "saved": "2026-11-16 11:29",
  "services": [
   "ufw",
   "cups.socket",
@@ -144,6 +144,7 @@
   "aiModel": "gemma4:e4b",
   "aiMuted": false,
   "aiProvider": "ollama",
+  "aiScreenAsk": "sensible",
   "aiVoice": true,
   "aiVoiceLocal": false,
   "animPreset": "minimalista",

@@ -49,7 +49,8 @@ Singleton {
     property bool aiConversation: false    // conversación por voz en marcha (Dictado.qml): escucha, responde, escucha…
     signal aiReplied(bool ok)              // llegó la respuesta del asistente (AiChat.qml)
     signal aiCompanionNow()                // «Probar ahora» (Ajustes › Asistente de IA): visita del compañero ya
-    signal aiCheckIn(string reason, string image)   // modo compañero: Harper mira la pantalla y habla él primero (Companion.qml)
+    signal aiCheckIn(string reason, string image, bool askLook)   // modo compañero: Harper habla él primero (Companion.qml); askLook: sin captura, pregunta si puede mirar
+    signal aiConvEnd(string farewell)      // «no, gracias» a una oferta (hf-ai "end"): la voz se despide y la conversación termina; el compañero espera más
     property bool aiPlanPending: false     // en la conversación por voz hay un plan esperando «sí» o «no» (AiChat.qml)
     signal aiPlanAnswer(bool yes)          // la respuesta dicha a ese plan (Dictado.qml)
     // Pantalla donde se abren los paneles: la del monitor con foco
