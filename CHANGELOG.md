@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.28] — 2026-11-16
+
+### Cambios (Asistente de IA)
+- **El asistente se llama Harper** (antes Helpert). Tus ajustes se actualizan solos (copia en
+  `settings.json.antes-de-harper`). Si habías escrito tu propia personalidad, se queda como estaba.
+- **Por voz se entiende su nombre aunque se transcriba mal:** «Jarper», «járper», «har per»… llegan como «Harper».
+  También vale como palabra de activación si la eliges en Ajustes › Dictado; la de serie sigue siendo «Distro».
+- **Icono nuevo:** unas gafas con cejas y un prompt `>_` en las lentes, en la barra, el Spotlight, el panel y Ajustes.
+
 ## [0.10.27] — 2026-11-15
 
 ### Arreglos (Asistente de IA)

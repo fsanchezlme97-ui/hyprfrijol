@@ -118,11 +118,12 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.10.26",
+ "hyprfrijol": "v0.10.27-5-gd007b6d",
  "ollama": [
+  "qwen3.5:9b",
   "gemma4:e4b"
  ],
- "saved": "2026-11-15 18:54",
+ "saved": "2026-11-16 10:16",
  "services": [
   "ufw",
   "cups.socket",
@@ -138,11 +139,11 @@
   "aiAnnounceUrgent": true,
   "aiCompanion": true,
   "aiFallbackModel": "gemma4:e4b",
-  "aiFallbackProvider": "ollama",
+  "aiFallbackProvider": "off",
   "aiHistoryDays": 0,
-  "aiModel": "",
-  "aiMuted": true,
-  "aiProvider": "gemini",
+  "aiModel": "gemma4:e4b",
+  "aiMuted": false,
+  "aiProvider": "ollama",
   "aiVoice": true,
   "aiVoiceLocal": false,
   "animPreset": "minimalista",
@@ -257,10 +258,10 @@
   "palette": "oxocarbon",
   "pip": true,
   "pipAuto": false,
-  "pipCorner": "inf-der",
+  "pipCorner": "sup-der",
   "pipFree": [
-   -0.1521,
-   0.0067
+   -0.1583,
+   0.0325
   ],
   "pipHoverControls": true,
   "pipMargin": 4,
@@ -304,7 +305,7 @@
    "notas"
   ],
   "widgetsOnDesktop": false,
-  "windowMode": "flotante",
+  "windowMode": "mosaico",
   "workspaceAnim": "auto",
   "wsBarNames": false,
   "wsNumerals": "japonesa"
