@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.39] — 2026-11-17
+
+### Documentación
+- El plan de temas (`docs/planes/temas.md`) ya no habla de un tope de 24: describe los 54 temas actuales por grupo,
+  cuáles van sin pareja clara y por qué, y qué comprobar al añadir uno.
+
 ## [0.10.38] — 2026-11-17
 
 ### Novedades (temas)

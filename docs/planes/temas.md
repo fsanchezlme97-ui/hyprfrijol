@@ -2,7 +2,7 @@
 
 > **Apartado:** Ajustes › Apariencia › Temas
 > **Alcance:** estilo Math, transparencia, temas oficiales y temas propios (creador de temas).
-> **Estado:** borrador para revisión. Documento de traspaso para continuar en otra sesión de trabajo.
+> **Estado:** aplicado (estilo Math, transparencia, Mis temas y creador). El tope de temas oficiales se abandonó: ver §4 y §8.
 > **Repositorio:** `fsanchezlme97-ui/hyprfrijol` · archivos base: `config/quickshell/Theme.qml`, `scripts/hf-apply`, `config/themes/palettes.json`, `config/quickshell/modules/settings/sections/Apariencia.qml`
 
 ---
@@ -14,7 +14,7 @@
 | 3 estilos: *Material* (`flat`), *SkySoul* (`skysoul`), *Chroma* (`chroma`) | **1 estilo: Math** (Material Design pulido) |
 | SkySoul = estilo aparte con cristal y blur | **Transparencia**: interruptor que funciona con cualquier tema |
 | Chroma = estilo aparte (Nothing Phone) | **Se elimina** |
-| 66 paletas en `config/themes/palettes.json` | **24 temas como máximo**: 12–14 oficiales + espacios para temas propios |
+| 66 paletas en `config/themes/palettes.json` | **Sin tope**: 54 temas de HyprFrijol (42 en pares oscuro y claro) + los propios, sin límite |
 | Paletas solo oscuras o solo claras | **Cada tema es un par oscuro + claro** |
 | — | **Creador de temas** a partir de una imagen, una foto o códigos hex |
 
@@ -22,7 +22,7 @@ Hay tres ejes independientes:
 
 ```
 Estilo:        Math (único)
-Tema:          oficial (12–14) | propio (hasta 10–12)
+Tema:          de HyprFrijol (originales, populares, pastel) | propio (sin límite)
 Transparencia: activada | desactivada
 Modo:          oscuro | claro | automático (amanecer/atardecer)
 ```
@@ -93,28 +93,27 @@ La migración la hacen `hf-migrate` y `STYLE_ALIAS` en `hf-apply`, y debe ser id
 
 ---
 
-## 4. Temas oficiales (12–14)
+## 4. Temas de HyprFrijol
 
-Regla: **cada tema es un par oscuro + claro**, ajustado a mano para los dos modos y para la transparencia.
+El plan era quedarse en 12–14 temas oficiales y retirar el resto. No se hizo: se mantuvieron todos y desde 0.10.38
+hay **54 temas** (96 entradas en `config/themes/palettes.json`), sin tope. En Ajustes › Apariencia se filtran por
+grupo (Todas · Originales · Populares · Pastel · Importadas), así que el número no estorba.
 
-| # | Tema | Oscuro | Claro | Estado |
-|---|---|---|---|---|
-| 1 | Grafito | `grafito` | `claro` | Emparejar las dos existentes |
-| 2 | Oxocarbon | `oxocarbon` | — | **Crear variante clara** (base: IBM Carbon claro) |
-| 3 | Ciruela | — | — | **Nuevo**, desde la paleta de referencia (ver 4.1) |
-| 4 | Rosa pastel | `rosa` | `rosa-claro` | Existe |
-| 5 | Catppuccin | `catppuccin-mocha` | `catppuccin-latte` | Existe |
-| 6 | Rosé Pine | `rose-pine` | `rose-pine-dawn` | Existe |
-| 7 | Nord | `nord` | `nord-claro` | Existe |
-| 8 | Tokyo Night | `tokyo-night` | `tokyo-night-dia` | Existe |
-| 9 | Gruvbox | `gruvbox` | `gruvbox-claro` | Existe (por confirmar) |
-| 10 | Everforest | `everforest` | `everforest-claro` | Existe |
-| 11 | Kanagawa | `kanagawa` | `kanagawa-lotus` | Existe (por confirmar) |
-| 12 | Lila pastel | `lila` | `lila-claro` | Existe |
-| 13 | Monocromo | `mono` | `monoclaro` | Existe (neutro) |
-| 14 | *(libre)* | | | Opcional: Ámbar otoñal, Menta, Melocotón o Dracula |
+| Grupo (`group`) | Temas | Ejemplos |
+|---|---|---|
+| Originales (sin `group`) | 16 | Grafito, Ciruela, Frijol, Océano, Bosque, Boreal, Cacao, Índigo |
+| Populares (`popular`) | 31 | Catppuccin (las cuatro), Rosé Pine, Tokyo Night, Kanagawa, Modus, Poimandres, Cyberdream |
+| Pastel (`pastel`) | 7 | Rosa, Lila, Menta, Durazno, Cielo, Limón, Agua |
 
-**Se retiran:** Catppuccin Macchiato y Frappé, Tokyo Night Storm, Rosé Pine Moon, Kanagawa Dragon, Ayu (las tres), GitHub, Flexoki, Solarized, One Dark/Light, Monokai Pro, Nightfox, Dracula/Alucard, Menta, Melocotón, Cielo, Azul, Verde, Ámbar, Lavanda, Pizarra, Medianoche, Carbón, Bosque, Vino, Océano, Cobre, Neón, Hielo, Papel, Arena y Salvia (salvo las que se elijan para el n.º 14).
+Regla: **cada tema es un par oscuro + claro siempre que se pueda** (la clara lleva `"variant": true` y las dos se
+apuntan con `pair`). 42 lo son. Sin pareja quedan Monocromo y Monocromo claro (los usa el modo de color «mono»),
+Auto · Atardecer y los sabores oscuros de familias cuya clara ya está emparejada con otro (Catppuccin Frappé y
+Macchiato, Rosé Pine Moon, Tokyo Night Storm, Kanagawa Dragon), más Zenburn, Sonokai, Synthwave '84 y Vesper, que
+no tienen versión clara. Para ellos `hf-apply` deriva la variante del otro modo (`flip_palette`).
+
+**Añadir un tema:** los 15 roles en hex (y `ansi`, los 16 colores de terminal, si el tema los tiene oficiales),
+`python3 dev/coherencia.py` (roles, texto ≥ 4,5:1 sobre `s1`/`s3`, parejas recíprocas) y mirar la onda de la barra
+y el texto con las correcciones de `fix_contrast`: el primario y el terciario son también los colores de la onda.
 
 ### 4.1 Tema nuevo: Ciruela
 
@@ -153,10 +152,8 @@ Pendiente: decidir si se mantiene como paleta especial o si basta con el modo au
 ## 5. Temas propios y creador de temas
 
 ### 5.1 Límites
-- **Máximo total: 24 temas.**
-- Oficiales: 12–14, que no se pueden borrar.
-- Propios: los espacios restantes (10–12). Se pueden crear, renombrar, editar, borrar y reemplazar.
-- Con los espacios llenos, al crear uno nuevo el selector pide cuál reemplazar.
+- Sin tope, ni de temas de HyprFrijol ni de propios.
+- Los de HyprFrijol no se pueden borrar. Los propios se pueden crear, renombrar, editar y borrar.
 
 ### 5.2 Entradas aceptadas
 1. **Imagen de paleta** con los códigos hex escritos (como las de referencia).
@@ -219,8 +216,8 @@ Entrada ─▶ 1. Extracción ─▶ 2. Roles ─▶ 3. Completar ─▶ 4. Vali
 Estilo          Math
 Transparencia   [ interruptor ]
 Modo            Oscuro · Claro · Automático
-Temas oficiales [ cuadrícula de 12–14 ]
-Mis temas       [ cuadrícula de propios ]  [ + Crear tema ]   n/10
+Temas           [ Todas · Originales · Populares · Pastel · Importadas ]  [ cuadrícula ]
+Mis temas       [ cuadrícula de propios ]  [ + Crear tema ]
 ```
 
 El flujo de **Crear tema**: elegir la entrada (imagen, foto o hex), ver la vista previa, ajustar si hace falta y guardar.
@@ -230,16 +227,17 @@ El flujo de **Crear tema**: elegir la entrada (imagen, foto o hex), ver la vista
 ## 7. Fases de implementación
 
 1. **Estilo único:** Math + interruptor de transparencia + eliminación de Chroma/SkySoul + migración.
-2. **Temas oficiales:** podar `palettes.json`, emparejar oscuro/claro, crear Oxocarbon claro y Ciruela, ajustar cada uno con transparencia. Sincronizar `greeter/quickshell/palettes.json`.
+2. **Temas oficiales:** emparejar oscuro/claro, crear Oxocarbon claro y Ciruela, ajustar cada uno con transparencia. Sincronizar `greeter/quickshell/palettes.json`. (La poda a 12–14 se descartó.)
 3. **Pulido de Math:** movimiento, sombras, bordes, espaciado y estados en `Ui/` y `components/`.
-4. **Temas propios:** almacenamiento, selector con límite, exportar e importar.
+4. **Temas propios:** almacenamiento, selector sin límite, exportar e importar.
 5. **Creador de temas:** extracción (OCR / matugen / hex), roles (heurística + IA opcional), validación y vista previa.
 
 ---
 
 ## 8. Decisiones tomadas
 
-- 13 temas oficiales; el espacio n.º 14 queda libre por ahora.
+- ~~13 temas oficiales; el espacio n.º 14 queda libre por ahora.~~ Sustituida (2026-11-17): sin tope de temas de
+  HyprFrijol; se filtran por grupo en Ajustes. En 0.10.38 se añadieron 21 (54 temas en total).
 - Gruvbox y Kanagawa se mantienen.
 - Rosa pastel se mantiene junto a Ciruela.
 - «Auto · Atardecer» se quita: el modo automático (amanecer/atardecer) vale para cualquier tema.
