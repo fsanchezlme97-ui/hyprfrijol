@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.40] — 2026-11-17
+
+### Cambios (asistente)
+- **Nuevo logo de Harper:** un monóculo grande con `>!` en la lente y un cordón ondulado, en lugar de las gafas. Se ve
+  en la barra, Spotlight, el panel lateral, Ajustes y la captura de pantalla.
+
 ## [0.10.39] — 2026-11-17
 
 ### Documentación
