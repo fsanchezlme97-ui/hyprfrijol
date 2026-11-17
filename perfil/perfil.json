@@ -118,12 +118,12 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.10.35",
+ "hyprfrijol": "v0.10.36",
  "ollama": [
   "qwen3.5:9b",
   "gemma4:e4b"
  ],
- "saved": "2026-11-16 19:20",
+ "saved": "2026-11-17 13:01",
  "services": [
   "ufw",
   "cups.socket",
@@ -142,7 +142,7 @@
   "aiFallbackProvider": "off",
   "aiHistoryDays": 0,
   "aiModel": "gemma4:e4b",
-  "aiMuted": false,
+  "aiMuted": true,
   "aiProvider": "ollama",
   "aiScreenAsk": "sensible",
   "aiVoice": true,
@@ -260,10 +260,10 @@
   "palette": "oxocarbon",
   "pip": true,
   "pipAuto": false,
-  "pipCorner": "sup-der",
+  "pipCorner": "libre",
   "pipFree": [
-   -0.1583,
-   0.0325
+   0.8182,
+   0.7517
   ],
   "pipHoverControls": true,
   "pipMargin": 4,

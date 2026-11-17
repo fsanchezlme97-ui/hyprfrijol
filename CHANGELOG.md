@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.37] — 2026-11-17
+
+### Mejoras (onda de audio de la barra)
+- **Nuevos colores para la música:** cada barra tiene el cuerpo en el color primario, tenue, y la punta en el
+  terciario, así que el color sigue la fuerza del sonido. Antes cambiaba de izquierda a derecha.
+- **Movimiento con gravedad:** las barras suben al instante y caen acelerando, y en «Barras» una marca de pico se
+  queda arriba y baja despacio.
+- **El asistente usa los colores del tema:** escuchando en primario, procesando en primario apagado y hablando en
+  terciario. «Hablando» ya no se confunde con la música en temas donde el magenta coincidía con el terciario.
+- **Procesando:** una ola ancha que va y viene de lado a lado.
+- **En silencio** los puntos respiran despacio (quietos con las animaciones desactivadas).
+
 ## [0.10.36] — 2026-11-16
 
 ### Novedades (panel del asistente)

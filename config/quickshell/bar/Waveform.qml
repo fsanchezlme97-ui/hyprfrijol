@@ -2,16 +2,18 @@
 // Rendimiento: «barras» son 48 rectángulos que pinta la GPU (antes un Canvas pintado por la CPU y subido como imagen
 // en cada fotograma: ~6 % de CPU con música); «onda» y «línea» siguen en Canvas. Todo se mueve a 30 fps.
 // Estilos (Ajustes › Barra › Onda de audio, ajuste "waveStyle"):
-//   barras  barras redondeadas simétricas con degradado primario → terciario (por defecto)
+//   barras  barras redondeadas simétricas: cuerpo en primario tenue y la punta en terciario (por defecto)
 //   onda    curva suave rellena, simétrica
 //   linea   una sola línea fina que oscila
-// Cada fotograma se acerca al valor de cava con ataque rápido y caída suave, así se mueve fluido y sin retraso.
-// Estados del asistente, cada uno con un color de la paleta del tema (Theme.aiListen/aiThink/aiSpeak) y siempre como
-// onda (las barras son solo para el audio del equipo: con «barras» elegido, la voz se dibuja como «onda»):
-//   escucha  verde: el nivel del micrófono (dictado o conversación), lo más reciente en el centro
-//   piensa   azul: una ola que recorre las barras mientras prepara la respuesta (sin animaciones: quieta)
-//   habla    morado: la voz del asistente (cava)
-// Sin asistente: la música del equipo con los colores del tema; en silencio, una línea de puntos tenue. Clic: controles de música. Clic central: reproducir/pausar.
+// Movimiento con gravedad: cada barra sube al instante con cava y cae acelerando; en «barras», una marca de pico se
+// queda arriba y baja despacio.
+// Estados del asistente, con los colores del tema (el estado lo dice sobre todo el movimiento) y siempre como onda
+// (las barras son solo para el audio del equipo: con «barras» elegido, la voz se dibuja como «onda»):
+//   escucha  primario: el nivel del micrófono (dictado o conversación), lo más reciente en el centro
+//   piensa   primario apagado: una ola ancha que va y viene mientras prepara la respuesta (sin animaciones: quieta)
+//   habla    terciario: la voz del asistente (cava)
+// Sin asistente: la música del equipo; en silencio, una fila de puntos que respira despacio (opacidad animada en la
+// GPU; quieta sin animaciones). Clic: controles de música. Clic central: reproducir/pausar.
 // Rueda: volumen.
 import QtQuick
 import ".."
@@ -25,7 +27,9 @@ Rectangle {
     readonly property string aiState: Shell.aiSpeaking ? "habla"
         : Shell.aiConvState === "piensa" || Shell.aiBusy || Shell.dictPhase === "trans" ? "piensa"
         : Shell.dictPhase === "rec" || Shell.aiConvState === "escucha" ? "escucha" : ""
-    readonly property color stateColor: aiState === "habla" ? Theme.aiSpeak : aiState === "piensa" ? Theme.aiThink : Theme.aiListen
+    readonly property color stateColor: aiState === "habla" ? Theme.ter : aiState === "piensa" ? thinkColor : Theme.p
+    // primario mezclado con el fondo de la barra (opaco: el degradado del Canvas le cambia el alfa)
+    readonly property color thinkColor: Qt.tint(Theme.p, Qt.alpha(Theme.glass, 0.45))
     property real thinkT: 0
     readonly property int n: Cava.count
     readonly property string drawKind: kind === "barras" && aiState !== "" ? "onda" : kind
@@ -41,6 +45,18 @@ Rectangle {
     readonly property bool live: aiState !== "" || Cava.active && (Media.playing || peak > 0.02)
     property real peak: 0
     property var disp: Array(n).fill(0)
+    property var vel: Array(n).fill(0)     // velocidad de caída de cada barra (gravedad)
+    property var cap: Array(n).fill(0)     // marca de pico de cada barra
+    readonly property bool resting: !live && peak < 0.01
+    // Reposo: los puntos respiran (0,45 × 0,45–1 de opacidad, como la muestra elegida)
+    property real breath: 1
+    SequentialAnimation on breath {
+        running: root.resting && root.visible && !Theme.still
+        loops: Animation.Infinite
+        NumberAnimation { to: 0.45; duration: 2400; easing.type: Easing.InOutSine }
+        NumberAnimation { to: 1; duration: 2400; easing.type: Easing.InOutSine }
+        onRunningChanged: if (!running) root.breath = 1
+    }
     property bool idlePainted: false
     readonly property var paintKey: [Theme.p, Theme.ter, kind, aiState]
     onPaintKeyChanged: { idlePainted = false; cv.requestPaint(); }
@@ -55,12 +71,13 @@ Rectangle {
             // 30 fps: un fotograma de cada dos (con el tiempo acumulado, para que la caída no se ralentice)
             acc += frameTime;
             if (acc < 1 / 32) return;
-            const src = Cava.bars, d = root.disp, st = root.aiState, lv = Shell.micLevels ?? [], half = (root.n - 1) / 2;
+            const src = Cava.bars, d = root.disp, v = root.vel, c = root.cap, st = root.aiState, lv = Shell.micLevels ?? [], half = (root.n - 1) / 2;
             const dt = Math.min(0.08, acc);
             acc = 0;
             if (st === "piensa" && !Theme.still) root.thinkT += dt;
             const tt = root.thinkT;
-            const up = 1 - Math.exp(-dt * 38), down = 1 - Math.exp(-dt * 9);
+            const rise = 1 - Math.exp(-dt * 60), g = 3.2 * dt, capFall = 0.32 * dt;
+            const pos = half + half * 0.85 * Math.sin(tt * 1.5);
             let pk = 0;
             for (let i = 0; i < root.n; i++) {
                 let t;
@@ -68,9 +85,11 @@ Rectangle {
                     const k = Math.abs(i - half) / half, j = lv.length - 1 - Math.floor(k * (lv.length - 1) + 0.5);
                     t = Math.min(1, (lv[j] ?? 0) * (1 - 0.35 * k) * (0.8 + 0.2 * Math.sin(i * 1.7)));
                 } else if (st === "piensa") {
-                    t = 0.12 + 0.55 * Math.pow(0.5 + 0.5 * Math.sin(tt * 4.2 - i * 0.36), 2) * (0.7 + 0.3 * Math.sin(tt * 1.3 + i * 0.13));
+                    t = 0.1 + 0.6 * Math.exp(-(((i - pos) / 8) ** 2));   // ola ancha de lado a lado
                 } else t = Math.min(1, src[i] ?? 0);
-                d[i] += (t - d[i]) * (t > d[i] ? up : down);
+                if (t >= d[i]) { d[i] += (t - d[i]) * rise; v[i] = 0; }
+                else { v[i] += g; d[i] = Math.max(t, d[i] - v[i] * dt); }
+                c[i] = Math.max(d[i], c[i] - capFall);
                 if (d[i] > pk) pk = d[i];
             }
             root.peak = pk;
@@ -84,21 +103,18 @@ Rectangle {
 
     // ---- «barras» en la GPU: alto de cada rectángulo puesto a mano (sin 48 enlaces que se reevalúen)
     readonly property real barsH: height - 6
-    function barColor(f: real): color {
-        if (aiState !== "") { const c = stateColor; return Qt.rgba(c.r, c.g, c.b, 1 - 0.3 * Math.abs(f * 2 - 1)); }
-        const p = Theme.p, t = Theme.ter;
-        if (f < 0.5) return Qt.rgba(p.r, p.g, p.b, 0.75 + f * 0.5);
-        const k = (f - 0.5) * 2;
-        return Qt.rgba(p.r + (t.r - p.r) * k, p.g + (t.g - p.g) * k, p.b + (t.b - p.b) * k, 1 - 0.15 * k);
-    }
-    function amp(i: int): real { return Math.pow(Math.min(1, disp[i] * 1.15), 0.8); }
+    function amp(v: real): real { return Math.pow(Math.min(1, v * 1.15), 0.8); }
     function layoutBars(idle: bool): void {
         for (let i = 0; i < n; i++) {
             const it = bars.itemAt(i);
             if (!it) continue;
-            if (idle) { it.visible = i % 2 === 0; it.height = 2.2; it.opacity = 0.45; continue; }
-            it.visible = true; it.opacity = 1;
-            it.height = Math.max(2.6, amp(i) * (barsH - 2));
+            const b = it.bar;
+            if (idle) { b.visible = i % 2 === 0; b.height = 2.2; b.opacity = 0.45; it.capT.visible = it.capB.visible = false; continue; }
+            b.visible = true; b.opacity = 1;
+            const bh = Math.max(2.6, amp(disp[i]) * (barsH - 2)), ch = amp(cap[i]) * (barsH - 2), showCap = ch > bh + 1.5;
+            b.height = bh;
+            it.capT.visible = it.capB.visible = showCap;
+            if (showCap) { it.capT.y = barsH / 2 - ch / 2 - 0.6; it.capB.y = barsH / 2 + ch / 2 - 0.5; }
         }
     }
     Item {
@@ -107,19 +123,34 @@ Rectangle {
         anchors.centerIn: parent
         width: root.waveW
         height: root.barsH
+        opacity: root.breath
         Repeater {
             id: bars
             model: root.kind === "barras" ? root.n : 0   // se quedan aunque la voz pase a onda
-            Rectangle {
+            Item {
+                id: slot
                 required property int index
+                readonly property Item bar: barR
+                readonly property Item capT: capTop
+                readonly property Item capB: capBot
                 x: index * (root.bw + root.gap)
-                anchors.verticalCenter: parent.verticalCenter
-                width: root.bw; height: 2.2
-                radius: width / 2
-                visible: index % 2 === 0
-                opacity: 0.45
-                // degradado de la barra entera, como el del Canvas: primario 75 % → primario → terciario 85 %
-                color: root.barColor(index / (root.n - 1))
+                width: root.bw; height: parent.height
+                Rectangle {
+                    id: barR
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width; height: 2.2
+                    radius: width / 2
+                    visible: slot.index % 2 === 0
+                    opacity: 0.45
+                    // punta de color: terciario en los extremos, primario tenue en el centro (crece con la barra)
+                    gradient: Gradient {
+                        GradientStop { position: 0; color: Theme.ter }
+                        GradientStop { position: 0.5; color: Qt.alpha(Theme.p, 0.5) }
+                        GradientStop { position: 1; color: Theme.ter }
+                    }
+                }
+                Rectangle { id: capTop; width: parent.width; height: 1.1; radius: 0.55; color: Qt.alpha(Theme.ter, 0.8); visible: false }
+                Rectangle { id: capBot; width: parent.width; height: 1.1; radius: 0.55; color: Qt.alpha(Theme.ter, 0.8); visible: false }
             }
         }
         Component.onCompleted: root.layoutBars(true)
@@ -131,38 +162,30 @@ Rectangle {
         anchors.centerIn: parent
         width: root.waveW
         height: parent.height - 6
+        opacity: root.breath
         renderStrategy: Canvas.Cooperative
         onPaint: {
             const ctx = getContext("2d");
             ctx.reset();
             const w = width, h = height, mid = h / 2, d = root.disp, n = root.n;
-            const g = ctx.createLinearGradient(0, 0, w, 0);
             const ai = root.aiState !== "", sc = root.stateColor;
-            g.addColorStop(0, Qt.alpha(ai ? sc : Theme.p, 0.7));
-            g.addColorStop(0.5, ai ? sc : Theme.p);
-            g.addColorStop(1, Qt.alpha(ai ? sc : Theme.ter, ai ? 0.7 : 0.85));
+            // asistente: su color, más tenue a los lados; música: punta de color (terciario arriba y abajo)
+            const g = ai ? ctx.createLinearGradient(0, 0, w, 0) : ctx.createLinearGradient(0, 0, 0, h);
+            g.addColorStop(0, ai ? Qt.alpha(sc, 0.7) : Theme.ter);
+            g.addColorStop(0.5, ai ? sc : Qt.alpha(Theme.p, 0.55));
+            g.addColorStop(1, ai ? Qt.alpha(sc, 0.7) : Theme.ter);
             ctx.fillStyle = g;
             ctx.strokeStyle = g;
             // Las bandas graves (izquierda) suelen dominar: se reparte la altura con una ligera curva
             // Con la IA en marcha, un mínimo: en silencio (pausas al hablar, micrófono callado) la onda se seguía viendo
-            const amp = (i) => Math.max(ai ? 0.12 : 0, Math.pow(Math.min(1, d[i] * 1.15), 0.8));
-            if (!root.live && root.peak < 0.01) {
-                // Reposo: puntos tenues
+            const amp = (i) => Math.max(ai ? 0.12 : 0, root.amp(d[i]));
+            if (root.resting) {
+                // Reposo: puntos tenues (respiran con la opacidad del Canvas)
                 ctx.globalAlpha = 0.45;
-                const step = root.drawKind === "barras" ? root.bw + root.gap : 6;
-                for (let x = step / 2; x < w; x += step * 2) { ctx.beginPath(); ctx.arc(x, mid, 1.1, 0, Math.PI * 2); ctx.fill(); }
+                for (let x = 3; x < w; x += 12) { ctx.beginPath(); ctx.arc(x, mid, 1.1, 0, Math.PI * 2); ctx.fill(); }
                 return;
             }
-            if (root.drawKind === "barras") {
-                for (let i = 0; i < n; i++) {
-                    const bh = Math.max(2.6, amp(i) * (h - 2));
-                    const x = i * (root.bw + root.gap), y = mid - bh / 2, r = root.bw / 2;
-                    ctx.beginPath();
-                    ctx.moveTo(x, y + r); ctx.arc(x + r, y + r, r, Math.PI, 0);
-                    ctx.lineTo(x + root.bw, y + bh - r); ctx.arc(x + r, y + bh - r, r, 0, Math.PI);
-                    ctx.closePath(); ctx.fill();
-                }
-            } else {
+            {
                 const pts = [];
                 for (let i = 0; i < n; i++) pts.push([i / (n - 1) * w, amp(i) * (mid - 1)]);
                 const curve = (sign) => {

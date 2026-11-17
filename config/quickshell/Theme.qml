@@ -43,7 +43,7 @@ Singleton {
     property color o: c.o
     property color ov: c.ov
     readonly property color danger: light ? "#B3261E" : "#F2B8B5"
-    // Estados del asistente (onda de la barra, bar/Waveform.qml, y puntero): verde, azul y magenta de la paleta del
+    // Estados del asistente en el puntero (la onda de la barra usa primario y terciario): verde, azul y magenta del
     // tema (sus colores de terminal, c.ansi, que hf-apply pone siempre); los fijos solo si faltan
     readonly property var ansi: c.ansi ?? []
     readonly property color aiListen: ansi[2] ?? (light ? "#15803D" : "#22C55E")

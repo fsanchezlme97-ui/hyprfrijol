@@ -278,7 +278,7 @@ ColumnLayout {
             Layout.fillWidth: true
             spacing: 16
             Repeater {
-                model: [[Qt.alpha(Theme.p, 0.45), "En espera"], [Theme.aiListen, "Escuchando"], [Theme.aiThink, "Procesando"], [Theme.aiSpeak, "Hablando"]]
+                model: [[Qt.alpha(Theme.p, 0.45), "En espera"], [Theme.p, "Escuchando"], [Qt.tint(Theme.p, Qt.alpha(Theme.glass, 0.45)), "Procesando"], [Theme.ter, "Hablando"]]
                 Row {
                     required property var modelData
                     spacing: 8
