@@ -12,9 +12,10 @@ import "../services"
 IconBtn {
     readonly property string mode: Shell.micMode
     readonly property bool rec: Shell.dictPhase === "rec"
-    // dictado: micrófono con líneas de texto (relleno mientras escucha) · walkie y fluido: con chispas · desactivado: el
-    // micrófono solo, apagado
-    icon: Audio.micMuted ? "mic-off" : mode === "walkie" || mode === "fluido" ? "mic_ai" : mode === "desactivado" ? "mic" : rec ? "mic_rec" : "mic_dictado"
+    // dictado: micrófono con líneas de texto (relleno mientras escucha) · walkie: walkie-talkie (con ondas mientras
+    // escucha) · fluido: bocadillo con la onda de la voz · desactivado: bocadillo tachado
+    icon: Audio.micMuted ? "mic-off" : mode === "walkie" ? (rec ? "walkie_rec" : "walkie") : mode === "fluido" ? "fluido"
+          : mode === "desactivado" ? "voz_off" : rec ? "mic_rec" : "mic_dictado"
     active: rec || Shell.aiConversation
     fg: Audio.micMuted ? Theme.danger : mode === "desactivado" ? Theme.tv : Theme.t
     // Silenciado no se cambia de modo (modules/dictado/Dictado.qml): el clic solo lo vuelve a activar

@@ -42,7 +42,7 @@ Singleton {
     property bool aiBusy: false            // el asistente está pensando una respuesta (AiChat.qml: ola que va y viene en la barra)
     property string aiConvState: ""        // conversación por voz: escucha | piensa | habla ("" sin conversación; Dictado.qml)
     property var micLevels: []             // niveles recientes del micrófono al dictar o escuchar (0..1, el último el más nuevo)
-    signal voiceDo(string what)            // botones de voz de la barra (bar/VoiceBtns.qml): dictar | conversar | silenciar | microfono
+    signal voiceDo(string what)            // botones de voz de la barra (bar/VoiceBtns.qml): dictado | walkie | walkie-up | fluido | desactivado
     // Modo del micrófono (micMode): dictado · walkie (mantener para hablar con el asistente) · fluido (conversación de
     // ida y vuelta) · desactivado. Los nombres de antes se leen como su equivalente hasta que hf-migrate los cambia
     // (él también pasa «ia» con el antiguo aiTalkMode «pulsar» a walkie).

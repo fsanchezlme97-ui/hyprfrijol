@@ -1,10 +1,10 @@
-// Botones de voz de la barra (widget «voz»): cuatro controles fijos, cada uno con una sola función
-// (modules/dictado/Dictado.qml: Shell.voiceDo):
-//   dictar      dictado de voz a texto (Super + Alt + D)
-//   conversar   conversación por voz con el asistente (Super + Alt + H)
-//   silenciar   respuestas habladas (aiMuted: hf-ai speak calla); la conversación sigue y contesta por escrito
-//   micrófono   silenciar o activar el micrófono
-// Iconos fijos (los de la acción); lo silenciado se pinta en rojo y lo que está en marcha, resaltado.
+// Botones de voz de la barra (widget «voz»): un botón por modo de voz (Shell.micMode), resaltado el que está puesto.
+// Pulsar uno lo pone y hace lo suyo (modules/dictado/Dictado.qml: Shell.voiceDo):
+//   dictado       dictado de voz a texto (clic para empezar y clic para terminar)
+//   walkie        mantenlo pulsado mientras le hablas al asistente y suelta (un toque corto: clic, habla y clic)
+//   fluido        conversación de ida y vuelta (clic para empezar y para terminar)
+//   desactivado   no escucha nada (termina lo que estuviera escuchando)
+// Con Harper hablando, pulsar cualquiera lo corta. Micrófono silenciado: tenues; el clic lo vuelve a activar.
 import QtQuick
 import ".."
 import "../components"
@@ -15,46 +15,47 @@ Grid {
     property bool vertical: false
     readonly property real h: vertical ? 26 : 22
     readonly property bool conv: Shell.aiConversation
-    readonly property bool dictating: Shell.dictPhase === "rec" && !conv
-    readonly property bool repliesMuted: Settings.get("aiMuted", false)
-    readonly property string name: Settings.get("aiName", "") || "el asistente"
+    readonly property bool rec: Shell.dictPhase === "rec" && !conv
+    readonly property string mode: Shell.micMode
+    readonly property string name: Settings.get("aiName", "") || "Harper"
+    readonly property string hush: Shell.aiSpeaking ? " · clic para que " + name + " deje de hablar" : ""
     flow: vertical ? Grid.TopToBottom : Grid.LeftToRight
     columns: vertical ? 1 : 4
     spacing: 1
 
     IconBtn {
         implicitHeight: root.h
-        icon: root.dictating ? "mic_rec" : "mic_dictado"
-        active: root.dictating
-        opacity: Audio.micMuted || root.conv ? 0.45 : 1
-        tooltip: root.vertical ? "" : root.dictating ? "Dictando · clic para terminar · Super + Alt + D"
-                 : root.conv ? "Dictado: termina antes la conversación" : "Dictado de voz a texto · Super + Alt + D"
-        onClicked: Shell.voiceDo("dictar")
+        icon: root.rec && root.mode === "dictado" ? "mic_rec" : "mic_dictado"
+        active: root.mode === "dictado"
+        opacity: Audio.micMuted ? 0.45 : 1
+        tooltip: root.vertical ? "" : (root.rec && root.mode === "dictado" ? "Dictando · clic para terminar" : "Dictado de voz a texto") + root.hush
+        onClicked: Shell.voiceDo("dictado")
     }
     IconBtn {
         implicitHeight: root.h
-        icon: "audio_lines"
-        active: root.conv
+        icon: root.rec && root.mode === "walkie" ? "walkie_rec" : "walkie"
+        active: root.mode === "walkie"
+        activeBg: root.rec && root.mode === "walkie" ? Theme.danger : Theme.p
+        opacity: Audio.micMuted ? 0.45 : 1
+        tooltip: root.vertical ? "" : (root.rec && root.mode === "walkie" ? "Escuchando · suelta para preguntar"
+                 : "Walkie-talkie: mantén pulsado mientras le hablas a " + root.name) + root.hush
+        onDown: Shell.voiceDo("walkie")
+        onUp: Shell.voiceDo("walkie-up")
+    }
+    IconBtn {
+        implicitHeight: root.h
+        icon: root.conv ? "audio_lines" : "fluido"
+        active: root.mode === "fluido"
         opacity: Audio.micMuted && !root.conv ? 0.45 : 1
-        tooltip: root.vertical ? "" : root.conv ? "Conversación en marcha · clic para terminar · Super + Alt + H"
-                 : "Conversar con " + root.name + " · Super + Alt + H"
-        onClicked: Shell.voiceDo("conversar")
+        tooltip: root.vertical ? "" : (root.conv ? "Conversación en marcha · clic para terminar" : "Conversación fluida con " + root.name) + root.hush
+        onClicked: Shell.voiceDo("fluido")
     }
     IconBtn {
         implicitHeight: root.h
-        icon: "volume_mute"
-        fg: root.repliesMuted ? Theme.danger : Theme.t
-        active: root.repliesMuted
-        activeBg: Qt.alpha(Theme.danger, 0.18); activeFg: Theme.danger
-        tooltip: root.vertical ? "" : root.repliesMuted ? "Respuestas silenciadas: contesta por escrito · clic para volver a oírlas"
-                 : "Silenciar las respuestas habladas · en la conversación, di «silencio»"
-        onClicked: Shell.voiceDo("silenciar")
-    }
-    IconBtn {
-        implicitHeight: root.h
-        icon: "mic-off"
-        fg: Audio.micMuted ? Theme.danger : Theme.t
-        tooltip: root.vertical ? "" : Audio.micMuted ? "Micrófono deshabilitado · clic para activarlo" : "Deshabilitar el micrófono"
-        onClicked: Shell.voiceDo("microfono")
+        icon: "voz_off"
+        active: root.mode === "desactivado"
+        activeBg: Theme.s4; activeFg: Theme.t
+        tooltip: root.vertical ? "" : root.mode === "desactivado" ? "Voz desactivada: no escucha nada" : "Desactivar la voz"
+        onClicked: Shell.voiceDo("desactivado")
     }
 }

@@ -11,6 +11,10 @@ antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X
   suelta: se lo pasa a Harper; con el botón, clic, habla y clic), **fluido** (conversación de ida y vuelta) y
   **desactivado** (no escucha nada). Sustituyen a «Asistente» + «Conversación / Una pregunta» y a «Silenciar»;
   `hf-migrate` pasa tus ajustes a los nuevos nombres (con copia).
+- **Barra:** el widget «voz» pasa a ser los cuatro modos, con iconos nuevos (walkie-talkie, bocadillo con la onda de la
+  voz, bocadillo tachado) y el modo puesto resaltado. Pulsar uno lo pone y hace lo suyo; el de walkie se mantiene
+  pulsado mientras hablas. El botón único «Micrófono» también enseña el icono de su modo. Silenciar las respuestas
+  sigue en Ajustes y diciendo «silencio»; silenciar el micrófono, en el control de sonido.
 - **Interrumpir a Harper:** pulsar el micrófono o el atajo mientras habla lo calla al momento (0,2 s medidos). En
   fluido la conversación sigue y te escucha; en walkie empieza tu pregunta. En el chat, el botón de enviar pasa a
   «detener» mientras habla. Hablarle encima en fluido sigue cortándolo como antes.

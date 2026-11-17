@@ -94,6 +94,12 @@ Singleton {
         // Micrófono de la barra por modo (bar/MicBtn.qml): dictado (con líneas de texto), asistente (chispas), grabando (relleno)
         "mic_dictado": '<rect x="3.5" y="2.5" width="6" height="11" rx="3"/><path d="M1.5 10.5a5 5 0 0 0 10 0M6.5 15.5v5"/><path d="M14.5 6.5h7M14.5 11h7M14.5 15.5h4.5"/>',
         "mic_ai": '<rect x="4.5" y="2.5" width="6" height="11" rx="3"/><path d="M2 10.5a5.5 5.5 0 0 0 11 0M7.5 16v4.5"/><path d="M18.3 3.2l1 2.4 2.4 1-2.4 1-1 2.4-1-2.4-2.4-1 2.4-1z" fill="currentColor" stroke-width="1.1"/><path d="M19.2 13.4l.6 1.3 1.3.6-1.3.6-.6 1.3-.6-1.3-1.3-.6 1.3-.6z" fill="currentColor" stroke-width="0.9"/>',
+        // Modos de voz (barra): walkie-talkie (antena, rejilla y botón) · fluido (bocadillo con la onda de la voz) ·
+        // voz desactivada (bocadillo tachado)
+        "walkie": '<rect x="6.5" y="7.5" width="11" height="14" rx="2.5"/><path d="M9.5 7.5V2.5"/><path d="M9.5 11.5h5M9.5 14.5h5"/><circle cx="12" cy="18.3" r="1.1" fill="currentColor" stroke="none"/>',
+        "walkie_rec": '<rect x="6.5" y="7.5" width="11" height="14" rx="2.5" fill="currentColor"/><path d="M9.5 7.5V2.5"/><path d="M3.5 4.5a6 6 0 0 0 0 6M20.5 4.5a6 6 0 0 1 0 6"/>',
+        "fluido": '<path d="M20.5 11.5a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.4-4.3A8.5 8.5 0 1 1 20.5 11.5z"/><path d="M8.5 10v3M12 8v7M15.5 10v3"/>',
+        "voz_off": '<path d="M20.5 11.5a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.4-4.3A8.5 8.5 0 1 1 20.5 11.5z"/><path d="M8 8l8 7"/>',
         "mic_rec": '<rect x="9" y="2" width="6" height="12" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',
         // Barra de estado: wifi por señal (arcos atenuados), cable, volumen silenciado/bajo, cargando, campana en no molestar
         "wifi_2": '<path d="M2.5 9.2a14 14 0 0 1 19 0" stroke-opacity=".3"/><path d="M5.6 12.6a9.5 9.5 0 0 1 12.8 0"/><path d="M8.8 16a5 5 0 0 1 6.4 0"/><circle cx="12" cy="19.4" r="1.3" fill="currentColor" stroke="none"/>',

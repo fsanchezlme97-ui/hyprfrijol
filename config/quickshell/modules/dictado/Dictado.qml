@@ -298,18 +298,21 @@ Scope {
     Binding { target: Shell; property: "dictPhase"; value: root.phase }
     Binding { target: Shell; property: "aiConvState"; value: root.conv ? root.convState : "" }
     Binding { target: Shell; property: "micLevels"; value: root.levels }
-    // Botones de voz de la barra (bar/VoiceBtns.qml): cada uno hace siempre lo suyo, sin depender de micMode
+    // Botones de voz de la barra (bar/VoiceBtns.qml): uno por modo; pulsarlo pone ese modo y hace lo suyo. walkie llega
+    // al pulsar el botón y «walkie-up» al soltarlo (como el atajo: mantener para hablar, un toque corto deja escuchando).
     function voiceDo(what): void {
-        if (what === "conversar") { convToggle(); return; }
-        if (what === "silenciar") { setMuted(!Settings.get("aiMuted", false)); return; }
-        if (what === "microfono") {             // silenciar el micrófono: termina lo que lo estaba usando
-            if (!Audio.micMuted) { if (conv) convEnd(false); else if (proc.running && phase === "rec") stop(); }
-            Audio.toggleMic();
-            return;
+        if (what === "walkie-up") { if (micHeld) { micHeld = false; released(); } return; }
+        if (!(what in micModes)) return;
+        if (what !== micMode) {
+            if (conv) convEnd(false); else if (proc.running) cancel();   // lo que escuchaba era del modo anterior
+            Settings.set("micMode", what);
         }
-        // dictar: con el micrófono silenciado o en plena conversación no se empieza nada
-        if (Audio.micMuted) { note("Micrófono silenciado"); return; }
-        if (!conv) toggle("dictado");
+        if (Shell.aiSpeaking) { hush(); if (conv) return; }              // cortarle: en conversación sigue y te escucha
+        if (what === "desactivado") { note("Voz desactivada: no escucha nada"); return; }
+        if (Audio.micMuted) { Audio.toggleMic(); note("Micrófono activado"); return; }
+        if (what === "dictado") toggle("dictado");
+        else if (what === "fluido") convToggle();
+        else { micHeld = true; pressed("ia"); }
     }
     // Silenciar las respuestas habladas (aiMuted; hf-ai speak calla): la conversación sigue y contesta por escrito,
     // en una notificación (AiChat.qml). Botón de la barra o, en la conversación, «silencio» / «vuelve a hablar».

@@ -16,6 +16,8 @@ Rectangle {
     property bool focusable: true
     signal clicked()
     signal rightClicked()
+    signal down()                        // botón izquierdo pulsado y soltado (mantener para hablar: VoiceBtns)
+    signal up()
     // Teclado: se llega con Tab (anillo de foco) y se pulsa con Intro o Espacio
     // Los que solo aparecen al pasar el cursor (opacity 0): invisibles no reciben clic ni foco
     readonly property bool shown: opacity > 0.05
@@ -42,7 +44,8 @@ Rectangle {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
         onEntered: if (root.preload) Shell.preload(root.preload)
-        onPressed: m => rip.burst(m.x, m.y)
+        onPressed: m => { rip.burst(m.x, m.y); if (m.button === Qt.LeftButton) root.down(); }
+        onReleased: m => { if (m.button === Qt.LeftButton) root.up(); }
         onClicked: m => m.button === Qt.RightButton ? root.rightClicked() : root.clicked()
     }
 }
