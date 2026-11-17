@@ -726,6 +726,8 @@ print(json.dumps(out[:300]))
         property bool cover: true               // recorte cuadrado; false → respeta la proporción (alto según `ratio`)
         readonly property real ratio: thImg.implicitWidth > 0 ? thImg.implicitHeight / thImg.implicitWidth : 0.65
         signal remove()
+        // la captura ya no existe (las de «Mirar la pantalla» se borran a las 24 h): sin hueco vacío en el historial
+        visible: removable || thImg.status !== Image.Error
         radius: Theme.r(7)
         color: Theme.s4
         border.width: 1; border.color: Theme.ov
@@ -1794,11 +1796,19 @@ print(json.dumps(out[:300]))
                 anchors { right: parent.right; rightMargin: 8; bottom: parent.bottom; bottomMargin: 8 }
                 width: 32; height: 32; radius: Theme.r(10)
                 color: Theme.p
-                opacity: root.busy || input.text.trim() !== "" || root.pending.length || root.pendingDocs.length ? 1 : 0.55
-                // respondiendo: «Detener» (un cuadrado) corta la respuesta y deja lo que llegó
-                Icon { anchors.centerIn: parent; visible: !root.busy; name: "arrow_right"; color: Theme.pText; size: 14 }
-                Rectangle { anchors.centerIn: parent; visible: root.busy; width: 10; height: 10; radius: 2; color: Theme.pText }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.busy ? root.stop() : root.ask(input.text) }
+                // respondiendo o hablando: «Detener» (un cuadrado) corta la respuesta (deja lo que llegó) y la voz
+                readonly property bool halt: root.busy || (Shell.aiSpeaking && input.text.trim() === "")
+                opacity: halt || input.text.trim() !== "" || root.pending.length || root.pendingDocs.length ? 1 : 0.55
+                Icon { anchors.centerIn: parent; visible: !sendBtn.halt; name: "arrow_right"; color: Theme.pText; size: 14 }
+                Rectangle { anchors.centerIn: parent; visible: sendBtn.halt; width: 10; height: 10; radius: 2; color: Theme.pText }
+                MouseArea {
+                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (!sendBtn.halt) { root.ask(input.text); return; }
+                        if (root.busy) root.stop();
+                        if (Shell.aiSpeaking) Quickshell.execDetached([Paths.script("hf-ai"), "speak", "--stop"]);
+                    }
+                }
             }
         }
     }

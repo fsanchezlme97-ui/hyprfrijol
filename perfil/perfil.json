@@ -248,7 +248,7 @@
    "clima"
   ],
   "lowBatterySaver": false,
-  "micMode": "ia",
+  "micMode": "fluido",
   "musicLyrics": false,
   "naturalScroll": true,
   "nightLight": "off",

@@ -257,7 +257,7 @@ Son los mismos que en illogical-impulse (misma tecla, misma función), más los 
 | Ctrl + Super + Shift + D | Claro / oscuro |
 | Super + - / Super + = (o ¡) | Lupa |
 | Super + Shift + B · N · P · M | Pista anterior · siguiente · reproducir/pausar · silenciar |
-| Super + Alt + M · Super + Shift + Alt + M | Micrófono: lo de su modo (dictar, hablar con el asistente o silenciar; como el botón de la barra) · cambiar de modo |
+| Super + Alt + M · Super + Shift + Alt + M | Micrófono: lo de su modo (dictado, walkie-talkie mientras lo mantienes, conversación fluida o desactivado; como el botón de la barra; si Harper está hablando, lo corta) · cambiar de modo |
 | Super + Z | Modo sin distracciones |
 | Super + L · Super + Shift + L | Bloquear · suspender |
 | Super + Esc · Ctrl + Alt + Supr | Menú de energía |

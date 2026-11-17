@@ -3,6 +3,23 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.43] — 2026-11-17
+
+### Novedades (asistente por voz)
+- **Cuatro modos de voz** para el botón del micrófono y Super + Alt + M (Ajustes › Dictado o › Asistente de IA; clic
+  derecho o Super + Shift + Alt + M para cambiar): **dictado**, **walkie-talkie** (mantén el atajo mientras hablas y
+  suelta: se lo pasa a Harper; con el botón, clic, habla y clic), **fluido** (conversación de ida y vuelta) y
+  **desactivado** (no escucha nada). Sustituyen a «Asistente» + «Conversación / Una pregunta» y a «Silenciar»;
+  `hf-migrate` pasa tus ajustes a los nuevos nombres (con copia).
+- **Interrumpir a Harper:** pulsar el micrófono o el atajo mientras habla lo calla al momento (0,2 s medidos). En
+  fluido la conversación sigue y te escucha; en walkie empieza tu pregunta. En el chat, el botón de enviar pasa a
+  «detener» mientras habla. Hablarle encima en fluido sigue cortándolo como antes.
+
+### Correcciones (chat del asistente)
+- «Activa no molestar» (y café, concentración) ya no responde «No pude preparar eso» cuando el modelo escribe el sí o
+  el no como texto (`"true"`, `"on"`); pasaba con los modelos pequeños en la CPU.
+- El historial ya no muestra huecos vacíos por las capturas de «Mirar la pantalla» que se borran a las 24 h.
+
 ## [0.10.42] — 2026-11-17
 
 ### Novedades (instalador)

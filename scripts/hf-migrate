@@ -216,6 +216,27 @@ with open(tmp, "w") as f:
 os.replace(tmp, p)
 PY
   fi
+  # Modos de voz (0.10.43): micMode «ia» + aiTalkMode → «walkie» (una pregunta) o «fluido» (conversación);
+  # «silencio» → «desactivado». Se repite sin miedo: solo actúa si queda un nombre antiguo.
+  if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(d,dict) and (d.get("micMode") in ("ia","silencio") or "aiTalkMode" in d) else 1)' "$cfg" 2>/dev/null; then
+    say "Modos de voz: dictado · walkie-talkie · fluido · desactivado en $cfg"
+    run cp -n "$cfg" "$cfg.antes-de-modos-voz"
+    [ "$DRY" = 1 ] || python3 -I - "$cfg" <<'PY'
+import json, os, sys
+p = os.path.realpath(sys.argv[1])
+d = json.load(open(p))
+talk = d.pop("aiTalkMode", "conversacion")
+m = d.get("micMode")
+if m == "ia":
+    d["micMode"] = "walkie" if talk == "pulsar" else "fluido"
+elif m == "silencio":
+    d["micMode"] = "desactivado"
+tmp = p + ".tmp"
+with open(tmp, "w") as f:
+    f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
+os.replace(tmp, p)
+PY
+  fi
   # Paletas retiradas (0.9.2: 12 temas en pares oscuro y claro): la que tengas pasa a la más parecida.
   # Solo si ya no existe en el repo ni en palettes-user.json (los temas importados no se tocan).
   if [ -f "$cfg" ] && python3 -I - "$cfg" "$root/config/themes/palettes.json" "$HOME/.config/$NEW/palettes-user.json" <<'PY' 2>/dev/null

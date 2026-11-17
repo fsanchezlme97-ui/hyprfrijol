@@ -1,9 +1,11 @@
 // Dictado y comandos de voz (local, como SuperWhisper): atajos globales hf:dictado (Super + Alt + D), hf:comando
-// (Super + Alt + V) y hf:hablar (Super + Alt + H). Hablar con el asistente (aiTalkMode): «conversacion» (por defecto)
+// (Super + Alt + V) y hf:hablar (Super + Alt + H). Modos del micrófono (Shell.micMode): dictado · walkie (mantener
+// pulsado para hablar con el asistente; al soltar se lo pasa) · fluido (conversación) · desactivado. «fluido»
 // la activa y la desactiva: escucha, al callarte (aiConvSilence s) se lo pasa al asistente, Harper contesta en voz
 // alta y vuelve a escuchar, hasta que la desactivas (o dices «adiós» / «eso es todo»). Mientras Harper habla sigue
 // escuchando (aiConvInterrupt): si le hablas, se calla y tu frase es el turno siguiente; para no oírse a sí mismo,
-// durante la conversación su voz y el micrófono pasan por el cancelador de eco de PipeWire (hf-dictate aec). «pulsar»: una sola pregunta por pulsación (contesta con voz si aiVoice). Modo «ptt»: hablar mientras se mantiene (un toque corto deja el micrófono abierto hasta volver a
+// durante la conversación su voz y el micrófono pasan por el cancelador de eco de PipeWire (hf-dictate aec). Pulsar el
+// micrófono o el atajo mientras Harper habla lo corta (hush): en fluido te escucha, en walkie empieza tu pregunta. Modo «ptt»: hablar mientras se mantiene (un toque corto deja el micrófono abierto hasta volver a
 // pulsar); «toggle»: cada pulsación empieza/termina; «continuo»: empieza al pulsar y para solo tras unos segundos
 // callado. Mientras hablas el texto se va escribiendo en la ventana y lo provisional se corrige al terminar cada frase
 // (scripts/hf-dictate: VAD + whisper-server residente). Al dictar, «Distro, …» al principio de una frase es una orden (dictationWake);
@@ -42,6 +44,7 @@ Scope {
     property double pressedAt: 0
     property bool latched: false            // toque corto en modo ptt: sigue grabando hasta la próxima pulsación
     property string pendingKind: ""
+    property string recMode: "ptt"           // el de esta grabación: dictationMode, o ptt/toggle en walkie
     property var args: []
     readonly property string mode: Settings.get("dictationMode", "ptt")
     readonly property bool busy: proc.running
@@ -61,7 +64,7 @@ Scope {
     Timer { id: aecOff; interval: 4000; onTriggered: if (root.conv) return; else if (Shell.aiSpeaking) restart(); else Quickshell.execDetached([Paths.script("hf-dictate"), "aec", "off"]) }
     // Modo compañero: Harper ya está pensando qué decir (AiChat.checkIn); al terminar de hablar, escucha una vez
     function companionTalk(): void {
-        if (conv || proc.running) return;
+        if (conv || proc.running || micMode === "desactivado") return;
         Quickshell.execDetached([Paths.script("hf-ai"), "voice-warm"]);   // mientras piensa qué decir
         Shell.aiConversation = true;
         convProactive = true;
@@ -69,7 +72,15 @@ Scope {
         convState = "piensa";
     }
     Companion { id: companion; busy: proc.running; onVisiting: root.companionTalk() }
-    readonly property string talkMode: Settings.get("aiTalkMode", "conversacion")
+    // Super + Alt + H: walkie en modo walkie, si no conversación
+    readonly property string talkMode: micMode === "walkie" ? "walkie" : "fluido"
+    // Cortar a Harper mientras habla: en conversación, tu turno empieza ya (si ya escuchaba con --tts, deja de filtrar)
+    function hush(): void {
+        Quickshell.execDetached([Paths.script("hf-ai"), "speak", "--stop"]);
+        if (!conv || convState !== "habla") return;
+        convState = "escucha"; replyTimer.stop(); thinkTimer.stop();
+        if (proc.running) send("tts off"); else convLater.restart();
+    }
     function convToggle(): void { if (conv) convEnd(false); else convStart(); }
     function convStart(): void {
         if (conv || Shell.locked) return;   // con la pantalla bloqueada nadie habla con el asistente
@@ -157,11 +168,13 @@ Scope {
     function start(k, extra, fromKey): void {
         if (proc.running || Shell.locked) return;
         kind = k || "dictado";
-        levels = Array(12).fill(0); secs = 0; msg = ""; code = ""; latched = !fromKey && mode === "ptt";   // sin atajo: manos libres
+        // walkie: con el atajo, mantener; con el botón (un clic), clic para empezar y clic para preguntar
+        recMode = kind === "ia" && !conv ? (fromKey ? "ptt" : "toggle") : mode;
+        levels = Array(12).fill(0); secs = 0; msg = ""; code = ""; latched = !fromKey && recMode === "ptt";   // sin atajo: manos libres
         partial = ""; committed = ""; cmdText = ""; cmdMsg = ""; cmdOk = true; ready = false; speaking = false;
         phase = "rec";
         hider.stop(); cmdHider.stop();
-        const a = [Paths.script("hf-dictate"), "record", "--mode", conv && kind === "ia" ? "continuo" : fromKey || mode !== "ptt" ? mode : "toggle"];
+        const a = [Paths.script("hf-dictate"), "record", "--mode", conv && kind === "ia" ? "continuo" : fromKey || recMode !== "ptt" ? recMode : "toggle"];
         if (kind === "comando") a.push("--command");
         if (fromKey) a.push("--hold");     // no escribir con las teclas del atajo aún pulsadas (released() lo suelta)
         args = a.concat(extra ?? []);
@@ -307,22 +320,29 @@ Scope {
     }
     // Aviso corto en la píldora, solo si no está ocupada dictando o escuchando
     function note(t): void { if (proc.running) return; phase = "done"; msg = t; hider.interval = 1600; hider.restart(); }
-    // Micrófono de la barra y hf:micro (Super + Alt + M): según micMode, dictar, hablar con el asistente o silenciar.
-    // hf:micro-modo (Super + Shift + Alt + M) y el clic derecho del botón pasan al siguiente modo.
+    // Micrófono de la barra y hf:micro (Super + Alt + M): lo de su modo (dictar, walkie, conversación) o, desactivado,
+    // nada. hf:micro-modo (Super + Shift + Alt + M) y el clic derecho del botón pasan al siguiente modo.
     // Silenciado, ningún modo funcionaría: no se cambia de modo y el botón (o el atajo) solo lo vuelve a activar.
-    readonly property string micMode: Settings.get("micMode", "dictado")
-    readonly property var micModes: ({ dictado: "dictado", ia: "hablar con el asistente", silencio: "silenciar" })
+    readonly property string micMode: Shell.micMode
+    readonly property var micModes: ({ dictado: "dictado", walkie: "walkie-talkie", fluido: "conversación fluida", desactivado: "desactivado" })
+    readonly property string offMsg: "Voz desactivada · clic derecho o Super + Shift + Alt + M para cambiar de modo"
     function micAction(): void {
-        if (micMode === "silencio" || Audio.micMuted) { if (conv) convEnd(false); Audio.toggleMic(); }
-        else if (micMode === "ia") talk();
-        else toggle("dictado");
+        if (Audio.micMuted) { if (conv) convEnd(false); Audio.toggleMic(); return; }
+        if (micMode === "desactivado") { note(offMsg); return; }
+        if (Shell.aiSpeaking) { hush(); if (conv) return; }   // cortarle: en conversación sigue y te escucha
+        if (micMode === "dictado") toggle("dictado"); else talk();
     }
-    function talk(): void { if (talkMode === "conversacion") convToggle(); else toggle("ia"); }
+    function talk(): void {
+        if (micMode === "desactivado") { note(offMsg); return; }
+        if (Shell.aiSpeaking) { hush(); if (conv) return; }
+        if (talkMode === "fluido") convToggle(); else toggle("ia");
+    }
     function micCycle(): void {
         if (Audio.micMuted) { if (!proc.running) { phase = "done"; msg = "Micrófono silenciado: actívalo para cambiar de modo"; hider.interval = 1800; hider.restart(); } return; }
         const m = Object.keys(micModes), next = m[(m.indexOf(micMode) + 1) % m.length];
+        if (conv) convEnd(false); else if (proc.running) cancel();   // lo que escuchaba era del modo anterior
         Settings.set("micMode", next);
-        if (!proc.running) { phase = "done"; msg = "Micrófono: " + micModes[next]; hider.interval = 1400; hider.restart(); }
+        phase = "done"; msg = "Micrófono: " + micModes[next]; hider.interval = 1400; hider.restart();
     }
     Connections { target: Shell; function onDictToggle() { root.micAction(); } function onMicCycle() { root.micCycle(); } function onVoiceDo(w) { root.voiceDo(w); }
         // al bloquear se deja de escuchar: lo que se diga (o un «sí» a un plan pendiente) no debe llegar al asistente
@@ -344,7 +364,7 @@ Scope {
     }
     function released(): void {
         root.send("release");                                          // ya se puede escribir (en todos los modos)
-        if (root.mode !== "ptt" || root.phase !== "rec" || root.latched) return;
+        if (root.recMode !== "ptt" || root.phase !== "rec" || root.latched) return;
         if (Date.now() - root.pressedAt < 350) root.latched = true;    // toque corto: manos libres
         else root.stop();
     }
@@ -360,14 +380,22 @@ Scope {
     }
     GlobalShortcut {
         appid: "hf"; name: "hablar"; description: "HyprFrijol: hablar con el asistente"
-        onPressed: root.talkMode === "conversacion" ? root.convToggle() : root.pressed("ia")
-        onReleased: if (root.talkMode !== "conversacion") root.released()
+        onPressed: {
+            root.micHeld = false;
+            if (root.micMode === "desactivado") { root.note(root.offMsg); return; }
+            if (Shell.aiSpeaking) { root.hush(); if (root.conv) return; }   // cortarle; en walkie, tu pregunta empieza ya
+            if (root.talkMode === "fluido") root.convToggle(); else { root.micHeld = true; root.pressed("ia"); }
+        }
+        onReleased: if (root.micHeld) root.released()
     }
     GlobalShortcut {
         appid: "hf"; name: "micro"; description: "HyprFrijol: micrófono (lo de su modo)"
         onPressed: {
-            if (root.micMode === "ia" && root.talkMode === "conversacion" && !Audio.micMuted) { root.micHeld = false; root.convToggle(); return; }
-            root.micHeld = root.micMode !== "silencio" && !Audio.micMuted; if (root.micHeld) root.pressed(root.micMode === "ia" ? "ia" : "dictado"); else Audio.toggleMic();
+            root.micHeld = false;
+            if (Audio.micMuted || root.micMode === "desactivado") { root.micAction(); return; }
+            if (Shell.aiSpeaking) { root.hush(); if (root.conv) return; }
+            if (root.micMode === "fluido") { root.convToggle(); return; }
+            root.micHeld = true; root.pressed(root.micMode === "walkie" ? "ia" : "dictado");
         }
         onReleased: if (root.micHeld) root.released()
     }
@@ -375,7 +403,8 @@ Scope {
     IpcHandler {
         target: "dictado"
         function toggle(): void { root.toggle("dictado"); }
-        function talk(): void { root.talk(); }                // hablar con el asistente (hf-ai talk): según aiTalkMode
+        function talk(): void { root.talk(); }                // hablar con el asistente (hf-ai talk): según el modo
+        function hush(): void { root.hush(); }                // que Harper deje de hablar
         function conversation(): void { root.convToggle(); }  // activar / desactivar la conversación por voz
         // pruebas: una conversación con estos audios (rutas separadas por comas) como turnos tuyos
         function conversationFiles(paths: string): void { if (root.conv) return; root.convFiles = paths.split(",").filter(p => p); root.convTest = true; root.convStart(); }

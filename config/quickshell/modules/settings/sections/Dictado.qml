@@ -410,14 +410,14 @@ ColumnLayout {
                 label: "Micrófono"
                 labelWidth: 110
                 Seg {
-                    model: [["dictado", "Dictado"], ["ia", "Asistente"], ["silencio", "Silenciar"]]
-                    current: Settings.get("micMode", "dictado")
+                    model: [["dictado", "Dictado"], ["walkie", "Walkie-talkie"], ["fluido", "Fluido"], ["desactivado", "Desactivado"]]
+                    current: Shell.micMode
                     onPicked: k => Settings.set("micMode", k)
                 }
             }
             Txt {
                 Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
-                text: "Lo que hacen el botón del micrófono de la barra y Super + Alt + M. Clic derecho en el botón o Super + Shift + Alt + M: el siguiente."
+                text: "Lo que hacen el botón del micrófono de la barra y Super + Alt + M: dictar, hablar con el asistente (walkie-talkie: mientras mantienes; fluido: conversación) o nada. Clic derecho en el botón o Super + Shift + Alt + M: el siguiente."
             }
             LabeledRow {
                 label: "Motor"

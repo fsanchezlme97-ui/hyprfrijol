@@ -43,6 +43,13 @@ Singleton {
     property string aiConvState: ""        // conversación por voz: escucha | piensa | habla ("" sin conversación; Dictado.qml)
     property var micLevels: []             // niveles recientes del micrófono al dictar o escuchar (0..1, el último el más nuevo)
     signal voiceDo(string what)            // botones de voz de la barra (bar/VoiceBtns.qml): dictar | conversar | silenciar | microfono
+    // Modo del micrófono (micMode): dictado · walkie (mantener para hablar con el asistente) · fluido (conversación de
+    // ida y vuelta) · desactivado. Los nombres de antes se leen como su equivalente hasta que hf-migrate los cambia
+    // (él también pasa «ia» con el antiguo aiTalkMode «pulsar» a walkie).
+    readonly property string micMode: {
+        const m = Settings.get("micMode", "dictado");
+        return ({ ia: "fluido", silencio: "desactivado" })[m] ?? (["dictado", "walkie", "fluido", "desactivado"].includes(m) ? m : "dictado");
+    }
     signal dictToggle()                    // botón del micrófono: lo de su modo (micMode, modules/dictado)
     signal micCycle()                      // siguiente modo del micrófono
     signal aiAskHidden(string text)        // pregunta al asistente sin abrir el panel (hablar por voz: Super + Alt + H)

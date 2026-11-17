@@ -814,6 +814,13 @@ def _num(v):
         raise ValueError
     return float(v)
 
+def _bool(v):
+    """Sí/no de una acción: los modelos pequeños a veces lo escriben como texto («true», "on") o número."""
+    if isinstance(v, bool):
+        return v
+    t = str(v).strip().lower()
+    return True if t in ("true", "on", "1", "si", "sí", "yes") else False if t in ("false", "off", "0", "no") else None
+
 def validate(actions):
     ok = []
     d = defaults()
@@ -897,7 +904,8 @@ def validate(actions):
                     ok.append(a)
                 else:
                     a["value"] = max(1, min(100, int(_num(v)))); ok.append(a)
-            elif t in ("dnd", "focus", "caffeine") and isinstance(a.get("value"), bool):
+            elif t in ("dnd", "focus", "caffeine") and _bool(a.get("value")) is not None:
+                a["value"] = _bool(a["value"])
                 if a.get("minutes") is not None:
                     a["minutes"] = max(0, min(1440, int(_num(a["minutes"]))))
                 ok.append(a)
@@ -2142,6 +2150,11 @@ def _selftest_handoff():
     assert handoff_target({"aiHandoff": "custom", "aiHandoffCmd": "x {prompt}", "aiHandoffLabel": "X"})["label"] == "X"
     assert handoff_target({"aiHandoff": "no-existe"}) is None
     assert (handoff_target({"aiHandoff": "auto"}) or {}).get("id") == (found[0]["id"] if found else None) or found
+
+def _selftest_bool():
+    assert validate([{"type": "dnd", "value": "true"}, {"type": "caffeine", "value": "off"}]) == \
+        [{"type": "dnd", "value": True}, {"type": "caffeine", "value": False}]
+    assert validate([{"type": "dnd", "value": "quizá"}]) == []
 
 def _selftest_reply():
     s = {"aiAllowShell": False}
@@ -5107,6 +5120,7 @@ def main(argv):
         _selftest_redact()
         _selftest_handoff()
         _selftest_reply()
+        _selftest_bool()
         _selftest_name()
         _selftest_files()
         _selftest_queries()

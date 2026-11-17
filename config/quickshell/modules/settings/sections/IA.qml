@@ -377,18 +377,19 @@ ColumnLayout {
             text: "Instalar la voz de Harper (Piper, ~250 MB, sin internet)"
             onClicked: { Pkg.runInTerminal(Paths.script("hf-ai") + " voice-install --tty", "Voz del asistente"); voiceLater.n = 0; voiceLater.restart(); }
         }
-        // Super + Alt + H (y el micro en modo «asistente»): conversación de ida y vuelta o una sola pregunta (Dictado.qml)
+        // Modo del micrófono (Shell.micMode, el mismo que en Ajustes › Dictado): botón de la barra, Super + Alt + M y,
+        // en walkie, Super + Alt + H (en los demás, Super + Alt + H abre la conversación). Dictado.qml
         LabeledRow {
-            label: "Super + Alt + H"
+            label: "Modo de voz"
             labelWidth: 120
             Seg {
-                model: [["conversacion", "Conversación"], ["pulsar", "Una pregunta"]]
-                current: Settings.get("aiTalkMode", "conversacion")
-                onPicked: k => Settings.set("aiTalkMode", k)
+                model: [["dictado", "Dictado"], ["walkie", "Walkie-talkie"], ["fluido", "Fluido"], ["desactivado", "Desactivado"]]
+                current: Shell.micMode
+                onPicked: k => Settings.set("micMode", k)
             }
         }
         LabeledRow {
-            visible: Settings.get("aiTalkMode", "conversacion") === "conversacion"
+            visible: Shell.micMode !== "desactivado"
             label: "Tu turno acaba"
             labelWidth: 120
             Seg {
@@ -398,15 +399,18 @@ ColumnLayout {
             }
         }
         SwRow {
-            visible: Settings.get("aiTalkMode", "conversacion") === "conversacion"
+            visible: Shell.micMode === "fluido"
             label: "Interrumpir hablando"; key: "aiConvInterrupt"; def: true
             sub: "mientras " + (Settings.get("aiName", "") || "Harper") + " contesta te sigue escuchando: si le hablas, se calla y te atiende. Su voz pasa por un cancelador de eco para que no se oiga a sí mismo por los altavoces"
         }
         Txt {
             Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
-            text: Settings.get("aiTalkMode", "conversacion") === "conversacion"
-                ? "Pulsa una vez y habla con naturalidad: al callarte se lo pasa al asistente, Harper contesta en voz alta y vuelve a escucharte (puedes cortarle hablando). Para terminar, pulsa otra vez o di «adiós» (también se cierra tras un rato en silencio)."
-                : "Cada pulsación es una pregunta; la respuesta sale en el panel (y en voz si «Hablar con voz» está activo)."
+            text: ({
+                dictado: "El micrófono dicta. Super + Alt + H abre una conversación con " + (Settings.get("aiName", "") || "Harper") + ".",
+                walkie: "Mantén Super + Alt + M (o Super + Alt + H) mientras hablas y suelta: se lo pasa al asistente. Con el botón de la barra: clic, habla y clic. Si está hablando, pulsar lo corta y empieza tu pregunta.",
+                fluido: "Pulsa una vez y habla con naturalidad: al callarte se lo pasa al asistente, Harper contesta en voz alta y vuelve a escucharte. Puedes cortarle hablando o pulsando. Para terminar, pulsa otra vez o di «adiós» (también se cierra tras un rato en silencio).",
+                desactivado: "Ni el micrófono ni Super + Alt + H escuchan. El chat sigue funcionando por escrito."
+            })[Shell.micMode]
         }
         // Avisos (hf-ai announce): también con la voz de Harper. Nunca en «no molestar».
         SwRow { label: "Saludo al entrar"; sub: "al iniciar sesión Harper dice la hora y el tiempo"; key: "aiAnnounceGreet"; def: false }
