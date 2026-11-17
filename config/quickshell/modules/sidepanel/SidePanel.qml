@@ -101,7 +101,7 @@ PanelWindow {
         target: Shell
         function onPreloadRequested(v) { if (v === "ia") win.chatHeld = true; }   // cursor sobre el botón de la IA
     }
-    readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, toggleHistory: () => {}, showHistory: false, toggleLog: () => {}, showLog: false, handoffTo: null, handoff: () => {}, setWindow: () => {} })
+    readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, toggleHistory: () => {}, showHistory: false, toggleLog: () => {}, showLog: false, setWindow: () => {} })
 
     readonly property string aiLabel: String(Settings.get("aiName", "") ?? "").trim() || "IA"
     // Bajo el nombre: quién responde y su respaldo («Gemini · respaldo Ollama»)
@@ -240,13 +240,16 @@ PanelWindow {
                         }
                         ColumnLayout {
                             spacing: -1
-                            Txt { text: win.aiLabel; weight: Font.DemiBold; size: 13 }
-                            Txt { visible: win.aiSub !== ""; text: win.aiSub; size: 10.5; muted: true }
+                            // lo que dejan los botones (≈ 200 px): un proveedor largo se corta y no los empuja fuera
+                            Layout.maximumWidth: win.panelW - 200
+                            Txt { Layout.fillWidth: true; text: win.aiLabel; weight: Font.DemiBold; size: 13 }
+                            Txt { Layout.fillWidth: true; visible: win.aiSub !== ""; text: win.aiSub; size: 10.5; muted: true }
                         }
                     }
                     IconBtn {
                         icon: "plus"; iconSize: 13; fg: Theme.tv
                         implicitWidth: 26; implicitHeight: 26
+                        tooltip: "Nueva conversación"
                         onClicked: chat.clear()
                     }
                     IconBtn {
@@ -264,12 +267,7 @@ PanelWindow {
                         onClicked: chat.toggleLog()
                     }
                     Item { Layout.fillWidth: true }
-                    IconBtn {
-                        visible: !!chat.handoffTo
-                        icon: "detach"; iconSize: 14; implicitWidth: 26; implicitHeight: 26
-                        tooltip: "Seguir en " + (chat.handoffTo?.label ?? "")
-                        onClicked: chat.handoff()
-                    }
+                    // «Seguir en …» está en la fila de contexto del chat (aquí repetía y apretaba la cabecera)
                     IconBtn {
                         icon: "pin"; iconSize: 14; implicitWidth: 26; implicitHeight: 26
                         active: win.pinPref
@@ -278,7 +276,7 @@ PanelWindow {
                     }
                     IconBtn {
                         icon: "x"; iconSize: 14; implicitWidth: 26; implicitHeight: 26
-                        tooltip: win.pinPref ? "Esconder (sigue fijado; vuelve con Super + A)" : ""
+                        tooltip: win.pinPref ? "Esconder (sigue fijado; vuelve con Super + A)" : "Cerrar"
                         onClicked: win.hidePanel()
                     }
                 }

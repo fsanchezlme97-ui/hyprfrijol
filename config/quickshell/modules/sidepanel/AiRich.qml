@@ -186,7 +186,7 @@ ColumnLayout {
                 id: svgCol
                 x: 8; y: 8
                 width: parent.width - 16
-                spacing: 6
+                spacing: 8
                 Image {
                     width: parent.width
                     height: Math.min(380, width * sv.vb[3] / sv.vb[2])
@@ -202,7 +202,7 @@ ColumnLayout {
                     }
                 }
                 Row {
-                    spacing: 14
+                    spacing: 16
                     Repeater {
                         model: [["Guardar", "save-svg"], ["Copiar", ""], ["Abrir en grande", "open-svg"]]
                         Txt {

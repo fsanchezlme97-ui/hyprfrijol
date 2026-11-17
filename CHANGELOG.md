@@ -3,6 +3,27 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.35] — 2026-11-16
+
+### Arreglos (panel del asistente)
+- **La conversación por voz ya no se queda colgada** si hablas mientras Harper está respondiendo a otra cosa (una
+  visita del compañero, una pregunta del panel): tu pregunta espera su turno y se contesta después. Si «Detener»
+  corta una respuesta o hf-ai falla, la voz vuelve a escucharte.
+- Tras detener una visita, o al abrir una conversación guardada, ya no se pierde la siguiente respuesta ni queda un
+  plan pendiente de la conversación anterior.
+- **«Seguir en…»** funciona también con conversaciones largas.
+- **«+ Captura»** avisa si no pudo leer la pantalla, en vez de marcar «Captura ✓» y mandarla vacía.
+- **«Ejecutar»** deja la terminal abierta aunque el comando termine en un comentario.
+- «Copiar» en un comando que empieza por `-` ya copia.
+
+### Mejoras
+- **La entrada admite varias líneas:** Intro envía y Mayús + Intro salta de línea; crece hasta unas seis líneas.
+- La cabecera deja sitio a los botones con nombres de proveedor largos («Claude Code · respaldo Ollama»), y «Seguir
+  en…» queda solo en la fila de contexto (estaba repetido arriba).
+- Tooltips en «Nueva conversación» y «Cerrar»; el aviso de «Seguir en…» ya no muestra siempre una «C».
+- La bienvenida y la pantalla vacía explican bien cuándo se aplican los cambios solos (sin confirmación en Ajustes ›
+  IA, o hablando).
+
 ## [0.10.34] — 2026-11-16
 
 ### Seguridad

@@ -74,7 +74,7 @@ Item {
         : ["Resume mis notificaciones", "Temporizador de 10 min para el té", "Pon la barra arriba y el fondo lago", "Cierra las ventanas de Firefox"]
 
     function focusInput() { input.forceActiveFocus(); }
-    function clear() { planIdx = -1; Shell.aiPlanPending = false; checkingIn = false; messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; showLog = false; focusInput(); }
+    function clear() { queued = null; planIdx = -1; Shell.aiPlanPending = false; checkingIn = false; messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; showLog = false; focusInput(); }
     function setWindow(w) { if (w && w.address) { winInfo = w; useWindow = true; } Qt.callLater(focusInput); }
     function patch(i, p) { const m = messages.slice(); m[i] = Object.assign({}, m[i], p); messages = m; }
     function push(m) { messages = [...messages, m]; Qt.callLater(scrollEnd); }
@@ -100,10 +100,14 @@ Item {
                                 context: Object.assign(context(), Shell.aiConversation ? { spoken: true } : {}) }, extra ?? {}));
     }
 
+    // Pregunta de la voz o de Spotlight mientras hay una respuesta en curso: espera su turno (antes se perdía y la
+    // conversación por voz se quedaba «pensando» para siempre). Lo escrito en la entrada sigue ahí hasta que acabe.
+    property var queued: null
     function ask(text, task) {
-        nextTask = task ?? "";
         text = String(text ?? "").trim();
-        if ((text === "" && !pending.length && !pendingDocs.length) || busy) return;
+        if (busy) { if (task === "quick" && text !== "") queued = text; return; }
+        nextTask = task ?? "";
+        if (text === "" && !pending.length && !pendingDocs.length) return;
         const m = { role: "user", text: text };
         if (pending.length) m.images = pending;
         if (pendingDocs.length) m.files = pendingDocs;
@@ -247,7 +251,9 @@ Item {
         if (!busy) return;
         busy = false;
         gotFinal = true;
+        checkingIn = false;               // si no, la próxima respuesta se tomaba por la visita y un error no se veía
         chatProc.running = false;
+        Shell.aiReplied(false);           // la conversación por voz no se queda esperando
         if (liveText.trim() !== "") push({ role: "ai", text: liveText, steps: liveSteps.concat(["Respuesta detenida"]), actions: [], labels: [], plan: [], code: "", state: "" });
         liveText = ""; liveSteps = [];
     }
@@ -384,8 +390,8 @@ Item {
         stdout: SplitParser { onRead: line => root.onLine(line) }
         onExited: code => {
             if (root.gotFinal || !root.busy) return;
-            root.busy = false; root.liveText = ""; root.liveSteps = [];
-            root.push({ role: "ai", text: code !== 0 ? "hf-ai falló (código " + code + ")." : "hf-ai terminó sin responder.", error: true });
+            // por reply(): también avisa a la voz y deja la visita del compañero sin rastro
+            root.reply({ error: code !== 0 ? "hf-ai falló (código " + code + ")." : "hf-ai terminó sin responder." });
         }
     }
 
@@ -460,7 +466,8 @@ Item {
     }
     function runCode(code) {
         const term = Settings.get("terminal", "kitty");
-        Quickshell.execDetached([term, "-e", "sh", "-c", code + '; echo; printf "Pulsa Intro para cerrar…"; read _']);
+        // salto de línea y no «;»: un comentario al final del comando se comía la pausa y la terminal se cerraba
+        Quickshell.execDetached([term, "-e", "sh", "-c", code + '\necho; printf "Pulsa Intro para cerrar…"; read _']);
     }
 
     // ---- handoff «Seguir en <herramienta> ↗» (Ajustes › Asistente de IA › Integraciones: aiHandoff; hf-ai handoff-targets)
@@ -474,11 +481,17 @@ Item {
         stdout: StdioCollector { onStreamFinished: { try { root.handoffTo = JSON.parse(text).current; } catch (e) { root.handoffTo = null; } } }
     }
     function handoff() {
-        handoffProc.command = [Paths.script("hf-ai"), "handoff", payload()];
+        // por la entrada estándar, como el chat: como argumento, una conversación larga pasa del límite (128 KB)
+        handoffProc.sendIn = payload();
+        handoffProc.command = [Paths.script("hf-ai"), "handoff", "-"];
+        handoffProc.stdinEnabled = true;
         handoffProc.running = true;
     }
     Process {
         id: handoffProc
+        property string sendIn: ""
+        stdinEnabled: true
+        onStarted: { write(sendIn); sendIn = ""; stdinEnabled = false; }
         stdout: StdioCollector {
             onStreamFinished: { try { root.notice = JSON.parse(text); } catch (e) { root.notice = { text: "No se pudo seguir en " + (root.handoffTo?.label ?? "otra herramienta"), sub: "" }; } }
         }
@@ -500,7 +513,9 @@ Item {
                 let r = {};
                 try { r = JSON.parse(text); } catch (e) {}
                 root.capturing = false;
-                root.captureText = r.text || " ";
+                // vacío: falló la captura o el OCR no leyó nada; antes salía «Captura ✓» y se mandaba en blanco
+                root.captureText = String(r.text ?? "").trim() !== "" ? r.text : "";
+                if (root.captureText === "") root.note("No pude leer texto de la pantalla.");
                 Shell.open("ia", "ia");
             }
         }
@@ -545,7 +560,12 @@ Item {
     property var logList: []
     function toggleLog() { showLog = !showLog; showHistory = false; if (showLog) loadLog(); else focusInput(); }
     function loadLog() { logProc.running = false; logProc.running = true; }
-    onBusyChanged: if (!busy && showLog) loadLog()
+    onBusyChanged: {
+        if (busy) return;
+        if (showLog) loadLog();
+        // después de que reply() pinte la respuesta en curso, no antes
+        if (queued !== null) { const q = queued; queued = null; Qt.callLater(() => root.ask(q, "quick")); }
+    }
     Process {
         id: logProc
         command: [Paths.script("hf-ai"), "activity", "200"]
@@ -586,6 +606,9 @@ print(json.dumps(out[:300]))
                 try {
                     const d = JSON.parse(text);
                     root.busy = false; chatProc.running = false; root.notice = null;
+                    // nada de la conversación anterior: ni visita a medias, ni plan esperando un «sí», ni pregunta en cola
+                    root.checkingIn = false; root.queued = null; root.liveText = ""; root.liveSteps = [];
+                    root.planIdx = -1; Shell.aiPlanPending = false;
                     root.historyFile = histOpener.target;
                     root.histLoading = true;
                     root.messages = (d.messages ?? []).map(m => Object.assign({ actions: [] }, m, { state: m.state || (m.labels?.length ? "discarded" : "") }));
@@ -792,7 +815,7 @@ print(json.dumps(out[:300]))
                 spacing: 12
                 Rectangle {
                     implicitWidth: 26; implicitHeight: 26; radius: Theme.r(7); color: Theme.ter
-                    Text { anchors.centerIn: parent; text: "C"; color: Theme.bg; font.family: Theme.font; font.pixelSize: Theme.px(12); font.weight: Font.Bold }
+                    Icon { anchors.centerIn: parent; name: "detach"; size: 13; color: Theme.bg }   // sea cual sea el destino
                 }
                 ColumnLayout {
                     Layout.fillWidth: true
@@ -848,7 +871,9 @@ print(json.dumps(out[:300]))
                         model: [
                             ["sparkle", "Responde, resume y redacta, con el contexto que elijas arriba (ventana, portapapeles, captura)."],
                             ["sliders", "Cambia el escritorio con palabras: ajustes, ventanas, apps, música, fondos, descargas, memorias USB…"],
-                            ["check", "Nada cambia sin tu aprobación: ves qué pasa (antes → después), eliges qué pasos, y casi todo se deshace."],
+                            root.confirmChanges
+                                ? ["check", "Por escrito, nada cambia sin tu aprobación: ves qué pasa (antes → después) y eliges qué pasos. Hablando, lo que se deshace se hace solo. Casi todo se deshace."]
+                                : ["check", "Los cambios se aplican solos, con Deshacer (Ajustes › IA). Lo que no tiene vuelta atrás siempre pregunta antes."],
                             ["shield", "Solo mira tus ventanas, avisos o archivos si se lo permites en Ajustes › IA."]
                         ]
                         RowLayout {
@@ -906,7 +931,9 @@ print(json.dumps(out[:300]))
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap; elide: Text.ElideNone
                     muted: true; size: 12
-                    text: "Pregunta lo que quieras, pide un comando o cambia el escritorio con palabras. Los cambios se aplican solo si los apruebas (o si marcaste «Aprobar siempre» esa acción)."
+                    text: "Pregunta lo que quieras, pide un comando o cambia el escritorio con palabras. "
+                        + (root.confirmChanges ? "Por escrito, los cambios se aplican solo si los apruebas (o si marcaste «Aprobar siempre» esa acción)."
+                                               : "Los cambios se aplican solos, con Deshacer; lo que no tiene vuelta atrás pregunta antes.")
                 }
             }
 
@@ -1068,7 +1095,7 @@ print(json.dumps(out[:300]))
                                 Flow {
                                     visible: (msg.modelData.choices?.length ?? 0) > 0
                                     Layout.fillWidth: true
-                                    spacing: 6
+                                    spacing: 8
                                     Repeater {
                                         model: msg.modelData.choices ?? []
                                         SmallBtn {
@@ -1265,7 +1292,7 @@ print(json.dumps(out[:300]))
                                         SmallBtn { visible: !!msg.modelData.confirm; text: "No"; onClicked: root.patch(msg.index, { confirm: false }) }
                                         SmallBtn {
                                             visible: !msg.modelData.confirm; text: "Copiar"
-                                            onClicked: Quickshell.execDetached(["wl-copy", msg.modelData.code])
+                                            onClicked: Quickshell.execDetached(["wl-copy", "--", msg.modelData.code])
                                         }
                                     }
 
@@ -1598,7 +1625,7 @@ print(json.dumps(out[:300]))
         Rectangle {
             Layout.fillWidth: true
             Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.bottomMargin: 12
-            implicitHeight: 46
+            implicitHeight: Math.max(46, Math.min(128, input.contentHeight + 24))
             radius: Theme.r(14)
             color: Theme.fill2
             border.width: input.activeFocus ? 2 : 1
@@ -1606,7 +1633,7 @@ print(json.dumps(out[:300]))
             Rectangle {
                 id: clipBtn
                 visible: root.allowCapture
-                anchors { left: parent.left; leftMargin: 4; verticalCenter: parent.verticalCenter }
+                anchors { left: parent.left; leftMargin: 4; bottom: parent.bottom; bottomMargin: 8 }
                 width: visible ? 30 : 0; height: 30; radius: Theme.r(7)
                 color: clipMa.containsMouse ? Qt.alpha(Theme.t, 0.08) : "transparent"
                 Icon {   // clip
@@ -1615,29 +1642,50 @@ print(json.dumps(out[:300]))
                 }
                 MouseArea { id: clipMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.attachFrom(["pick"]) }
             }
-            TextInput {
-                id: input
-                anchors { left: clipBtn.visible ? clipBtn.right : parent.left; right: micBtn.left; verticalCenter: parent.verticalCenter; leftMargin: clipBtn.visible ? 4 : 14; rightMargin: 8 }
-                color: Theme.t
-                selectionColor: Theme.pc
-                selectedTextColor: Theme.pcText
-                font.family: Theme.font
-                font.pixelSize: Theme.px(12.5)
+            // Varias líneas: Intro envía, Mayús + Intro salta de línea; crece hasta ~6 líneas y luego se desliza
+            Flickable {
+                id: inFlick
+                anchors { left: clipBtn.visible ? clipBtn.right : parent.left; right: micBtn.left; top: parent.top; bottom: parent.bottom
+                          leftMargin: clipBtn.visible ? 4 : 14; rightMargin: 8; topMargin: 12; bottomMargin: 12 }
+                contentWidth: width
+                contentHeight: input.contentHeight
+                boundsBehavior: Flickable.StopAtBounds
                 clip: true
-                onAccepted: root.ask(text)
-                // Esc sube al panel (SidePanel): fijado, devuelve el teclado a la ventana; si no, cierra
-                Keys.onPressed: e => { if (e.matches(StandardKey.Paste)) { e.accepted = true; root.pasteImage(); } }
-                Txt {
-                    anchors.fill: parent
-                    visible: input.text === "" && !input.preeditText
-                    text: root.busy ? "Pensando…" : root.pending.length ? "Pregunta sobre la imagen…" : root.pendingDocs.length ? "Pregunta sobre el documento…" : root.winInfo ? "Pregunta sobre esta ventana o pide algo…" : "Pregunta o pide algo al escritorio…"
-                    muted: true
+                interactive: false               // arrastrar selecciona texto; se desliza con la rueda o el cursor
+                WheelHandler { onWheel: e => inFlick.contentY = Math.max(0, Math.min(inFlick.contentHeight - inFlick.height, inFlick.contentY - e.angleDelta.y / 2)) }
+                TextEdit {
+                    id: input
+                    width: inFlick.width
+                    wrapMode: TextEdit.Wrap
+                    selectByMouse: true
+                    color: Theme.t
+                    selectionColor: Theme.pc
+                    selectedTextColor: Theme.pcText
+                    font.family: Theme.font
+                    font.pixelSize: Theme.px(12.5)
+                    // el cursor siempre a la vista
+                    onCursorRectangleChanged: {
+                        const r = cursorRectangle;
+                        if (r.y < inFlick.contentY) inFlick.contentY = r.y;
+                        else if (r.y + r.height > inFlick.contentY + inFlick.height) inFlick.contentY = r.y + r.height - inFlick.height;
+                    }
+                    // Esc sube al panel (SidePanel): fijado, devuelve el teclado a la ventana; si no, cierra
+                    Keys.onPressed: e => {
+                        if (e.matches(StandardKey.Paste)) { e.accepted = true; root.pasteImage(); }
+                        else if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter) && !(e.modifiers & Qt.ShiftModifier)) { e.accepted = true; root.ask(text); }
+                    }
+                    Txt {
+                        anchors { left: parent.left; right: parent.right; top: parent.top }
+                        visible: input.text === "" && !input.preeditText
+                        text: root.busy ? "Pensando…" : root.pending.length ? "Pregunta sobre la imagen…" : root.pendingDocs.length ? "Pregunta sobre el documento…" : root.winInfo ? "Pregunta sobre esta ventana o pide algo…" : "Pregunta o pide algo al escritorio…"
+                        muted: true
+                    }
                 }
             }
             // Dictar: el dictado global escribe en la entrada (siempre dictado, sea cual sea el modo del micrófono de la barra)
             Rectangle {
                 id: micBtn
-                anchors { right: sendBtn.left; rightMargin: 2; verticalCenter: parent.verticalCenter }
+                anchors { right: sendBtn.left; rightMargin: 2; bottom: parent.bottom; bottomMargin: 8 }
                 width: 30; height: 30; radius: Theme.r(9)
                 readonly property bool rec: Shell.dictPhase === "rec"
                 color: rec ? Theme.ter : micMa.containsMouse ? Qt.alpha(Theme.t, 0.08) : "transparent"
@@ -1646,7 +1694,7 @@ print(json.dumps(out[:300]))
             }
             Rectangle {
                 id: sendBtn
-                anchors { right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
+                anchors { right: parent.right; rightMargin: 8; bottom: parent.bottom; bottomMargin: 8 }
                 width: 32; height: 32; radius: Theme.r(10)
                 color: Theme.p
                 opacity: root.busy || input.text.trim() !== "" || root.pending.length || root.pendingDocs.length ? 1 : 0.55
