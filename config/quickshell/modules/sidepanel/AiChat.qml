@@ -74,7 +74,7 @@ Item {
         : ["Resume mis notificaciones", "Temporizador de 10 min para el té", "Pon la barra arriba y el fondo lago", "Cierra las ventanas de Firefox"]
 
     function focusInput() { input.forceActiveFocus(); }
-    function clear() { queued = null; planIdx = -1; Shell.aiPlanPending = false; checkingIn = false; messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; showLog = false; focusInput(); }
+    function clear() { stopRun(); runIdx = -1; queued = null; planIdx = -1; Shell.aiPlanPending = false; checkingIn = false; messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; showLog = false; focusInput(); }
     function setWindow(w) { if (w && w.address) { winInfo = w; useWindow = true; } Qt.callLater(focusInput); }
     function patch(i, p) { const m = messages.slice(); m[i] = Object.assign({}, m[i], p); messages = m; }
     function push(m) { messages = [...messages, m]; Qt.callLater(scrollEnd); }
@@ -464,6 +464,37 @@ Item {
         if (messages[i].undo) Quickshell.execDetached([Paths.script("hf-ai"), "undo", messages[i].undo]);
         patch(i, { state: "undone" });
     }
+    // ---- «Ejecutar»: el comando corre aquí y su salida sale debajo (messages[i].out / exit / stopped). Sin terminal no
+    // hay donde teclear una contraseña: lo que lleva sudo, doas o su va a la terminal (runCode), igual que «En la terminal».
+    readonly property var ttyRe: /(^|[\s;&|(`])(sudo|doas|su)(\s|$)/
+    property int runIdx: -1
+    property string runOut: ""
+    property bool runStopped: false
+    function runHere(i) {
+        if (runProc.running) return;
+        runIdx = i; runOut = ""; runStopped = false;
+        patch(i, { confirm: "", out: undefined, exit: undefined, stopped: false });
+        // sin entrada (un comando que pregunta no se queda esperando) y con los errores en la misma salida
+        runProc.command = ["bash", "-c", "exec 2>&1 </dev/null\n" + messages[i].code];
+        runProc.running = true;
+    }
+    // shortcut: Detener mata bash; un proceso hijo en segundo plano seguiría. Si molesta, setsid y matar el grupo.
+    function stopRun() { if (runProc.running) { runStopped = true; runProc.running = false; } }
+    Process {
+        id: runProc
+        workingDirectory: Paths.home
+        environment: ({ NO_COLOR: "1", TERM: "dumb" })
+        stdout: SplitParser {
+            onRead: l => {
+                root.runOut = (root.runOut + l.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "") + "\n").slice(-12000);
+                if (root.runIdx === root.messages.length - 1) Qt.callLater(root.scrollEnd);
+            }
+        }
+        onExited: code => {
+            if (root.runIdx >= 0 && root.runIdx < root.messages.length) root.patch(root.runIdx, { out: root.runOut, exit: code, stopped: root.runStopped });
+            root.runIdx = -1; root.runOut = "";
+        }
+    }
     function runCode(code) {
         const term = Settings.get("terminal", "kitty");
         // salto de línea y no «;»: un comentario al final del comando se comía la pausa y la terminal se cerraba
@@ -609,6 +640,7 @@ print(json.dumps(out[:300]))
                     // nada de la conversación anterior: ni visita a medias, ni plan esperando un «sí», ni pregunta en cola
                     root.checkingIn = false; root.queued = null; root.liveText = ""; root.liveSteps = [];
                     root.planIdx = -1; Shell.aiPlanPending = false;
+                    root.stopRun(); root.runIdx = -1;
                     root.historyFile = histOpener.target;
                     root.histLoading = true;
                     root.messages = (d.messages ?? []).map(m => Object.assign({ actions: [] }, m, { state: m.state || (m.labels?.length ? "discarded" : "") }));
@@ -1276,23 +1308,88 @@ print(json.dumps(out[:300]))
                                             font.family: Theme.mono; font.pixelSize: Theme.px(11.5)
                                         }
                                     }
-                                    RowLayout {
-                                        visible: (msg.modelData.code ?? "") !== ""
+                                    // confirm: "" | "aquí" | "terminal" (la pregunta «¿Ejecutarlo?» antes de hacerlo)
+                                    Flow {
+                                        id: runRow
+                                        readonly property string cmd: msg.modelData.code ?? ""
+                                        readonly property string ask: typeof msg.modelData.confirm === "string" ? msg.modelData.confirm : ""
+                                        readonly property bool tty: root.ttyRe.test(cmd)
+                                        readonly property bool running: root.runIdx === msg.index
+                                        visible: cmd !== ""
+                                        Layout.fillWidth: true
                                         spacing: 8
                                         SmallBtn {
-                                            visible: !msg.modelData.confirm
-                                            text: "Ejecutar (pide confirmación)"; primary: true
-                                            onClicked: root.patch(msg.index, { confirm: true })
+                                            visible: runRow.ask === "" && !runRow.running
+                                            text: runRow.tty ? "Ejecutar en la terminal" : "Ejecutar"; primary: true
+                                            onClicked: root.patch(msg.index, { confirm: runRow.tty ? "terminal" : "aquí" })
                                         }
-                                        Txt { visible: !!msg.modelData.confirm; text: "¿Ejecutar en la terminal?"; size: 12; weight: Font.DemiBold }
                                         SmallBtn {
-                                            visible: !!msg.modelData.confirm; text: "Sí, ejecutar"; primary: true
-                                            onClicked: { root.runCode(msg.modelData.code); root.patch(msg.index, { confirm: false }); }
+                                            visible: runRow.ask === "" && !runRow.running && !runRow.tty; text: "En la terminal"
+                                            onClicked: root.patch(msg.index, { confirm: "terminal" })
                                         }
-                                        SmallBtn { visible: !!msg.modelData.confirm; text: "No"; onClicked: root.patch(msg.index, { confirm: false }) }
                                         SmallBtn {
-                                            visible: !msg.modelData.confirm; text: "Copiar"
-                                            onClicked: Quickshell.execDetached(["wl-copy", "--", msg.modelData.code])
+                                            visible: runRow.ask === "" && !runRow.running; text: "Copiar"
+                                            onClicked: Quickshell.execDetached(["wl-copy", "--", runRow.cmd])
+                                        }
+                                        Txt {
+                                            visible: runRow.ask !== ""; height: 26; verticalAlignment: Text.AlignVCenter
+                                            text: runRow.ask === "terminal" ? (runRow.tty ? "Pide tu contraseña: ¿lo abro en la terminal?" : "¿Ejecutar en la terminal?") : "¿Ejecutarlo?"
+                                            size: 12; weight: Font.DemiBold
+                                        }
+                                        SmallBtn {
+                                            visible: runRow.ask !== ""; text: "Sí, ejecutar"; primary: true
+                                            onClicked: {
+                                                if (runRow.ask === "terminal") { root.runCode(runRow.cmd); root.patch(msg.index, { confirm: "" }); }
+                                                else root.runHere(msg.index);
+                                            }
+                                        }
+                                        SmallBtn { visible: runRow.ask !== ""; text: "No"; onClicked: root.patch(msg.index, { confirm: "" }) }
+                                        SmallBtn { visible: runRow.running; text: "Detener"; onClicked: root.stopRun() }
+                                    }
+                                    // Salida del comando ejecutado aquí (las últimas 40 líneas; Copiar la lleva entera)
+                                    Rectangle {
+                                        id: outBox
+                                        readonly property bool live: root.runIdx === msg.index
+                                        readonly property string out: String(live ? root.runOut : (msg.modelData.out ?? "")).replace(/\n+$/, "")
+                                        readonly property var lines: out === "" ? [] : out.split("\n")
+                                        readonly property bool bad: !live && !msg.modelData.stopped && (msg.modelData.exit ?? 0) !== 0
+                                        visible: live || msg.modelData.exit !== undefined
+                                        Layout.fillWidth: true
+                                        implicitHeight: outCol.implicitHeight + 16
+                                        radius: Theme.r(7)
+                                        color: Qt.alpha(Theme.bg, 0.55)
+                                        border.width: 1; border.color: bad ? Theme.danger : Theme.ov
+                                        Column {
+                                            id: outCol
+                                            x: 10; y: 8; width: parent.width - 20
+                                            spacing: 4
+                                            RowLayout {
+                                                width: parent.width
+                                                Icon { name: "terminal"; size: 11; color: outBox.bad ? Theme.danger : Theme.tv }
+                                                Txt {
+                                                    Layout.fillWidth: true
+                                                    text: outBox.live ? "Ejecutando…" : msg.modelData.stopped ? "Detenido"
+                                                        : outBox.bad ? "Terminó con error (código " + msg.modelData.exit + ")" : "Hecho"
+                                                    size: 10.5; weight: Font.DemiBold; color: outBox.bad ? Theme.danger : Theme.tv
+                                                }
+                                                Txt {
+                                                    visible: outBox.out !== "" && !outBox.live
+                                                    text: "Copiar salida"; size: 10.5; muted: !cpOutMa.containsMouse
+                                                    MouseArea { id: cpOutMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                                                onClicked: Quickshell.execDetached(["wl-copy", "--", outBox.out]) }
+                                                }
+                                            }
+                                            TextEdit {
+                                                visible: outBox.out !== ""
+                                                width: parent.width
+                                                readOnly: true; selectByMouse: true
+                                                textFormat: TextEdit.PlainText
+                                                wrapMode: TextEdit.WrapAnywhere
+                                                text: (outBox.lines.length > 40 ? "… (" + (outBox.lines.length - 40) + " líneas antes)\n" : "") + outBox.lines.slice(-40).join("\n")
+                                                color: Theme.t; selectionColor: Qt.alpha(Theme.p, 0.4)
+                                                font.family: Theme.mono; font.pixelSize: Theme.px(11)
+                                            }
+                                            Txt { visible: outBox.out === "" && !outBox.live; text: "Sin salida"; size: 11; muted: true }
                                         }
                                     }
 

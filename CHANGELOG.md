@@ -3,6 +3,17 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.36] — 2026-11-16
+
+### Novedades (panel del asistente)
+- **«Ejecutar» corre el comando en el propio chat:** la salida (también los errores) sale debajo, con «Hecho» o
+  «Terminó con error (código N)», «Copiar salida» y «Detener» mientras dura. Ya no se abre una terminal aparte.
+- Lo que lleva `sudo`, `doas` o `su` pide la contraseña, así que sigue yendo a la terminal («Ejecutar en la terminal»);
+  cualquier otro comando también se puede llevar allí con «En la terminal».
+
+### Arreglos
+- La cabecera ya no pone «respaldo Off» cuando no hay respaldo.
+
 ## [0.10.35] — 2026-11-16
 
 ### Arreglos (panel del asistente)

@@ -110,7 +110,9 @@ PanelWindow {
                                         cli: Settings.get("aiCli", "") || "Terminal" })
     function provName(k): string { k = String(k ?? ""); return provNames[k] ?? (k ? k.charAt(0).toUpperCase() + k.slice(1) : ""); }
     readonly property string aiSub: {
-        const p = provName(Settings.get("aiProvider", "")), f = provName(Settings.get("aiFallbackProvider", ""));
+        // respaldo solo si es un proveedor conocido, como hf-ai (fallback_for): "off" de versiones viejas = sin respaldo
+        const fk = String(Settings.get("aiFallbackProvider", "") ?? "");
+        const p = provName(Settings.get("aiProvider", "")), f = fk in provNames ? provName(fk) : "";
         return p + (f && f !== p ? " · respaldo " + f : "");
     }
 
