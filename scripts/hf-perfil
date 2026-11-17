@@ -244,7 +244,7 @@ def plan(p, yes=False):
     if p.get("apps"):
         steps.append(("Apps del centro de aplicaciones", sh(SCRIPTS / "hf-apps", "install", *p["apps"], *(["--yes"] if yes else []))))
     for u in p.get("services", []):
-        if u in SERVICES and u not in ("sshd", "ssh", "ufw", "firewalld", "tailscaled", "rustdesk", "greetd"):   # esos, con su paso; nada fuera de la lista
+        if u in SERVICES and u not in ("sshd", "ssh", "ufw", "firewalld", "tailscaled", "rustdesk", "greetd") and not enabled(u):   # esos, con su paso; nada fuera de la lista; ya activo: sin sudo
             steps.append((f"Servicio {u}", sh("sudo", "systemctl", "enable", "--now", u)))
     for u in p.get("userServices", []):
         if u in USER_SERVICES and not enabled(u, user=True):
@@ -507,7 +507,8 @@ def main():
         if not dry:
             print("\nListo. Cierra sesión y vuelve a entrar para verlo todo." if not failed else "\nTerminado con fallos en: " + ", ".join(failed) + " (puedes repetir: solo hace lo que falta)")
             print("Falta lo que no va en el perfil: claves de la IA (Ajustes › Asistente de IA), contraseña de RDP "
-                  "(hf-remote rdp password), contraseña permanente de RustDesk y tus fondos (" + str(p.get("wallpapers")) + ").")
+                  "(hf-remote rdp password), contraseña permanente de RustDesk"
+                  + (f" y tus fondos ({p['wallpapers']})." if p.get("wallpapers") else "."))
         return 1 if failed else 0
     print(__doc__.strip(), file=sys.stderr)
     return 1

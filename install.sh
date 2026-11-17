@@ -21,11 +21,15 @@
 #                                 y el idioma, teclado y hora del sistema (todo menos contraseñas y claves)
 #   ./install.sh --perfil         lo mismo con el perfil público del repo (perfil/perfil.json, sin datos personales)
 #   ./install.sh --acceso-remoto  con --perfil: activa el acceso remoto del perfil sin preguntar (si no, se pregunta)
+#   ./install.sh --equipo=gpu|cpu|ninguno   asistente (Harper) y dictado listos para este equipo (perfil/equipo-*.json):
+#                                 gpu = gráfica dedicada de 6 GB o más (IA y dictado en la GPU), cpu = sin ella
+#                                 (portátiles de oficina: todo en la CPU), ninguno = sin IA. Sin la opción, lo
+#                                 detecta y lo pregunta (con --yes, lo detectado)
 #   ./install.sh --apps=serie,productividad   apps por nivel (install/apps.json, scripts/hf-apps): serie (por defecto),
 #                                 productividad, destacada, creativa, experimental, all; --apps=none o --no-apps: ninguna
 #
 # Pruebas: HF_DISTRO=<id> [HF_DISTRO_VERSION=<versión o nombre>] simula otra distro (úsalo con --dry-run);
-#          HF_INIT=systemd|runit|openrc fuerza el sistema de arranque; HF_NO_COLORS=1 no genera los colores iniciales. Ids: arch cachyos endeavouros manjaro garuda
+#          HF_INIT=systemd|runit|openrc fuerza el sistema de arranque; HF_NO_COLORS=1 no genera los colores iniciales. HF_MEMINFO=<archivo> simula otra RAM (--equipo=cpu). Ids: arch cachyos endeavouros manjaro garuda
 #          fedora rocky almalinux opensuse-tumbleweed opensuse-leap debian ubuntu pop linuxmint void gentoo nixos.
 #
 # Se puede repetir sin miedo: solo hace lo que falta. No toca ~/.config/hypr, ~/.config/quickshell ni
@@ -33,6 +37,7 @@
 set -euo pipefail
 
 DRY=0 YES=0 FULL=0 DEPS=1 SYSTEM=1 SESSION=1 UNINSTALL=0 PURGE=0 GREETER="" MIGRATE=0 PERFIL="" REMOTO=0
+EQUIPO=""   # gpu | cpu | ninguno (--equipo=…); vacío = detectar y preguntar
 APPS=""   # niveles de install/apps.json (--apps=…); vacío = preguntar (o «serie» con --yes/--dry-run)
 for a in "$@"; do
   case "$a" in
@@ -48,6 +53,8 @@ for a in "$@"; do
     --greeter-off)  GREETER=off ;;
     --greeter-sync) GREETER=sync ;;
     --apps=*)       APPS="${a#--apps=}" ;;
+    --equipo=*)     EQUIPO="${a#--equipo=}"
+                    case "$EQUIPO" in gpu|cpu|ninguno) ;; *) echo "--equipo: gpu, cpu o ninguno" >&2; exit 1 ;; esac ;;
     --no-apps)      APPS=none ;;
     --migrate)      MIGRATE=1 ;;
     --perfil=*)     PERFIL="${a#--perfil=}" ;;
@@ -930,6 +937,70 @@ apps_install() {
   return 0
 }
 [ "$DEPS" = 1 ] && apps_install || { [ "$DEPS" = 0 ] && skip_ "apps por nivel (--no-deps)"; }
+
+# ---------- Asistente y dictado según el equipo (perfil/equipo-*.json → scripts/hf-perfil) ----------
+# Medido el 2026-11-17 (docs/IA.md): con gráfica, gemma4:e4b en la GPU (~0,5 s por orden) y dictado híbrido con
+# whisper turbo; sin ella, todo en la CPU con Parakeet (0,7 s por frase) y gemma4:e4b (2–4,5 s por orden; la
+# primera ~1 min) o, con menos de 16 GB de RAM, gemma4:e2b (1,6–2,4 s; la primera ~17 s; algo menos preciso).
+vram_gib() {   # la mayor VRAM dedicada en GiB redondeados (una de 6 GB da 5,98): AMD (amdgpu) y NVIDIA (nvidia-smi); las integradas dan 0–2
+  # shortcut: Intel Arc no expone la VRAM aquí y cuenta como «cpu»; elige --equipo=gpu a mano
+  local m=0 v f
+  for f in /sys/class/drm/card*/device/mem_info_vram_total; do
+    [ -r "$f" ] || continue; v=$(( ($(cat "$f") + 536870912) / 1073741824 )); [ "$v" -gt "$m" ] && m=$v
+  done
+  if have nvidia-smi; then
+    v=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | sort -n | tail -1)
+    v=$(( (${v:-0} + 512) / 1024 )); [ "$v" -gt "$m" ] && m=$v
+  fi
+  echo "$m"
+}
+ram_gib() { awk '/^MemTotal:/ {printf "%d", ($2 + 524288) / 1048576}' ${HF_MEMINFO:-/proc/meminfo}; }
+equipo_perfil() {
+  # sin gráfica y con menos de 16 GB: gemma4:e2b (4,7 GB de RAM) en vez de e4b (6,8 GB, casi todo un portátil de 8)
+  local f="equipo-$1"; [ "$1" = cpu ] && [ "$(ram_gib)" -lt 15 ] && f=equipo-cpu-poca-ram
+  local pf=(aplicar "$HERE/perfil/$f.json")
+  [ "$DRY" = 1 ] && pf+=(--dry-run); [ "$YES" = 1 ] && pf+=(--yes)
+  HF_ROOT="$HERE" "$HERE/scripts/hf-perfil" "${pf[@]}"
+}
+equipo_install() {
+  local eq="$EQUIPO" v det ans again=0
+  if [ -z "$eq" ]; then
+    v=$(vram_gib); det=cpu; [ "$v" -ge 6 ] && det=gpu
+    eq=$det
+    if [ "$YES" = 0 ] && [ "$DRY" = 0 ]; then
+      say "Asistente (Harper) y dictado: gráfica dedicada con ${v} GB de memoria → recomiendo «$det»"
+      note "gpu      gráfica de 6 GB o más: IA local en la gráfica (~0,5 s por orden) y dictado más preciso (whisper turbo)" \
+           "cpu      sin gráfica dedicada (portátil de oficina): IA local en la CPU (2–5 s por orden) y dictado Parakeet" \
+           "ninguno  sin IA ni dictado local (luego: ./install.sh --no-deps --equipo=gpu|cpu)"
+      printf '%s?%s ¿Cuál? [%s] ' "$C1" "$C0" "$det"
+      { read -r ans </dev/tty; } 2>/dev/null || ans=""
+      eq="${ans:-$det}"
+    fi
+  fi
+  case "$eq" in
+    gpu|cpu) ;;
+    ninguno) skip_ "asistente y dictado (equipo: ninguno)"; return 0 ;;
+    *) warn "Equipo «$eq» desconocido (gpu, cpu o ninguno): no instalo la IA"; todo_ "asistente: ./install.sh --no-deps --equipo=gpu|cpu"; return 0 ;;
+  esac
+  hdr "Asistente y dictado (equipo: $eq)"
+  equipo_perfil "$eq" || true
+  # lo que no tiene paquete en algunas distros (Debian, Ubuntu, Void…): con su instalador y otra pasada del perfil
+  if ! have ollama && [ "$DRY" = 0 ]; then
+    if ask "Tu distro no trae Ollama. ¿Lo instalo con el instalador oficial (ollama.com/install.sh)?" s; then
+      run sh -c 'curl -fsSL https://ollama.com/install.sh | sh' && again=1
+    fi
+  fi
+  if [ "$eq" = gpu ] && [ "$DRY" = 0 ] && [ "$("$HERE/scripts/hf-dictate" status 2>/dev/null | jq -r .vosk)" != true ]; then
+    run "$HERE/scripts/hf-dictate" install-vosk && again=1   # el híbrido escribe en vivo con Vosk
+  fi
+  [ "$again" = 1 ] && { equipo_perfil "$eq" || true; }
+  if have ollama || [ "$DRY" = 1 ]; then done_ "asistente y dictado: equipo $eq"
+  else todo_ "asistente: instala Ollama (ollama.com/download) y repite ./install.sh --no-deps --equipo=$eq"; fi
+  return 0
+}
+if [ "$DEPS" = 1 ]; then equipo_install
+elif [ -n "$EQUIPO" ] && [ "$EQUIPO" != ninguno ]; then equipo_install
+else skip_ "asistente y dictado (--no-deps; para prepararlos: --equipo=gpu|cpu)"; fi
 HAS_DM="$(current_dm)"; [ "$HAS_DM" = greetd ] && HAS_DM="el login (greetd)"
 summary
 if [ -n "$PERFIL" ]; then

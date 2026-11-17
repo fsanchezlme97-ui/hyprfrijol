@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.42] — 2026-11-17
+
+### Novedades (instalador)
+- **`./install.sh --equipo=gpu|cpu|ninguno`:** deja Harper y el dictado listos para el equipo. Sin la opción detecta la
+  gráfica (6 GB de VRAM o más = `gpu`) y pregunta; con `--yes`, lo detectado. `gpu`: gemma4:e4b en la gráfica y dictado
+  híbrido con whisper turbo. `cpu` (portátiles de oficina, gráfica integrada): Parakeet y gemma4:e4b en la CPU, o
+  gemma4:e2b con menos de 16 GB de RAM (4,7 GB frente a 6,8). Instala Ollama si falta (pregunta antes).
+  Perfiles en `perfil/equipo-*.json`; medidas en `docs/IA.md`.
+
+### Correcciones
+- `hf-perfil aplicar` ya no pide sudo para activar servicios que ya están activos, ni habla de «tus fondos (None)».
+
 ## [0.10.41] — 2026-11-17
 
 ### Correcciones (dictado)

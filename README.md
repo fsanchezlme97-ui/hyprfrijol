@@ -105,6 +105,7 @@ cd ~/hyprfrijol
 | `--uninstall` [`--purge`] | desinstalar [y borrar ajustes, estado y caché] |
 | `--migrate` | pasar una instalación de hypr-liquid (nombre anterior) a hyprfrijol |
 | `--apps=serie,productividad,…` | apps por nivel: `serie` (por defecto), `productividad`, `destacada`, `creativa`, `experimental`, `all`; `--no-apps` ninguna. Sin `--yes` pregunta. Lista: `scripts/hf-apps list` |
+| `--equipo=gpu\|cpu\|ninguno` | deja el asistente (Harper) y el dictado listos para el equipo: `gpu` (gráfica dedicada de 6 GB o más: IA local y dictado whisper turbo en la gráfica), `cpu` (portátil de oficina o gráfica integrada: IA local y dictado Parakeet en la CPU) o `ninguno`. Sin la opción, lo detecta y pregunta (con `--yes`, lo detectado). Perfiles: `perfil/equipo-gpu.json`, `perfil/equipo-cpu.json` |
 
 Se puede repetir sin miedo: solo hace lo que falta. Al final enseña un resumen de lo instalado, lo saltado y lo que te toca a ti. Las dependencias están en [`install/packages.tsv`](install/packages.tsv) (imprescindibles, recomendadas y opcionales, con el nombre del paquete en cada familia).
 

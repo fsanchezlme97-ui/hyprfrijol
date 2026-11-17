@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "nota": "Asistente y dictado para equipos con gráfica dedicada de 6 GB o más (./install.sh --equipo=gpu). Medido el 2026-11-17 en una RX 6600 XT: gemma4:e4b en la GPU ~0,5 s por orden; dictado híbrido (Vosk en vivo y whisper turbo corrige la frase): 10 % de palabras mal con ruido de fondo, ~3 s por orden corta.",
+  "deps": ["ollama", "ollama-gpu", "whisper", "whisper-gpu", "vosk"],
+  "services": ["ollama"],
+  "voice": {"helpert": true},
+  "dictation": {"vosk": ["vosk-model-small-es-0.42"], "whisper": ["turbo"]},
+  "ollama": ["gemma4:e4b"],
+  "settings": {
+    "aiProvider": "ollama",
+    "aiModel": "gemma4:e4b",
+    "aiVoice": true,
+    "dictationEngine": "hibrido",
+    "dictationModel": "turbo"
+  }
+}

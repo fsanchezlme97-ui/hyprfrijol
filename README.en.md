@@ -33,7 +33,7 @@ git clone https://github.com/fsanchezlme97-ui/hyprfrijol ~/hyprfrijol && cd ~/hy
 ./install.sh             # packages + services + ~/.local/bin links + "Hyprland (HyprFrijol)" session
 ```
 
-Options: `--yes` (non-interactive), `--full` (optional extras too), `--no-deps`, `--no-system`, `--no-session`, `--greeter` / `--greeter-off` (greetd login, restores your previous display manager), `--uninstall [--purge]`, `--migrate`. Simulate another distro with `HF_DISTRO=fedora ./install.sh --dry-run`.
+Options: `--yes` (non-interactive), `--full` (optional extras too), `--no-deps`, `--no-system`, `--no-session`, `--greeter` / `--greeter-off` (greetd login, restores your previous display manager), `--uninstall [--purge]`, `--migrate`, `--equipo=gpu|cpu|ninguno` (assistant and dictation ready for this machine: a dedicated GPU with 6 GB or more, CPU only for office laptops, or none; detected and asked if omitted). Simulate another distro with `HF_DISTRO=fedora ./install.sh --dry-run`.
 
 | Distro | Hyprland ≥ 0.57 | Quickshell |
 |---|---|---|

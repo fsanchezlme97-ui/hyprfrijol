@@ -125,6 +125,20 @@ LM Studio (llama.cpp Vulkan) va igual de rápido que Ollama (47 frente a 48 toke
 ocupa 1,2 GB de RAM frente a 0,2 GB y no está en los repositorios; el llama.cpp de Arch va a la mitad (23 tokens/s).
 Con modelos que piensan (qwen3.5…) `hf-ai` manda `"think": false`: pensar tardaba más de 30 s.
 
+**Sin gráfica dedicada** (portátiles de oficina): el 2026-11-17, en la CPU con 4 hilos, 8 órdenes reales con el prompt de
+`hf-ai`. La primera orden carga el modelo y lee las ~2.400 instrucciones; las siguientes las tiene en caché.
+
+| Modelo (solo CPU) | Órdenes bien | Primera | Siguientes | RAM |
+|---|---|---|---|---|
+| **gemma4:e4b** (16 GB de RAM o más) | 7/8 | ~1 min | 2–4,5 s | 6,8 GB |
+| **gemma4:e2b** (menos de 16 GB) | 6/8 | 17 s | 1,6–2,4 s | 4,7 GB |
+| qwen3:4b-instruct | 6/8 | 94 s | 5–17 s | 5,1 GB |
+
+La orden que falla a los tres («Cambia el estilo a flat») también la falla gemma4:e4b en la gráfica: es del modelo, no
+de la CPU. `./install.sh --equipo=cpu` deja Parakeet de dictado (0,7 s por orden corta con 4 núcleos) y el modelo según la
+RAM (`perfil/equipo-cpu.json` o `perfil/equipo-cpu-poca-ram.json`); `--equipo=gpu`, gemma4:e4b en la gráfica y el
+dictado híbrido con whisper turbo (`perfil/equipo-gpu.json`).
+
 ## Contexto
 
 Los chips de la cabecera eligen qué se envía con cada pregunta:

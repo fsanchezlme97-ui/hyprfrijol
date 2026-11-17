@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "nota": "Asistente y dictado para equipos sin gráfica dedicada (portátiles de oficina, gráfica integrada) con 16 GB de RAM o más: ./install.sh --equipo=cpu (con menos, equipo-cpu-poca-ram.json). Medido el 2026-11-17 con 4 hilos de CPU: gemma4:e4b (6,8 GB de RAM) 7/8 órdenes bien, 2–4,5 s por orden (la primera ~1 min: carga y lee las instrucciones); qwen3:4b-instruct, más lento (5–17 s) y 6/8. Dictado con Parakeet: 0,7 s por orden corta.",
+  "deps": [
+    "ollama"
+  ],
+  "services": [
+    "ollama"
+  ],
+  "voice": {
+    "helpert": true
+  },
+  "dictation": {
+    "parakeet": true
+  },
+  "ollama": [
+    "gemma4:e4b"
+  ],
+  "settings": {
+    "aiProvider": "ollama",
+    "aiModel": "gemma4:e4b",
+    "aiVoice": true,
+    "dictationEngine": "parakeet"
+  }
+}

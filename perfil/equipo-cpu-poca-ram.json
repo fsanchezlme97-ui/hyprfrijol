@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "nota": "Asistente y dictado para equipos sin gráfica dedicada y menos de 16 GB de RAM (el instalador lo elige solo con --equipo=cpu). Medido el 2026-11-17 con 4 hilos de CPU: gemma4:e2b ocupa 4,7 GB de RAM (e4b, 6,8), 6/8 órdenes bien, 1,6–2,4 s por orden (la primera ~17 s). Dictado con Parakeet: 0,7 s por orden corta.",
+  "deps": [
+    "ollama"
+  ],
+  "services": [
+    "ollama"
+  ],
+  "voice": {
+    "helpert": true
+  },
+  "dictation": {
+    "parakeet": true
+  },
+  "ollama": [
+    "gemma4:e2b"
+  ],
+  "settings": {
+    "aiProvider": "ollama",
+    "aiModel": "gemma4:e2b",
+    "aiVoice": true,
+    "dictationEngine": "parakeet"
+  }
+}
