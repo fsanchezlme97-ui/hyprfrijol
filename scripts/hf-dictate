@@ -564,13 +564,14 @@ def wav_bytes(pcm):
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(RATE); w.writeframes(bytes(pcm))
     return b.getvalue()
 
-def audio_ctx(pcm):
+def audio_ctx(pcm, model=""):
     """Contexto de audio del codificador según lo que dura la frase (whisper procesa siempre 30 s si no: 1500).
-    50 posiciones por segundo + margen; frases de unos segundos van 3–4 veces más rápido en CPU sin perder precisión."""
+    50 posiciones por segundo + margen; frases de unos segundos van 3–4 veces más rápido en CPU sin perder precisión.
+    turbo (large-v3) repite la frase entera con menos de 768 («Pon la barra arriba. Pon la barra arriba.»); small no."""
     sec = len(pcm) / 2 / RATE
     if sec >= 24:
         return 0
-    return max(512, min(1500, int(math.ceil((sec * 50 * 1.5 + 128) / 64) * 64)))
+    return max(768 if model == "turbo" else 512, min(1500, int(math.ceil((sec * 50 * 1.5 + 128) / 64) * 64)))
 
 def langs_of(lang):
     """dictationLang → (idioma con el que se empieza, idiomas permitidos o None). «es+en»: español e inglés."""
@@ -580,12 +581,12 @@ def langs_of(lang):
         return (ls[0] if ls else "es"), tuple(ls or ["es"])
     return lang, None
 
-def server_infer(port, pcm, lang, prompt="", detail=False, beam=5):
+def server_infer(port, pcm, lang, prompt="", detail=False, beam=5, model=""):
     """Texto de la frase (o {text, lang, prob} con detail). Búsqueda en haz (5; lo provisional, voraz: beam=-1) y
     contexto de audio a la medida."""
     bd = uuid.uuid4().hex
     fields = {"response_format": "verbose_json" if detail else "json", "temperature": "0.0", "language": lang,
-              "beam_size": str(beam), "audio_ctx": str(audio_ctx(pcm))}
+              "beam_size": str(beam), "audio_ctx": str(audio_ctx(pcm, model))}
     if prompt:
         fields["prompt"] = prompt
     body = b"".join(f"--{bd}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n{v}\r\n".encode() for k, v in fields.items())
@@ -622,15 +623,15 @@ class WhisperEngine:
     def infer(self, pcm, prompt, final):
         beam = 5 if final else -1
         if not self.allowed:
-            return server_infer(self.port, pcm, self.lang, prompt, beam=beam)
-        r = server_infer(self.port, pcm, self.lang, prompt, detail=True, beam=beam)
+            return server_infer(self.port, pcm, self.lang, prompt, beam=beam, model=self.model)
+        r = server_infer(self.port, pcm, self.lang, prompt, detail=True, beam=beam, model=self.model)
         if r["lang"] in self.allowed and r["lang"] != self.lang and r["prob"] >= (0.5 if final else 0.6):
             # cambió de idioma. Lo provisional ya lo detecta mientras hablas, así la frase final suele salir a la
             # primera en el idioma bueno; si no, se repite en el que oye. Las siguientes siguen en ese.
             self.lang = r["lang"]
             self.switched = True
             if final:
-                return server_infer(self.port, pcm, self.lang, prompt, beam=beam)
+                return server_infer(self.port, pcm, self.lang, prompt, beam=beam, model=self.model)
         return r["text"]
     def transcribe(self, pcm, prompt="", final=True):
         if self.port:
@@ -644,7 +645,7 @@ class WhisperEngine:
             f.write(wav_bytes(pcm)); wav = f.name
         try:
             cmd = [whisper_bin(), "-m", str(model_path(self.model)), "-f", wav, "-l", "auto" if self.allowed else self.lang,
-                   "-nt", "-np", "-t", threads(), "-ac", str(audio_ctx(pcm))] + ([] if use_gpu(self.model, measure=False) else ["-ng"])
+                   "-nt", "-np", "-t", threads(), "-ac", str(audio_ctx(pcm, self.model))] + ([] if use_gpu(self.model, measure=False) else ["-ng"])
             if prompt:
                 cmd += ["--prompt", prompt]
             r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)

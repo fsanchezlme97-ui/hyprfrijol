@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.41] — 2026-11-17
+
+### Correcciones (dictado)
+- **whisper turbo ya no repite la frase:** con frases cortas el contexto de audio se recortaba a 512 y large-v3-turbo
+  escribía la frase dos o más veces («Pon la barra arriba… Pon la barra arriba…»). Con turbo el mínimo pasa a 768
+  (desde ahí ya no repite); small y los demás siguen en 512. Afectaba a los motores whisper.cpp e híbrido.
+
+### Documentación
+- Medidas de dictado en `docs/AJUSTES.md`: con ruido de fondo, turbo falla un 10 % de las palabras frente al 17 % de
+  Parakeet, el 23 % de Nemotron y el 25 % de small; en el híbrido una orden corta tarda ~3 s en quedar escrita
+  (Nemotron ~1,4 s).
+
 ## [0.10.40] — 2026-11-17
 
 ### Cambios (asistente)

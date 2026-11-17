@@ -228,6 +228,7 @@ El dictado es local y **sin IA**. Solo una orden que `hf-voice` no entienda va a
 | `dictationEngine` | `auto` | `auto` = Vosk si están `python-vosk` y el modelo (tiempo real, palabra a palabra); si no, whisper.cpp · `vosk` · `whisper.cpp` (más preciso, por frases) · `hibrido` (Vosk lo provisional, whisper cada frase) · `faster-whisper` |
 | `dictationVoskModel` | `vosk-model-small-es-0.42` | modelo de Vosk (39 MB, ~300 MB de RAM); `vosk-model-es-0.42` (1,4 GB) acierta más pero pide varios GB de RAM. Si falta Vosk, la sección ofrece «Instalar» (Arch: `pacman -S python-vosk vosk-api`; otras: `hf-dictate install-vosk`) y se dicta con whisper mientras tanto |
 | `dictationModel` | `base` | modelo de whisper.cpp (`tiny` · `base` · `small` · `medium` · `turbo`) |
+|  |  | Medido el 2026-11-17 (RX 6600 XT, 14 s de voz; sin ruido / con ruido de fondo): turbo 4 % / 10 % de palabras mal, Parakeet 6 % / 17 %, Nemotron 6 % / 23 %, small 4 % / 25 %. Con turbo, el **híbrido** (Vosk en vivo y turbo corrige la frase) deja una orden corta escrita en ~3 s, Nemotron en ~1,4 s |
 | `dictationMode` | `ptt` | `ptt` (mantener) · `toggle` · `continuo` (para tras `dictationSilenceSec` s en silencio) |
 | `micMode` | `dictado` | botón del micrófono de la barra y Super + Alt + M: `dictado` · `ia` (hablar con el asistente) · `silencio` (silenciar o activar el micrófono); clic derecho o Super + Shift + Alt + M: el siguiente |
 | `dictationPauseMs` | `600` | pausa que cierra una frase (Vosk: retardo del fin de frase; whisper: VAD) |
