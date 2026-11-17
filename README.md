@@ -33,7 +33,7 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 |---|---|
 | Hyprland en Lua, validado con `Hyprland --verify-config` | `config/hypr/frijol/` |
 | Sesión aparte y modo de prueba en ventana (`hf-session --nested`) | `scripts/hf-session` |
-| Colores del fondo (matugen) o 36 temas en pares oscuro y claro (y los tuyos, sin límite), estilo Math (Material 3) con o sin transparencia, claro / oscuro / auto, redondeo ajustable | `scripts/hf-apply`, `config/themes/` |
+| Colores del fondo (matugen) o 54 temas, 42 de ellos en pares oscuro y claro (y los tuyos, sin límite), estilo Math (Material 3) con o sin transparencia, claro / oscuro / auto, redondeo ajustable | `scripts/hf-apply`, `config/themes/` |
 | Barra abajo / arriba / izquierda, fija o flotante | `quickshell/bar/` |
 | Spotlight (apps, archivos con vista previa y acciones rápidas, calculadora, comandos, ventanas) | `modules/spotlight`, `scripts/hf-fileact` |
 | Ajustes rápidos, notificaciones con respuesta, OSD | `modules/quicksettings`, `notifications`, `osd` |

@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.38] — 2026-11-17
+
+### Novedades (temas)
+- **21 temas nuevos** (54 en total): Catppuccin Frappé y Macchiato, Rosé Pine Moon, Tokyo Night Storm, Kanagawa
+  Dragon, Modus Vivendi y Operandi, Poimandres (con variante clara), Zenburn, Sonokai, Cyberdream (oscuro y claro),
+  Synthwave '84 y Vesper, con sus colores de terminal; y tres originales en pares oscuro y claro: **Boreal**, **Cacao**
+  e **Índigo**. Están en Ajustes › Apariencia.
+
+### Cambios (onda de audio de la barra)
+- En silencio vuelve a verse la fila de puntos quieta (sin respirar), que se pinta una sola vez.
+- Comprobada en los 96 temas, sólidos y con transparencia: la punta de color, «procesando» y el terciario se leen sobre
+  la barra en todos.
+
 ## [0.10.37] — 2026-11-17
 
 ### Mejoras (onda de audio de la barra)

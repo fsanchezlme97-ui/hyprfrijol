@@ -12,8 +12,8 @@
 //   escucha  primario: el nivel del micrófono (dictado o conversación), lo más reciente en el centro
 //   piensa   primario apagado: una ola ancha que va y viene mientras prepara la respuesta (sin animaciones: quieta)
 //   habla    terciario: la voz del asistente (cava)
-// Sin asistente: la música del equipo; en silencio, una fila de puntos que respira despacio (opacidad animada en la
-// GPU; quieta sin animaciones). Clic: controles de música. Clic central: reproducir/pausar.
+// Sin asistente: la música del equipo; en silencio, una fila de puntos tenues (se pinta una vez). Clic: controles de
+// música. Clic central: reproducir/pausar.
 // Rueda: volumen.
 import QtQuick
 import ".."
@@ -48,15 +48,6 @@ Rectangle {
     property var vel: Array(n).fill(0)     // velocidad de caída de cada barra (gravedad)
     property var cap: Array(n).fill(0)     // marca de pico de cada barra
     readonly property bool resting: !live && peak < 0.01
-    // Reposo: los puntos respiran (0,45 × 0,45–1 de opacidad, como la muestra elegida)
-    property real breath: 1
-    SequentialAnimation on breath {
-        running: root.resting && root.visible && !Theme.still
-        loops: Animation.Infinite
-        NumberAnimation { to: 0.45; duration: 2400; easing.type: Easing.InOutSine }
-        NumberAnimation { to: 1; duration: 2400; easing.type: Easing.InOutSine }
-        onRunningChanged: if (!running) root.breath = 1
-    }
     property bool idlePainted: false
     readonly property var paintKey: [Theme.p, Theme.ter, kind, aiState]
     onPaintKeyChanged: { idlePainted = false; cv.requestPaint(); }
@@ -123,7 +114,6 @@ Rectangle {
         anchors.centerIn: parent
         width: root.waveW
         height: root.barsH
-        opacity: root.breath
         Repeater {
             id: bars
             model: root.kind === "barras" ? root.n : 0   // se quedan aunque la voz pase a onda
@@ -162,7 +152,6 @@ Rectangle {
         anchors.centerIn: parent
         width: root.waveW
         height: parent.height - 6
-        opacity: root.breath
         renderStrategy: Canvas.Cooperative
         onPaint: {
             const ctx = getContext("2d");
@@ -180,7 +169,7 @@ Rectangle {
             // Con la IA en marcha, un mínimo: en silencio (pausas al hablar, micrófono callado) la onda se seguía viendo
             const amp = (i) => Math.max(ai ? 0.12 : 0, root.amp(d[i]));
             if (root.resting) {
-                // Reposo: puntos tenues (respiran con la opacidad del Canvas)
+                // Reposo: puntos tenues
                 ctx.globalAlpha = 0.45;
                 for (let x = 3; x < w; x += 12) { ctx.beginPath(); ctx.arc(x, mid, 1.1, 0, Math.PI * 2); ctx.fill(); }
                 return;
