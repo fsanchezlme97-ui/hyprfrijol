@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.45] — 2026-11-17
+
+### Arreglos
+- **Impr Pant ya captura los paneles de HyprFrijol** (asistente de IA, notificaciones, centro de control…). Solo hay
+  una vista abierta a la vez y abrir la captura cerraba el panel antes de congelar la pantalla; ahora se congela
+  primero, con el panel a la vista, y la captura se abre sobre esa imagen.
+
 ## [0.10.44] — 2026-11-17
 
 ### Novedades

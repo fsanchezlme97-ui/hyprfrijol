@@ -119,6 +119,10 @@ Scope {
         shapes = []; crop = Qt.rect(0, 0, 0, 0); shot = ""; cropFile = ""; cropFor = ""; words = []; lines = []; ocrText = "";
         stage = "congelando";
         clientsProc.running = true;
+        // Congelada ya por Shell.open, con el panel que había abierto a la vista
+        const pre = Shell.capFrozen; Shell.capFrozen = "";
+        if (pre && !cursor) { gotFrozen(pre); return; }
+        if (pre) Quickshell.execDetached(["rm", "-f", pre]);
         // Deja que se vaya el panel que estuviera abierto (Spotlight, ajustes rápidos…) antes de congelar
         freezeTimer.interval = Theme.durOut + 60;
         freezeTimer.restart();
@@ -139,25 +143,23 @@ Scope {
     }
     Process {
         id: freezeProc
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const p = text.trim();
-                if (!root.shown) { if (p) Quickshell.execDetached(["rm", "-f", p]); return; }
-                if (!p) {
-                    Quickshell.execDetached(["notify-send", "-a", "Captura", "No se pudo capturar la pantalla", "¿Está instalado grim?"]);
-                    Shell.close(); return;
-                }
-                const old = root.frozen;
-                root.frozen = p;
-                if (old) Quickshell.execDetached(["rm", "-f", old]);
-                root.cropFile = ""; root.cropFor = "";
-                root.hiding = false;
-                if (root.stage === "congelando") {
-                    if (root.preset.width >= 4) { root.sel = root.preset; root.preset = Qt.rect(0, 0, 0, 0); root.stage = "listo"; }
-                    else if (root.mode === "pantalla") { root.sel = root.fullRect(); root.stage = "listo"; }
-                    else root.stage = "elegir";
-                }
-            }
+        stdout: StdioCollector { onStreamFinished: root.gotFrozen(text.trim()) }
+    }
+    function gotFrozen(p: string): void {
+        if (!root.shown) { if (p) Quickshell.execDetached(["rm", "-f", p]); return; }
+        if (!p) {
+            Quickshell.execDetached(["notify-send", "-a", "Captura", "No se pudo capturar la pantalla", "¿Está instalado grim?"]);
+            Shell.close(); return;
+        }
+        const old = root.frozen;
+        root.frozen = p;
+        if (old) Quickshell.execDetached(["rm", "-f", old]);
+        root.cropFile = ""; root.cropFor = "";
+        root.hiding = false;
+        if (root.stage === "congelando") {
+            if (root.preset.width >= 4) { root.sel = root.preset; root.preset = Qt.rect(0, 0, 0, 0); root.stage = "listo"; }
+            else if (root.mode === "pantalla") { root.sel = root.fullRect(); root.stage = "listo"; }
+            else root.stage = "elegir";
         }
     }
     // Volver a congelar (cursor activado o retardo): se oculta, espera y captura otra vez; la zona se queda

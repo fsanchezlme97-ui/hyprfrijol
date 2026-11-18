@@ -110,7 +110,33 @@ Singleton {
     property real openedAt: 0
     function stamp(): void { openedAt = Date.now(); }
 
+    // Captura con un panel abierto (Impr Pant sobre el de IA, las notificaciones…): solo hay una vista a la vez y
+    // abrir «captura» cerraba el panel antes de congelar la pantalla, así que nunca salía. Primero se congela con el
+    // panel a la vista y luego se abre la captura sobre esa imagen (Capture.qml la recoge en capFrozen).
+    property string capFrozen: ""
+    property var capPending: null
+    Process {
+        id: capFreezer
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const p = root.capPending; root.capPending = null;
+                root.capFrozen = text.trim();
+                if (p) root.openNow(p[0], p[1]);
+            }
+        }
+    }
     function open(v: string, a): void {
+        if (v === "captura" && view !== "" && view !== "captura") {
+            if (!capPending) {
+                capPending = [v, a];
+                capFreezer.command = [Paths.script("hf-capture"), "freeze", screen.name];
+                capFreezer.running = true;
+            }
+            return;
+        }
+        openNow(v, a);
+    }
+    function openNow(v: string, a): void {
         const rd = redirects[v];
         if (rd) { v = rd[0]; a = rd[1]; }
         const al = aliases[v];
