@@ -331,6 +331,8 @@
   "roundness": "sobrio",
   "roundingShape": "auto",
   "waveStyle": "barras",
+  "sliderGlow": true,
+  "profileCard": true,
   "osdPos": "arriba",
   "osdOffset": 4,
   "rounding": 4,

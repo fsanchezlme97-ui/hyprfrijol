@@ -546,25 +546,28 @@ def style_tokens(c, s):
         # el terciario que se desliza despacio (tint), y un borde de dos trazos: filo exterior oscuro casi
         # invisible (edge) + filo interior de luz brillante arriba (rimTop → border → rimBottom). Los rellenos
         # (bg2) son capas de cristal más claras; lo elegido en los segmentos, una cápsula sólida en contraste.
-        base = mix(c["s1"], W, .55) if LT else mix(c["s1"], c["p"], .04)
+        # cristal cálido (referencias de glassmorphism): la base lleva algo del acento y del terciario, no gris neutro
+        warm = mix(c["p"], c["ter"], .5)
+        base = mix(mix(c["s1"], W, .55), warm, .05) if LT else mix(c["s1"], warm, .08)
         S = dict(
             blur=True, pill=False,
             # la barra algo más velada: está siempre sobre el fondo y su texto tiene que leerse en cualquiera
             # en claro, el cristal blanco necesita algo más de cuerpo: sobre zonas oscuras del fondo se volvía gris
             bg=argb(base, .68 if LT else .50), bgPanel=argb(base, .60 if LT else .34),
-            bgPopup=argb(base, .70 if LT else .44), bg2=argb(W, .50 if LT else .075),
-            border=argb(W, .22 if LT else .06), borderWidth=1,
+            bgPopup=argb(base, .70 if LT else .44), bg2=argb(W, .52 if LT else .09),
+            border=argb(W, .26 if LT else .08), borderWidth=1,
             highlight=none, glow=none,
-            rimTop=argb(W, .55 if LT else .10), rimBottom=argb(W, 0),
+            # filo de luz más vivo arriba y un esmerilado algo más claro: el canto brillante del cristal de las referencias
+            rimTop=argb(W, .70 if LT else .16), rimBottom=argb(W, 0),
             edge=none,   # sin filo oscuro: sobre fondos claros o de colores se leía como un contorno
-            sheen=argb(W, .32 if LT else .055), tint=argb(mix(c["p"], c["ter"], .4), .16 if LT else .10),
+            sheen=argb(W, .38 if LT else .08), tint=argb(mix(c["p"], c["ter"], .4), .18 if LT else .13),
             tint2=none, tint3=none, rimInner=none,
             # sombras muy tenues: el cristal es translúcido y la sombra se transparentaba como una franja oscura
             # en el borde (y por encima de 0,2 Hyprland la desenfocaba con él)
             shadow=argb(K, .05 if LT else .12), shadowBig=argb(K, .08 if LT else .18),
             win=argb(base, .66 if LT else .48), winBorder=argb(W, .5 if LT else .10),
             winSolid=argb(mix(c["s1"], W, .4) if LT else c["s1"], .62 if LT else .46),
-            card=argb(W, .38 if LT else .05), cardBorder=1,
+            card=argb(W, .42 if LT else .065), cardBorder=1,
             shBlur=40, shY=14, shBigBlur=70, shBigY=26, shSpread=0)
     elif mat == "tonal":
         S = dict(
@@ -590,6 +593,8 @@ def style_tokens(c, s):
             shadow=argb(K, .12 if LT else .30), shadowBig=argb(K, .20 if LT else .45),
             win=argb(sur, 1), winSolid=argb(sur, 1), winBorder=argb(c["ov"], 1))
     S.update(GEOMETRY, estilo="math", material=mat)
+    if mat == "cristal":   # el cristal se ve más blando con esquinas más amplias (antes de «Redondeo»)
+        S.update(panelRad=14, ctlRad=8)
     # Sombras de los paneles del shell (Glass): radio/desplazamiento del estilo y «Sombras» de Apariencia
     base_sh = {"solido": (14, 3, 52, 18, -2), "tonal": (20, 6, 48, 16, 0)}.get(mat)
     if base_sh:

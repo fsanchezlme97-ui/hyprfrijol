@@ -262,8 +262,10 @@ ColumnLayout {
         headerRight: Sw { checked: Settings.barHas("musica"); onToggled: v => { const l = Settings.barModuleList.filter(m => m !== "musica"); if (v) l.push("musica"); Settings.set("barModules", l); } }
         LabeledRow {
             label: "Estilo"; labelWidth: 60
-            Seg {
-                model: [["barras", "Barras"], ["onda", "Onda rellena"], ["linea", "Línea"]]
+            Dropdown {
+                Layout.fillWidth: true
+                model: [["barras", "Barras"], ["onda", "Onda rellena"], ["linea", "Línea"], ["zigzag", "Zigzag"],
+                        ["cinta", "Cinta"], ["escalones", "Escalones (vúmetro)"], ["capas", "Capas suaves"]]
                 current: Settings.get("waveStyle", "barras")
                 onPicked: k => Settings.set("waveStyle", k)
             }

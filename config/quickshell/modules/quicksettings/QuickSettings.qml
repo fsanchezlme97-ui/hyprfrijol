@@ -10,6 +10,7 @@
 // Todo con datos reales; lo que no existe se oculta.
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
@@ -32,6 +33,13 @@ Overlay {
     property string pwFor: ""                 // red Wi-Fi que pide contraseña
     property string userName: ""
     property bool hasFace: false
+    // Tarjeta de perfil (Ajustes › Panel › «Tarjeta de perfil», profileCard): foto más grande con un anillo en
+    // degradado del tema y debajo, en una sola tarjeta, encendido · CPU · memoria
+    readonly property bool profile: Settings.get("profileCard", true) === true
+    function upText(s: real): string {
+        const m = Math.floor(s / 60), h = Math.floor(m / 60), d = Math.floor(h / 24);
+        return d > 0 ? d + " d " + (h % 24) + " h" : h > 0 ? h + " h " + (m % 60) + " min" : m + " min";
+    }
     property bool nightOn: false
     property bool vncAvailable: false
     property bool vncOn: false
@@ -173,8 +181,22 @@ Overlay {
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: 12
+                        Item {
+                            implicitWidth: win.profile ? 48 : 30; implicitHeight: implicitWidth
+                            // anillo: círculo en degradado (primario → terciario, en diagonal) asomando 3 px alrededor de la foto
+                            Rectangle {
+                                visible: win.profile
+                                anchors.fill: parent; radius: width / 2; rotation: 45
+                                gradient: Gradient {
+                                    orientation: Gradient.Horizontal
+                                    GradientStop { position: 0; color: Theme.p }
+                                    GradientStop { position: 1; color: Theme.ter }
+                                }
+                            }
                         Rectangle {
-                            implicitWidth: 30; implicitHeight: 30; radius: 15
+                            anchors.centerIn: parent
+                            implicitWidth: win.profile ? 42 : 30; implicitHeight: implicitWidth; radius: implicitWidth / 2
+                            border.width: win.profile ? 1.5 : 0; border.color: Theme.glassPanel
                             color: Theme.pc
                             clip: true
                             Icon { anchors.centerIn: parent; name: "user"; color: Theme.pcText; size: 15; visible: face.status !== Image.Ready }
@@ -183,15 +205,23 @@ Overlay {
                                 anchors.fill: parent
                                 source: win.hasFace ? "file://" + Paths.home + "/.face" : ""
                                 fillMode: Image.PreserveAspectCrop
-                                sourceSize: Qt.size(60, 60)
+                                sourceSize: Qt.size(96, 96)
                                 visible: status === Image.Ready
+                                // clip no recorta en redondo: máscara circular
                                 layer.enabled: visible
+                                layer.effect: MultiEffect { maskEnabled: true; maskSource: faceMask; maskThresholdMin: 0.5; maskSpreadAtMin: 1.0 }
                             }
+                            Item {
+                                id: faceMask
+                                anchors.fill: parent; visible: false; layer.enabled: true
+                                Rectangle { anchors.fill: parent; radius: width / 2 }
+                            }
+                        }
                         }
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 0
-                            Txt { Layout.fillWidth: true; text: win.userName; weight: Font.DemiBold }
+                            Txt { Layout.fillWidth: true; text: win.userName; weight: Font.DemiBold; size: win.profile ? 16 : 12.5 }
                             Txt {
                                 Layout.fillWidth: true
                                 size: 11.5; muted: true
@@ -212,6 +242,39 @@ Overlay {
                                 color: Theme.fill2
                                 icon: modelData.icon; iconSize: 15; tooltip: modelData.tip
                                 onClicked: modelData.run()
+                            }
+                        }
+                    }
+
+                    // Tarjeta de perfil: datos agrupados en una sola tarjeta con separadores finos
+                    Rectangle {
+                        visible: win.profile
+                        Layout.fillWidth: true
+                        implicitHeight: 46
+                        radius: Theme.inner(mainCard.rr ?? Theme.panelRadius, 12)
+                        color: Theme.fill2
+                        UseCounter { target: SysStats; active: win.shown && win.profile; bar: false }
+                        RowLayout {
+                            anchors.fill: parent
+                            spacing: 0
+                            Repeater {
+                                model: [
+                                    ["Encendido", win.upText(SysStats.uptime)],
+                                    ["CPU", Math.round(SysStats.cpu) + " %"],
+                                    ["Memoria", SysStats.memTotal > 0 ? Math.round(SysStats.memUsed / SysStats.memTotal * 100) + " %" : "—"]
+                                ]
+                                Item {
+                                    required property var modelData
+                                    required property int index
+                                    Layout.fillWidth: true; Layout.fillHeight: true
+                                    Rectangle { visible: parent.index > 0; width: 1; height: parent.height * 0.5; anchors.verticalCenter: parent.verticalCenter; color: Theme.border }
+                                    Column {
+                                        anchors.centerIn: parent
+                                        spacing: 1
+                                        Txt { anchors.horizontalCenter: parent.horizontalCenter; text: modelData[1]; size: 14; weight: Font.DemiBold; tabular: true }
+                                        Txt { anchors.horizontalCenter: parent.horizontalCenter; text: modelData[0]; size: 10.5; muted: true }
+                                    }
+                                }
                             }
                         }
                     }
@@ -764,9 +827,10 @@ Overlay {
         implicitHeight: 32
         radius: Theme.ctl(height)
         color: Theme.fill2
-        clip: true
         readonly property real frac: Math.max(0, Math.min(1, value))
+        SliderGlow { target: fillR; glow: root.muted ? Theme.o : Theme.p }
         Rectangle {
+            id: fillR
             width: Math.max(34, parent.width * root.frac)
             height: parent.height
             radius: parent.radius

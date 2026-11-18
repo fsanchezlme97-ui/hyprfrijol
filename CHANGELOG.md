@@ -3,6 +3,22 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.46] — 2026-11-17
+
+### Novedades
+- **Cuatro ondas nuevas** en la barra (Ajustes › Barra › Onda de audio, ahora un desplegable): zigzag, cinta (dos
+  curvas que se cruzan), escalones (vúmetro de bloques) y capas suaves (tres ondas rellenas superpuestas).
+- **Deslizadores con brillo:** volumen, brillo y el aviso (OSD) llevan un halo del color del tema; el del OSD, además,
+  una perla luminosa en la punta. Se apaga en Ajustes › Animaciones y efectos › «Deslizadores con brillo» (`sliderGlow`).
+- **Tarjeta de perfil:** en los ajustes rápidos la foto sale más grande, redonda y con un anillo en degradado del tema,
+  y debajo, agrupados en una tarjeta, el tiempo encendido, la CPU y la memoria. El bloqueo también lleva el anillo.
+  Se apaga en Ajustes › Usuarios › «Tarjeta de perfil» (`profileCard`).
+
+### Interfaz
+- **Cristal pulido** (Transparencia): base cálida con algo del acento, filo de luz y esmerilado más vivos, tarjetas
+  algo más claras y esquinas de los paneles más amplias.
+- La foto de los ajustes rápidos y del bloqueo se recorta de verdad en redondo (antes `clip` la dejaba cuadrada).
+
 ## [0.10.45] — 2026-11-17
 
 ### Arreglos

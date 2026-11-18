@@ -15,9 +15,10 @@ Rectangle {
     implicitHeight: 30
     radius: Theme.ctl(height)
     color: Theme.fill2
-    clip: true
     readonly property real frac: Math.max(0, Math.min(1, (value - from) / (to - from)))
+    SliderGlow { target: fillR }
     Rectangle {
+        id: fillR
         width: Math.max(parent.height, parent.width * root.frac)
         height: parent.height
         radius: parent.radius

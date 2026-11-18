@@ -5,6 +5,10 @@
 //   barras  barras redondeadas simétricas: cuerpo en primario tenue y la punta en terciario (por defecto)
 //   onda    curva suave rellena, simétrica
 //   linea   una sola línea fina que oscila
+//   zigzag  picos rectos que alternan arriba y abajo, como un trazo de osciloscopio
+//   cinta   dos curvas desfasadas que se cruzan, con el hueco relleno: una cinta que se retuerce
+//   escalones  columnas de bloques (vúmetro): la altura va por escalones
+//   capas   tres ondas suaves rellenas superpuestas, cada una más tenue y ancha
 // Movimiento con gravedad: cada barra sube al instante con cava y cae acelerando; en «barras», una marca de pico se
 // queda arriba y baja despacio.
 // Estados del asistente, con los colores del tema (el estado lo dice sobre todo el movimiento) y siempre como onda
@@ -190,9 +194,48 @@ Rectangle {
                     }
                     ctx.lineTo(w, mid);
                 };
-                if (root.drawKind === "onda") {
+                const k = root.drawKind;
+                if (k === "onda") {
                     ctx.globalAlpha = 0.9;
                     ctx.beginPath(); curve(-1); curve(1); ctx.fill();
+                } else if (k === "zigzag") {
+                    ctx.lineWidth = 1.4; ctx.lineJoin = "miter";
+                    ctx.beginPath(); ctx.moveTo(0, mid);
+                    for (let i = 0; i < n; i++) ctx.lineTo(pts[i][0], mid + (i % 2 ? 1 : -1) * pts[i][1]);
+                    ctx.lineTo(w, mid); ctx.stroke();
+                } else if (k === "cinta") {
+                    // dos bordes: la amplitud por un seno que avanza a lo ancho; donde se cruzan, la cinta «gira»
+                    const edge = (sign) => {
+                        for (let i = 0; i < n; i++) {
+                            const [x, a] = pts[i], y = mid + sign * a * Math.cos(i / (n - 1) * Math.PI * 3);
+                            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                        }
+                    };
+                    ctx.globalAlpha = 0.35; ctx.beginPath(); edge(1);
+                    for (let i = n - 1; i >= 0; i--) { const [x, a] = pts[i]; ctx.lineTo(x, mid - a * Math.cos(i / (n - 1) * Math.PI * 3)); }
+                    ctx.closePath(); ctx.fill();
+                    ctx.globalAlpha = 1; ctx.lineWidth = 1.3;
+                    ctx.beginPath(); edge(1); ctx.stroke(); ctx.beginPath(); edge(-1); ctx.stroke();
+                } else if (k === "escalones") {
+                    // 24 columnas (una por cada dos bandas) de bloques de 2 px con 1 px de hueco
+                    const cols = Math.floor(n / 2), cw = w / cols, step = 3;
+                    for (let c = 0; c < cols; c++) {
+                        const a = Math.max(pts[2 * c][1], pts[2 * c + 1]?.[1] ?? 0), blocks = Math.max(1, Math.round(a / step));
+                        for (let b = 0; b < blocks; b++) {
+                            ctx.globalAlpha = 1 - b / (blocks + 2) * 0.6;
+                            ctx.fillRect(c * cw + 0.5, mid - (b + 1) * step + 1, cw - 1.5, 2);
+                            ctx.fillRect(c * cw + 0.5, mid + b * step, cw - 1.5, 2);
+                        }
+                    }
+                } else if (k === "capas") {
+                    // la de fondo más ancha y tenue; cada capa, la misma onda escalada
+                    for (const [sc2, al] of [[1, 0.25], [0.7, 0.45], [0.4, 0.9]]) {
+                        ctx.globalAlpha = al;
+                        const old = pts.map(p => p[1]);
+                        for (let i = 0; i < n; i++) pts[i][1] = old[i] * sc2;
+                        ctx.beginPath(); curve(-1); curve(1); ctx.fill();
+                        for (let i = 0; i < n; i++) pts[i][1] = old[i];
+                    }
                 } else {
                     ctx.lineWidth = 1.6; ctx.lineJoin = "round";
                     ctx.beginPath(); curve(-1); ctx.stroke();

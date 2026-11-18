@@ -48,6 +48,7 @@
   {"f": "Animaciones", "l": "Espacios", "t": "row", "g": "Movimiento"},
   {"f": "Animaciones", "l": "Minimizar al dock", "t": "row", "s": "la ventana vuela y se encoge hasta su icono del dock", "g": "Movimiento"},
   {"f": "Animaciones", "l": "Onda al pulsar", "t": "row", "s": "botones y mosaicos dibujan una onda desde el punto pulsado", "g": "Movimiento"},
+  {"f": "Animaciones", "l": "Deslizadores con brillo", "t": "row", "s": "volumen, brillo y demás deslizadores con un halo del color del tema", "g": "Movimiento"},
   {"f": "Animaciones", "l": "Ventanas", "t": "card"},
   {"f": "Animaciones", "l": "Sombras", "t": "row", "g": "Ventanas"},
   {"f": "Animaciones", "l": "Resaltado", "t": "row", "g": "Ventanas"},
@@ -509,6 +510,7 @@
   {"f": "Usuarios", "l": "Tu cuenta", "t": "card"},
   {"f": "Usuarios", "l": "Nombre completo", "t": "row", "g": "Tu cuenta"},
   {"f": "Usuarios", "l": "Contraseña", "t": "row", "g": "Tu cuenta"},
+  {"f": "Usuarios", "l": "Tarjeta de perfil", "t": "row", "s": "la foto con un anillo del color del tema y, en los ajustes rápidos, encendido · CPU · memoria", "g": "Tu cuenta"},
   {"f": "Usuarios", "l": "Inicio de sesión", "t": "card"},
   {"f": "Usuarios", "l": "Iniciar sesión automáticamente", "t": "row", "g": "Inicio de sesión"},
   {"f": "Usuarios", "l": "Usuarios del equipo", "t": "card"},
@@ -531,7 +533,7 @@
   "Acerca": ["settingsTech", "syncApps", "syncMethod", "syncWallpapers"],
   "Agenda": ["calendarCollapsed", "calendarIcs"],
   "Almacenamiento": ["devicesAutomount", "devicesBarIcon", "devicesNotify", "devicesOpenOnPlug", "downloadsAudioFormat", "downloadsBarIcon", "downloadsHistory", "downloadsNotify", "downloadsParallel", "downloadsResume", "downloadsVideoFormat"],
-  "Animaciones": ["activeBorder", "animMinimize", "animPreset", "animSpeed", "animado", "blurAuto", "blurOnBattery", "blurQuality", "dimInactive", "gameNoFx", "inactiveOpacity", "inactiveOpacityExclude", "ripple", "shadows", "workspaceAnim"],
+  "Animaciones": ["activeBorder", "animMinimize", "animPreset", "animSpeed", "animado", "blurAuto", "blurOnBattery", "blurQuality", "dimInactive", "gameNoFx", "inactiveOpacity", "inactiveOpacityExclude", "ripple", "shadows", "sliderGlow", "workspaceAnim"],
   "Apariencia": ["accent", "appFontPx", "colorMode", "fontFamily", "fontScale", "gapsIn", "gapsOut", "iconFolders", "lightFrom", "lightTo", "monoFondo", "palette", "rounding", "roundingShape", "roundness", "termFontPx", "themeApps", "themeBtop", "themeGtk", "themeIcons", "themeKitty", "themeMode", "themeQt", "themeSchedule", "themeWallpaper", "transparencia", "uiScale"],
   "Aplicaciones": ["protonWayland", "wineTweaks"],
   "BarWidgets": ["barActions", "barCustom", "barModules", "barOrder", "barStatsShow", "barStatsStyle", "barWeatherText"],
@@ -559,5 +561,6 @@
   "Remoto": ["rdpListen", "rdpOutput", "rdpServer", "remoteClient", "remoteHosts", "vncListen", "vncOutput"],
   "Sistema": ["hfUpdateCheck", "safeModeCrashLimit", "updatesFirmware", "updatesFlatpak", "updatesMode", "updatesSnapshot"],
   "Sonido": ["audioAutoSwitch", "noiseSuppression", "overAmplify", "systemSounds"],
-  "Teclado": ["capsEscape", "kbLayouts", "kbRepeatDelay", "kbRepeatRate", "kbSwitch", "keybinds", "numlock"]
+  "Teclado": ["capsEscape", "kbLayouts", "kbRepeatDelay", "kbRepeatRate", "kbSwitch", "keybinds", "numlock"],
+  "Usuarios": ["profileCard"]
 }}

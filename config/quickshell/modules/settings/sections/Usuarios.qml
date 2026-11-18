@@ -176,6 +176,7 @@ RowLayout {
                 Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
                 text: "La foto se usa en la pantalla de bloqueo, los ajustes rápidos y el inicio de sesión. El nombre completo aparece al bloquear."
             }
+            SwRow { label: "Tarjeta de perfil"; sub: "la foto con un anillo del color del tema y, en los ajustes rápidos, encendido · CPU · memoria"; key: "profileCard"; def: true }
         }
         Section {
             Layout.fillWidth: true

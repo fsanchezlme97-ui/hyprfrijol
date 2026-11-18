@@ -132,7 +132,9 @@ portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si o
 | `barPos` / `barMode` | `abajo` `arriba` `izquierda` `derecha` / `fija` `flotante` `isla` `archipielago` | posición y forma (archipiélago: cada grupo en su propia píldora; si flota, el margen con el borde es `gapsOut`, entre 2 y 4 px) |
 | `gapsIn` / `gapsOut` | 0–20 | hueco entre ventanas / con el borde y la barra |
 | `osdPos` / `osdOffset` | `abajo` `arriba` `centro` `izquierda` `derecha` `inf-der` `sup-der` / px | dónde salen los avisos de volumen, brillo y Bloq Mayús |
-| `waveStyle` | `barras` · `onda` · `linea` | onda de audio de la barra (cava a 60 fps) |
+| `waveStyle` | `barras` · `onda` · `linea` · `zigzag` · `cinta` · `escalones` · `capas` | onda de audio de la barra (cava a 60 fps) |
+| `sliderGlow` | `true` · `false` | deslizadores (volumen, brillo, OSD) con un halo del color del tema |
+| `profileCard` | `true` · `false` | tarjeta de perfil: anillo en degradado en la foto y encendido · CPU · memoria en los ajustes rápidos |
 | `pipCorner` / `pipFree` | `sup-izq` `sup-centro` `sup-der` `inf-izq` `inf-centro` `inf-der` `libre` / `[x, y]` | posición del PiP; al arrastrarlo se imanta o queda libre |
 
 ## Modo de ventanas (Escritorio y gestos · `services/WinMode.qml` + `30-layout.py` + `35-windows.py`)

@@ -93,11 +93,21 @@ PanelWindow {
                 visible: win.hasBar
                 implicitWidth: 150; implicitHeight: 4; radius: 2
                 color: Theme.fill2
+                SliderGlow { target: osdFill; glow: osdFill.color }
                 Rectangle {
+                    id: osdFill
                     width: parent.width * Math.max(0, Math.min(1, win.level))
                     height: parent.height; radius: 2
                     color: win.kind === "volumen" && Audio.muted ? Theme.o : Theme.p
                     Behavior on width { NumberAnimation { duration: Theme.durShort; easing.type: Easing.OutCubic } }
+                }
+                // con brillo, una perla luminosa en la punta (como el deslizador de la referencia)
+                Rectangle {
+                    visible: Settings.get("sliderGlow", true) === true && osdFill.width > 1
+                    width: 10; height: 10; radius: 5
+                    x: osdFill.width - 5; anchors.verticalCenter: parent.verticalCenter
+                    color: Qt.tint(osdFill.color, Qt.alpha("#ffffff", 0.55))
+                    SliderGlow { target: parent; glow: osdFill.color; x: 0; y: 0 }
                 }
             }
             Txt {

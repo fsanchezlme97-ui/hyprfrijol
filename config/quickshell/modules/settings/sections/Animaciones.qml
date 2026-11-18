@@ -74,6 +74,7 @@ ColumnLayout {
             }
             SwRow { label: "Minimizar al dock"; sub: "la ventana vuela y se encoge hasta su icono del dock"; key: "animMinimize"; def: true; enabled: mov.preset !== "ninguno" && !Theme.reduceMotion }
             SwRow { label: "Onda al pulsar"; sub: "botones y mosaicos dibujan una onda desde el punto pulsado"; key: "ripple"; def: true; enabled: !Theme.reduceMotion }
+            SwRow { label: "Deslizadores con brillo"; sub: "volumen, brillo y demás deslizadores con un halo del color del tema"; key: "sliderGlow"; def: true }
             LinkRow {
                 visible: Theme.reduceMotion
                 label: "Reducir movimiento está activado"; value: "Sin animaciones"
