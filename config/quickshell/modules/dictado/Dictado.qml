@@ -450,7 +450,7 @@ Scope {
 
         readonly property bool isCmd: root.kind === "comando" || root.cmdText !== ""
         readonly property color accent: root.phase === "error" || (root.cmdText && root.cmdMsg && !root.cmdOk) ? Theme.danger
-                                      : root.phase === "rec" && !isCmd && !convIdle ? Theme.danger : Theme.p
+                                      : root.phase === "rec" && !isCmd && !convIdle && root.kind !== "ia" ? Theme.danger : Theme.p   // walkie: color del asistente, no rojo
         readonly property string iconName: win.convIdle ? (root.convState === "habla" ? "volume" : "ai")
                                          : root.cmdMsg ? (root.cmdOk ? "check" : "alert")
                                          : root.phase === "done" ? "check" : root.phase === "error" ? "alert"

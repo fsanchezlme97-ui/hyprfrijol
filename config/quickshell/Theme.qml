@@ -122,6 +122,13 @@ Singleton {
     readonly property string mono: "JetBrains Mono"
     readonly property real scale: data.fontScale ?? 1.0
     function px(n: real): real { return Math.round(n * scale * 2) / 2; }
+    // Escala tipográfica (components/Txt.qml): leyenda · secundario · cuerpo · cuerpo grande · subtítulo · títulos
+    readonly property var typeScale: [9.5, 10.5, 11.5, 12.5, 14, 16, 18, 20, 24, 28, 32, 40, 48, 56, 72, 96]
+    function typeStep(n: real): real {
+        let best = typeScale[0];
+        for (const v of typeScale) if (Math.abs(v - n) <= Math.abs(best - n)) best = v;   // <=: empate hacia arriba
+        return best;
+    }
     // Movimiento (Ajustes › Apariencia › Movimiento → hf-apply → theme.json motion): duraciones y curvas del
     // preajuste (Fluido · Equilibrado · Rápido · Mínimo · Ninguna) ya divididas por la velocidad elegida.
     // «Reducir movimiento» o animaciones apagadas → 0.

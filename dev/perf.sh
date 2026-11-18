@@ -4,6 +4,7 @@
 #   dev/perf.sh               reposo: 20 s tras asentarse
 #   dev/perf.sh -t 40         ventana de medida en segundos
 #   dev/perf.sh -v ajustes    además mide con esa vista abierta (spotlight, ajustes, vista…)
+#   dev/perf.sh -s '.barModules -= ["voz"]'   con los ajustes cambiados por esa expresión de jq (para buscar qué gasta)
 #   dev/perf.sh -c 3          fugas: abre y cierra todas las vistas y secciones de Ajustes 3 veces y da la memoria
 #                             (anónima) tras cada vuelta; si sigue subiendo después de la primera, algo no se libera
 #
@@ -12,7 +13,7 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 T=20; VIEW=""; CYC=0
-while getopts "t:v:c:" o; do case $o in t) T=$OPTARG;; v) VIEW=$OPTARG;; c) CYC=$OPTARG;; *) exit 1;; esac; done
+while getopts "t:v:c:s:" o; do case $o in t) T=$OPTARG;; v) VIEW=$OPTARG;; c) CYC=$OPTARG;; s) SET=$OPTARG;; *) exit 1;; esac; done
 VIEWS="spotlight ajustes energia fondos actualizaciones vista widgets w-clima w-sistema bienvenida atajos musica captura color tareas remoto maquinas impresion restauracion"
 SECTIONS="$(grep -oE '\{ (grp: "[^"]*", )?key: "[a-z]+"' "$ROOT/config/quickshell/modules/settings/SettingsApp.qml" | sed -E 's/.*"([a-z]+)"/\1/' | tr '\n' ' ')"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/hf-perf.XXXXXX")"
@@ -22,6 +23,10 @@ mkdir -p "$FH/.config" "$FH/.local/state" "$FH/.cache"
 cp -rL "$HOME/.config/hyprfrijol" "$FH/.config/" 2>/dev/null || mkdir -p "$FH/.config/hyprfrijol"
 cp -rL "$HOME/.local/state/hyprfrijol" "$FH/.local/state/" 2>/dev/null || true
 [ -d "$HOME/.config/hypr" ] && cp -rL "$HOME/.config/hypr" "$FH/.config/" 2>/dev/null
+if [ -n "${SET:-}" ]; then
+  f="$FH/.config/hyprfrijol/settings.json"; [ -f "$f" ] || echo '{}' > "$f"
+  jq "$SET" "$f" > "$f.n" && mv "$f.n" "$f" || { echo "-s: expresión de jq no válida" >&2; exit 1; }
+fi
 
 cat > "$TMP/probe.sh" <<EOF
 #!/bin/bash

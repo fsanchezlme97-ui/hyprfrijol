@@ -3,6 +3,25 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.44] — 2026-11-17
+
+### Novedades
+- **Seis temas nuevos, cada uno en oscuro y claro:** Marple, Eucalipto, Sunset, Violet Dusk, Cove y Blush, con sus
+  colores originales y el contraste comprobado (texto a 13:1 como mínimo, botones a 4,5:1).
+
+### Interfaz
+- **Escala tipográfica:** los ~30 tamaños de letra que había (10, 10,5, 11, 11,5, 12, 12,5, 13…) se ajustan a una escala
+  de 16 escalones (`Theme.typeScale`); la jerarquía se nota más y ningún texto se mueve más de 1 px.
+- **Sombras teñidas:** las de los paneles llevan un poco del color del tema en vez de negro puro, como ya hacían las
+  de las ventanas.
+- **Voz:** el walkie-talkie ya no se pone rojo al escuchar (el rojo queda para el dictado); «voz desactivada» se ve en
+  rojo y atenúa los otros modos.
+
+### Rendimiento
+- La onda de audio de la barra (y su `cava`) se para cuando nadie la ve: pantalla completa, modo juego, sesión
+  bloqueada o barra escondida. Antes seguía a 30 fps toda la noche bajo el bloqueo.
+- `dev/perf.sh -s '<jq>'` mide con ajustes cambiados (para buscar qué gasta).
+
 ## [0.10.43] — 2026-11-17
 
 ### Novedades (asistente por voz)

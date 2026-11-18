@@ -17,7 +17,7 @@ IconBtn {
     icon: Audio.micMuted ? "mic-off" : mode === "walkie" ? (rec ? "walkie_rec" : "walkie") : mode === "fluido" ? "fluido"
           : mode === "desactivado" ? "voz_off" : rec ? "mic_rec" : "mic_dictado"
     active: rec || Shell.aiConversation
-    fg: Audio.micMuted ? Theme.danger : mode === "desactivado" ? Theme.tv : Theme.t
+    fg: Audio.micMuted || mode === "desactivado" ? Theme.danger : Theme.t
     // Silenciado no se cambia de modo (modules/dictado/Dictado.qml): el clic solo lo vuelve a activar
     tooltip: Audio.micMuted ? "Micrófono silenciado · clic para activarlo · Super + Alt + M"
              : Shell.aiSpeaking && mode !== "desactivado" ? "Clic para que " + (Settings.get("aiName", "") || "Harper") + " deje de hablar"

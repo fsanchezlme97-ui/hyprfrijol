@@ -595,9 +595,12 @@ def style_tokens(c, s):
     if base_sh:
         S.update(shBlur=base_sh[0], shY=base_sh[1], shBigBlur=base_sh[2], shBigY=base_sh[3], shSpread=base_sh[4])
     sk = SHADOWS.get(s.get("shadows", "suaves"), SHADOWS["suaves"])
+    # Sombra de los paneles teñida con el primario (más en claro), como la de las ventanas (config/apply/10-look.py):
+    # el negro puro se ve sucio y duro sobre fondos de color
+    shade = mix(K, c["p"], .18 if LT else .06)
     for key in ("shadow", "shadowBig"):
         a = int(S[key][1:3], 16) / 255
-        S[key] = argb("#" + S[key][3:], min(1, a * sk["alpha"]))
+        S[key] = argb(shade, min(1, a * sk["alpha"]))
     for key in ("shBlur", "shBigBlur"):
         S[key] = round(S[key] * sk["blur"])
     for key in ("shY", "shBigY"):

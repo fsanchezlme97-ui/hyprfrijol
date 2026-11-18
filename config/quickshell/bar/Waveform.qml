@@ -16,6 +16,7 @@
 // música. Clic central: reproducir/pausar.
 // Rueda: volumen.
 import QtQuick
+import Quickshell
 import ".."
 import "../components"
 import "../services"
@@ -52,11 +53,15 @@ Rectangle {
     readonly property var paintKey: [Theme.p, Theme.ter, kind, aiState]
     onPaintKeyChanged: { idlePainted = false; cv.requestPaint(); }
 
-    UseCounter { target: Cava; active: root.visible }
+    // Nadie la ve (pantalla completa, modo juego, sesión bloqueada o barra escondida): ni animación ni cava, como el
+    // icono del tiempo (WeatherChip). Antes seguía a 30 fps bajo el juego o el bloqueo toda la noche.
+    readonly property bool covered: Shell.gameMode || Shell.locked || Shell.barHidden
+                                    || WinMode.hasFullscreen(root.QsWindow.window?.screen?.name ?? "")
+    UseCounter { target: Cava; active: root.visible && !root.covered }
 
     readonly property bool gpuBars: drawKind === "barras"
     FrameAnimation {
-        running: root.visible && (Cava.active || root.peak > 0.002 || root.aiState !== "")
+        running: root.visible && !root.covered && (Cava.active || root.peak > 0.002 || root.aiState !== "")
         property real acc: 0
         onTriggered: {
             // 30 fps: un fotograma de cada dos (con el tiempo acumulado, para que la caída no se ralentice)

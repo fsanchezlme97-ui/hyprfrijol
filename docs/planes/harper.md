@@ -5,7 +5,7 @@ Fecha: 2026-11-16 · Estado: diseño pendiente de aprobación
 ## Por qué
 
 El asistente del panel lateral debe rendir bien en local (gemma4:e4b en la RX 6600 XT) sin depender de la nube ni
-de EcoFlow AI, que queda como proyecto aparte. Se le cambia el nombre a **Harper** y se le dan tres capacidades que
+de Open Web UI - C_SrFrijol, que queda como proyecto aparte. Se le cambia el nombre a **Harper** y se le dan tres capacidades que
 hoy le faltan o fallan: encontrar y abrir archivos, no equivocarse de sitio al usar la pantalla, y dibujar para
 explicar.
 
@@ -24,7 +24,7 @@ explicar.
 
 ## Fuera de alcance
 
-- Unirlo con EcoFlow AI (llama-swap, Qwen 35B, FLUX, Kokoro, ComfyUI).
+- Unirlo con Open Web UI - C_SrFrijol (llama-swap, Qwen 35B, FLUX, Kokoro, ComfyUI).
 - Imágenes por difusión, código libre en p5.js/Zdog/Three.js, escenas de Spline, HyperFrames y Remotion. Con gemma4,
   el código libre en p5 y Zdog salió roto en la prueba (ver «Enfoques»).
 - Indexar los archivos (RAG) o buscar por contenido. La búsqueda es por nombre.
