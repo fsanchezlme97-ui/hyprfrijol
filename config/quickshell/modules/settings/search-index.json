@@ -125,7 +125,6 @@
   {"f": "Barra", "l": "Posición", "t": "row", "g": "Indicadores de volumen y brillo"},
   {"f": "Barra", "l": "Distancia", "t": "row", "g": "Indicadores de volumen y brillo"},
   {"f": "Barra", "l": "Onda de audio", "t": "card"},
-  {"f": "Barra", "l": "Estilo", "t": "row", "g": "Onda de audio"},
   {"f": "BloqueoLogin", "l": "Pantalla de bloqueo", "t": "card"},
   {"f": "BloqueoLogin", "l": "Tema", "t": "row", "g": "Pantalla de bloqueo"},
   {"f": "BloqueoLogin", "l": "Fondo", "t": "row", "g": "Pantalla de bloqueo"},

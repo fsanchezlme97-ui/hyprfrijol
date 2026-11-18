@@ -8,6 +8,7 @@ import "../../.."
 import "../../../components"
 import "../../../services"
 import "../ui"
+import "../../../bar"
 
 ColumnLayout {
     id: root
@@ -260,14 +261,44 @@ ColumnLayout {
         Layout.fillWidth: true
         title: "Onda de audio"
         headerRight: Sw { checked: Settings.barHas("musica"); onToggled: v => { const l = Settings.barModuleList.filter(m => m !== "musica"); if (v) l.push("musica"); Settings.set("barModules", l); } }
-        LabeledRow {
-            label: "Estilo"; labelWidth: 60
-            Dropdown {
-                Layout.fillWidth: true
+        // Cada estilo dibujado con unos niveles de muestra (bar/Waveform.qml en modo muestra)
+        GridLayout {
+            id: waveGrid
+            Layout.fillWidth: true
+            columns: width > 640 ? 4 : 3
+            columnSpacing: 8; rowSpacing: 8
+            readonly property var sample: Array.from({ length: 48 }, (_, i) => 0.18 + 0.55 * Math.abs(Math.sin(i * 0.37)) * (0.55 + 0.45 * Math.cos(i * 0.11)))
+            Repeater {
                 model: [["barras", "Barras"], ["onda", "Onda rellena"], ["linea", "Línea"], ["zigzag", "Zigzag"],
-                        ["cinta", "Cinta"], ["escalones", "Escalones (vúmetro)"], ["capas", "Capas suaves"]]
-                current: Settings.get("waveStyle", "barras")
-                onPicked: k => Settings.set("waveStyle", k)
+                        ["cinta", "Cinta"], ["escalones", "Escalones"], ["capas", "Capas suaves"], ["burbujas", "Burbujas"],
+                        ["agujas", "Agujas"], ["montana", "Montaña"], ["reflejo", "Reflejo"], ["pixeles", "Píxeles"],
+                        ["eco", "Eco"], ["cuerdas", "Cuerdas"], ["pulso", "Pulso"]]
+                Rectangle {
+                    id: wc
+                    required property var modelData
+                    readonly property bool sel: Settings.get("waveStyle", "barras") === modelData[0]
+                    Layout.fillWidth: true
+                    implicitHeight: 74
+                    radius: Theme.r(7)
+                    color: sel ? Theme.selBg : wma.containsMouse ? Qt.alpha(Theme.t, 0.04) : "transparent"
+                    border.width: sel ? 2 : 1
+                    border.color: sel ? Theme.p : Theme.ov
+                    Waveform {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        y: 8
+                        scale: Math.min(1, (wc.width - 16) / implicitWidth)
+                        barHeight: 38
+                        forceKind: wc.modelData[0]
+                        sample: waveGrid.sample
+                    }
+                    Txt {
+                        anchors { left: parent.left; right: parent.right; bottom: parent.bottom; bottomMargin: 8 }
+                        horizontalAlignment: Text.AlignHCenter
+                        text: wc.modelData[1]; size: 11.5; weight: Font.Medium
+                        color: wc.sel ? Theme.selText : Theme.t
+                    }
+                    MouseArea { id: wma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Settings.set("waveStyle", wc.modelData[0]) }
+                }
             }
         }
         // Estados del asistente (bar/Waveform.qml): se ven en cualquier estilo, antes que la música

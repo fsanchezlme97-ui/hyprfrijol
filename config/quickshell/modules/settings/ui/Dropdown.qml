@@ -38,6 +38,7 @@ Rectangle {
     Popup {
         id: pop
         y: root.height + 4
+        margins: 8      // dentro de la ventana: al final de una página la lista se abría por debajo del borde y no se veía
         x: root.flat && !root.alignLeft ? root.width - width : 0
         width: root.popupWidth
         height: Math.min(320, list.contentHeight + (root.searchable ? 44 : 0) + 10)

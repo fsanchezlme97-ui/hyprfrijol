@@ -3,6 +3,22 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.10.47] — 2026-11-17
+
+### Novedades
+- **15 estilos de onda de audio** con vista previa: Ajustes › Barra › Onda de audio enseña cada estilo dibujado en
+  una tarjeta y se elige con un clic. Nuevos: burbujas, agujas, montaña, reflejo, píxeles, eco, cuerdas y pulso.
+- **Colores del tema** en todas las ondas: degradado del primario (izquierda) al terciario (derecha), sin atenuar
+  (antes el primario iba a media transparencia y con muchos temas se veía gris).
+
+### Cambios
+- **Barras sin caída:** se fue el movimiento con gravedad y las marcas de pico que bajaban despacio; ahora cada banda
+  sube y baja con un suavizado parejo y se mezcla un poco con sus vecinas, así el perfil se ve como una curva.
+
+### Arreglos
+- Los desplegables de Ajustes ya no abren su lista por debajo del borde de la ventana (al final de una página no se
+  veía).
+
 ## [0.10.46] — 2026-11-17
 
 ### Novedades
