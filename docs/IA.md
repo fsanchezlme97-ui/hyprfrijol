@@ -177,14 +177,35 @@ Claves de `set`: `estilo`, `colorMode`, `palette`, `themeMode`, `barPos`, `barMo
 - **Deshacer** → `hf-ai undo <id>`: restaura los ajustes tocados, el fondo, «no molestar» y el espacio.
 - Los comandos `run` nunca se ejecutan solos: hay que confirmar y se abren en la terminal (`kitty`).
 
-### Voz: solo las órdenes que no se entienden
+### Voz: órdenes, sin conversación
+
+No se conversa por voz con Harper (desde 0.11.0): la conversación por voz y los modelos grandes viven en otro
+proyecto (Open WebUI con su modo de llamada). Aquí se quedan el dictado, las órdenes de voz y la voz de Harper como
+**lectora** opcional (`aiVoice`, apagada por defecto: avisos urgentes y el saludo con lo pendiente del día).
 
 El **dictado nunca usa IA** (la antigua limpieza `dictationAI` se retiró; `hf-migrate --retired-only` quita la clave con
 copia en `settings.json.antes-sin-ia-dictado`). Las órdenes de voz («Distro, …» al dictar, o Super+Alt+V) las entiende
-`scripts/hf-voice` sin IA: primero las órdenes propias (`voiceCommands`) y los sinónimos (`voiceAliases`), luego las
-de serie. Solo lo que no entiende va al panel (`qs ipc call sidepanel ask`), si `voiceAiFallback` está activo, y lo que
-cambie algo pasa por la aprobación de siempre. `voiceCommands`, `voiceAliases` y `voiceAiFallback` están en `DENY_KEYS`:
-el asistente no puede crearse órdenes que ejecuten comandos.
+`scripts/hf-voice`: primero las órdenes propias (`voiceCommands`) y los sinónimos (`voiceAliases`), luego las de serie
+(con **buscar archivo**, que abre Spotlight en `/`, y **leer archivo**, que lo abre en kitty con `bat`). Si nada
+encaja, una **IA local** (Ollama, nunca la nube) elige entre las órdenes conocidas: devuelve `{"orden", "valor"}` con
+salida JSON limitada, la orden pasa otra vez por las reglas y nunca escribe un comando suyo (`voiceLocalAI`,
+`voiceLocalModel`). Si tampoco, la frase va escrita al panel (`qs ipc call sidepanel ask`) si `voiceAiFallback` está
+activo, y lo que cambie algo pasa por la aprobación de siempre. `voiceCommands`, `voiceAliases` y `voiceAiFallback`
+están en `DENY_KEYS`: el asistente no puede crearse órdenes que ejecuten comandos.
+
+**Qué modelo** (`dev/voz-modelos.py`, 2026-11-19, RX 6600 XT): 40 frases que las reglas no entienden, 3 de ellas
+trampas destructivas («borra la carpeta de descargas») que deben dar `ninguna`. Gana el más pequeño que no sea peor
+que gemma4:e4b (mismos aciertos o más, ninguna trampa) y conteste en menos de 1,5 s; si no, gemma4:e4b.
+
+| Modelo | Aciertos | Trampas falladas | Mediana | p90 | En disco |
+|---|---|---|---|---|---|
+| **gemma4:e4b** (se queda) | 37/40 | 0 | 504 ms | 540 ms | 6,1 GB |
+| gemma4:e2b | 35/40 | 0 | 260 ms | 281 ms | 4,3 GB |
+| qwen3.5:2b | 31/40 | 2 | 500 ms | 549 ms | 2,5 GB |
+| qwen3.5:4b | 38/40 | 0 | 3919 ms | 5803 ms | 3,1 GB |
+
+qwen3.5:4b acierta una más pero tarda casi 4 s; gemma4:e2b es el doble de rápido pero falla más. Un solo modelo para
+el panel y la voz: gemma4:e4b.
 
 ### Aprobación
 
