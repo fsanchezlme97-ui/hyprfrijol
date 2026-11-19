@@ -1,11 +1,11 @@
 # Voz sin conversación con la IA: dictado, órdenes de voz y una IA local pequeña
 
-Fecha: 2026-11-18 · Estado: propuesta
+Fecha: 2026-11-18 · Estado: aprobado
 
 ## Por qué
 
-HyperFrijol ha ido acumulando una capa de «hablar con Harper» (walkie-talkie, conversación fluida, voz Piper,
-cancelador de eco, modo compañero, avisos hablados) que solapa con lo que ya hace mejor el proyecto
+HyperFrijol ha ido acumulando una capa de «hablar con Harper» (walkie-talkie, conversación fluida, respuestas
+habladas, cancelador de eco, modo compañero) que solapa con lo que ya hace mejor el proyecto
 `~/Proyectos/c_srfrijol` (Open WebUI con Kokoro, whisper y modelos grandes, con su propio modo de llamada por voz).
 La conversación por voz y los modelos pesados pasan a vivir allí. En HyperFrijol se queda solo lo que es del
 escritorio: el asistente escrito del panel lateral, el dictado y las órdenes de voz, con la IA local más pequeña
@@ -32,7 +32,7 @@ que lo haga bien.
 
 - Que la IA escriba y ejecute un comando de shell suyo. **Solo** elige entre órdenes conocidas (opción A elegida).
 - Que una orden de voz salga a la nube: la capa nueva usa siempre Ollama local, aunque el panel use Claude o Gemini.
-- Que quede algo que hable: ni Piper, ni `hf-ai speak`, ni avisos leídos en voz alta.
+- Que se pueda **conversar** por voz con Harper. Su voz (Piper) se queda, pero solo para leer en voz alta.
 - Que se rompa la barra de quien tenga el widget «voz» o «dictado» puesto.
 
 ## Qué se quita
@@ -42,12 +42,10 @@ que lo haga bien.
 | Walkie-talkie y conversación fluida (`kind: "ia"`, `conv*`, `--tts`, barge-in) | `modules/dictado/Dictado.qml`, `scripts/hf-dictate` |
 | Modo del micrófono (`micMode`, `micModes`, `micCycle`, clic derecho, `hf:micro-modo` `Super+Shift+Alt+M`) | `Dictado.qml`, `Shell.qml`, `bar/MicBtn.qml`, `config/hypr/frijol/binds.lua` |
 | `hf:hablar` (`Super+Alt+H`) | `binds.lua`, `Dictado.qml` |
-| Voz de Harper: `hf-ai speak`, `voice-install`, `voice-warm`, servidor residente Piper | `scripts/hf-ai` |
 | Cancelador de eco (`hf-dictate aec`, `HF_DICTATE_AEC`) | `scripts/hf-dictate`, `config/hypr/frijol/autostart.lua` |
 | Modo compañero | `modules/dictado/Companion.qml` (se borra), `hf-ai peek` si solo lo usa él |
-| Avisos y saludos hablados (`aiAnnounceGreet`, `aiAnnounceUrgent`) | `Notifs.qml`, `Shell.qml` |
-| Estado «Harper hablando» (`aiSpeaking`, `aiMuted`, onda de la voz) | `Shell.qml`, `bar/Waveform.qml`, `Cava.qml`, `Puntero.qml`, `Theme.qml`, `AiChat.qml` |
-| Ajustes de todo lo anterior (`aiVoice`, `aiVoiceLocal`, `aiTalkMode`, `aiCompanion*`, `aiMuted`…) | `sections/IA.qml`, `sections/Dictado.qml`, `search-index.json`, `config/defaults/settings.json` |
+| Respuestas habladas del chat (`aiVoice` como «contestar en voz alta», `aiTalkMode`, `aiVoiceLocal`) | `AiChat.qml`, `Shell.qml`, `sections/IA.qml` |
+| Ajustes de todo lo anterior (`aiTalkMode`, `aiCompanion*`, `micMode`…) | `sections/IA.qml`, `sections/Dictado.qml`, `search-index.json`, `config/defaults/settings.json` |
 | Iconos `walkie`, `walkie_rec`, `fluido`, `voz_off`, `audio_lines` (si nadie más los usa) | `components/Icons.qml` |
 | Documentación | `docs/IA.md`, `docs/AJUSTES.md`, `README.md`, `CHANGELOG.md` |
 
@@ -55,9 +53,7 @@ Para encontrarlo todo: `grep -rlE 'aiVoice|aiCompanion|aiSpeak|walkie|fluido|mic
 (unos 30 archivos el 2026-11-18). `dev/coherencia.py` debe seguir pasando.
 
 **Migración** (`scripts/hf-migrate`): borra de `settings.json` las claves retiradas. Si alguien tenía el widget
-«voz», sigue apareciendo, ahora con los dos botones nuevos. El entorno de Piper en
-`~/.local/share/hyprfrijol/tts` **no se borra solo** (son archivos del usuario): el CHANGELOG da la orden para
-borrarlo a mano.
+«voz», sigue apareciendo, ahora con los dos botones nuevos. El entorno de Piper se queda (la voz lectora lo usa).
 
 ## Qué se queda o se amplía
 
@@ -91,7 +87,18 @@ Ajustes nuevos: `voiceLocalModel` (el modelo de Ollama de la capa, por defecto e
 `voiceLocalAI` (encendido por defecto). Van en Ajustes › Dictado, junto a las órdenes de voz.
 
 ### Asistente del panel lateral
-Igual, salvo lo que hablaba. Su modelo es la pregunta pendiente de abajo.
+Igual, salvo que ya no contesta hablando a lo que le preguntas: es escrito.
+
+### Voz de Harper (opcional, solo para leer)
+Se queda Piper (`hf-ai speak`, `voice-install`, `voice-warm`) como **lectora**, apagada por defecto, con un solo
+interruptor en Ajustes › Asistente de IA: «Leer en voz alta» (`aiVoice`). Lo que lee, cada cosa con su casilla:
+
+- avisos relevantes (los urgentes: recordatorios, batería…; `aiAnnounceUrgent`, como ahora);
+- tareas puntuales: recordatorios y temporizadores del asistente cuando vencen, y el saludo con lo pendiente del
+  día (`aiAnnounceGreet`).
+
+Mientras lee, el estado `aiSpeaking` y la onda siguen igual, y cualquier botón de voz de la barra la corta.
+No escucha nada después (no hay barge-in ni conversación).
 
 ## La IA local: cómo se elige
 
@@ -102,7 +109,8 @@ seguridad («borra la carpeta de descargas», que no existe como orden y debe da
 
 Candidatos: `gemma4:e2b`, `qwen3.5:2b`, `qwen3.5:4b` y el `gemma4:e4b` actual como referencia. Se mide el
 acierto, la latencia con el modelo ya cargado (en la GPU de este equipo y en la CPU) y la RAM/VRAM. Gana el más
-pequeño que acierte al menos 38 de 40, sin fallar ninguna trampa, y responda en menos de 1,5 s en la GPU. El
+pequeño que no sea peor que `gemma4:e4b` (mismos aciertos o más, ninguna trampa fallada) y responda en menos de
+1,5 s en la GPU; si ninguno lo consigue, se queda `gemma4:e4b`. El
 resultado queda en `docs/IA.md` con la fecha, y los perfiles `perfil/equipo-*.json` y `install.sh` (que ya
 eligen modelo según el equipo) pasan a ese modelo.
 
@@ -123,7 +131,7 @@ ahora:  [dictado] [orden]
 ## Paquetes
 
 `bat` pasa a `install/packages.tsv` como opcional (lector de archivos de las órdenes de voz) en todas las distros.
-Piper no tiene paquete en `packages.tsv` (lo instalaba `hf-ai voice-install`); esa orden desaparece.
+Piper no tiene paquete en `packages.tsv` (lo instala `hf-ai voice-install`, que se queda).
 
 ## Enfoques considerados
 
@@ -145,16 +153,16 @@ shell y tú lo confirmas) descartada porque un modelo pequeño se equivoca a men
 - El límite de 2 MB y lo de no abrir binarios.
 - 3 s de tiempo máximo para la capa de IA.
 - `Super+Alt+M` queda como dictado; `Super+Shift+Alt+M` y `Super+Alt+H` se quitan sin reasignar.
-- Los archivos de Piper no se borran solos.
 - `dictationAiFix` pierde la opción `asistente` (era para lo dicho al walkie): queda `nunca|siempre` y la migración
   pasa `asistente` a `nunca`.
 - `hf-ai digest` (resumen local de avisos, escrito) se queda: no habla.
 
-## Pendiente de decidir
+## Decidido
 
-- **Modelo del panel lateral.** El panel usa ahora `gemma4:e4b` (6,6 GB). Si la prueba elige uno más pequeño para
-  la voz: ¿el panel pasa también a ese (un solo modelo cargado, menos memoria, el asistente algo menos listo) o se
-  queda en e4b (dos modelos que se turnan en la gráfica de 8 GB)?
+- **Un solo modelo para todo** (panel y voz). Si los pequeños salen peores que `gemma4:e4b` en la prueba, se
+  descartan y `gemma4:e4b` sigue para todo (2026-11-18, el usuario). «Peor» = menos aciertos o alguna trampa
+  fallada; la latencia solo desempata.
+- La voz de Harper se mantiene, opcional, solo para leer avisos relevantes y tareas puntuales.
 
 ## Para quien lo construya
 
