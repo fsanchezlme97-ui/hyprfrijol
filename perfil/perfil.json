@@ -25,6 +25,7 @@
   "android",
   "audio",
   "backup",
+  "bat",
   "bluetooth",
   "calculator",
   "cava",
@@ -105,7 +106,8 @@
    "vosk-model-small-es-0.42"
   ],
   "whisper": [
-   "small"
+   "small",
+   "turbo"
   ]
  },
  "greeter": true,
@@ -118,12 +120,12 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.10.39",
+ "hyprfrijol": "v0.10.47-9-g7acc5a6",
  "ollama": [
-  "qwen3.5:9b",
-  "gemma4:e4b"
+  "gemma4:e4b",
+  "qwen3.5:9b"
  ],
- "saved": "2026-11-17 14:57",
+ "saved": "2026-11-19 09:10",
  "services": [
   "ufw",
   "cups.socket",
@@ -137,16 +139,13 @@
   "activeBorder": "sutil",
   "aiAnnounceGreet": true,
   "aiAnnounceUrgent": true,
-  "aiCompanion": true,
   "aiFallbackModel": "gemma4:e4b",
   "aiFallbackProvider": "off",
   "aiHistoryDays": 0,
   "aiModel": "gemma4:e4b",
-  "aiMuted": true,
   "aiProvider": "ollama",
   "aiScreenAsk": "sensible",
   "aiVoice": true,
-  "aiVoiceLocal": false,
   "animPreset": "minimalista",
   "animSpeed": 1.5,
   "animado": true,
@@ -203,8 +202,9 @@
   "deskIconSize": "pequeno",
   "deskIcons": "no",
   "deskSort": "tipo",
+  "dictationEngine": "hibrido",
   "dictationMode": "toggle",
-  "dictationModel": "small",
+  "dictationModel": "turbo",
   "dimInactive": true,
   "disableWhileTyping": true,
   "dockBehavior": "inteligente",
@@ -248,7 +248,6 @@
    "clima"
   ],
   "lowBatterySaver": false,
-  "micMode": "fluido",
   "musicLyrics": false,
   "naturalScroll": true,
   "nightLight": "off",
@@ -260,15 +259,16 @@
   "palette": "vesper",
   "pip": true,
   "pipAuto": false,
-  "pipCorner": "libre",
+  "pipCorner": "inf-der",
   "pipFree": [
-   0.8182,
-   0.7517
+   0.8281,
+   0.465
   ],
   "pipHoverControls": true,
   "pipMargin": 4,
   "pipOpacity": 1,
   "pipSize": "pequeno",
+  "profileCard": true,
   "protonWayland": false,
   "rounding": 4,
   "roundingShape": "auto",
@@ -280,6 +280,7 @@
   "sidePanelPinned": false,
   "sideSide": "izquierda",
   "sideWidth": "cuarto",
+  "sliderGlow": false,
   "tapToClick": true,
   "themeApps": true,
   "themeMode": "oscuro",
