@@ -24,8 +24,8 @@ ColumnLayout {
         pomodoro: ["Pomodoro", "clock", "tiempo de foco y descansos · también en el centro de control"],
         cafeina: ["Cafeína", "coffee", "no apagar la pantalla · clic derecho: 1 hora"],
         portapapeles: ["Portapapeles", "clipboard", "abre el historial en Spotlight"],
-        dictado: ["Micrófono", "mic", "un botón con el modo de voz puesto: dictado, walkie-talkie, fluido o desactivado (clic derecho cambia de modo)"],
-        voz: ["Modos de voz", "fluido", "dictado, walkie-talkie (mantener para hablar), conversación fluida y desactivado; el puesto, resaltado"],
+        dictado: ["Micrófono", "mic", "un botón de dictado: lo que digas se escribe"],
+        voz: ["Voz", "mic_orden", "dos botones: dictado y orden de voz («abre Firefox», «lee el archivo notas.md»)"],
         ia: ["Asistente de IA", "ai", "abre el panel del asistente"],
         ajustes: ["Ajustes", "gear", "la tuerca: abre esta ventana"]
     })

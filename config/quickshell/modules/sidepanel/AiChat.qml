@@ -74,7 +74,7 @@ Item {
         : ["Resume mis notificaciones", "Temporizador de 10 min para el té", "Pon la barra arriba y el fondo lago", "Cierra las ventanas de Firefox"]
 
     function focusInput() { input.forceActiveFocus(); }
-    function clear() { stopRun(); runIdx = -1; queued = null; planIdx = -1; Shell.aiPlanPending = false; checkingIn = false; messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; showLog = false; focusInput(); }
+    function clear() { stopRun(); runIdx = -1; queued = null; messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; showLog = false; focusInput(); }
     function setWindow(w) { if (w && w.address) { winInfo = w; useWindow = true; } Qt.callLater(focusInput); }
     function patch(i, p) { const m = messages.slice(); m[i] = Object.assign({}, m[i], p); messages = m; }
     function push(m) { messages = [...messages, m]; Qt.callLater(scrollEnd); }
@@ -95,9 +95,8 @@ Item {
                                                             m.images?.length ? { images: m.images } : {},
                                                             m.files?.length ? { files: m.files } : {},
                                                             m.steps?.length ? { queried: true } : {},     // ver mcp_auto en hf-ai
-                                                            m.checkIn ? { checkIn: true } : {},
                                                             m.lookAsk ? { lookAsk: true } : {})),         // hf-ai: «sí» → mira
-                                context: Object.assign(context(), Shell.aiConversation ? { spoken: true } : {}) }, extra ?? {}));
+                                context: context() }, extra ?? {}));
     }
 
     // Pregunta de la voz o de Spotlight mientras hay una respuesta en curso: espera su turno (antes se perdía y la
@@ -251,9 +250,7 @@ Item {
         if (!busy) return;
         busy = false;
         gotFinal = true;
-        checkingIn = false;               // si no, la próxima respuesta se tomaba por la visita y un error no se veía
         chatProc.running = false;
-        Shell.aiReplied(false);           // la conversación por voz no se queda esperando
         if (liveText.trim() !== "") push({ role: "ai", text: liveText, steps: liveSteps.concat(["Respuesta detenida"]), actions: [], labels: [], plan: [], code: "", state: "" });
         liveText = ""; liveSteps = [];
     }
@@ -294,60 +291,14 @@ Item {
         send();
     }
 
-    // Modo compañero (Shell.aiCheckIn ← Companion.qml): Harper mira la captura y habla él primero; si no ve nada que
-    // valga la pena decir contesta SKIP y todo se borra sin ruido (ni mensaje ni voz)
-    property bool checkingIn: false
-    // askLook (hf-ai peek → "ask"): no hay captura porque hace falta tu permiso; saluda sin mirar y pregunta si puede
-    // mirar la pantalla (hf-ai guarda la pregunta: «sí» hace la captura, «no, gracias» se despide)
-    function checkIn(reason, image, askLook) {
-        if (busy) { Shell.aiConversation = false; return; }
-        const m = { role: "user", checkIn: true,
-                    text: "[Visita de " + (Settings.get("aiName", "") || "Harper") + ", sin que yo lo pida] " + reason + "\n"
-                        + (askLook ? "No has mirado mi pantalla: para eso necesitas mi permiso. Salúdame como un amigo que pasa a saludar, "
-                                   + "ofréceme ayuda y termina preguntándome si quiero que mires mi pantalla para ayudarme. Una o dos frases, "
-                                   + "sin repetir lo de visitas anteriores."
-                           : (image ? "Mira la captura de mi pantalla y" : "") + " Háblame como un amigo que pasa a saludar: según lo que veas, ofrece una ayuda concreta, "
-                        + "pregúntame cómo voy o si necesito algo, o comenta lo que ves con naturalidad. Una o dos frases, sin repetir lo de visitas "
-                        + "anteriores. Si no hay nada que valga la pena decir ahora, responde solo SKIP.") };
-        if (askLook) m.lookAsk = true;
-        if (image && allowCapture) m.images = [image];
-        push(m);
-        checkingIn = true;
-        nextTask = "quick";
-        send();
-    }
-    // Plan propuesto en la conversación por voz: se aprueba o se descarta diciendo «sí» o «no» (Dictado.qml)
-    property int planIdx: -1
-    function answerPlan(yes) {
-        const i = planIdx;
-        Shell.aiPlanPending = false; planIdx = -1;
-        if (i < 0 || i >= messages.length || messages[i].state !== "") return;
-        Quickshell.execDetached([Paths.script("hf-ai"), "speak", yes ? "Vale, lo hago." : "Vale, lo dejo así."]);
-        if (yes) apply(i); else discard(i);
-    }
-
     function reply(r) {
         root.busy = false;
         root.liveText = ""; root.liveSteps = [];
         if (!r || typeof r !== "object") r = { error: "Respuesta no válida de hf-ai" };
-        const wasCheckIn = checkingIn;
-        checkingIn = false;
-        if (wasCheckIn && (r.error || /^\W*SKIP\W*$/i.test(String(r.text ?? "").trim()) || !String(r.text ?? "").trim())) {
-            if (messages.length && messages[messages.length - 1].checkIn) messages = messages.slice(0, -1);   // nada que decir: ni rastro
-            Shell.aiConversation = false;
-            return;
-        }
-        // «No, gracias» a una oferta (hf-ai "end"): se despide y la conversación por voz vuelve a esperar (Dictado.qml)
-        if (r.end && !r.error) {
-            root.push({ role: "ai", text: r.text || "Vale." });
-            if (Shell.aiConversation) Shell.aiConvEnd(r.text || "");
-            else { if (Settings.get("aiVoice", false)) Quickshell.execDetached([Paths.script("hf-ai"), "speak", r.text || ""]); Shell.aiConvEnd(""); }
-            return;
-        }
-        Shell.aiReplied(!r.error);         // la conversación por voz espera a la respuesta (Dictado.qml)
+        // «No, gracias» a una oferta (hf-ai "end"): se despide sin llamar al modelo
+        if (r.end && !r.error) { root.push({ role: "ai", text: r.text || "Vale." }); return; }
         if (r.error) {
             root.push({ role: "ai", text: r.error, error: true });
-            if (Shell.aiConversation) Quickshell.execDetached([Paths.script("hf-ai"), "speak", r.error]);
             if (!root.active) Quickshell.execDetached(["notify-send", "-a", Settings.get("aiName", "") || "Asistente", "-i", "dialog-error", r.error]);
         } else {
             root.push({ role: "ai", text: r.text || (r.actions?.length ? "Puedo hacerlo. Estos son los pasos:" : "…"),
@@ -356,30 +307,11 @@ Item {
                         steps: (r.steps ?? []).concat(r.redacted ? [(r.redacted === 1 ? "Se ocultó 1 dato sensible" : "Se ocultaron " + r.redacted + " datos sensibles") + " del contexto"] : []),
                         code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto, model: r.model ?? "",
                         choices: r.choices ?? [] });
-            // Se aplica ya, con Deshacer: sin confirmación (Ajustes › IA), todo «aprobado siempre» (aiAlwaysApprove) o, en la
-            // conversación por voz, si todo se puede deshacer (abrir apps y webs, música, ajustes…). Lo que no tiene vuelta
-            // atrás (cerrar ventanas, borrar avisos, comandos) pregunta «¿Lo hago?» y se contesta hablando (Dictado.qml);
-            // solo lo que lleva sudo va al panel: pide tu contraseña en la terminal y hay que verlo.
-            const conv = Shell.aiConversation, n = r.actions?.length ?? 0;
-            const sudo = (r.actions ?? []).some(a => a.type === "run" && /(^|[\s;&|(`])(sudo|pkexec|doas|su|run0)(\s|$)/.test(String(a.command ?? "")));
-            // Usar la pantalla: lo que se oye antes de «¿Lo hago?» son los pasos tal cual (el nombre que leyó hf-screen), no
-            // lo que el modelo dice que hará; y un icono sin texto («blind») no se aprueba de oído: va al panel, a mirar.
-            const ptr = (r.actions ?? []).some(a => a.type === "pointer");
-            const blind = conv && (r.actions ?? []).some(a => a.type === "pointer" && a.blind);
-            const auto = n > 0 && ((!root.confirmChanges && !r.confirm) || r.auto || (conv && !r.confirm && !sudo));
-            const waits = conv && n > 0 && !auto && !sudo && !blind;
-            if (waits) { root.planIdx = root.messages.length - 1; Shell.aiPlanPending = true; }
-            const said = (r.labels ?? []).map(l => ptr ? String(l) : String(l).split(":")[0]).join(". ") + ".";
-            // r.notice: respondió el respaldo («Gemini no respondió a tiempo; te contesto con el modelo local.»)
-            const spoken = (r.notice ? r.notice + " " : "") + (ptr && n ? (r.text ? r.text + " " : "") + "Voy a hacer esto: " + said : r.text || (n ? said : ""))
-                + (waits ? " ¿Lo hago?" : conv && sudo ? " Eso necesita tu contraseña: te lo dejo en el panel."
-                   : blind ? " No sé qué hace ese icono: mira en la pantalla dónde señala y, si es el que quieres, apruébalo en el panel." : "");
-            // Respuestas silenciadas (aiMuted) en la conversación: la respuesta llega por escrito, en una notificación
-            if (conv && Settings.get("aiMuted", false) && !root.active)
-                Quickshell.execDetached(["notify-send", "-a", Settings.get("aiName", "") || "Asistente", "-i", "dialog-information", "--", spoken]);
-            else if (Settings.get("aiVoice", false) || conv) Quickshell.execDetached([Paths.script("hf-ai"), "speak", spoken]);
+            // Se aplica ya, con Deshacer: sin confirmación (Ajustes › IA) o todo «aprobado siempre» (aiAlwaysApprove)
+            const n = r.actions?.length ?? 0;
+            const auto = n > 0 && ((!root.confirmChanges && !r.confirm) || r.auto);
             if (auto) root.apply(root.messages.length - 1);
-            else if (n > 0 && !root.active && (!conv || sudo || blind)) Shell.open("ia");
+            else if (n > 0 && !root.active) Shell.open("ia");
         }
     }
     Process {
@@ -390,7 +322,7 @@ Item {
         stdout: SplitParser { onRead: line => root.onLine(line) }
         onExited: code => {
             if (root.gotFinal || !root.busy) return;
-            // por reply(): también avisa a la voz y deja la visita del compañero sin rastro
+            // por reply(): el error se ve en el panel (y en una notificación si está cerrado)
             root.reply({ error: code !== 0 ? "hf-ai falló (código " + code + ")." : "hf-ai terminó sin responder." });
         }
     }
@@ -401,7 +333,6 @@ Item {
     function selOf(m) { return (m.actions ?? []).map((a, k) => (m.sel ?? [])[k] !== false); }
     function toggleStep(i, k) { const s = selOf(messages[i]); s[k] = !s[k]; patch(i, { sel: s }); }
     function apply(i) {
-        if (i === planIdx) { Shell.aiPlanPending = false; planIdx = -1; }
         if (applyProc.running) return;             // un plan cada vez: el resultado se apunta en el que se lanzó
         const sel = selOf(messages[i]);
         const acts = messages[i].actions.filter((a, k) => sel[k]);
@@ -455,7 +386,6 @@ Item {
         }
     }
     function discard(i) {
-        if (i === planIdx) { Shell.aiPlanPending = false; planIdx = -1; }
         patch(i, { state: "discarded" });
         if ((messages[i].actions ?? []).some(a => a.type === "pointer")) Quickshell.execDetached([Paths.script("hf-screen"), "hide"]);
         push({ role: "ai", text: "De acuerdo, no cambié nada.", local: true });
@@ -637,9 +567,8 @@ print(json.dumps(out[:300]))
                 try {
                     const d = JSON.parse(text);
                     root.busy = false; chatProc.running = false; root.notice = null;
-                    // nada de la conversación anterior: ni visita a medias, ni plan esperando un «sí», ni pregunta en cola
-                    root.checkingIn = false; root.queued = null; root.liveText = ""; root.liveSteps = [];
-                    root.planIdx = -1; Shell.aiPlanPending = false;
+                    // nada de la conversación anterior: ni pregunta en cola
+                    root.queued = null; root.liveText = ""; root.liveSteps = [];
                     root.stopRun(); root.runIdx = -1;
                     root.historyFile = histOpener.target;
                     root.histLoading = true;

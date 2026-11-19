@@ -753,6 +753,8 @@ def ai_model(s):
         return str(s["voiceLocalModel"])
     if s.get("aiProvider") == "ollama" and s.get("aiModel"):
         return str(s["aiModel"])
+    if s.get("aiFallbackProvider") == "ollama" and s.get("aiFallbackModel"):   # el mismo que el respaldo: uno cargado
+        return str(s["aiFallbackModel"])
     return "gemma4:e4b"
 
 def ai_endpoint(s):

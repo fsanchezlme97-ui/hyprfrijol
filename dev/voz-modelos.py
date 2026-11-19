@@ -8,7 +8,7 @@ que hf-voice (ai_choose). Cuenta aciertos (la orden está entre las aceptadas), 
 que deben dar «ninguna») y la latencia con el modelo cargado (mediana y p90) y el tamaño en disco. Regla de docs/IA.md: gana el más
 pequeño que no sea peor que gemma4:e4b (mismos aciertos o más, ninguna trampa) y responda en < 1,5 s; si no, e4b.
 """
-import importlib.machinery, importlib.util, json, pathlib, statistics, subprocess, sys, time, urllib.request
+import importlib.machinery, importlib.util, json, pathlib, statistics, sys, urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 _ld = importlib.machinery.SourceFileLoader("hf_voice", str(ROOT / "scripts/hf-voice"))

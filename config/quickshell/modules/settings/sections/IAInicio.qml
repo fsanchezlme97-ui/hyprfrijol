@@ -166,7 +166,7 @@ ColumnLayout {
                 model: [
                     ["Abrir el panel del asistente", "Super + A"],
                     ["Preguntar sobre la ventana activa", "Super + Ctrl + A"],
-                    ["Hablar con el asistente", "Super + Alt + H"],
+                    ["Orden de voz", "Super + Alt + V"],
                     ["Dictar en cualquier app", "Super + Alt + D"],
                     ["Preguntar desde Spotlight", "?"],
                 ]

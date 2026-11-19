@@ -1,20 +1,16 @@
-// Dictado y comandos de voz (local, como SuperWhisper): atajos globales hf:dictado (Super + Alt + D), hf:comando
-// (Super + Alt + V) y hf:hablar (Super + Alt + H). Modos del micrófono (Shell.micMode): dictado · walkie (mantener
-// pulsado para hablar con el asistente; al soltar se lo pasa) · fluido (conversación) · desactivado. «fluido»
-// la activa y la desactiva: escucha, al callarte (aiConvSilence s) se lo pasa al asistente, Harper contesta en voz
-// alta y vuelve a escuchar, hasta que la desactivas (o dices «adiós» / «eso es todo»). Mientras Harper habla sigue
-// escuchando (aiConvInterrupt): si le hablas, se calla y tu frase es el turno siguiente; para no oírse a sí mismo,
-// durante la conversación su voz y el micrófono pasan por el cancelador de eco de PipeWire (hf-dictate aec). Pulsar el
-// micrófono o el atajo mientras Harper habla lo corta (hush): en fluido te escucha, en walkie empieza tu pregunta. Modo «ptt»: hablar mientras se mantiene (un toque corto deja el micrófono abierto hasta volver a
-// pulsar); «toggle»: cada pulsación empieza/termina; «continuo»: empieza al pulsar y para solo tras unos segundos
-// callado. Mientras hablas el texto se va escribiendo en la ventana y lo provisional se corrige al terminar cada frase
-// (scripts/hf-dictate: VAD + whisper-server residente). Al dictar, «Distro, …» al principio de una frase es una orden (dictationWake);
-// las órdenes las entiende scripts/hf-voice (sin IA) y lo demás va al asistente.
+// Dictado y órdenes de voz (local, como SuperWhisper): atajos globales hf:dictado (Super + Alt + D), hf:comando
+// (Super + Alt + V) y hf:micro (Super + Alt + M, igual que el dictado). Modo «ptt»: hablar mientras se mantiene (un
+// toque corto deja el micrófono abierto hasta volver a pulsar); «toggle»: cada pulsación empieza/termina; «continuo»:
+// empieza al pulsar y para solo tras unos segundos callado. Mientras hablas el texto se va escribiendo en la ventana y
+// lo provisional se corrige al terminar cada frase (scripts/hf-dictate: VAD + whisper-server residente). Al dictar,
+// «Distro, …» al principio de una frase es una orden (dictationWake); las órdenes las entiende scripts/hf-voice (reglas
+// y, si no encajan, una IA local que solo elige entre órdenes conocidas) y lo demás va escrito al asistente.
+// No hay conversación por voz: la voz de Harper solo lee (avisos, saludo); pulsar cualquier botón de voz la corta.
 // La píldora va donde el OSD y con su estilo (services/OsdStack.qml): pegada al borde y el OSD se aparta.
-// IPC:  qs -p <repo>/config/quickshell ipc call dictado toggle|start|stop|cancel|state|command
+// IPC:  qs -p <repo>/config/quickshell ipc call dictado toggle|start|stop|cancel|state|command|hush
 //       … dictado file <clip.wav> [dictado|comando]  (pruebas: el audio sale del archivo, a tiempo real)
 // Ajustes › Dictado (sections/Dictado.qml).
-// Botón de la barra: módulo «dictado» de barModules (bar/MicBtn.qml: Shell.dictToggle / micCycle / dictPhase).
+// Botones de la barra: bar/MicBtn.qml (dictado) y bar/VoiceBtns.qml (dictado y orden), por Shell.voiceDo.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -29,7 +25,7 @@ Scope {
     id: root
     // idle | rec | trans | cmd | done | error  (el dictado no usa IA: sin fase de «mejorar»)
     property string phase: "idle"
-    property string kind: "dictado"         // dictado | comando | ia (lo dicho va al asistente, no se escribe)
+    property string kind: "dictado"         // dictado | comando
     property string msg: ""
     property string code: ""
     property string partial: ""             // lo provisional de la frase en curso
@@ -43,138 +39,21 @@ Scope {
     property var levels: Array(12).fill(0)
     property double pressedAt: 0
     property bool latched: false            // toque corto en modo ptt: sigue grabando hasta la próxima pulsación
-    property string pendingKind: ""
-    property string recMode: "ptt"           // el de esta grabación: dictationMode, o ptt/toggle en walkie
     property var args: []
     readonly property string mode: Settings.get("dictationMode", "ptt")
     readonly property bool busy: proc.running
 
-    // ---------- conversación por voz ----------
-    readonly property bool conv: Shell.aiConversation
-    property string convState: ""           // escucha | piensa | habla
-    property int convMisses: 0              // turnos seguidos sin oír nada (3 = se da por terminada)
-    property bool convProactive: false      // la empezó Harper (modo compañero): si no contestas, se va sin despedirse
-    onConvChanged: {
-        if (conv) { aecOff.stop(); if (convBarge) Quickshell.execDetached([Paths.script("hf-dictate"), "aec", "on"]); }
-        else { convTest = false; convFiles = []; convState = ""; convProactive = false; convLater.stop(); thinkTimer.stop(); replyTimer.stop(); aecOff.restart(); }
-    }
-    // Interrumpir a Harper hablando (Ajustes › Asistente de IA › Conversación)
-    readonly property bool convBarge: Settings.get("aiConvInterrupt", true) !== false
-    // El cancelador de eco se quita al acabar, cuando ya no suena el «Hasta luego»
-    Timer { id: aecOff; interval: 4000; onTriggered: if (root.conv) return; else if (Shell.aiSpeaking) restart(); else Quickshell.execDetached([Paths.script("hf-dictate"), "aec", "off"]) }
-    // Modo compañero: Harper ya está pensando qué decir (AiChat.checkIn); al terminar de hablar, escucha una vez
-    function companionTalk(): void {
-        if (conv || proc.running || micMode === "desactivado") return;
-        Quickshell.execDetached([Paths.script("hf-ai"), "voice-warm"]);   // mientras piensa qué decir
-        Shell.aiConversation = true;
-        convProactive = true;
-        convMisses = 2;
-        convState = "piensa";
-    }
-    Companion { id: companion; busy: proc.running; onVisiting: root.companionTalk() }
-    // Super + Alt + H: walkie en modo walkie, si no conversación
-    readonly property string talkMode: micMode === "walkie" ? "walkie" : "fluido"
-    // Cortar a Harper mientras habla: en conversación, tu turno empieza ya (si ya escuchaba con --tts, deja de filtrar)
-    function hush(): void {
-        Quickshell.execDetached([Paths.script("hf-ai"), "speak", "--stop"]);
-        if (!conv || convState !== "habla") return;
-        convState = "escucha"; replyTimer.stop(); thinkTimer.stop();
-        if (proc.running) send("tts off"); else convLater.restart();
-    }
-    function convToggle(): void { if (conv) convEnd(false); else convStart(); }
-    function convStart(): void {
-        if (conv || Shell.locked) return;   // con la pantalla bloqueada nadie habla con el asistente
-        Quickshell.execDetached([Paths.script("hf-ai"), "voice-warm"]);   // la voz ya cargada para la primera respuesta
-        if (Audio.micMuted) { phase = "done"; msg = "Micrófono silenciado"; hider.interval = 1800; hider.restart(); return; }
-        if (proc.running) send("cancel");
-        Shell.aiConversation = true;
-        convMisses = 0;
-        convProactive = false;
-        convLater.restart();
-    }
-    function convEnd(bye, words): void {
-        if (!conv) return;
-        Shell.aiConversation = false;
-        convState = ""; convLater.stop(); thinkTimer.stop(); replyTimer.stop();
-        if (proc.running) send("cancel");
-        Quickshell.execDetached([Paths.script("hf-ai"), "speak", bye ? (words || "Hasta luego.") : "--stop"]);
-        phase = "done"; msg = "Conversación terminada"; hider.interval = 1400; hider.restart();
-    }
-    // Pruebas (IPC conversationFiles): cada turno lee el siguiente audio en lugar del micrófono; al acabarse, termina
-    property var convFiles: []
-    property bool convTest: false
-    // Con Harper hablando (y convBarge) se escucha igual con --tts: hf-dictate solo avisa («barge») si le hablas
-    function convListen(): void {
-        const talking = Shell.aiSpeaking;
-        if (!conv || (talking && !convBarge)) return;
-        if (proc.running) {
-            if (kind !== "ia") convLater.restart();                        // un dictado a medias: esperar
-            else if (!talking && convState === "habla") { send("tts off"); convState = "escucha"; }
-            return;
-        }
-        if (convTest && !convFiles.length) { convEnd(false); return; }
-        convState = talking ? "habla" : "escucha";
-        const tts = talking ? ["--tts"] : [];
-        if (convTest) { const f = convFiles[0]; convFiles = convFiles.slice(1); start("ia", ["--file", f, "--simulate-live"].concat(tts)); }
-        else start("ia", tts);
-    }
-    // Entre turnos, un respiro: que no se oiga el final de la voz de Harper
-    Timer { id: convLater; interval: 600; onTriggered: root.convListen() }
-    // Si tarda, Harper avisa de que sigue en ello (y la respuesta lo corta al llegar)
-    Timer { id: thinkTimer; interval: 4000; onTriggered: if (root.conv && root.convState === "piensa") Quickshell.execDetached([Paths.script("hf-ai"), "speak", "Un momento."]) }
-    // La respuesta llegó pero no sonó (sin voz instalada, texto vacío…): se vuelve a escuchar igual
-    Timer { id: replyTimer; interval: 8000; onTriggered: if (root.conv && root.convState === "habla" && !Shell.aiSpeaking) root.convListen() }
-    Connections {
-        target: Shell
-        function onAiSpeakingChanged() {
-            if (!root.conv) return;
-            if (Shell.aiSpeaking) {
-                if (root.convState === "escucha") { if (proc.running) root.send(root.convBarge ? "tts on" : "cancel"); root.convState = "habla"; }
-                else if (root.convState === "habla" && !proc.running) root.convListen();
-            } else if (root.convState === "habla") {
-                if (proc.running) { root.send("tts off"); root.convState = "escucha"; }   // acabó: tu turno ya está abierto
-                else convLater.restart();
-            }
-        }
-        function onAiConvEnd(f) { if (root.conv) { thinkTimer.stop(); root.convEnd(true, f); } }   // «no, gracias»
-        function onAiReplied(ok) {
-            if (!root.conv || root.convState !== "piensa") return;
-            thinkTimer.stop();
-            root.convState = "habla";
-            if (Settings.get("aiMuted", false)) { convLater.restart(); return; }   // sin voz: tu turno ya
-            replyTimer.restart();
-            if (Shell.aiSpeaking) root.convListen();
-        }
-    }
-    // «¿Lo hago?» contestado hablando: true (sí), false (no) o null (otra cosa: va al asistente como pregunta nueva).
-    // Sin tildes ni muletillas delante («Mm, de acuerdo»); el reconocedor a veces lo oye en inglés («Proceed.») o partido
-    // («A probar y aplicar», «Aslo» por «hazlo»). El sí tiene que ser la frase entera («sí, hazlo», «vale, adelante»): «sí, pero ese no es»
-    // no aprueba nada, va al asistente (lo que espera la respuesta no tiene vuelta atrás).
-    readonly property string yesW: "(si|vale|ok|okay|okey|claro|adelante|hazlo|hagalo|dale|de acuerdo|perfecto|venga|por favor|procede|proceda|proced|proceed|yes|sure|aprobar|apruebo|aprobado|apruebalo|a probar|aplica|aplicalo|confirmo|confirmado|confirma|correcto|afirmativo|exacto|ejecuta|ejecutalo|abrelo|abrela|eso es|aplicar|haslo|aslo)"
-    readonly property var yesRe: new RegExp("^" + yesW + "( (y |e )?" + yesW + ")*$")
-    readonly property var noRe: /^(no|nope|cancela|cancelar|cancelalo|dejalo|mejor no|ni hablar|olvidalo|espera)( |$)/
-    function planAnswer(t: string): var {
-        const w = t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z0-9ñ]+/).filter(x => x);
-        while (w.length && /^(m+h*m*|h?m+|e+h*|a+h+|u+m+|bueno|pues|este|oye|mira)$/.test(w[0])) w.shift();
-        const s = w.join(" ");
-        return noRe.test(s) ? false : yesRe.test(s) ? true : null;
-    }
-    readonly property var noiseRe: /^[\s.,…!?¡¿-]*(m+-?h?m+|mhm+|hmm+|e+h+|a+h+|u+m+|o+h+|gracias|subt[ií]tulos.*|amara\.org.*|\[.*\]|\(.*\)|m[uú]sica)?[\s.,…!?¡¿-]*$/i
-    readonly property var byeRe: /^(adi[oó]s|hasta luego|chao|terminar|termina|para ya|eso es todo|ya est[aá]|gracias,? eso es todo|fin de la conversaci[oó]n)[\s.!¡]*$/i
-    // Silenciar o volver a oír las respuestas en plena conversación: solo la frase entera («silencio», «modo silencio»…)
-    readonly property var muteRe: /^[¡¿\s]*(silencio|s[ií]l[eé]nciate|c[aá]llate|modo silencio(so)?|silencia(r)? (tus |las )?respuestas|no hables|sin voz|(cont[eé]st|respond)(a|e)?(me)? por escrito)[\s.,!¡]*(por favor)?[\s.!]*$/i
-    readonly property var unmuteRe: /^[¡¿\s]*(vuelve a hablar|ya puedes hablar|h[aá]blame( otra vez| de nuevo)?|activa (la|tu) voz|quita el silencio|con voz|(cont[eé]st|respond)(a|e)?(me)? hablando)[\s.,!¡]*(por favor)?[\s.!]*$/i
+    // Que Harper deje de leer en voz alta
+    function hush(): void { Quickshell.execDetached([Paths.script("hf-ai"), "speak", "--stop"]); }
 
     function start(k, extra, fromKey): void {
         if (proc.running || Shell.locked) return;
-        kind = k || "dictado";
-        // walkie: con el atajo, mantener; con el botón (un clic), clic para empezar y clic para preguntar
-        recMode = kind === "ia" && !conv ? (fromKey ? "ptt" : "toggle") : mode;
-        levels = Array(12).fill(0); secs = 0; msg = ""; code = ""; latched = !fromKey && recMode === "ptt";   // sin atajo: manos libres
+        kind = k === "comando" ? "comando" : "dictado";
+        levels = Array(12).fill(0); secs = 0; msg = ""; code = ""; latched = !fromKey && mode === "ptt";   // sin atajo: manos libres
         partial = ""; committed = ""; cmdText = ""; cmdMsg = ""; cmdOk = true; ready = false; speaking = false;
         phase = "rec";
         hider.stop(); cmdHider.stop();
-        const a = [Paths.script("hf-dictate"), "record", "--mode", conv && kind === "ia" ? "continuo" : fromKey || recMode !== "ptt" ? recMode : "toggle"];
+        const a = [Paths.script("hf-dictate"), "record", "--mode", fromKey || mode !== "ptt" ? mode : "toggle"];
         if (kind === "comando") a.push("--command");
         if (fromKey) a.push("--hold");     // no escribir con las teclas del atajo aún pulsadas (released() lo suelta)
         args = a.concat(extra ?? []);
@@ -195,12 +74,6 @@ Scope {
             secs = j.t ?? secs;
             break;
         case "speech": speaking = j.on; break;
-        case "barge":                           // le hablaste mientras contestaba: se calla y es tu turno
-            if (conv && convState === "habla") {
-                Quickshell.execDetached([Paths.script("hf-ai"), "speak", "--stop"]);
-                convState = "escucha"; replyTimer.stop();
-            }
-            break;
         case "partial": partial = j.text; break;
         case "phrase":
             partial = "";
@@ -220,42 +93,6 @@ Scope {
         case "transcribing": phase = "trans"; break;
         case "text": committed = j.text; break;
         case "done":
-            if (kind === "ia" && conv) {        // conversación: lo dicho va al asistente y se espera su voz
-                const t = committed.trim();
-                phase = "idle";
-                // Nada, o lo que Whisper «oye» en el ruido de fondo: cuenta como silencio, no se le pregunta nada al asistente
-                if (!t || noiseRe.test(t)) {
-                    if (++convMisses >= 3) convEnd(!convProactive); else convLater.restart();
-                    break;
-                }
-                if (byeRe.test(t)) { convEnd(true); break; }
-                if (muteRe.test(t) || unmuteRe.test(t)) {
-                    const on = muteRe.test(t);
-                    setMuted(on);
-                    if (!on) Quickshell.execDetached([Paths.script("hf-ai"), "speak", "De acuerdo, vuelvo a hablar."]);
-                    convMisses = 0; convLater.restart();
-                    break;
-                }
-                convMisses = 0; convProactive = false;
-                // Un plan esperando (las herramientas del asistente): «sí» lo aplica, «no» lo descarta
-                if (Shell.aiPlanPending && planAnswer(t) !== null) {
-                    Shell.aiPlanAnswer(planAnswer(t));
-                    convState = "habla";
-                    replyTimer.restart();
-                    break;
-                }
-                convState = "piensa";
-                Shell.aiAskHidden(t);
-                thinkTimer.restart();
-                break;
-            }
-            if (kind === "ia") {                // hablar con el asistente: la pregunta va al panel lateral
-                phase = "done"; msg = committed.trim() ? "Se lo dije a " + (Settings.get("aiName", "") || "el asistente") : "No te oí";
-                // Con voz, la conversación sigue con el panel cerrado (se oye la respuesta); sin voz, hay que verla
-                if (committed.trim()) Settings.get("aiVoice", false) ? Shell.aiAskHidden(committed.trim()) : Shell.open("ia", { ask: committed.trim() });
-                hider.interval = 1800; hider.restart();
-                break;
-            }
             if (j.how === "comando") {          // solo hubo órdenes: se queda el resultado un momento
                 if (kind !== "comando") { phase = "done"; msg = cmdMsg; hider.interval = 2400; hider.restart(); }
                 break;
@@ -267,14 +104,6 @@ Scope {
         case "cancelled": phase = "idle"; break;
         case "error":
             if (j.fatal === false) break;
-            if (kind === "ia" && conv) {        // en conversación, no oír nada no es un error: se sigue escuchando
-                if (["silence", "empty"].includes(j.code ?? "")) {
-                    phase = "idle";
-                    if (++convMisses >= 3) convEnd(!convProactive); else convLater.restart();   // ~1,5 min callado: se cierra sola
-                    break;
-                }
-                convEnd(false);
-            }
             phase = "error"; msg = j.msg ?? "Error"; code = j.code ?? "";
             hider.interval = 4500; hider.restart();
             break;
@@ -284,77 +113,36 @@ Scope {
     Process {
         id: proc
         command: root.args
-        // «ia»: no escribir en la ventana (y dictationAiFix); en conversación, el turno acaba tras un silencio corto
-        environment: root.kind !== "ia" ? ({}) : Object.assign({ HF_DICTATE_OUTPUT: "ninguna", HF_DICTATE_FOR: "ia" },
-            root.conv ? { HF_DICTATE_SILENCE: String(Settings.get("aiConvSilence", 1.2)), HF_DICTATE_WAIT: "20", HF_DICTATE_MAX: "40",
-                          HF_DICTATE_AEC: root.convBarge ? "1" : "0", HF_DICTATE_AIFIX: "0" } : {})
         stdinEnabled: true
         stdout: SplitParser { onRead: l => { try { root.onEvent(JSON.parse(l)); } catch (e) {} } }
-        onExited: {
-            if (["rec", "trans", "cmd"].includes(root.phase)) root.phase = "idle";
-            if (root.conv && root.convState === "escucha") convLater.restart();   // terminó sin decir nada (o falló)
-        }
+        onExited: if (["rec", "trans", "cmd"].includes(root.phase)) root.phase = "idle"
     }
     Binding { target: Shell; property: "dictPhase"; value: root.phase }
-    Binding { target: Shell; property: "aiConvState"; value: root.conv ? root.convState : "" }
+    Binding { target: Shell; property: "dictKind"; value: root.kind }
     Binding { target: Shell; property: "micLevels"; value: root.levels }
-    // Botones de voz de la barra (bar/VoiceBtns.qml): uno por modo; pulsarlo pone ese modo y hace lo suyo. walkie llega
-    // al pulsar el botón y «walkie-up» al soltarlo (como el atajo: mantener para hablar, un toque corto deja escuchando).
+    // Botones de voz de la barra (bar/VoiceBtns.qml, bar/MicBtn.qml): «dictado» o «comando». Con Harper leyendo, el
+    // clic la corta; micrófono silenciado, el clic solo lo vuelve a activar. Si escucha lo otro, lo termina y empieza esto.
     function voiceDo(what): void {
-        if (what === "walkie-up") { if (micHeld) { micHeld = false; released(); } return; }
-        if (!(what in micModes)) return;
-        if (what !== micMode) {
-            if (conv) convEnd(false); else if (proc.running) cancel();   // lo que escuchaba era del modo anterior
-            Settings.set("micMode", what);
-        }
-        if (Shell.aiSpeaking) { hush(); if (conv) return; }              // cortarle: en conversación sigue y te escucha
-        if (what === "desactivado") { note("Voz desactivada: no escucha nada"); return; }
+        const k = what === "comando" ? "comando" : "dictado";
+        if (Shell.aiSpeaking) { hush(); return; }
         if (Audio.micMuted) { Audio.toggleMic(); note("Micrófono activado"); return; }
-        if (what === "dictado") toggle("dictado");
-        else if (what === "fluido") convToggle();
-        else { micHeld = true; pressed("ia"); }
-    }
-    // Silenciar las respuestas habladas (aiMuted; hf-ai speak calla): la conversación sigue y contesta por escrito,
-    // en una notificación (AiChat.qml). Botón de la barra o, en la conversación, «silencio» / «vuelve a hablar».
-    function setMuted(on): void {
-        Settings.set("aiMuted", on);
-        if (on) Quickshell.execDetached([Paths.script("hf-ai"), "speak", "--stop"]);
-        note(on ? "Respuestas silenciadas: te contesto por escrito" : "Respuestas habladas activadas");
+        if (proc.running && kind !== k) { cancel(); return; }
+        toggle(k);
     }
     // Aviso corto en la píldora, solo si no está ocupada dictando o escuchando
     function note(t): void { if (proc.running) return; phase = "done"; msg = t; hider.interval = 1600; hider.restart(); }
-    // Micrófono de la barra y hf:micro (Super + Alt + M): lo de su modo (dictar, walkie, conversación) o, desactivado,
-    // nada. hf:micro-modo (Super + Shift + Alt + M) y el clic derecho del botón pasan al siguiente modo.
-    // Silenciado, ningún modo funcionaría: no se cambia de modo y el botón (o el atajo) solo lo vuelve a activar.
-    readonly property string micMode: Shell.micMode
-    readonly property var micModes: ({ dictado: "dictado", walkie: "walkie-talkie", fluido: "conversación fluida", desactivado: "desactivado" })
-    readonly property string offMsg: "Voz desactivada · clic derecho o Super + Shift + Alt + M para cambiar de modo"
-    function micAction(): void {
-        if (Audio.micMuted) { if (conv) convEnd(false); Audio.toggleMic(); return; }
-        if (micMode === "desactivado") { note(offMsg); return; }
-        if (Shell.aiSpeaking) { hush(); if (conv) return; }   // cortarle: en conversación sigue y te escucha
-        if (micMode === "dictado") toggle("dictado"); else talk();
-    }
-    function talk(): void {
-        if (micMode === "desactivado") { note(offMsg); return; }
-        if (Shell.aiSpeaking) { hush(); if (conv) return; }
-        if (talkMode === "fluido") convToggle(); else toggle("ia");
-    }
-    function micCycle(): void {
-        if (Audio.micMuted) { if (!proc.running) { phase = "done"; msg = "Micrófono silenciado: actívalo para cambiar de modo"; hider.interval = 1800; hider.restart(); } return; }
-        const m = Object.keys(micModes), next = m[(m.indexOf(micMode) + 1) % m.length];
-        if (conv) convEnd(false); else if (proc.running) cancel();   // lo que escuchaba era del modo anterior
-        Settings.set("micMode", next);
-        phase = "done"; msg = "Micrófono: " + micModes[next]; hider.interval = 1400; hider.restart();
-    }
-    Connections { target: Shell; function onDictToggle() { root.micAction(); } function onMicCycle() { root.micCycle(); } function onVoiceDo(w) { root.voiceDo(w); }
-        // al bloquear se deja de escuchar: lo que se diga (o un «sí» a un plan pendiente) no debe llegar al asistente
-        function onLockedChanged() { if (Shell.locked) { root.convEnd(false); root.cancel(); } } }
-    property bool micHeld: false            // hf:micro pulsado en modo dictado o asistente (al soltar, released())
+    Connections { target: Shell; function onDictToggle() { root.voiceDo("dictado"); } function onVoiceDo(w) { root.voiceDo(w); }
+        // al bloquear se deja de escuchar
+        function onLockedChanged() { if (Shell.locked) root.cancel(); } }
     Timer { id: hider; interval: 1600; onTriggered: root.phase = "idle" }
     Timer { id: cmdHider; interval: 3000; onTriggered: { root.cmdText = ""; root.cmdMsg = ""; } }
 
+    property bool held: false               // atajo pulsado que empezó a escuchar (al soltar, released())
     function pressed(k): void {
+        held = false;
+        if (Shell.aiSpeaking && !proc.running) { hush(); return; }
+        if (Audio.micMuted && !proc.running) { Audio.toggleMic(); note("Micrófono activado"); return; }
+        held = true;
         if (proc.running) {
             // Con Super + Alt pulsados, lo que se teclease serían atajos de Hyprland (Super + Alt + S manda la ventana al
             // espacio oculto…): hf-dictate no escribe hasta que released() mande «release»
@@ -366,8 +154,10 @@ Scope {
         root.start(k, null, true);
     }
     function released(): void {
+        if (!held) return;
+        held = false;
         root.send("release");                                          // ya se puede escribir (en todos los modos)
-        if (root.recMode !== "ptt" || root.phase !== "rec" || root.latched) return;
+        if (root.mode !== "ptt" || root.phase !== "rec" || root.latched) return;
         if (Date.now() - root.pressedAt < 350) root.latched = true;    // toque corto: manos libres
         else root.stop();
     }
@@ -382,41 +172,16 @@ Scope {
         onReleased: root.released()
     }
     GlobalShortcut {
-        appid: "hf"; name: "hablar"; description: "HyprFrijol: hablar con el asistente"
-        onPressed: {
-            root.micHeld = false;
-            if (root.micMode === "desactivado") { root.note(root.offMsg); return; }
-            if (Shell.aiSpeaking) { root.hush(); if (root.conv) return; }   // cortarle; en walkie, tu pregunta empieza ya
-            if (root.talkMode === "fluido") root.convToggle(); else { root.micHeld = true; root.pressed("ia"); }
-        }
-        onReleased: if (root.micHeld) root.released()
+        appid: "hf"; name: "micro"; description: "HyprFrijol: dictado (micrófono)"
+        onPressed: root.pressed("dictado")
+        onReleased: root.released()
     }
-    GlobalShortcut {
-        appid: "hf"; name: "micro"; description: "HyprFrijol: micrófono (lo de su modo)"
-        onPressed: {
-            root.micHeld = false;
-            if (Audio.micMuted || root.micMode === "desactivado") { root.micAction(); return; }
-            if (Shell.aiSpeaking) { root.hush(); if (root.conv) return; }
-            if (root.micMode === "fluido") { root.convToggle(); return; }
-            root.micHeld = true; root.pressed(root.micMode === "walkie" ? "ia" : "dictado");
-        }
-        onReleased: if (root.micHeld) root.released()
-    }
-    GlobalShortcut { appid: "hf"; name: "micro-modo"; description: "HyprFrijol: siguiente modo del micrófono"; onPressed: root.micCycle() }
     IpcHandler {
         target: "dictado"
         function toggle(): void { root.toggle("dictado"); }
-        function talk(): void { root.talk(); }                // hablar con el asistente (hf-ai talk): según el modo
-        function hush(): void { root.hush(); }                // que Harper deje de hablar
-        function conversation(): void { root.convToggle(); }  // activar / desactivar la conversación por voz
-        // pruebas: una conversación con estos audios (rutas separadas por comas) como turnos tuyos
-        function conversationFiles(paths: string): void { if (root.conv) return; root.convFiles = paths.split(",").filter(p => p); root.convTest = true; root.convStart(); }
-        function checkIn(): void { companion.visit(true); }   // modo compañero: que Harper pase a saludar ya (pruebas)
-        function companionState(): string { return companion.state(); }
-        function conversationState(): string { return root.conv ? root.convState || "activa" : "apagada"; }
+        function hush(): void { root.hush(); }                // que Harper deje de leer
         function command(): void { root.toggle("comando"); }
-        function micro(): void { root.micAction(); }          // lo del modo del micrófono (micMode)
-        function microModo(): void { root.micCycle(); }
+        function micro(): void { root.voiceDo("dictado"); }   // como el botón del micrófono de la barra
         function start(): void { root.start("dictado", null); }
         function stop(): void { root.stop(); }
         function cancel(): void { root.cancel(); }
@@ -430,7 +195,7 @@ Scope {
     // ---------- píldora (sitio y estilo del OSD) ----------
     PanelWindow {
         id: win
-        readonly property bool shown: root.phase !== "idle" || root.conv
+        readonly property bool shown: root.phase !== "idle"
         screen: Shell.screen
         visible: shown || fade.running
         color: "transparent"
@@ -450,17 +215,13 @@ Scope {
 
         readonly property bool isCmd: root.kind === "comando" || root.cmdText !== ""
         readonly property color accent: root.phase === "error" || (root.cmdText && root.cmdMsg && !root.cmdOk) ? Theme.danger
-                                      : root.phase === "rec" && !isCmd && !convIdle && root.kind !== "ia" ? Theme.danger : Theme.p   // walkie: color del asistente, no rojo
-        readonly property string iconName: win.convIdle ? (root.convState === "habla" ? "volume" : "ai")
-                                         : root.cmdMsg ? (root.cmdOk ? "check" : "alert")
+                                      : root.phase === "rec" && !isCmd ? Theme.danger : Theme.p
+        readonly property string iconName: root.cmdMsg ? (root.cmdOk ? "check" : "alert")
                                          : root.phase === "done" ? "check" : root.phase === "error" ? "alert"
                                          : isCmd ? "command" : "mic"
         readonly property string mmss: Math.floor(root.secs / 60) + ":" + String(Math.floor(root.secs % 60)).padStart(2, "0")
         // texto principal y secundario de la píldora
-        // en conversación sin tu voz en curso (también mientras Harper habla y se le escucha por si le interrumpes)
-        readonly property bool convIdle: root.conv && (root.phase === "idle" || (root.phase === "rec" && root.convState === "habla"))
-        readonly property string mainText: convIdle ? (root.convState === "piensa" ? "Pensando…" : root.convState === "habla" ? (Settings.get("aiName", "") || "Harper") + " te responde…" : "")
-            : root.cmdText !== "" && root.phase !== "error" ? root.cmdText
+        readonly property string mainText: root.cmdText !== "" && root.phase !== "error" ? root.cmdText
             : root.phase === "rec" ? (root.partial || (root.committed ? root.committed.trim().slice(-120) : ""))
             : root.phase === "trans" ? (root.partial || "Transcribiendo…")
             : root.phase === "cmd" ? root.cmdText
@@ -468,11 +229,9 @@ Scope {
         readonly property string hint: root.phase !== "rec" ? ""
             : !root.ready ? "Preparando el micrófono…"
             : root.kind === "comando" ? "Di una orden: «pon Walk de Foo Fighters en YouTube»"
-            : root.conv ? "Te escucho…"
             : Settings.get("dictationWake", true) ? "Habla… · «" + (String(Settings.get("dictationWakeWord", "Distro")).trim() || "Distro") + ", …» para una orden"
             : "Habla…"
-        readonly property string sub: root.conv && root.cmdMsg === "" ? (root.convState === "habla" && root.phase === "rec" ? "Háblale para interrumpirle · Super + Alt + H para terminar" : "Conversación · Super + Alt + H para terminar")
-            : root.cmdMsg !== "" ? root.cmdMsg
+        readonly property string sub: root.cmdMsg !== "" ? root.cmdMsg
             : root.phase === "cmd" ? "Haciéndolo…"
             : root.phase === "rec" && !root.partial && !root.committed && (root.latched || root.mode !== "ptt") ? (root.mode === "continuo" ? "para solo al callarte" : "pulsa otra vez para terminar")
             : ""
@@ -531,7 +290,7 @@ Scope {
                 }
                 // puntos mientras transcribe o ejecuta
                 Row {
-                    visible: root.phase === "trans" || root.phase === "cmd" || (root.cmdText !== "" && root.cmdMsg === "") || (win.convIdle && root.convState === "piensa")
+                    visible: root.phase === "trans" || root.phase === "cmd" || (root.cmdText !== "" && root.cmdMsg === "") 
                     spacing: 4
                     Repeater {
                         model: 3
@@ -580,17 +339,9 @@ Scope {
                     Txt { id: cfg; anchors.centerIn: parent; text: "Configurar"; size: 12; weight: Font.DemiBold; color: Theme.pText }
                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.phase = "idle"; Shell.open("ajustesapp", "dictado"); } }
                 }
-                // terminar la conversación
-                Rectangle {
-                    visible: root.conv
-                    implicitWidth: 24; implicitHeight: 24; radius: 12
-                    color: Qt.alpha(Theme.danger, cma.containsMouse ? 0.3 : 0.18)
-                    Rectangle { anchors.centerIn: parent; width: 8; height: 8; radius: 2; color: Theme.danger }
-                    MouseArea { id: cma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.convEnd(false) }
-                }
                 // terminar (manos libres)
                 Rectangle {
-                    visible: root.phase === "rec" && !root.conv && (root.latched || root.mode !== "ptt")
+                    visible: root.phase === "rec" && (root.latched || root.mode !== "ptt")
                     implicitWidth: 24; implicitHeight: 24; radius: 12
                     color: Qt.alpha(Theme.danger, sma.containsMouse ? 0.3 : 0.18)
                     Rectangle { anchors.centerIn: parent; width: 8; height: 8; radius: 2; color: Theme.danger }
@@ -598,7 +349,7 @@ Scope {
                 }
                 // cancelar
                 Rectangle {
-                    visible: (root.phase === "rec" || root.phase === "trans") && !root.conv
+                    visible: root.phase === "rec" || root.phase === "trans"
                     implicitWidth: 24; implicitHeight: 24; radius: 12
                     color: xma.containsMouse ? Theme.fill2 : "transparent"
                     Icon { anchors.centerIn: parent; name: "x"; size: 12; color: Theme.tv }

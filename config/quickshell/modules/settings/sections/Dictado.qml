@@ -407,19 +407,6 @@ ColumnLayout {
                     : "Una pulsación empieza a escuchar y otra termina."
             }
             LabeledRow {
-                label: "Micrófono"
-                labelWidth: 110
-                Seg {
-                    model: [["dictado", "Dictado"], ["walkie", "Walkie-talkie"], ["fluido", "Fluido"], ["desactivado", "Desactivado"]]
-                    current: Shell.micMode
-                    onPicked: k => Settings.set("micMode", k)
-                }
-            }
-            Txt {
-                Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
-                text: "Lo que hacen el botón del micrófono de la barra y Super + Alt + M: dictar, hablar con el asistente (walkie-talkie: mientras mantienes; fluido: conversación) o nada. Clic derecho en el botón o Super + Shift + Alt + M: el siguiente."
-            }
-            LabeledRow {
                 label: "Motor"
                 labelWidth: 110
                 Seg {
@@ -477,16 +464,16 @@ ColumnLayout {
                 labelWidth: 110
                 hint: "dictationAiFix"
                 Seg {
-                    model: [["nunca", "Nunca"], ["asistente", "Al hablar con el asistente"], ["siempre", "Siempre"]]
-                    current: Settings.get("dictationAiFix", "asistente")
+                    model: [["nunca", "Nunca"], ["siempre", "Siempre"]]
+                    current: Settings.get("dictationAiFix", "nunca") === "siempre" ? "siempre" : "nunca"
                     onPicked: k => Settings.set("dictationAiFix", k)
                 }
             }
             Txt {
                 Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
-                text: (Settings.get("dictationAiFix", "asistente") === "siempre"
+                text: (Settings.get("dictationAiFix", "nunca") === "siempre"
                        ? "Cada frase pasa por el modelo rápido de tu asistente antes de escribirse (~1–2 s más): arregla nombres de grupos, creadores, marcas, programas y términos de internet que el reconocedor oye mal. Lo que dictas sale de tu equipo salvo con «Solo en este equipo»."
-                       : "Con «Siempre», cada frase dictada pasa por el modelo rápido de tu asistente (~1–2 s más) y arregla nombres de grupos, creadores, marcas, programas y términos de internet que el reconocedor oye mal. Al hablar con el asistente, lo que dices ya va a la IA.")
+                       : "Con «Siempre», cada frase dictada pasa por el modelo rápido de tu asistente (~1–2 s más) y arregla nombres de grupos, creadores, marcas, programas y términos de internet que el reconocedor oye mal.")
                     + " Si no responde en " + (Settings.get("dictationAiFixSec", 3)) + " s, se escribe lo que se oyó."
             }
             SwRow { label: "Puntuación y mayúsculas automáticas"; sub: "comas, puntos y mayúscula al empezar frase; di «nueva línea» o «punto y aparte»"; key: "dictationPunct"; def: true }
@@ -541,6 +528,26 @@ ColumnLayout {
         Txt {
             Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
             text: "Para «pon <canción>» sin decir dónde. YouTube abre el primer resultado y empieza solo" + (root.st.ytdlp ? " (lo busca yt-dlp)." : "; con yt-dlp instalado la búsqueda es más fiable.")
+        }
+        // Capa de IA local de hf-voice (local_ai): siempre Ollama de este equipo; solo elige entre las órdenes conocidas
+        SwRow {
+            label: "Entender con la IA local"
+            sub: "lo que las reglas no entienden («ponme algo tranquilo», «quiero ver mis notas») lo traduce a una de estas órdenes un modelo de Ollama de este equipo; nunca escribe comandos ni sale a internet"
+            key: "voiceLocalAI"; def: true
+        }
+        LabeledRow {
+            visible: Settings.get("voiceLocalAI", true) !== false
+            label: "Modelo"
+            labelWidth: 110
+            hint: "voiceLocalModel"
+            Field {
+                icon: ""
+                placeholder: "El del asistente local (gemma4:e4b)"
+                text: Settings.get("voiceLocalModel", "")
+                input.maximumLength: 80
+                onAccepted: Settings.set("voiceLocalModel", text.trim())
+                input.onActiveFocusChanged: if (!input.activeFocus && text.trim() !== Settings.get("voiceLocalModel", "")) Settings.set("voiceLocalModel", text.trim())
+            }
         }
         SwRow {
             label: "Lo que no entienda, al asistente"

@@ -230,6 +230,8 @@ for k in ("micMode", "aiTalkMode", "aiConvSilence", "aiConvInterrupt", "aiCompan
     d.pop(k, None)
 if d.get("dictationAiFix") == "asistente":
     d["dictationAiFix"] = "nunca"
+if d.get("aiAnnounceUrgent") or d.get("aiAnnounceGreet"):   # leer avisos ahora depende de «Leer en voz alta»
+    d["aiVoice"] = True
 tmp = p + ".tmp"
 with open(tmp, "w") as f:
     f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")

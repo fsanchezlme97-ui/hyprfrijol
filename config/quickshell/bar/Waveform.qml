@@ -44,8 +44,8 @@ Rectangle {
     readonly property bool isPreview: sample !== null
     readonly property string kind: forceKind || Settings.get("waveStyle", "barras")
     readonly property string aiState: isPreview ? "" : Shell.aiSpeaking ? "habla"
-        : Shell.aiConvState === "piensa" || Shell.aiBusy || Shell.dictPhase === "trans" ? "piensa"
-        : Shell.dictPhase === "rec" || Shell.aiConvState === "escucha" ? "escucha" : ""
+        : Shell.aiBusy || Shell.dictPhase === "trans" ? "piensa"
+        : Shell.dictPhase === "rec" ? "escucha" : ""
     readonly property color stateColor: aiState === "habla" ? Theme.ter : aiState === "piensa" ? thinkColor : Theme.p
     // primario mezclado con el fondo de la barra (opaco: el degradado del Canvas le cambia el alfa)
     readonly property color thinkColor: Qt.tint(Theme.p, Qt.alpha(Theme.glass, 0.45))

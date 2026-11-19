@@ -3276,9 +3276,9 @@ def greeting():
     return " ".join(parts)
 
 def greet():
-    """Saludo de Harper al entrar (aiAnnounceGreet): una vez por sesión de Hyprland, aunque el shell se reinicie."""
+    """Saludo de Harper al entrar (aiVoice y aiAnnounceGreet): una vez por sesión de Hyprland, aunque el shell se reinicie."""
     s = settings()
-    if not s.get("aiAnnounceGreet"):
+    if not (s.get("aiVoice") and s.get("aiAnnounceGreet")):
         return {"ok": False, "error": "Saludo desactivado"}
     mark = TTS_DIR / f"hf-ai-greeted-{os.environ.get('HYPRLAND_INSTANCE_SIGNATURE', 'x')}"
     if mark.exists():

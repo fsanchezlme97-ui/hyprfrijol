@@ -346,75 +346,35 @@ ColumnLayout {
             visible: Settings.get("aiFallbackProvider", "") !== ""
             Layout.fillWidth: true; Layout.leftMargin: 150
             size: 11; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
-            text: "Por voz; al escribir se espera el triple (" + 3 * Number(Settings.get("aiFallbackWait", 8)) + " s). En la voz, Harper te dice que contestó el respaldo"
-                + (Settings.get("aiFallbackProvider", "") === "ollama" ? ", y el modelo local se carga al empezar a hablar para que conteste al momento." : ".")
-        }
-        SwRow {
-            visible: Settings.get("aiFallbackProvider", "") === "ollama" && (root.prov === "gemini" || root.prov === "claude-code")
-            label: "Voz con el modelo local primero"
-            sub: "contesta en menos de 1 s en la gráfica; si falla, responde " + (root.prov === "gemini" ? "Gemini" : "Claude")
-            key: "aiVoiceLocal"; def: false
+            text: "Se espera el triple: el respaldo contesta si el principal no lo ha hecho a los " + 3 * Number(Settings.get("aiFallbackWait", 8)) + " s."
         }
     }
 
-    // Voz y conversación: leer en voz alta, Super + Alt + H, turnos y avisos hablados
+    // Leer en voz alta (aiVoice): la voz de Harper (local, Piper) solo lee, no conversa. hf-ai announce y greet;
+    // Notifs.qml lee los urgentes. Nunca en «no molestar».
     Section {
         Layout.fillWidth: true
-        title: "Voz y conversación"
-        // Voz (aiVoice): hf-ai speak lee cada respuesta con Harper, la única voz (local, Piper)
+        title: "Leer en voz alta"
         SwRow {
-            label: "Hablar con voz"; key: "aiVoice"; def: false
+            label: "Leer en voz alta"; key: "aiVoice"; def: false
             sub: root.voiceLocal === false ? "falta la voz de Harper: instálala abajo"
-                                           : "Harper lee las respuestas en voz alta (voz local: rápida y sin internet)"
-        }
-        // aiMuted: hf-ai speak calla del todo (respuestas, avisos y saludo); la conversación contesta en notificaciones
-        SwRow {
-            label: "Silenciar respuestas habladas"; key: "aiMuted"; def: false
-            sub: "Harper no dice nada en voz alta; en la conversación contesta por escrito. También con el botón de la barra o diciendo «silencio» (y «vuelve a hablar»)"
+                                           : (Settings.get("aiName", "") || "Harper") + " lee los avisos que elijas con su voz local (rápida y sin internet). No conversa: el asistente se usa por escrito"
         }
         Button {
             visible: root.voiceLocal === false
             text: "Instalar la voz de Harper (Piper, ~250 MB, sin internet)"
             onClicked: { Pkg.runInTerminal(Paths.script("hf-ai") + " voice-install --tty", "Voz del asistente"); voiceLater.n = 0; voiceLater.restart(); }
         }
-        // Modo del micrófono (Shell.micMode, el mismo que en Ajustes › Dictado): botón de la barra, Super + Alt + M y,
-        // en walkie, Super + Alt + H (en los demás, Super + Alt + H abre la conversación). Dictado.qml
-        LabeledRow {
-            label: "Modo de voz"
-            labelWidth: 120
-            Seg {
-                model: [["dictado", "Dictado"], ["walkie", "Walkie-talkie"], ["fluido", "Fluido"], ["desactivado", "Desactivado"]]
-                current: Shell.micMode
-                onPicked: k => Settings.set("micMode", k)
-            }
-        }
-        LabeledRow {
-            visible: Shell.micMode !== "desactivado"
-            label: "Tu turno acaba"
-            labelWidth: 120
-            Seg {
-                model: [["0.8", "Rápido"], ["1.2", "Normal"], ["2", "Con pausas"]]
-                current: String(Settings.get("aiConvSilence", 1.2))
-                onPicked: k => Settings.set("aiConvSilence", parseFloat(k))
-            }
+        SwRow {
+            visible: Settings.get("aiVoice", false) === true
+            label: "Avisos urgentes"; key: "aiAnnounceUrgent"; def: false
+            sub: "recordatorios y temporizadores del asistente al vencer, batería baja y otras notificaciones urgentes; calla en «no molestar»"
         }
         SwRow {
-            visible: Shell.micMode === "fluido"
-            label: "Interrumpir hablando"; key: "aiConvInterrupt"; def: true
-            sub: "mientras " + (Settings.get("aiName", "") || "Harper") + " contesta te sigue escuchando: si le hablas, se calla y te atiende. Su voz pasa por un cancelador de eco para que no se oiga a sí mismo por los altavoces"
+            visible: Settings.get("aiVoice", false) === true
+            label: "Saludo al entrar"; key: "aiAnnounceGreet"; def: false
+            sub: "al iniciar sesión dice la hora y el tiempo"
         }
-        Txt {
-            Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
-            text: ({
-                dictado: "El micrófono dicta. Super + Alt + H abre una conversación con " + (Settings.get("aiName", "") || "Harper") + ".",
-                walkie: "Mantén Super + Alt + M (o Super + Alt + H) mientras hablas y suelta: se lo pasa al asistente. Con el botón de la barra: clic, habla y clic. Si está hablando, pulsar lo corta y empieza tu pregunta.",
-                fluido: "Pulsa una vez y habla con naturalidad: al callarte se lo pasa al asistente, Harper contesta en voz alta y vuelve a escucharte. Puedes cortarle hablando o pulsando. Para terminar, pulsa otra vez o di «adiós» (también se cierra tras un rato en silencio).",
-                desactivado: "Ni el micrófono ni Super + Alt + H escuchan. El chat sigue funcionando por escrito."
-            })[Shell.micMode]
-        }
-        // Avisos (hf-ai announce): también con la voz de Harper. Nunca en «no molestar».
-        SwRow { label: "Saludo al entrar"; sub: "al iniciar sesión Harper dice la hora y el tiempo"; key: "aiAnnounceGreet"; def: false }
-        SwRow { label: "Avisos importantes en voz alta"; sub: "lee los recordatorios y las notificaciones urgentes; calla en «no molestar»"; key: "aiAnnounceUrgent"; def: false }
         Timer { id: voiceLater; interval: 5000; repeat: true; property int n: 0; onTriggered: { stat.running = false; stat.running = true; if (++n > 24 || root.voiceLocal) stop(); } }
     }
 
@@ -487,41 +447,6 @@ ColumnLayout {
             visible: persona.text.length > 1500
             text: persona.text.length + " / 2000"
             size: 11; color: persona.text.length > 2000 ? Theme.ter : Theme.tv
-        }
-    }
-
-    Section {
-        Layout.fillWidth: true
-        title: "Modo compañero"
-        // Modo compañero (modules/dictado/Companion.qml): Harper empieza él la conversación de vez en cuando
-        SwRow {
-            label: "Modo compañero"; key: "aiCompanion"; def: false
-            sub: "de vez en cuando " + (Settings.get("aiName", "") || "Harper") + " pasa a saludar: ofrece ayuda, pregunta cómo vas o comenta lo que ve. Nunca en pantalla completa, en llamadas, en «no molestar», con el pomodoro de foco ni si no estás"
-        }
-        LabeledRow {
-            visible: Settings.get("aiCompanion", false) === true
-            label: "Cada cuánto"
-            labelWidth: 120
-            Seg {
-                model: [["poco", "Poco (1,5 h)"], ["normal", "Normal (45 min)"], ["amenudo", "A menudo (20 min)"]]
-                current: Settings.get("aiCompanionFreq", "normal")
-                onPicked: k => Settings.set("aiCompanionFreq", k)
-            }
-        }
-        SwRow {
-            visible: Settings.get("aiCompanion", false) === true
-            label: "Mirar la pantalla"; key: "aiCompanionLook"; def: true
-            sub: "hace una captura de la pantalla activa para saber qué haces (en ~/.cache/hyprfrijol/capturas_tmp_ai, solo tuya: guarda las 20 últimas y las borra al día). Nunca con un gestor de contraseñas a la vista"
-        }
-        Txt {
-            visible: Settings.get("aiCompanion", false) === true
-            Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
-            text: "Avisa antes si el equipo va muy cargado y propone un descanso tras una hora seguida. Con muchas ventanas abiertas o el equipo trabajando a tope espera más. Si no contestas, se va sin insistir. Para pedirle cambios, contesta «sí» o «no» cuando te pregunte «¿Lo hago?»."
-        }
-        Button {
-            visible: Settings.get("aiCompanion", false) === true
-            text: "Probar ahora"
-            onClicked: Shell.aiCompanionNow()
         }
     }
 

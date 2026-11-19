@@ -268,12 +268,12 @@ Singleton {
         }
     }
 
-    // Harper lee en voz alta los avisos urgentes (recordatorios del asistente, batería…): aiAnnounceUrgent.
+    // Harper lee en voz alta los avisos urgentes (recordatorios del asistente, batería…): aiVoice y aiAnnounceUrgent.
     // Nunca en «no molestar» ni de apps silenciadas; el mismo aviso repetido en menos de 1 min, una sola vez.
     property string lastSpoken: ""
     property real lastSpokenT: 0
     function announce(n) {
-        if (!isCritical(n) || dnd || !Settings.get("aiAnnounceUrgent", false) || ruleOf(n).allow === false) return;
+        if (!isCritical(n) || dnd || !Settings.get("aiVoice", false) || !Settings.get("aiAnnounceUrgent", false) || ruleOf(n).allow === false) return;
         const text = [n.summary, n.body].filter(Boolean).join(". ");
         if (!text.trim() || (text === lastSpoken && Date.now() - lastSpokenT < 60000)) return;
         lastSpoken = text; lastSpokenT = Date.now();

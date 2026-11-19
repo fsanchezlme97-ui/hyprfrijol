@@ -83,6 +83,7 @@ pkgbase = hyprfrijol-git
 	optdepends = cliphist: historial del portapapeles
 	optdepends = playerctl: música y brillo
 	optdepends = brightnessctl: música y brillo
+	optdepends = bat: lector de archivos de las órdenes de voz («lee <archivo>»; sin él, less)
 	optdepends = python-pymupdf: Firmar documentos PDF (hf-sign); sin él usa Poppler y se pierden enlaces y formularios
 	optdepends = python-gobject: selector de archivos, enviar al móvil y avisos del asistente (hf-pickfile, hf-phone, hf-ai)
 	optdepends = poppler: OCR y conversión de PDF desde Nautilus (pdftoppm, hf-fileact)

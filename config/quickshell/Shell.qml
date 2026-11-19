@@ -40,26 +40,10 @@ Singleton {
     property string dictPhase: "idle"
     property bool aiSpeaking: false        // hf-ai speak mientras suena la voz del asistente (onda en terciario en la barra)
     property bool aiBusy: false            // el asistente está pensando una respuesta (AiChat.qml: ola que va y viene en la barra)
-    property string aiConvState: ""        // conversación por voz: escucha | piensa | habla ("" sin conversación; Dictado.qml)
+    property string dictKind: "dictado"    // lo que escucha: dictado | comando (Dictado.qml; botones de bar/VoiceBtns.qml)
     property var micLevels: []             // niveles recientes del micrófono al dictar o escuchar (0..1, el último el más nuevo)
-    signal voiceDo(string what)            // botones de voz de la barra (bar/VoiceBtns.qml): dictado | walkie | walkie-up | fluido | desactivado
-    // Modo del micrófono (micMode): dictado · walkie (mantener para hablar con el asistente) · fluido (conversación de
-    // ida y vuelta) · desactivado. Los nombres de antes se leen como su equivalente hasta que hf-migrate los cambia
-    // (él también pasa «ia» con el antiguo aiTalkMode «pulsar» a walkie).
-    readonly property string micMode: {
-        const m = Settings.get("micMode", "dictado");
-        return ({ ia: "fluido", silencio: "desactivado" })[m] ?? (["dictado", "walkie", "fluido", "desactivado"].includes(m) ? m : "dictado");
-    }
-    signal dictToggle()                    // botón del micrófono: lo de su modo (micMode, modules/dictado)
-    signal micCycle()                      // siguiente modo del micrófono
-    signal aiAskHidden(string text)        // pregunta al asistente sin abrir el panel (hablar por voz: Super + Alt + H)
-    property bool aiConversation: false    // conversación por voz en marcha (Dictado.qml): escucha, responde, escucha…
-    signal aiReplied(bool ok)              // llegó la respuesta del asistente (AiChat.qml)
-    signal aiCompanionNow()                // «Probar ahora» (Ajustes › Asistente de IA): visita del compañero ya
-    signal aiCheckIn(string reason, string image, bool askLook)   // modo compañero: Harper habla él primero (Companion.qml); askLook: sin captura, pregunta si puede mirar
-    signal aiConvEnd(string farewell)      // «no, gracias» a una oferta (hf-ai "end"): la voz se despide y la conversación termina; el compañero espera más
-    property bool aiPlanPending: false     // en la conversación por voz hay un plan esperando «sí» o «no» (AiChat.qml)
-    signal aiPlanAnswer(bool yes)          // la respuesta dicha a ese plan (Dictado.qml)
+    signal voiceDo(string what)            // botones de voz de la barra (bar/VoiceBtns.qml, bar/MicBtn.qml): dictado | comando
+    signal dictToggle()                    // botón del micrófono: dictar (modules/dictado)
     // Pantalla donde se abren los paneles: la del monitor con foco
     readonly property var screen: {
         const name = Hyprland.focusedMonitor?.name;
