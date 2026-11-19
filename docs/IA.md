@@ -218,18 +218,18 @@ el panel y la voz: gemma4:e4b.
 
 ### Conversación
 
-- **Permiso para mirar la pantalla** (Ajustes › Asistente de IA › Privacidad › «Mirar la pantalla»):
-  - antes de capturar (consultas `screen`/`ui`, la ventana activa sin captura guardada), Harper pregunta «¿Puedo hacer
-    una captura?» con los botones Sí / No, y espera;
-  - `aiScreenAsk`: `siempre` (por defecto) pregunta antes de cada captura; `sensible` solo con una ventana sensible a
-    la vista;
+- **Mirar la pantalla, solo si se lo pides** (Ajustes › Asistente de IA › Privacidad › «Mirar la pantalla»):
+  - cuenta como petición que tu último mensaje lo diga («mira mi pantalla», «¿qué ves?») o pida usarla («haz clic en
+    Responder»), además de «+ Captura» y el atajo de la ventana actual (Super + Ctrl + A), que adjuntan la captura;
+  - si no, Harper no captura ni lo pregunta: las consultas `screen`/`ui` le contestan que no ha pedido que mire y
+    responde sin la pantalla; la ventana activa se lee sin captura nueva;
   - **ventanas sensibles** (`aiSensitiveWindows`: correo, banca, pagos, mensajería, inicios de sesión…, por la clase o
-    el título): con una a la vista pregunta siempre y dice por qué, en los dos modos y aunque se lo pidas tú;
-  - pedirlo tú («mira mi pantalla», «¿qué ves?», «+ Captura», el atajo de la ventana actual) ya es el permiso;
+    el título): aunque se lo pidas, con una a la vista pregunta antes y dice por qué;
   - si al contestar «sí» hay una ventana sensible que la pregunta no nombraba (apareció después), no captura: vuelve a
-    preguntar nombrándola;
-  - la pregunta espera 5 minutos (`~/.cache/hyprfrijol/ai-screen-ask.json`); cualquier otro mensaje la descarta;
-  - también vale para lo que se pide por MCP: sin permiso, la herramienta de pantalla no captura.
+    preguntar nombrándola; la pregunta espera 5 minutos (`~/.cache/hyprfrijol/ai-screen-ask.json`);
+  - lo que llega por MCP no es una petición tuya: la herramienta de pantalla nunca captura;
+  - no hay nada que se dispare solo: el asistente espera a que le escribas (el resumen de avisos solo se genera al
+    abrir el centro de notificaciones, con el modelo local, y no mira la pantalla).
 - **«No, gracias»** («estoy bien», «ahora no», «no hace falta»…) se entiende siempre como una negativa; un «no» o un
   «nada» a secas, solo justo después de una oferta. Harper contesta «Vale, aquí estoy si me necesitas.», sin llamar al
   modelo.

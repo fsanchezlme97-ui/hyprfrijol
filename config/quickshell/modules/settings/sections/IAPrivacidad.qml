@@ -3,8 +3,8 @@
 //    contexto que se envía; el panel avisa «Se ocultó 1 dato sensible»)
 //  · apps privadas (privateApps → hf-ai is_private: con una delante no se lee su ventana, título, pantalla ni
 //    portapapeles; la misma lista sirve al portapapeles)
-//  · mirar la pantalla (aiScreenAsk "siempre" | "sensible", aiSensitiveWindows → hf-ai screen_ask: pregunta antes de
-//    capturar; con una ventana sensible a la vista, siempre)
+//  · mirar la pantalla (hf-ai screen_ask: solo si el usuario lo pide; aiSensitiveWindows: con una de esas a la vista
+//    pregunta antes de capturar)
 //  · historial del panel (aiHistory, aiHistoryDays → hf-ai prune_history; ~/.local/share/hyprfrijol/ai)
 //  · registro de acciones: `hf-ai log` (lo que aún se puede deshacer, ~/.cache/hyprfrijol/undo) y `hf-ai undo <id>`
 import QtQuick
@@ -41,20 +41,11 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Mirar la pantalla"
-        LabeledRow {
-            label: "Preguntar antes"
-            labelWidth: 140
-            Seg {
-                model: [["siempre", "Siempre"], ["sensible", "Solo con ventanas sensibles"]]
-                current: Settings.get("aiScreenAsk", "siempre")
-                onPicked: k => Settings.set("aiScreenAsk", k)
-            }
-        }
         Txt {
             Layout.fillWidth: true
-            text: "Antes de hacer una captura para ver tu pantalla, el asistente pregunta y espera tu «sí». Si se lo pides tú "
-                + "(«mira mi pantalla», «+ Captura») no vuelve a preguntar. Con una ventana sensible a la vista pregunta siempre, "
-                + "en los dos modos. Cuenta como sensible la ventana cuyo nombre o título lleva una de estas palabras:"
+            text: "El asistente solo mira la pantalla cuando se lo pides: «mira mi pantalla», «¿qué ves?», «haz clic en…», «+ Captura» "
+                + "o Super + Ctrl + A. Por su cuenta no captura ni lo pregunta. Aunque se lo pidas, si hay una ventana sensible a la vista "
+                + "pregunta antes. Cuenta como sensible la ventana cuyo nombre o título lleva una de estas palabras:"
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }
         Field {

@@ -42,9 +42,15 @@ def _profiles_left():
     if any(f'"{k}"' in t for k in ("webapps", "webappEngine", "webappPreload")):   # web apps (retiradas en 0.8.28)
         return True
     if any(f'"{k}"' in t for k in ("micMode", "aiTalkMode", "aiConvSilence", "aiConvInterrupt", "aiCompanion",
-                                   "aiCompanionFreq", "aiCompanionLook", "aiMuted", "aiVoiceLocal")) \
+                                   "aiCompanionFreq", "aiCompanionLook", "aiMuted", "aiVoiceLocal", "aiScreenAsk")) \
             or re.search(r'"dictationAiFix":\s*"asistente"', t):   # voz sin conversación (0.11.0)
         return True
+    try:   # personalidad de fábrica de antes de 0.11.1: pasa a la nueva (hf-migrate, paso 6)
+        import hashlib
+        if hashlib.sha256(str(json.loads(t).get("aiPersona", "")).encode()).hexdigest() == "48a0582337e7ebe8e8c7f8399d5300d2d5a8b3e4a0b3e5ff919f3ec915034077":
+            return True
+    except Exception:
+        pass
     if re.search(r'"estilo":\s*"(?!math")', t):   # Chroma y SkySoul (retirados en 0.9.0): pasa a Math
         return True
     try:   # paleta retirada en 0.9.2: pasa a la más parecida (aquí aún no existe load())

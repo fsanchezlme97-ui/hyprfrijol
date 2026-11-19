@@ -218,20 +218,36 @@ PY
   fi
   # Voz sin conversación (0.11.0): fuera el modo del micrófono, la conversación, el compañero y las respuestas
   # habladas; «asistente» en dictationAiFix pasa a «nunca». La voz de Harper queda solo como lectora (aiVoice).
-  if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); k=("micMode","aiTalkMode","aiConvSilence","aiConvInterrupt","aiCompanion","aiCompanionFreq","aiCompanionLook","aiMuted","aiVoiceLocal"); sys.exit(0 if isinstance(d,dict) and (any(x in d for x in k) or d.get("dictationAiFix")=="asistente") else 1)' "$cfg" 2>/dev/null; then
-    say "Voz sin conversación: quito el modo del micrófono, la conversación y el compañero de $cfg"
+  if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); k=("micMode","aiTalkMode","aiConvSilence","aiConvInterrupt","aiCompanion","aiCompanionFreq","aiCompanionLook","aiMuted","aiVoiceLocal","aiScreenAsk"); sys.exit(0 if isinstance(d,dict) and (any(x in d for x in k) or d.get("dictationAiFix")=="asistente") else 1)' "$cfg" 2>/dev/null; then
+    say "Ajustes retirados (modo del micrófono, conversación por voz, compañero, preguntar antes de mirar la pantalla) en $cfg"
     run cp -n "$cfg" "$cfg.antes-de-voz-sin-ia"
     [ "$DRY" = 1 ] || python3 -I - "$cfg" <<'PY'
 import json, os, sys
 p = os.path.realpath(sys.argv[1])
 d = json.load(open(p))
 for k in ("micMode", "aiTalkMode", "aiConvSilence", "aiConvInterrupt", "aiCompanion", "aiCompanionFreq",
-          "aiCompanionLook", "aiMuted", "aiVoiceLocal"):
+          "aiCompanionLook", "aiMuted", "aiVoiceLocal", "aiScreenAsk"):
     d.pop(k, None)
 if d.get("dictationAiFix") == "asistente":
     d["dictationAiFix"] = "nunca"
 if d.get("aiAnnounceUrgent") or d.get("aiAnnounceGreet"):   # leer avisos ahora depende de «Leer en voz alta»
     d["aiVoice"] = True
+tmp = p + ".tmp"
+with open(tmp, "w") as f:
+    f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
+os.replace(tmp, p)
+PY
+  fi
+  # Personalidad de Harper (0.11.1): la de fábrica de antes (mayordomo de tú) pasa a la nueva (formal, de usted,
+  # concisa y con algún sarcasmo). Solo si no la habías cambiado (huella sha256).
+  if [ -f "$cfg" ] && python3 -I -c 'import hashlib,json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(d,dict) and hashlib.sha256(str(d.get("aiPersona","")).encode()).hexdigest()=="48a0582337e7ebe8e8c7f8399d5300d2d5a8b3e4a0b3e5ff919f3ec915034077" else 1)' "$cfg" 2>/dev/null; then
+    say "Asistente: personalidad nueva de Harper en $cfg (copia: $cfg.antes-de-persona-formal)"
+    run cp -n "$cfg" "$cfg.antes-de-persona-formal"
+    [ "$DRY" = 1 ] || python3 -I - "$cfg" "$root/config/defaults/settings.json" <<'PY'
+import json, os, sys
+p = os.path.realpath(sys.argv[1])
+d = json.load(open(p))
+d["aiPersona"] = json.load(open(sys.argv[2]))["aiPersona"]
 tmp = p + ".tmp"
 with open(tmp, "w") as f:
     f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")

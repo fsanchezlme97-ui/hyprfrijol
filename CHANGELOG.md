@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.1] — 2026-11-19
+
+### Cambios
+- **El asistente solo mira la pantalla si se lo pides:** «mira mi pantalla», «¿qué ves?», «haz clic en…», «+ Captura» o
+  Super + Ctrl + A. Por su cuenta ya no captura ni pregunta «¿Puedo hacer una captura?»: contesta sin mirar. Con una
+  ventana sensible a la vista (correo, banca…) sigue preguntando antes. Lo que pide un agente por MCP nunca captura.
+  Desaparece el ajuste «Preguntar antes» de Ajustes › Asistente de IA › Privacidad.
+- **Harper, más formal y concisa:** trata de usted, va directa al dato en una o dos frases, sin saludos, anuncios ni
+  ofrecimientos, y con algún comentario seco de vez en cuando. Si no habías cambiado su personalidad, `hf-migrate` pone
+  la nueva (copia en `settings.json.antes-de-persona-formal`).
+- Sin la coletilla «No pude preparar eso en este equipo» cuando la respuesta ya lo explica.
+
 ## [0.11.0] — 2026-11-19
 
 ### Novedades
