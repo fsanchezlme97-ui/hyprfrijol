@@ -16,22 +16,17 @@ Motor (dictationEngine; «auto» = Nemotron si está instalado; si no Parakeet; 
   hibrido     palabras de Vosk mientras hablas y whisper corrige la frase entera antes de escribirla.
   faster-whisper (Python, por frases).
 
-  hf-dictate record [--command] [--mode ptt|toggle|continuo] [--hold] [--tts] [--file clip.wav [--simulate-live]]
+  hf-dictate record [--command] [--mode ptt|toggle|continuo] [--hold] [--file clip.wav [--simulate-live]]
         graba hasta «stop» (por stdin, SIGUSR1 o `hf-dictate stop`); --command: una orden de voz (hf-voice);
         --hold: no escribe hasta «release» por stdin (modo mantener: las teclas del atajo siguen pulsadas);
         --file: lee el audio de un archivo en lugar del micrófono (pruebas; --simulate-live lo da a tiempo real).
-        --tts: empieza con Harper hablando (conversación): no se cierra por silencio y solo una voz clara y
-        sostenida cuenta; entonces emite {"ev":"barge"} (el shell lo calla) y sigue como un turno normal.
-        Con HF_DICTATE_AEC=1 graba del micrófono sin eco (hf-dictate aec on) si está cargado.
-        stdin admite líneas: stop · cancel · release · hold (teclas del atajo pulsadas: no escribir) · tts on · tts off. Imprime eventos en líneas JSON (los lee modules/dictado):
+        stdin admite líneas: stop · cancel · release · hold (teclas del atajo pulsadas: no escribir). Imprime eventos en líneas JSON (los lee modules/dictado):
         {"ev":"rec","kind":"dictado|comando",…} {"ev":"ready"} {"ev":"level","v":0..1,"t":s} {"ev":"speech","on":bool}
         {"ev":"partial","text":…} {"ev":"phrase","text":…,"lat":s,"how":…} {"ev":"cmd","text":…,"label":…}
         {"ev":"cmdresult","ok":…,"msg":…} {"ev":"transcribing"} {"ev":"text","text":…}
         {"ev":"done","how":"escrito|pegado|copiado|comando|ninguna"} {"ev":"error","msg":…,"code":…} {"ev":"cancelled"}
   hf-dictate toggle [--command]  sin el shell: empieza o, si ya graba, para (avisos con notify-send)
   hf-dictate stop | cancel       para la grabación en curso (y transcribe) / la descarta
-  hf-dictate aec on|off|status   cancelador de eco de PipeWire (webrtc) para la conversación: micrófono «hf-aec-source»;
-                                 lo que suena por «hf-aec-sink» (la voz de Harper, hf-ai speak) no se oye en él
   hf-dictate status              {engine, bin, server, model, modelOk, models, vosk…, recorder, typer, gpu…}
   hf-dictate warm | unload       carga el modelo en whisper-server / lo descarga ya
   hf-dictate transcribe <wav>    imprime el texto (pruebas)
@@ -52,7 +47,7 @@ Ajustes (settings.json): dictationModel tiny|base|small|medium|turbo (base) · d
   N s callado, 5) · dictationKeepLoaded (s con el modelo cargado, 600) · dictationWake + dictationWakeWord (decir
   «Distro, …» para dar una orden) · dictationVoskModel ·
   dictationPrompt (vocabulario, separado por comas: whisper lo usa al reconocer y todos los motores al corregir) ·
-  dictationAiFix nunca|asistente|siempre (corregir nombres con la IA: al hablar con el asistente, o también al dictar) ·
+  dictationAiFix nunca|siempre (corregir nombres con la IA también al dictar; «asistente», de antes, cuenta como nunca) ·
   dictationAiFixSec (tiempo máximo de esa corrección, 3) · dictationMaxSec (120 en ptt/toggle; 600 en continuo)
 Modelos: ~/.local/share/hyprfrijol/whisper/ggml-<modelo>.bin · …/whisper/vosk/<modelo>/
 Pruebas: HF_DICTATE_OUTPUT=ninguna no escribe nada · HF_VOICE_DRY=1 no ejecuta las órdenes (hf-voice --dry-run) ·
@@ -999,12 +994,7 @@ def vocab_fix(text, vocab):
     return " ".join(out)
 
 def ai_fix_wanted(s, kind):
-    if os.environ.get("HF_DICTATE_AIFIX") == "0":   # conversación: el asistente ya entiende un nombre mal oído y la
-        return False                                # corrección le añadía hasta dictationAiFixSec a cada turno
-    mode = s.get("dictationAiFix") or "asistente"
-    if mode == "siempre":
-        return True
-    return mode == "asistente" and os.environ.get("HF_DICTATE_FOR") == "ia"
+    return s.get("dictationAiFix") == "siempre"
 
 def ai_fix(text, s, before=""):
     """Corrige los nombres mal oídos con la IA (hf-ai dictfix). Si tarda más de dictationAiFixSec o falla, el texto
@@ -1219,41 +1209,10 @@ def running_pid():
     except Exception:
         return 0
 
-AEC_SRC, AEC_SINK = "hf-aec-source", "hf-aec-sink"
-
-def pa_names(kind):
-    """Nombres de los sinks / sources / modules de PipeWire (pactl list short)."""
-    try:
-        out = subprocess.run(["pactl", "list", "short", kind], capture_output=True, text=True, timeout=3).stdout
-    except Exception:
-        return []
-    return [l.split("\t") for l in out.splitlines() if l.strip()]
-
-def aec_on():
-    return any(len(f) > 1 and f[1] == AEC_SRC for f in pa_names("sources"))
-
-def aec(cmd):
-    """Cancelador de eco para hablar con Harper sin auriculares: su voz suena por AEC_SINK y el micrófono AEC_SRC la
-    resta. Solo existe mientras dura la conversación (Dictado.qml lo carga y lo quita); no cambia los dispositivos
-    por defecto."""
-    if not shutil.which("pactl"):
-        return {"ok": False, "error": "Falta pactl (pipewire-pulse)"}
-    mods = [f[0] for f in pa_names("modules") if len(f) > 2 and f"source_name={AEC_SRC}" in f[2]]
-    if cmd == "on" and not mods:
-        r = subprocess.run(["pactl", "load-module", "module-echo-cancel", "aec_method=webrtc",
-                            f"source_name={AEC_SRC}", f"sink_name={AEC_SINK}"], capture_output=True, text=True, timeout=5)
-        if r.returncode != 0:
-            return {"ok": False, "error": (r.stderr or "No se pudo cargar module-echo-cancel").strip()}
-    elif cmd == "off":
-        for m in mods:
-            subprocess.run(["pactl", "unload-module", m], capture_output=True, timeout=5)
-    return {"ok": True, "on": aec_on()}
-
 def rec_cmd():
     r = recorder()
     if r == "pw-record":
-        tgt = ["--target", AEC_SRC] if os.environ.get("HF_DICTATE_AEC") == "1" and aec_on() else []
-        return ["pw-record", "--raw", "--rate", str(RATE), "--channels", "1", "--format", "s16", *tgt,
+        return ["pw-record", "--raw", "--rate", str(RATE), "--channels", "1", "--format", "s16",
                 "--media-role", "Communication", "-P", "{ node.name = hf-dictate application.name = Dictado }", "-"]
     if r == "arecord":
         return ["arecord", "-q", "-f", "S16_LE", "-r", str(RATE), "-c", "1", "-t", "raw", "-"]
@@ -1282,13 +1241,8 @@ def frame_db(b):
 
 # ---------------------------------------------------------------- sesión
 class Session:
-    def __init__(self, s, kind="dictado", mode=None, hold=False, src=None, live_pace=False, tts=False):
+    def __init__(self, s, kind="dictado", mode=None, hold=False, src=None, live_pace=False):
         self.s = s
-        # Harper hablando (conversación): solo cuenta una voz clara y sostenida, que lo interrumpe (ev «barge»)
-        self.tts = threading.Event()
-        if tts:
-            self.tts.set()
-        self.aec = src is None and os.environ.get("HF_DICTATE_AEC") == "1" and aec_on()
         self.kind = kind
         self.mode = mode or s.get("dictationMode") or "ptt"
         self.hold = hold
@@ -1299,10 +1253,6 @@ class Session:
         self.wake = s.get("dictationWake", True) is not False
         self.pause = max(250, int(s.get("dictationPauseMs") or 700)) / 1000
         self.silence = max(1.5, float(s.get("dictationSilenceSec") or 5))
-        # Conversación por voz (Dictado.qml): el turno termina tras un silencio corto, y se espera más a que empieces
-        if os.environ.get("HF_DICTATE_SILENCE"):
-            self.silence = min(5.0, max(0.6, float(os.environ["HF_DICTATE_SILENCE"])))
-        self.wait0 = float(os.environ.get("HF_DICTATE_WAIT") or 0)
         self.maxsec = float(s.get("dictationMaxSec") or 120)
         if self.mode == "continuo":
             self.maxsec = max(self.maxsec, 600.0)
@@ -1312,8 +1262,6 @@ class Session:
             if s.get("voiceLocalAI") is not False and not os.environ.get("HF_VOICE_DRY"):
                 subprocess.Popen([str(ROOT / "scripts/hf-voice"), "warm"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                  start_new_session=True)
-        if os.environ.get("HF_DICTATE_MAX"):   # conversación: un turno no dura minutos (con ruido de fondo no llegaba el silencio)
-            self.maxsec = min(self.maxsec, max(10.0, float(os.environ["HF_DICTATE_MAX"])))
         self.vocab = (s.get("dictationPrompt") or "").strip()
         self.stop = threading.Event()
         self.cancel = threading.Event()
@@ -1608,10 +1556,6 @@ class Session:
                     self.released.set()
                 elif c == "hold":            # el shell: vuelven a estar pulsadas las teclas del atajo
                     self.released.clear()
-                elif c == "tts on":
-                    self.tts.set()
-                elif c == "tts off":
-                    self.tts.clear()
         except Exception:
             pass
 
@@ -1705,12 +1649,6 @@ class Session:
         buf = bytearray()
         t0 = tmax0 = time.time()
         ppid = os.getppid()
-        barge = 0
-        eref, tts_n, was_tts = -90.0, 0, False                      # nivel del eco de Harper (picos: sube ≤10 dB/s, cae ~1,7 dB/s) y tramos oídos
-        tpre = collections.deque(maxlen=50)        # 1,5 s del micro mientras habla Harper
-        # interrumpir a Harper: dB por encima del suelo y tramos de 30 ms seguidos. Con el cancelador de eco su voz
-        # apenas llega; sin él (altavoces) hace falta hablar claramente más alto que lo que el micro oye de ellos
-        barge_db, barge_n = (4.0, 10) if self.aec else (10.0, 12)
         live_end = self.src is None or self.live_pace     # se corta por silencio (y en pruebas a tiempo real)
         floor = -60.0
         on_count = 0
@@ -1752,35 +1690,6 @@ class Session:
             db = frame_db(fr)
             v = max(0.0, min(1.0, (db + 55) / 45))     # −55 dBFS → 0 · −10 dBFS → 1
             self.peak = max(self.peak, v)
-            if self.tts.is_set():
-                # Harper habla: el turno no corre (ni el silencio ni el máximo) y su voz no abre frases
-                if not was_tts:                 # empieza a hablar: se vuelve a aprender su eco
-                    eref, tts_n, barge, was_tts = -90.0, 0, 0, True
-                last_voice_t = tmax0 = time.time()
-                if phrase is not None:          # lo que decías cuando empezó a hablar
-                    self.finalize(phrase, speech_frames * FRAME_S, silence_frames * FRAME_S)
-                    phrase = None; on_count = 0
-                    emit("speech", on=False)
-                floor = floor * 0.97 + db * 0.03 if db < floor + 8 else floor
-                floor = min(max(floor if db >= floor else db * 0.4 + floor * 0.6, -80.0), -32.0)
-                tpre.append(fr)
-                tts_n += 1
-                # tu voz tiene que pasar al eco (sus picos) y al ruido; los primeros 0,8 s solo se aprende el eco
-                loud = tts_n > 26 and db > max(floor + 11, -50.0, eref) + barge_db
-                if not loud and not barge:      # sube al momento mientras aprende; luego despacio (10 dB/s), que el
-                    eref = (db if tts_n <= 26 else min(db, eref + 0.3)) if db > eref else eref - 0.05   # arranque de tu voz no lo tape
-                barge = barge + 1 if loud else max(0, barge - 1)     # entre sílabas baja poco
-                if barge >= barge_n:
-                    self.tts.clear(); barge = 0
-                    emit("barge")
-                    # lo que llevas dicho hasta que se notó: va delante de la frase
-                    if self.eng is not None and self.eng is self.vosk:
-                        backlog.extend(tpre)
-                    else:
-                        pre = collections.deque(tpre, maxlen=50)
-                    tpre.clear()
-                continue
-            was_tts = False
             if nframe % 2 == 0:
                 emit("level", v=round(v, 3), t=round(nframe * FRAME_S, 1))
             # --- VAD por energía con suelo de ruido adaptable
@@ -1826,7 +1735,7 @@ class Session:
                                 self.partial_job = (self.phrase_id + 1, pt)
                 backlog.clear()
                 if (self.mode == "continuo" or self.kind == "comando") and live_end:
-                    limit = self.silence if (self.phrases_heard or self.cmd_done) else (self.wait0 or max(self.silence, 8.0 if self.kind == "dictado" else 6.0))
+                    limit = self.silence if (self.phrases_heard or self.cmd_done) else max(self.silence, 8.0 if self.kind == "dictado" else 6.0)
                     if time.time() - last_voice_t > limit and self.jobs.empty() and not self.busy and not last_pt:
                         break
                 continue
@@ -1844,7 +1753,7 @@ class Session:
                     if self.vosk:
                         self.vosk_text = self.vosk.feed(phrase) if self.ready.is_set() and not self.errors else ""
                 elif self.mode == "continuo" or self.kind == "comando":
-                    limit = self.silence if (self.phrases or self.cmd_done) else (self.wait0 or max(self.silence, 8.0 if self.kind == "dictado" else 6.0))
+                    limit = self.silence if (self.phrases or self.cmd_done) else max(self.silence, 8.0 if self.kind == "dictado" else 6.0)
                     if live_end and time.time() - last_voice_t > limit and self.jobs.empty() and not self.busy:
                         break
                 continue
@@ -2055,14 +1964,12 @@ def main(argv):
             except Exception as e:
                 emit("error", msg=str(e)); sys.exit(1)
         ses = Session(s, kind="comando" if "--command" in flags else "dictado", mode=opt("--mode"),
-                      hold="--hold" in flags, src=src, live_pace="--simulate-live" in flags, tts="--tts" in flags)
+                      hold="--hold" in flags, src=src, live_pace="--simulate-live" in flags)
         try:
             rc = ses.run()
         finally:
             clip_restore()
         sys.exit(rc)
-    if cmd == "aec":
-        print(json.dumps(aec((argv[1:2] or ["status"])[0]), ensure_ascii=False)); return
     if cmd in ("stop", "cancel"):
         pid = running_pid()
         if pid:
