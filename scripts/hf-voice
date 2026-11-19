@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """hf-voice — comandos de voz de hyprfrijol: entiende frases en español («Reproduce Walk de los Foo Fighters desde
-YouTube», «sube el volumen al 50 por ciento», «nueva pestaña»…) y las ejecuta. Sin IA: expresiones regulares. Lo
-que no entiende se lo pasa al asistente (hf-ai, en el panel lateral, con sus reglas de aprobación).
+YouTube», «sube el volumen al 50 por ciento», «lee el archivo notas.md»…) y las ejecuta. Primero expresiones
+regulares; lo que no entienden se lo pregunta a la IA local (Ollama, siempre en este equipo), que solo puede elegir
+una de las órdenes de ORDENES (nunca un comando suyo). Si tampoco es ninguna, va escrito al asistente del panel lateral.
 
   hf-voice parse "<frase>"          imprime la intención en JSON sin ejecutar nada (prueba en seco)
   hf-voice run "<frase>" [--no-ai] [--dry-run]
@@ -12,9 +13,14 @@ que no entiende se lo pasa al asistente (hf-ai, en el panel lateral, con sus reg
                                     new-tab · close-tab · next-tab · prev-tab · back · forward · reload · scroll-down ·
                                     scroll-up · top · bottom · fullscreen · find <texto> · search <texto> · open <sitio|url>
   hf-voice intents                  lista de intenciones admitidas (para Ajustes y la documentación)
+  hf-voice ai "<frase>" [--model m] [--timeout s]
+                                    qué orden elige la IA local y cuánto tarda → {"orden","valor","intent","label","ms","error"}
+  hf-voice warm                     carga el modelo de la IA local (hf-dictate lo lanza al empezar una orden)
+  hf-voice selftest [--ai]          comprueba las frases de ejemplo y las plantillas (--ai: también la IA local); 1 si falla
   hf-voice test                     prueba el analizador con frases de ejemplo (en seco)
 
-Ajustes: voiceAiFallback (true: lo no entendido va a la IA) · voiceMusicService youtube|music|spotify (al decir
+Ajustes: voiceLocalAI (true: lo que no entienden las reglas se lo pregunta a la IA local) · voiceLocalModel (su modelo
+de Ollama; vacío: aiModel si el proveedor es ollama, si no gemma4:e4b) · voiceAiFallback (true: lo no entendido va al asistente) · voiceMusicService youtube|music|spotify (al decir
 «pon X» sin decir dónde) · dictationWakeWord (palabra de activación, «Distro»: «Distro, …», «oye Distro …») ·
 voiceCommands (órdenes propias: [{"phrase":"modo cine","do":"run|app|url|orden","value":"…"}], «*» en la frase → {x})
 · voiceAliases ({"toca":"reproduce"}: palabras tuyas para las órdenes de serie). Van antes que las de serie.
@@ -703,6 +709,130 @@ def find_file(query, ext="", dry=False, words=None, msg="Mira los resultados"):
         run(cmd, timeout=6)
     return {"ok": True, "msg": msg, "spotlight": sq, "cmd": cmd, **({"dry": True} if dry else {})}
 
+# ---------------------------------------------------------------- IA local (lo que las reglas no entienden)
+# El modelo solo elige un id de esta lista y un valor de texto; la plantilla lo convierte en una frase de las de serie
+# y esa frase pasa otra vez por parse(): la IA no tiene un camino propio para ejecutar nada.
+ORDENES = {
+    "reproducir": ("poner, escuchar o ver música o un vídeo (también «en YouTube»); valor: qué (canción, artista, género, "
+                   "ambiente)", "pon {v}"),
+    "buscar_youtube": ("solo si pide BUSCAR en YouTube (ver resultados, sin reproducir); valor: qué", "busca {v} en youtube"),
+    "abrir_app": ("abrir una aplicación del equipo; valor: su nombre o lo que es (navegador, editor de código, terminal, archivos…)", "abre {v}"),
+    "abrir_web": ("abrir una página web; valor: el sitio (youtube, gmail, github, elpais.com…)", "abre {v}"),
+    "buscar_web": ("buscar algo en internet; valor: qué", "busca {v}"),
+    "buscar_archivo": ("encontrar un archivo o documento del usuario; valor: palabras de su nombre", "busca el archivo {v}"),
+    "leer_archivo": ("ver o leer el contenido de un archivo; valor: palabras de su nombre", "lee el archivo {v}"),
+    "subir_volumen": ("subir el volumen", "sube el volumen"),
+    "bajar_volumen": ("bajar el volumen", "baja el volumen"),
+    "poner_volumen": ("poner el volumen a un porcentaje; valor: el número", "volumen al {v} por ciento"),
+    "silenciar": ("silenciar el sonido", "silencia"),
+    "pausa": ("pausar la música o el vídeo", "pausa"),
+    "seguir": ("reanudar la música o el vídeo", "sigue"),
+    "siguiente": ("siguiente canción", "siguiente cancion"),
+    "anterior": ("canción anterior", "cancion anterior"),
+    "captura": ("captura de pantalla", "haz una captura de pantalla"),
+    "bloquear": ("bloquear la pantalla", "bloquea la pantalla"),
+    "cerrar_ventana": ("cerrar la ventana activa", "cierra la ventana"),
+    "escritorio": ("ir a un escritorio o espacio de trabajo; valor: el número", "ve al escritorio {v}"),
+    "temporizador": ("temporizador o alarma; valor: minutos (número)", "pon un temporizador de {v} minutos"),
+    "tarea": ("apuntar una tarea o un recordatorio; valor: el texto de la tarea", "añade una tarea {v}"),
+    "modo_oscuro": ("tema oscuro", "pon el modo oscuro"),
+    "modo_claro": ("tema claro", "pon el modo claro"),
+    "no_molestar": ("activar no molestar", "activa el modo no molestar"),
+    "hora": ("decir la hora", "que hora es"),
+    "fecha": ("decir qué día es", "que dia es hoy"),
+    "orden_propia": ("una de las órdenes propias del usuario (lista abajo); valor: su frase exacta", "{v}"),
+    "ninguna": ("nada de lo anterior: preguntas, charla o algo que no está en la lista (borrar, instalar, mover o cambiar "
+                "archivos, comandos de terminal…)", None),
+}
+AI_SYSTEM = ("Interpretas órdenes de voz de un escritorio Linux en español. La frase viene del reconocedor de voz y puede "
+             "tener errores. Elige UNA orden de la lista y su valor (texto corto, en el idioma de la frase; vacío si la orden "
+             "no lleva valor). Si la frase no pide claramente una de estas órdenes, elige «ninguna». Nunca inventes órdenes.\n")
+
+def ai_model(s):
+    if s.get("voiceLocalModel"):
+        return str(s["voiceLocalModel"])
+    if s.get("aiProvider") == "ollama" and s.get("aiModel"):
+        return str(s["aiModel"])
+    return "gemma4:e4b"
+
+def ai_endpoint(s):
+    """El Ollama de este equipo: aiEndpoint solo si es local; si no, el de siempre. Las órdenes de voz no salen de aquí."""
+    ep = (s.get("aiEndpoint") or "") if s.get("aiProvider") == "ollama" else ""
+    host = (urllib.parse.urlsplit(ep).hostname or "").lower() if ep else ""
+    return ep.rstrip("/") if host in ("localhost", "::1") or host.startswith("127.") else "http://localhost:11434"
+
+def ai_post(ep, path, body, timeout):
+    req = urllib.request.Request(ep + path, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode())
+
+def ai_loaded(ep, model):
+    try:
+        req = urllib.request.Request(ep + "/api/ps")
+        with urllib.request.urlopen(req, timeout=1) as r:
+            return any(m.get("name") == model or m.get("model") == model for m in json.loads(r.read()).get("models") or [])
+    except Exception:
+        return False
+
+def ai_ctx(s):
+    # el mismo num_ctx que hf-ai (aiOllamaCtx): con otro, Ollama volvería a cargar el modelo en cada orden
+    return int(s.get("aiOllamaCtx") or 16384)
+
+def ai_warm(s=None):
+    """hf-voice warm: carga el modelo mientras hablas (hf-dictate record --command), para que la respuesta no espere."""
+    s = s or settings()
+    if s.get("voiceLocalAI") is False:
+        return
+    try:
+        ai_post(ai_endpoint(s), "/api/generate", {"model": ai_model(s), "keep_alive": "30m", "options": {"num_ctx": ai_ctx(s)}}, 90)
+    except Exception:
+        pass
+
+def ai_choose(text, s, model=None, timeout=None):
+    """→ (orden, valor, ms, error). timeout por defecto: 3 s con el modelo cargado; 15 s si hay que cargarlo."""
+    ep, model = ai_endpoint(s), model or ai_model(s)
+    if timeout is None:
+        timeout = 3 if ai_loaded(ep, model) else 15
+    own = [str(c.get("phrase")) for c in s.get("voiceCommands") or [] if isinstance(c, dict) and c.get("phrase")]
+    lines = [f"- {k}: {d}" for k, (d, _) in ORDENES.items() if k != "orden_propia" or own]
+    system = AI_SYSTEM + "\n".join(lines) + (("\nÓrdenes propias: " + " · ".join(f"«{p}»" for p in own)) if own else "")
+    ids = [k for k in ORDENES if k != "orden_propia" or own]
+    body = {"model": model, "stream": False, "think": False, "keep_alive": "30m",
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": text}],
+            "format": {"type": "object", "properties": {"orden": {"type": "string", "enum": ids}, "valor": {"type": "string"}},
+                       "required": ["orden", "valor"]},
+            "options": {"temperature": 0, "num_ctx": ai_ctx(s)}}
+    t0 = time.time()
+    try:
+        j = json.loads(ai_post(ep, "/api/chat", body, timeout)["message"]["content"])
+        orden, valor = str(j.get("orden") or "ninguna"), str(j.get("valor") or "").strip()
+    except Exception as e:
+        return "ninguna", "", round((time.time() - t0) * 1000), type(e).__name__ + ": " + str(e)[:120]
+    return (orden if orden in ids else "ninguna"), valor, round((time.time() - t0) * 1000), None
+
+def ai_intent(orden, valor, s):
+    """La intención de una orden elegida por la IA, ya pasada por parse(); None si no da ninguna orden conocida."""
+    tpl = (ORDENES.get(orden) or (None, None))[1]
+    if not tpl or ("{v}" in tpl and not valor):
+        return None
+    if orden == "orden_propia":
+        own = {fold(str(c.get("phrase"))): str(c.get("phrase")) for c in s.get("voiceCommands") or [] if isinstance(c, dict) and c.get("phrase")}
+        if fold(valor) not in own:
+            return None
+        valor = own[fold(valor)]
+    it = parse(tpl.replace("{v}", valor), s, wake=False)
+    if it["intent"] in ("unknown", "none"):
+        return None
+    return {**it, "via": "ia-local", "ai": {"orden": orden, "valor": valor}}
+
+def local_ai(text, s=None, model=None, timeout=None):
+    """Frase que las reglas no entienden → intención (con "via": "ia-local") o None (ninguna, apagado o error)."""
+    s = s or settings()
+    if s.get("voiceLocalAI") is False or not (text or "").strip():
+        return None
+    orden, valor, _, _ = ai_choose(text, s, model, timeout)
+    return ai_intent(orden, valor, s)
+
 def plan_of(it):
     """Lo que se haría (en seco): hf-ai apply […], teclas o dirección."""
     k = it["intent"]
@@ -757,6 +887,10 @@ def execute(it, s=None, no_ai=False):
     k = it["intent"]
     if k == "none":
         return {"ok": True, "msg": it["label"]}
+    if k == "unknown" and not no_ai:
+        li = local_ai(it.get("text") or "", s)
+        if li:
+            return {**execute(li, s, no_ai=True), "via": "ia-local", "label": li["label"], "intent": li["intent"]}
     if k == "unknown":
         if no_ai or s.get("voiceAiFallback", True) is False:
             return {"ok": False, "msg": "No entendí la orden", "fallback": "ai" if not no_ai else None}
@@ -838,14 +972,35 @@ SELFTEST = [
     ("Busca recetas de paella", "url"), ("Pon Bohemian Rhapsody en YouTube", "play"), ("¿Qué tal estás?", "unknown"),
 ]
 
-def selftest():
+# Con --ai (necesita Ollama): frases que las reglas no cogen → intención que debe sacar la capa de IA (None: ninguna)
+SELFTEST_AI = [
+    ("Ponme algo de música tranquila en YouTube", "play"), ("Quiero ver qué pone en el archivo de notas", "readfile"),
+    ("Ábreme el editor de código", "launch"), ("Necesito encontrar mi currículum", "findfile"),
+    ("Borra la carpeta de descargas", None), ("¿Qué tal estás?", None),
+]
+
+def selftest(ai=False):
     bad = 0
+    s = settings()
+    for ph, want in SELFTEST_AI if ai else []:
+        it = local_ai(ph, s, timeout=30)
+        got = it["intent"] if it else None
+        if got != want:
+            bad += 1
+            print(f"FALLA  IA {ph!r}: {got} (esperaba {want})")
+    for k, (_, tpl) in ORDENES.items():
+        if tpl and k != "orden_propia":
+            it = parse(tpl.replace("{v}", "3" if k in ("poner_volumen", "escritorio", "temporizador") else "notas"), s, wake=False)
+            if it["intent"] in ("unknown", "none"):
+                bad += 1
+                print(f"FALLA  plantilla {k!r}: {tpl!r} no la entiende el analizador")
     for ph, want in SELFTEST:
         got = parse(ph)["intent"]
         if got != want:
             bad += 1
             print(f"FALLA  {ph!r}: {got} (esperaba {want})")
-    print(f"{len(SELFTEST) - bad}/{len(SELFTEST)} bien")
+    n = len(SELFTEST) + (len(SELFTEST_AI) if ai else 0)
+    print(f"{n - bad}/{n} bien")
     return bad == 0
 
 def main(argv):
@@ -886,8 +1041,16 @@ def main(argv):
         print(json.dumps({"wake": ok, "rest": r}, ensure_ascii=False)); return
     if cmd == "intents":
         print(json.dumps(INTENT_DOC, ensure_ascii=False)); return
+    if cmd == "ai":                 # prueba de la capa de IA local: qué orden elige y cuánto tarda
+        s = settings()
+        orden, valor, ms, err = ai_choose(" ".join(rest), s, opt("--model") or None, float(opt("--timeout", "0")) or None)
+        it = ai_intent(orden, valor, s)
+        print(json.dumps({"orden": orden, "valor": valor, "intent": it["intent"] if it else None, "label": it["label"] if it else None,
+                          "ms": ms, "model": opt("--model") or ai_model(s), "error": err}, ensure_ascii=False)); return
+    if cmd == "warm":
+        ai_warm(); return
     if cmd == "selftest":
-        sys.exit(0 if selftest() else 1)
+        sys.exit(0 if selftest(ai="--ai" in flags) else 1)
     if cmd == "test":
         for ph in TESTS:
             it = parse(ph)

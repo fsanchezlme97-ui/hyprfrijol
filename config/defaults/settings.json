@@ -310,6 +310,8 @@
   "dictationWake": true,
   "dictationWakeWord": "Distro",
   "voiceAiFallback": true,
+  "voiceLocalAI": true,
+  "voiceLocalModel": "",
   "voiceMusicService": "youtube",
   "voiceCommands": [],
   "voiceAliases": {},
