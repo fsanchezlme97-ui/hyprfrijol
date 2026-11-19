@@ -55,8 +55,7 @@ b(mod .. " + ALT + COMMA", hl.dsp.global("hf:ajustesapp"))
 b(mod .. " + SHIFT + I", hl.dsp.global("hf:herramientas"),   { description = "Centro de aplicaciones" })
 b(mod .. " + ALT + A",   ipc("settings open accesibilidad"), { description = "Accesibilidad" })
 b(mod .. " + ALT + D",   hl.dsp.global("hf:dictado"),        { description = "Dictado" })   -- mantener: hablar · soltar: escribir
-b(mod .. " + ALT + V",   hl.dsp.global("hf:comando"),        { description = "Comando de voz" })
-b(mod .. " + ALT + H",   hl.dsp.global("hf:hablar"),         { description = "Hablar con el asistente" })   -- mantener: hablar · soltar: se lo pregunta   -- «pon Walk de Foo Fighters en YouTube»
+b(mod .. " + ALT + V",   hl.dsp.global("hf:comando"),        { description = "Comando de voz" })   -- «pon Walk de Foo Fighters en YouTube»
 b(mod .. " + V",         hl.dsp.global("hf:portapapeles"),   { description = "Portapapeles" })   -- Spotlight en modo «:»
 b(mod .. " + PERIOD",    hl.dsp.global("hf:emojis"),         { description = "Emojis" })         -- Spotlight en modo «;»
 b(mod .. " + SLASH",     hl.dsp.global("hf:atajos"),         { description = "Atajos de teclado" })
@@ -248,8 +247,7 @@ b("XF86AudioLowerVolume",  exec("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), me
 b("XF86AudioMute",         exec("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
 b(mod .. " + SHIFT + M",   exec("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true, description = "Silenciar" })
 b("XF86AudioMicMute",      exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
-b(mod .. " + ALT + M",     hl.dsp.global("hf:micro"),          { description = "Micrófono (dictado · asistente · silenciar)" })   -- lo del modo del botón de la barra
-b(mod .. " + SHIFT + ALT + M", hl.dsp.global("hf:micro-modo"), { description = "Modo del micrófono" })
+b(mod .. " + ALT + M",     hl.dsp.global("hf:micro"),          { description = "Dictado (micrófono)" })   -- como Super + Alt + D
 b("XF86MonBrightnessUp",   exec("brightnessctl s 5%+" .. osd .. "brillo"), media)
 b("XF86MonBrightnessDown", exec("brightnessctl s 5%-" .. osd .. "brillo"), media)
 b("XF86AudioPlay",  exec("playerctl play-pause"), { locked = true })

@@ -216,21 +216,20 @@ with open(tmp, "w") as f:
 os.replace(tmp, p)
 PY
   fi
-  # Modos de voz (0.10.43): micMode «ia» + aiTalkMode → «walkie» (una pregunta) o «fluido» (conversación);
-  # «silencio» → «desactivado». Se repite sin miedo: solo actúa si queda un nombre antiguo.
-  if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(d,dict) and (d.get("micMode") in ("ia","silencio") or "aiTalkMode" in d) else 1)' "$cfg" 2>/dev/null; then
-    say "Modos de voz: dictado · walkie-talkie · fluido · desactivado en $cfg"
-    run cp -n "$cfg" "$cfg.antes-de-modos-voz"
+  # Voz sin conversación (0.11.0): fuera el modo del micrófono, la conversación, el compañero y las respuestas
+  # habladas; «asistente» en dictationAiFix pasa a «nunca». La voz de Harper queda solo como lectora (aiVoice).
+  if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); k=("micMode","aiTalkMode","aiConvSilence","aiConvInterrupt","aiCompanion","aiCompanionFreq","aiCompanionLook","aiMuted","aiVoiceLocal"); sys.exit(0 if isinstance(d,dict) and (any(x in d for x in k) or d.get("dictationAiFix")=="asistente") else 1)' "$cfg" 2>/dev/null; then
+    say "Voz sin conversación: quito el modo del micrófono, la conversación y el compañero de $cfg"
+    run cp -n "$cfg" "$cfg.antes-de-voz-sin-ia"
     [ "$DRY" = 1 ] || python3 -I - "$cfg" <<'PY'
 import json, os, sys
 p = os.path.realpath(sys.argv[1])
 d = json.load(open(p))
-talk = d.pop("aiTalkMode", "conversacion")
-m = d.get("micMode")
-if m == "ia":
-    d["micMode"] = "walkie" if talk == "pulsar" else "fluido"
-elif m == "silencio":
-    d["micMode"] = "desactivado"
+for k in ("micMode", "aiTalkMode", "aiConvSilence", "aiConvInterrupt", "aiCompanion", "aiCompanionFreq",
+          "aiCompanionLook", "aiMuted", "aiVoiceLocal"):
+    d.pop(k, None)
+if d.get("dictationAiFix") == "asistente":
+    d["dictationAiFix"] = "nunca"
 tmp = p + ".tmp"
 with open(tmp, "w") as f:
     f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
