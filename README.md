@@ -257,7 +257,7 @@ Son los mismos que en illogical-impulse (misma tecla, misma función), más los 
 | Ctrl + Super + Shift + D | Claro / oscuro |
 | Super + - / Super + = (o ¡) | Lupa |
 | Super + Shift + B · N · P · M | Pista anterior · siguiente · reproducir/pausar · silenciar |
-| Super + Alt + M · Super + Shift + Alt + M | Micrófono: lo de su modo (dictado, walkie-talkie mientras lo mantienes, conversación fluida o desactivado; como el botón de la barra; si Harper está hablando, lo corta) · cambiar de modo |
+| Super + Alt + M · Super + Alt + V | Dictado (como el botón del micrófono de la barra) · orden de voz («abre Firefox», «lee el archivo notas.md»); si Harper está leyendo en voz alta, lo corta |
 | Super + Z | Modo sin distracciones |
 | Super + L · Super + Shift + L | Bloquear · suspender |
 | Super + Esc · Ctrl + Alt + Supr | Menú de energía |

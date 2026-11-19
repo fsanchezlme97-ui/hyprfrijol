@@ -2174,7 +2174,7 @@ def _selftest_redact():
     assert is_private("org.keepassxc.KeePassXC", {}) and not is_private("kitty", {})
 
 # ---------------------------------------------------------------- contexto
-# Modo compañero (Dictado.qml › Companion.qml): Harper mira la pantalla de vez en cuando. Solo la pantalla activa,
+# Capturas internas (hf-ai peek, hf-screen parse; las consultas screen/ui): solo la pantalla activa,
 # nunca con una app privada a la vista ni con las capturas desactivadas; se guardan en una carpeta solo tuya y se borran.
 CAP_TMP = HOME / ".cache/hyprfrijol/capturas_tmp_ai"
 
@@ -3095,18 +3095,10 @@ def speak_piper(t, player):
     """Piper → reproductor por una tubería: Piper suelta el audio frase a frase y suena según llega (sin archivos)."""
     sr = json.loads(PIPER_MODEL.with_suffix(".onnx.json").read_text())["audio"]["sample_rate"]
     tag = "hf-ai-voice-piper"                       # en la línea de órdenes: speak_stop solo mata a nuestro reproductor
-    # En conversación (hf-dictate aec on) suena por el cancelador de eco: el micrófono no se oye a Harper y puedes
-    # interrumpirle hablando
-    try:
-        aec = "hf-aec-sink" if "\thf-aec-sink\t" in subprocess.run(
-            ["pactl", "list", "short", "sinks"], capture_output=True, text=True, timeout=3).stdout else ""
-    except (OSError, subprocess.SubprocessError):
-        aec = ""
     play = ([player, "-a", "--rate", str(sr), "--channels", "1", "--format", "s16", "-P", f'{{ media.name = "{tag}" }}',
-             *(["--target", aec] if aec else []), "-"]
+             "-"]
             if player.endswith("pw-play") else
-            [player, "--raw", f"--rate={sr}", "--channels=1", "--format=s16le", f"--client-name={tag}",
-             *([f"--device={aec}"] if aec else [])])
+            [player, "--raw", f"--rate={sr}", "--channels=1", "--format=s16le", f"--client-name={tag}"])
     r = speak_resident(t, play)
     if r is not None:
         return r

@@ -87,15 +87,13 @@ scripts/hf-ai ask "¿qué hace hyprctl reload?"
 scripts/hf-ai chat '{"messages":[{"role":"user","text":"Pon la barra arriba"}],"context":{"window":false,"clipboard":false}}'
 ```
 
-### IA local con Ollama (respaldo y voz)
+### IA local con Ollama (respaldo y órdenes de voz)
 
 Ollama con `ollama-vulkan` usa la gráfica (AMD, Intel o NVIDIA). Con respaldo Ollama (`aiFallbackProvider`), si la
-nube falla o tarda contesta el modelo local. **Saltar al respaldo** (`aiFallbackWait`, 8 s de serie) es lo que se
-espera al principal en la voz; al escribir, el triple, y las CLI (Claude Code y las demás) tienen el doble en total.
-Con el principal mirando la pantalla (la consulta `ui`), el doble. En la voz, Harper dice antes de la respuesta que
-contestó el respaldo, y `hf-ai voice-warm` (al empezar la conversación) deja el modelo de Ollama cargado con el mismo
-`num_ctx` que el chat: el respaldo contesta en ~1-2 s tras la espera, no en 10-20 s más. Con **Voz con el modelo
-local primero** (`aiVoiceLocal`) es al revés: la voz pregunta a Ollama y la nube queda de respaldo.
+nube falla o tarda contesta el modelo local. **Saltar al respaldo** (`aiFallbackWait`, 8 s de serie) se multiplica
+por tres al principal (las CLI, Claude Code y las demás, tienen el doble en total); con el principal mirando la
+pantalla (la consulta `ui`), el doble. Las órdenes de voz que las reglas no entienden usan ese mismo modelo local
+(`voiceLocalModel` vacío: el de Ollama del panel o del respaldo; si no, gemma4:e4b), así solo hay uno cargado.
 
 ### IA que ya tienes instalada
 
@@ -221,9 +219,8 @@ el panel y la voz: gemma4:e4b.
 ### Conversación
 
 - **Permiso para mirar la pantalla** (Ajustes › Asistente de IA › Privacidad › «Mirar la pantalla»):
-  - antes de capturar (consultas `screen`/`ui`, la ventana activa sin captura guardada, las visitas del compañero),
-    Harper pregunta «¿Puedo hacer una captura?» con los botones Sí / No, y espera; también vale contestar escrito o por
-    voz;
+  - antes de capturar (consultas `screen`/`ui`, la ventana activa sin captura guardada), Harper pregunta «¿Puedo hacer
+    una captura?» con los botones Sí / No, y espera;
   - `aiScreenAsk`: `siempre` (por defecto) pregunta antes de cada captura; `sensible` solo con una ventana sensible a
     la vista;
   - **ventanas sensibles** (`aiSensitiveWindows`: correo, banca, pagos, mensajería, inicios de sesión…, por la clase o
@@ -233,12 +230,9 @@ el panel y la voz: gemma4:e4b.
     preguntar nombrándola;
   - la pregunta espera 5 minutos (`~/.cache/hyprfrijol/ai-screen-ask.json`); cualquier otro mensaje la descarta;
   - también vale para lo que se pide por MCP: sin permiso, la herramienta de pantalla no captura.
-- **Modo compañero:** sin permiso, saluda y ofrece ayuda sin mirar. La pregunta por la pantalla la añade hf-ai al
-  final del saludo, con los botones Sí / No, para que el «sí» sea a eso y no a otra cosa que dijera el modelo. Con «sí»
-  hace la captura y propone algo concreto.
 - **«No, gracias»** («estoy bien», «ahora no», «no hace falta»…) se entiende siempre como una negativa; un «no» o un
   «nada» a secas, solo justo después de una oferta. Harper contesta «Vale, aquí estoy si me necesitas.», sin llamar al
-  modelo; la conversación por voz termina y la siguiente visita del compañero tarda el doble.
+  modelo.
 - **«Repite»** («¿qué dijiste?», «otra vez», «¿cómo?») vuelve a decir la última respuesta sin llamar al modelo.
 - **Seguir el hilo:** una respuesta corta (hasta 4 palabras) a un mensaje que acababa en pregunta le llega al modelo con
   esa pregunta al lado. Así un «no» a «¿Te ha quedado claro?» se entiende como «explícamelo de otra forma». El prompt

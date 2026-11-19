@@ -3,6 +3,28 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.0] — 2026-11-19
+
+### Novedades
+- **Órdenes de voz más listas:** lo que las reglas no entienden («ponme algo de jazz suave», «necesito el navegador»)
+  lo traduce a una orden conocida una IA local (Ollama, nunca la nube). Solo elige entre las órdenes que ya existen:
+  nunca escribe ni ejecuta un comando suyo, y las órdenes peligrosas que no existen («borra la carpeta de descargas»)
+  no hacen nada. Ajustes › Dictado › «Entender con la IA local».
+- **Buscar y leer archivos con la voz:** «busca el archivo de la factura» abre Spotlight en modo archivos; «lee el
+  archivo notas.md» lo abre en una ventana flotante con `bat` (si hay varios parecidos, Spotlight para elegir; los
+  binarios y los de más de 2 MB no se abren).
+- **Barra:** el widget «voz» queda con dos botones, dictado y orden de voz (icono nuevo: micrófono con «>»).
+
+### Cambios
+- **Sin conversación por voz con Harper:** fuera el walkie-talkie, la conversación fluida, el modo compañero, las
+  respuestas habladas del panel y el cancelador de eco. El asistente del panel es escrito. La voz de Harper se queda
+  como lectora opcional: Ajustes › Asistente de IA › «Leer en voz alta» (avisos urgentes y saludo al entrar).
+- **Atajos:** Super + Alt + M dicta (como Super + Alt + D); Super + Alt + H y Super + Shift + Alt + M ya no existen.
+- **Modelo local:** medidos gemma4:e4b, gemma4:e2b, qwen3.5:2b y qwen3.5:4b con 40 órdenes; se queda gemma4:e4b para el
+  panel y la voz (tabla en docs/IA.md).
+- `hf-migrate` quita los ajustes retirados (`micMode`, `aiCompanion`…, con copia en `settings.json.antes-de-voz-sin-ia`)
+  y, si tenías avisos hablados, deja «Leer en voz alta» encendido.
+
 ## [0.10.47] — 2026-11-17
 
 ### Novedades
