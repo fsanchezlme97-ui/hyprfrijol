@@ -874,7 +874,7 @@ if [ "$DEPS" = 1 ]; then
       note "programs.hyprland.enable = true;" \
            "environment.systemPackages = with pkgs; [ quickshell matugen hyprlock hypridle hyprsunset hyprpicker" \
            "  wl-clipboard cliphist grim slurp wf-recorder wtype jq python3 kitty cava playerctl brightnessctl" \
-           "  imagemagick ffmpeg tesseract libnotify zenity papirus-icon-theme mpvpaper ];" \
+           "  imagemagick ffmpeg tesseract libnotify zenity papirus-icon-theme mpvpaper bat ];" \
            "fonts.packages = with pkgs; [ inter noto-fonts noto-fonts-color-emoji jetbrains-mono ];" \
            "services.pipewire = { enable = true; pulse.enable = true; };  networking.networkmanager.enable = true;" \
            "services.upower.enable = true;  services.power-profiles-daemon.enable = true;  security.polkit.enable = true;"

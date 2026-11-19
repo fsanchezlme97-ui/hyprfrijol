@@ -197,6 +197,7 @@ valent	optional	aur:valent	-	-	-	-	móvil en los ajustes rápidos (Valent, GTK; 
 android	optional	scrcpy,android-tools	android-tools	scrcpy,android-tools	scrcpy,adb	scrcpy,android-tools	ver y controlar el móvil Android (scrcpy + adb)	centro	scrcpy,adb
 # — Spotlight
 fd	optional	fd	fd-find	fd	fd-find	fd	búsqueda de archivos más rápida en Spotlight	spotlight	fd
+bat	recommended	bat	bat	bat	bat	bat	lector de archivos de las órdenes de voz («lee <archivo>»; sin él, less)	dictado	bat
 calculator	optional	libqalculate	qalculate	qalculate	qalc	libqalculate	calculadora avanzada de Spotlight (qalc)	spotlight	qalc
 # — Archivos y PDF (Nautilus, Firmar)
 pymupdf	recommended	python-pymupdf	python3-PyMuPDF	python313-PyMuPDF	python3-pymupdf	python3-PyMuPDF	Firmar documentos PDF (hf-sign); sin él usa Poppler y se pierden enlaces y formularios	archivos	

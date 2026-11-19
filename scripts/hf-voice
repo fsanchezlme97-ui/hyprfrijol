@@ -245,6 +245,36 @@ def music_service(word, s=None):
 
 SVC_NAMES = {"youtube": "YouTube", "music": "YouTube Music", "spotify": "Spotify"}
 
+# extensiones que se dicen sueltas («notas md», «el pdf de la factura»); clean() quita el punto de «notas.md»
+FILE_EXTS = "md txt pdf json py sh log csv conf ini yaml yml toml odt docx xlsx html css js qml lua xml".split()
+FILE_KINDS = {"pdf": "pdf", "texto": "txt", "markdown": "md", "json": "json", "script": "sh", "hoja de calculo": "xlsx", "documento de texto": "odt"}
+
+def file_query(x):
+    """«el pdf de la factura» → ("factura", "pdf"); «notas md» → ("notas.md", ""); quita artículos y relleno."""
+    x = re.sub(r"\s+punto\s+", ".", x.strip(), flags=re.I)
+    ext = ""
+    f = fold(x)
+    for k in sorted(FILE_KINDS, key=len, reverse=True):
+        m = re.match(r"(?:(?:el|la|los|las|un|una|mi|mis) )?" + k + r"s? (?:de |del |con |sobre )?", f)
+        if m:
+            ext, x = FILE_KINDS[k], x[m.end():]
+            break
+    x = re.sub(r"\s(" + "|".join(FILE_EXTS) + r")$", r".\1", x.strip(), flags=re.I)
+    x = re.sub(r"^(?:(?:el|la|los|las|un|una|mi|mis|de|del)\s+)+", "", x, flags=re.I)
+    return x.strip(" .,") or x, ext
+
+_HFAI = None
+def hfai():
+    """scripts/hf-ai como módulo (find_files, file_ok): la misma búsqueda y los mismos límites que el asistente."""
+    global _HFAI
+    if _HFAI is None:
+        import importlib.machinery, importlib.util
+        ld = importlib.machinery.SourceFileLoader("hf_ai_mod", str(ROOT / "scripts/hf-ai"))
+        sp = importlib.util.spec_from_loader("hf_ai_mod", ld)
+        _HFAI = importlib.util.module_from_spec(sp)
+        ld.exec_module(_HFAI)
+    return _HFAI
+
 def parse(text, s=None, wake=True, custom_ok=True):
     """Frase → intención (dict). Nunca ejecuta nada. intent == "unknown" si no la entiende."""
     s = s or settings()
@@ -275,6 +305,21 @@ def parse(text, s=None, wake=True, custom_ok=True):
         return I("none", "Nada que hacer")
     if re.fullmatch(r"(?:cancela(?:r)?|nada|olvidalo|da igual|dejalo|no importa)", t):
         return I("none", "Cancelado")
+
+    # --- archivos: buscar (Spotlight «/») y leer (ventana con bat)
+    m = re.fullmatch(r"(?:busca(?:me)?|encuentra(?:me)?|localiza(?:me)?)\s+(?:el |los |un |mi |mis )?(?:archivo|fichero|documento)s?"
+                     r"(?: (?:de|del|llamado|que se llama))?\s+(.+)|(?:donde (?:esta|estan|tengo|guarde|deje))\s+(.+)", t)
+    if m:
+        g = 1 if m.group(1) else 2
+        qq, ext = file_query(q(m, g))
+        return I("findfile", f"Buscar el archivo «{qq}»" + (f" ({ext})" if ext else ""), query=qq, ext=ext)
+    m = re.fullmatch(r"(?:leeme|lee|abre y lee)\s+(?:el |la |mi )?(?:archivo|fichero|documento)?\s*(?:de |del |llamado )?(.+)|"
+                     r"(?:ensename|muestrame|ensena|muestra)\s+(?:el contenido de(?:l)?|lo que (?:pone|hay|dice) en(?: el)?|"
+                     r"(?:el |la )?(?:archivo|fichero|documento))\s+(?:archivo |fichero |documento )?(.+)", t)
+    if m:
+        g = 1 if m.group(1) else 2
+        qq, ext = file_query(q(m, g))
+        return I("readfile", f"Leer «{qq}»" + (f" ({ext})" if ext else ""), query=qq, ext=ext)
 
     SVC = r"(youtube music|youtube|you tube|spotify)"
     # --- música en YouTube / YouTube Music / Spotify
@@ -600,6 +645,64 @@ def ask_ai(text):
         return {"ok": False, "msg": "No pude abrir el asistente"}
     return {"ok": True, "msg": "Se lo pregunté al asistente"}
 
+READ_MAX = 2 * 1024 * 1024        # «lee <archivo>»: más grande no se abre (un registro enorme no es para leerlo así)
+TEXT_MIME = re.compile(r"^(text/|application/(json|xml|x-empty|javascript|x-shellscript|toml|yaml|x-yaml|sql)|inode/x-empty)")
+
+def file_hits(query, ext=""):
+    """Archivos que se pueden enseñar (file_ok de hf-ai: nada oculto ni credenciales), los más parecidos primero."""
+    h = hfai()
+    words = h.file_words(query) or [w for w in re.findall(r"[\w.\-]+", fold(query)) if len(w) >= 2][:3]
+    rows = h.find_files(" ".join(words), ext) or []
+    out = []
+    for r in rows:
+        p = h.file_ok(r.split(" · ")[0])
+        if p and os.path.isfile(p) and p not in out:
+            out.append(p)
+    return out, words
+
+def spot_query(query, ext, words=None):
+    """Lo que se escribe en Spotlight «/»: busca el texto tal cual (fd -F), así que va la palabra más distintiva."""
+    words = words if words is not None else (hfai().file_words(query) or [query])
+    return "/" + (max(words, key=len) if words else query)
+
+def pick_file(query, hits):
+    """El archivo de «lee <x>» si no hay duda: uno solo, o uno cuyo nombre (con o sin extensión) es justo lo dicho."""
+    if len(hits) == 1:
+        return hits[0]
+    f = fold(query).strip()
+    same = [p for p in hits if fold(pathlib.Path(p).name) == f or fold(pathlib.Path(p).stem) == f]
+    return same[0] if len(same) == 1 else None
+
+def reader_cmd(path):
+    """kitty flotante (clase hf-lector, regla en rules.lua) con bat; sin bat, less."""
+    view = 'bat --paging=always --style=plain --color=always -- "$1"' if shutil.which("bat") else 'less -R -- "$1"'
+    return ["kitty", "--class", "hf-lector", "--title", pathlib.Path(path).name, "sh", "-c", view, "sh", path]
+
+def read_file(query, ext="", dry=False):
+    hits, words = file_hits(query, ext)
+    if not hits:
+        return {"ok": False, "msg": f"No encontré «{query}»"}
+    p = pick_file(query, hits)
+    if not p:
+        return find_file(query, ext, dry, words, msg=f"Hay {len(hits)} parecidos: elige uno")
+    size = os.path.getsize(p)
+    mime = run(["file", "--mime-type", "-b", p], timeout=4).stdout.strip()
+    if size > READ_MAX:
+        return {"ok": False, "msg": f"{pathlib.Path(p).name} es muy grande para leerlo así ({hfai().human_size(size)})", "path": p}
+    if mime and not TEXT_MIME.match(mime):
+        return {"ok": False, "msg": f"{pathlib.Path(p).name} no es de texto ({mime})", "path": p}
+    cmd = reader_cmd(p)
+    if not dry:
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    return {"ok": True, "msg": "Abierto: " + pathlib.Path(p).name, "path": p, "cmd": cmd, **({"dry": True} if dry else {})}
+
+def find_file(query, ext="", dry=False, words=None, msg="Mira los resultados"):
+    sq = spot_query(query, ext, words)
+    cmd = QS + ["ipc", "call", "shell", "openWith", "spotlight", sq]
+    if not dry:
+        run(cmd, timeout=6)
+    return {"ok": True, "msg": msg, "spotlight": sq, "cmd": cmd, **({"dry": True} if dry else {})}
+
 def plan_of(it):
     """Lo que se haría (en seco): hf-ai apply […], teclas o dirección."""
     k = it["intent"]
@@ -639,6 +742,10 @@ def plan_of(it):
         return {"hf-ai": [{"type": "task", "text": it["text"], **({"due": it["due"]} if it.get("due") else {})}]}
     if k == "say":
         return {"say": it["what"]}
+    if k == "findfile":
+        return find_file(it["query"], it.get("ext", ""), dry=True)
+    if k == "readfile":
+        return read_file(it["query"], it.get("ext", ""), dry=True)
     if k == "unknown":
         return {"ai": it.get("text")}
     if k == "run":
@@ -659,6 +766,10 @@ def execute(it, s=None, no_ai=False):
     if k == "url":
         open_url(it["url"])
         return {"ok": True, "msg": "Hecho", "url": it["url"]}
+    if k == "findfile":
+        return find_file(it["query"], it.get("ext", ""))
+    if k == "readfile":
+        return read_file(it["query"], it.get("ext", ""))
     if k == "browser":
         return browser(it["op"], it.get("value", ""))
     if k == "screenshot":
@@ -717,6 +828,26 @@ TESTS = [
     "¿Puedes subir un poco el volumen?", "Pon el volumen a tope", "¿Qué tiempo hará mañana en Sevilla?", "Reproduce", "Llévame a la Puerta del Sol",
 ]
 
+# (frase, intención esperada): hf-voice selftest sale con 1 si alguna no da la suya
+SELFTEST = [
+    ("Busca el archivo notas de la reunión", "findfile"), ("¿Dónde está el pdf de la factura?", "findfile"),
+    ("Encuentra el archivo presupuesto", "findfile"), ("Busca los archivos de fotos de la boda", "findfile"),
+    ("Lee el archivo notas.md", "readfile"), ("Enséñame el contenido de todo.txt", "readfile"),
+    ("Léeme el archivo de la lista de la compra", "readfile"), ("Muéstrame lo que pone en config.json", "readfile"),
+    ("Abre YouTube", "url"), ("Abre Firefox", "launch"), ("Sube el volumen", "volume"),
+    ("Busca recetas de paella", "url"), ("Pon Bohemian Rhapsody en YouTube", "play"), ("¿Qué tal estás?", "unknown"),
+]
+
+def selftest():
+    bad = 0
+    for ph, want in SELFTEST:
+        got = parse(ph)["intent"]
+        if got != want:
+            bad += 1
+            print(f"FALLA  {ph!r}: {got} (esperaba {want})")
+    print(f"{len(SELFTEST) - bad}/{len(SELFTEST)} bien")
+    return bad == 0
+
 def main(argv):
     cmd = argv[0] if argv else ""
     rest = [a for a in argv[1:] if not a.startswith("--")]
@@ -755,6 +886,8 @@ def main(argv):
         print(json.dumps({"wake": ok, "rest": r}, ensure_ascii=False)); return
     if cmd == "intents":
         print(json.dumps(INTENT_DOC, ensure_ascii=False)); return
+    if cmd == "selftest":
+        sys.exit(0 if selftest() else 1)
     if cmd == "test":
         for ph in TESTS:
             it = parse(ph)
@@ -769,6 +902,7 @@ INTENT_DOC = [
     ["Volumen y brillo", "«sube/baja el volumen» · «volumen al 40 %» · «silencia» · «activa el sonido» · «sube/baja el brillo» · «brillo al 70»"],
     ["Navegador", "«abre <web>» · «busca <algo> (en Google/Wikipedia/YouTube)» · «nueva pestaña» · «cierra la pestaña» · «atrás» · «adelante» · «recarga» · «baja/sube» · «busca <x> en la página»"],
     ["Escritorio", "«abre <app>» · «abre los ajustes» · «captura de pantalla» · «bloquea» · «no molestar» · «escritorio 3» · «cierra/maximiza la ventana» · «fondo siguiente» · «modo oscuro» · «temporizador de 10 minutos» · «cafeína» · «silencia el micro»"],
+    ["Archivos", "«busca el archivo <x>» · «dónde está <x>»: lo busca en Spotlight · «lee <archivo>» · «enséñame el contenido de <x>»: lo abre en una ventana para leerlo (solo texto, hasta 2 MB)"],
     ["Tareas y preguntas", "«recuérdame <algo> (mañana)» · «añade una tarea <algo>» · «qué hora es» · «qué día es hoy»"],
     ["Energía", "«apaga / reinicia / suspende el equipo» · «cierra sesión»: abre el menú con esa opción marcada; se confirma con Intro"],
     ["Tuyas", "las órdenes propias y las palabras que añadas abajo van antes que todas estas"],

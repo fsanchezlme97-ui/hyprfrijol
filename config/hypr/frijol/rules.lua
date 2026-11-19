@@ -43,3 +43,12 @@ hl.window_rule({
     no_blur   = true,
 })
 
+
+-- «lee <archivo>» por voz (scripts/hf-voice): kitty con bat, flotante y centrado, para leer y cerrarlo con q
+hl.window_rule({
+    name   = "hf-lector",
+    match  = { class = "^hf-lector$" },
+    float  = true,
+    center = true,
+    size   = { "(monitor_w*0.6)", "(monitor_h*0.7)" },
+})
