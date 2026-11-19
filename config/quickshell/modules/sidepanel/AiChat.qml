@@ -77,7 +77,44 @@ Item {
     function clear() { stopRun(); runIdx = -1; queued = null; messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; showLog = false; focusInput(); }
     function setWindow(w) { if (w && w.address) { winInfo = w; useWindow = true; } Qt.callLater(focusInput); }
     function patch(i, p) { const m = messages.slice(); m[i] = Object.assign({}, m[i], p); messages = m; }
-    function push(m) { messages = [...messages, m]; Qt.callLater(scrollEnd); }
+    // Cada mensaje lleva su hora (t, ms de época): el pie del mensaje y los separadores por día (Hoy, Ayer, «lun 17 nov»)
+    function push(m) { messages = [...messages, Object.assign({ t: Date.now() }, m)]; Qt.callLater(scrollEnd); }
+    // Conversación guardada: sin las visitas del modo compañero (retirado) ni lo que contestó a ellas; los mensajes de
+    // antes de guardar la hora llevan la del archivo (tApprox: cuenta para el día, no se enseña la hora)
+    function fromSaved(list, file) {
+        const m = /(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})\.json$/.exec(String(file ?? ""));
+        const ft = m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : Date.now();
+        const out = [];
+        let skip = false;
+        for (const x of list ?? []) {
+            if (x.checkIn) { skip = true; continue; }
+            if (skip && x.role === "ai") { skip = false; continue; }
+            skip = false;
+            out.push(Object.assign({ actions: [] }, x, { state: x.state || (x.labels?.length ? "discarded" : "") },
+                                   x.t ? {} : { t: ft, tApprox: true }));
+        }
+        return out;
+    }
+    // Editar el último mensaje tuyo: vuelve a la entrada (con sus adjuntos) y se quita con lo que vino después
+    function editLast(i) {
+        if (busy || i < 0 || i >= messages.length || messages[i].role !== "user") return;
+        const m = messages[i];
+        stopRun();
+        messages = messages.slice(0, i);
+        pending = m.images ?? []; pendingDocs = m.files ?? [];
+        input.text = String(m.text ?? "");
+        Qt.callLater(() => { input.forceActiveFocus(); input.cursorPosition = input.text.length; });
+    }
+    // «09:41» · otro día «ayer 09:41» o «lun 17 nov 09:41»
+    function dayKey(t) { const d = new Date(t); return d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate(); }
+    function dayLabel(t) {
+        const d = new Date(t), now = new Date();
+        const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+        return days === 0 ? "Hoy" : days === 1 ? "Ayer"
+             : Qt.locale("es_ES").toString(d, days < 300 ? "ddd d MMM" : "ddd d MMM yyyy").replace(/\./g, "");
+    }
+    function fullWhen(t) { const d = new Date(t); return Qt.locale("es_ES").toString(d, "dddd d 'de' MMMM 'de' yyyy") + ", " + Time.fmt(d); }
+    function secs(ms) { return ms < 10000 ? (ms / 1000).toFixed(1).replace(".", ",") + " s" : Math.round(ms / 1000) + " s"; }
     function scrollEnd() { flick.contentY = Math.max(0, flick.contentHeight - flick.height); }
 
     function context() {
@@ -94,8 +131,7 @@ Item {
                                     .map(m => Object.assign({ role: m.role, text: String(m.text).slice(0, 6000) },
                                                             m.images?.length ? { images: m.images } : {},
                                                             m.files?.length ? { files: m.files } : {},
-                                                            m.steps?.length ? { queried: true } : {},     // ver mcp_auto en hf-ai
-                                                            m.lookAsk ? { lookAsk: true } : {})),         // hf-ai: «sí» → mira
+                                                            m.steps?.length ? { queried: true } : {})),   // ver mcp_auto en hf-ai
                                 context: context() }, extra ?? {}));
     }
 
@@ -226,8 +262,10 @@ Item {
     property string liveText: ""
     property var liveSteps: []
     property bool gotFinal: false
+    property double sentAt: 0
     function send(model) {
         busy = true;
+        sentAt = Date.now();
         notice = null;
         liveText = ""; liveSteps = []; gotFinal = false; modelMenu = -1;
         // La conversación va por la entrada estándar: como argumento, una larga pasa del límite del sistema (128 KB)
@@ -301,7 +339,7 @@ Item {
             root.push({ role: "ai", text: r.error, error: true });
             if (!root.active) Quickshell.execDetached(["notify-send", "-a", Settings.get("aiName", "") || "Asistente", "-i", "dialog-error", r.error]);
         } else {
-            root.push({ role: "ai", text: r.text || (r.actions?.length ? "Puedo hacerlo. Estos son los pasos:" : "…"),
+            root.push({ role: "ai", text: r.text || (r.actions?.length ? "Puedo hacerlo. Estos son los pasos:" : "…"), ms: Date.now() - root.sentAt,
                         actions: r.actions ?? [], labels: r.labels ?? [], plan: r.plan ?? [],
                         // filtro de secretos de hf-ai: se avisa cuántos datos sensibles no salieron del equipo
                         steps: (r.steps ?? []).concat(r.redacted ? [(r.redacted === 1 ? "Se ocultó 1 dato sensible" : "Se ocultaron " + r.redacted + " datos sensibles") + " del contexto"] : []),
@@ -494,9 +532,10 @@ Item {
             if (root.historyFile === "") root.historyFile = root.historyDir + "/" + Qt.formatDateTime(new Date(), "yyyy-MM-dd_HH-mm-ss") + ".json";
             histWriter.command = ["sh", "-c", 'mkdir -p "$(dirname "$1")" && cat > "$1.tmp" && mv -f "$1.tmp" "$1"', "sh", root.historyFile];
             histWriter.sendIn = (
-                                  JSON.stringify({ messages: msgs.map(m => ({ role: m.role, text: m.text, checkIn: m.checkIn ?? false, images: m.images ?? [], files: m.files ?? [], labels: m.labels ?? [], plan: m.plan ?? [],
+                                  JSON.stringify({ messages: msgs.map(m => ({ role: m.role, text: m.text, images: m.images ?? [], files: m.files ?? [], labels: m.labels ?? [], plan: m.plan ?? [],
                                                                               steps: m.steps ?? [], code: m.code ?? "",
-                                                                              state: m.state ?? "", error: !!m.error })) }, null, 1));
+                                                                              state: m.state ?? "", error: !!m.error,
+                                                                              t: m.tApprox ? 0 : (m.t ?? 0), ms: m.ms ?? 0, model: m.model ?? "" })) }, null, 1));
             histWriter.stdinEnabled = true;
             histWriter.running = true;
         }
@@ -572,7 +611,7 @@ print(json.dumps(out[:300]))
                     root.stopRun(); root.runIdx = -1;
                     root.historyFile = histOpener.target;
                     root.histLoading = true;
-                    root.messages = (d.messages ?? []).map(m => Object.assign({ actions: [] }, m, { state: m.state || (m.labels?.length ? "discarded" : "") }));
+                    root.messages = root.fromSaved(d.messages, histOpener.target);
                     root.histLoading = false;
                     root.showHistory = false;
                     Qt.callLater(root.scrollEnd);
@@ -623,7 +662,7 @@ print(json.dumps(out[:300]))
                     const d = JSON.parse(text.slice(nl + 1));
                     root.historyFile = text.slice(0, nl);
                     root.histLoading = true;
-                    root.messages = (d.messages ?? []).map(m => Object.assign({ actions: [] }, m, { state: m.state || (m.labels?.length ? "discarded" : "") }));
+                    root.messages = root.fromSaved(d.messages, root.historyFile);
                     root.histLoading = false;
                 } catch (e) {}
             }
@@ -734,15 +773,15 @@ print(json.dumps(out[:300]))
         spacing: 0
 
         // ---------------------------------------------------- contexto
+        // Lo que acompaña a la pregunta, en una sola fila (encendido = se envía); «Seguir en…» está en la cabecera
         Flow {
             Layout.fillWidth: true
             Layout.preferredWidth: root.width - 24
             Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.topMargin: 8; Layout.bottomMargin: 8
             spacing: 8
-            Txt { height: 22; text: "Contexto"; size: 11.5; muted: true; rightPadding: 2 }
             Chip {
-                text: root.winInfo ? "Ventana: " + String(root.winInfo.title || root.winInfo["class"] || "").slice(0, 26) + (String(root.winInfo.title || "").length > 26 ? "…" : "")
-                                   : "Documento activo"
+                text: root.winInfo ? "Ventana: " + String(root.winInfo.title || root.winInfo["class"] || "").slice(0, 18) + (String(root.winInfo.title || "").length > 18 ? "…" : "")
+                                   : "Ventana activa"
                 on: root.useWindow
                 onClicked: root.useWindow = !root.useWindow
             }
@@ -753,12 +792,6 @@ print(json.dumps(out[:300]))
                 on: root.captureText !== ""
                 outline: true
                 onClicked: root.toggleCapture()
-            }
-            Chip {
-                visible: !!root.handoffTo
-                text: "Seguir en " + (root.handoffTo?.label ?? "") + " ↗"
-                outline: true
-                onClicked: root.handoff()
             }
         }
         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.ov }
@@ -801,6 +834,25 @@ print(json.dumps(out[:300]))
             contentHeight: Math.max(height, msgs.implicitHeight + 24, onboard.visible ? onboard.height + 24 : 0)
             boundsBehavior: Flickable.StopAtBounds
             onHeightChanged: Qt.callLater(root.scrollEnd)
+            // Pegado al final: si un mensaje crece después (el texto con formato, imágenes, el pie), se sigue viendo entero.
+            // Solo lo cambia el desplazamiento (tuyo o scrollEnd): al crecer el contenido, contentY no se mueve.
+            property bool follow: true
+            onContentYChanged: follow = contentHeight - height - contentY < 40
+            onContentHeightChanged: if (follow) Qt.callLater(root.scrollEnd)
+            // Subiste en una conversación larga: «↓» baja al último mensaje (fijo sobre la conversación, no se desliza)
+            Rectangle {
+                parent: flick
+                readonly property bool away: flick.contentHeight - flick.height - flick.contentY > 120
+                anchors { right: parent.right; bottom: parent.bottom; rightMargin: 16; bottomMargin: 12 }
+                width: 32; height: 32; radius: 16
+                color: Theme.fill2
+                border.width: 1; border.color: Theme.ov
+                opacity: away ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity { NumberAnimation { duration: Theme.durShort } }
+                Icon { anchors.centerIn: parent; name: "chevron_down"; size: 14; color: Theme.t }
+                MouseArea { anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.scrollEnd() }
+            }
 
             // Primera vez: qué puede hacer y ejemplos (aiOnboarded; «Empezar» o usar un ejemplo lo cierra)
             Rectangle {
@@ -919,37 +971,78 @@ print(json.dumps(out[:300]))
                         readonly property bool hasActs: !msg.mine && !msg.modelData.local && !msg.modelData.error && (msg.modelData.text ?? "") !== ""
                         readonly property bool isLast: msg.index === root.messages.length - 1
                         readonly property bool menuOpen: msg.isLast && root.modelMenu === msg.index && !root.busy
-                        height: bubble.height + (hasActs ? 26 : 0) + (menuOpen ? modelFlow.implicitHeight + 6 : 0)
+                        // hora (no en los de antes de guardarla) y separador cuando cambia el día
+                        readonly property real when: Number(msg.modelData.t ?? 0)
+                        readonly property bool hasTime: msg.when > 0 && !msg.modelData.tApprox
+                        readonly property bool newDay: msg.when > 0 && (msg.index === 0 || root.dayKey(Number(root.messages[msg.index - 1]?.t ?? 0)) !== root.dayKey(msg.when))
+                        readonly property real sepH: msg.newDay ? 30 : 0
+                        // tu último mensaje: «Editar» (vuelve a la entrada con lo que venía después quitado)
+                        readonly property bool canEdit: msg.mine && !root.busy && !root.messages.slice(msg.index + 1).some(m => m.role === "user")
+                        readonly property bool footer: msg.mine ? (msg.hasTime || msg.canEdit) : (msg.hasActs || msg.hasTime)
+                        height: sepH + bubble.height + (footer ? 26 : 0) + (menuOpen ? modelFlow.implicitHeight + 6 : 0)
                         HoverHandler { id: msgHover }
+                        // ── Hoy ── / ── Ayer ── / ── lun 17 nov ──
+                        Item {
+                            visible: msg.newDay
+                            width: parent.width; height: msg.sepH
+                            Rectangle { anchors { left: parent.left; right: dayTxt.left; rightMargin: 12; verticalCenter: parent.verticalCenter; verticalCenterOffset: -3 } height: 1; color: Theme.ov }
+                            Txt { id: dayTxt; anchors { horizontalCenter: parent.horizontalCenter; verticalCenter: parent.verticalCenter; verticalCenterOffset: -3 } text: root.dayLabel(msg.when); size: 10.5; muted: true; weight: Font.Medium }
+                            Rectangle { anchors { left: dayTxt.right; leftMargin: 12; right: parent.right; verticalCenter: parent.verticalCenter; verticalCenterOffset: -3 } height: 1; color: Theme.ov }
+                        }
+                        // Pie de tus mensajes: hora y, en el último, editar
+                        Row {
+                            visible: msg.mine && msg.footer
+                            anchors { right: parent.right; top: bubble.bottom; topMargin: 4; rightMargin: 2 }
+                            spacing: 2
+                            IconBtn {
+                                visible: msg.canEdit
+                                opacity: msgHover.hovered ? 1 : 0
+                                Behavior on opacity { NumberAnimation { duration: Theme.durShort } }
+                                icon: "edit"; iconSize: 12; fg: Theme.tv; implicitWidth: 24; implicitHeight: 22
+                                tooltip: "Editar y volver a enviar"
+                                onClicked: root.editLast(msg.index)
+                            }
+                            Txt {
+                                visible: msg.hasTime
+                                anchors.verticalCenter: parent.verticalCenter
+                                HoverHandler { id: myTimeHover }
+                                text: myTimeHover.hovered ? root.fullWhen(msg.when) : Time.fmt(new Date(msg.when))
+                                size: 10.5; muted: true; tabular: true; rightPadding: 2
+                            }
+                        }
                         Row {
                             id: actsRow
-                            visible: msg.hasActs
-                            anchors { left: parent.left; top: bubble.bottom; topMargin: 4; leftMargin: 2 }
+                            visible: !msg.mine && msg.footer
+                            anchors { left: parent.left; top: bubble.bottom; topMargin: 4; leftMargin: 12 }
                             spacing: 2
-                            opacity: msgHover.hovered || msg.isLast ? 1 : 0
-                            Behavior on opacity { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                            // hora · modelo · cuánto tardó (siempre a la vista; la fecha completa al pasar el cursor)
+                            Txt {
+                                visible: msg.hasTime || (msg.modelData.model ?? "") !== ""
+                                anchors.verticalCenter: parent.verticalCenter
+                                HoverHandler { id: timeHover }
+                                text: [msg.hasTime ? (timeHover.hovered ? root.fullWhen(msg.when) : Time.fmt(new Date(msg.when))) : "",
+                                       msg.modelData.model ?? "", msg.modelData.ms ? root.secs(msg.modelData.ms) : ""].filter(x => x).join(" · ")
+                                size: 10.5; muted: true; tabular: true; rightPadding: 8
+                            }
                             IconBtn {
-                                icon: "copy"; iconSize: 12; fg: Theme.tv; implicitWidth: 24; implicitHeight: 22
+                                visible: msg.hasActs
+                                opacity: msgHover.hovered || msg.isLast ? 1 : 0
+                                Behavior on opacity { NumberAnimation { duration: Theme.durShort } }
+                                icon: "copy"; iconSize: 13; fg: Theme.tv; implicitWidth: 26; implicitHeight: 22
                                 tooltip: "Copiar la respuesta"
                                 onClicked: { Quickshell.execDetached(["wl-copy", "--", String(msg.modelData.text)]); root.toast("Copiada", msg.index); }
                             }
                             IconBtn {
-                                visible: msg.isLast && !root.busy
-                                icon: "refresh"; iconSize: 12; fg: Theme.tv; implicitWidth: 24; implicitHeight: 22
+                                visible: msg.hasActs && msg.isLast && !root.busy
+                                icon: "refresh"; iconSize: 13; fg: Theme.tv; implicitWidth: 26; implicitHeight: 22
                                 tooltip: "Otra respuesta"
                                 onClicked: root.regenerate()
                             }
                             IconBtn {
-                                visible: msg.isLast && !root.busy
-                                icon: "sparkle"; iconSize: 12; fg: msg.menuOpen ? Theme.p : Theme.tv; implicitWidth: 24; implicitHeight: 22
+                                visible: msg.hasActs && msg.isLast && !root.busy
+                                icon: "sparkle"; iconSize: 13; fg: msg.menuOpen ? Theme.p : Theme.tv; implicitWidth: 26; implicitHeight: 22
                                 tooltip: "Repetir con otro modelo"
                                 onClicked: root.openModels(msg.index)
-                            }
-                            // Modelo que respondió
-                            Txt {
-                                visible: (msg.modelData.model ?? "") !== ""
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: msg.modelData.model ?? ""; size: 10.5; muted: true; leftPadding: 4
                             }
                             Txt { id: copiedTxt; anchors.verticalCenter: parent.verticalCenter; visible: root.toastText !== "" && root.toastIdx === msg.index; text: root.toastText; size: 10.5; muted: true; leftPadding: 4 }
                         }
@@ -958,7 +1051,7 @@ print(json.dumps(out[:300]))
                         Flow {
                             id: modelFlow
                             visible: msg.menuOpen
-                            anchors { left: parent.left; right: parent.right; top: actsRow.bottom; topMargin: 4; leftMargin: 2 }
+                            anchors { left: parent.left; right: parent.right; top: actsRow.bottom; topMargin: 4; leftMargin: 12 }
                             spacing: 4
                             Txt {
                                 height: 22
@@ -982,9 +1075,10 @@ print(json.dumps(out[:300]))
 
                         Rectangle {
                             id: bubble
+                            y: msg.sepH
                             anchors.right: msg.mine ? parent.right : undefined
                             // las respuestas, a todo lo ancho (su texto lo pinta AiRich, no body: sin esto una corta se quedaba en una columna)
-                            width: Math.min(msg.width * (msg.mine ? 0.85 : 0.92), Math.max(body.implicitWidth, rich.visible || stepsCol.visible ? 10000 : 0, extra.implicitWidth, imgFlow.wantW) + 24)
+                            width: Math.min(msg.width * (msg.mine ? 0.85 : 0.92), Math.max(Math.ceil(body.implicitWidth) + 2, rich.visible || stepsCol.visible ? 10000 : 0, extra.implicitWidth, imgFlow.wantW) + 24)
                             height: inner.implicitHeight + 20
                             // las respuestas, sin burbuja (texto a todo lo ancho, como un documento); las tuyas, en tu color
                             color: msg.mine ? Theme.pc : msg.modelData.error ? Qt.alpha(Theme.danger, 0.08) : "transparent"
@@ -1076,7 +1170,7 @@ print(json.dumps(out[:300]))
                                     // solo tus mensajes y los errores: las respuestas las pinta AiRich. Oculto pero con el
                                     // texto, el Markdown pedía igual las imágenes remotas de la respuesta
                                     text: !(msg.mine || !!msg.modelData.error) ? ""
-                                        : msg.modelData.checkIn ? (Settings.get("aiName", "") || "Harper") + " miró tu pantalla y pasó a saludar" : (msg.modelData.text ?? "")
+                                        : (msg.modelData.text ?? "")
                                     textFormat: msg.mine ? Text.PlainText : Text.MarkdownText
                                     wrapMode: Text.Wrap
                                     color: msg.mine ? Theme.pcText : msg.modelData.error ? Theme.danger : Theme.t

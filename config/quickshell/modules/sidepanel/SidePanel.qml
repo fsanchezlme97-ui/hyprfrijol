@@ -101,7 +101,7 @@ PanelWindow {
         target: Shell
         function onPreloadRequested(v) { if (v === "ia") win.chatHeld = true; }   // cursor sobre el botón de la IA
     }
-    readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, toggleHistory: () => {}, showHistory: false, toggleLog: () => {}, showLog: false, setWindow: () => {} })
+    readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, toggleHistory: () => {}, showHistory: false, toggleLog: () => {}, showLog: false, setWindow: () => {}, handoffTo: null, handoff: () => {} })
 
     readonly property string aiLabel: String(Settings.get("aiName", "") ?? "").trim() || "IA"
     // Bajo el nombre: quién responde y su respaldo («Gemini · respaldo Ollama»)
@@ -258,8 +258,15 @@ PanelWindow {
                         tooltip: "Registro del asistente"
                         onClicked: chat.toggleLog()
                     }
+                    // «Seguir en …» (aiHandoff): lleva la conversación a otra herramienta de IA
+                    IconBtn {
+                        visible: !!chat.handoffTo
+                        icon: "external"; iconSize: 13; fg: Theme.tv
+                        implicitWidth: 26; implicitHeight: 26
+                        tooltip: "Seguir en " + (chat.handoffTo?.label ?? "")
+                        onClicked: chat.handoff()
+                    }
                     Item { Layout.fillWidth: true }
-                    // «Seguir en …» está en la fila de contexto del chat (aquí repetía y apretaba la cabecera)
                     IconBtn {
                         icon: "pin"; iconSize: 14; implicitWidth: 26; implicitHeight: 26
                         active: win.pinPref

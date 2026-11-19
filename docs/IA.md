@@ -139,10 +139,16 @@ dictado híbrido con whisper turbo (`perfil/equipo-gpu.json`).
 
 ## Contexto
 
-Los chips de la cabecera eligen qué se envía con cada pregunta:
-**Documento activo** (clase y título de la ventana con foco), **Portapapeles** y **+ Captura**
+Los chips de arriba, en una sola fila, eligen qué se envía con cada pregunta:
+**Ventana activa** (clase y título de la ventana con foco), **Portapapeles** y **+ Captura**
 (el panel se aparta, se hace una captura con `grim` y se pasa por OCR con `tesseract spa+eng`; opcional).
 Además siempre va un resumen del estado del shell (estilo, color, barra).
+
+En la conversación, cada mensaje lleva su hora (la fecha completa al pasar el cursor) y hay un separador cuando cambia
+el día («Hoy», «Ayer», «lun 17 nov»). Bajo cada respuesta: hora, modelo y cuánto tardó, con Copiar, Otra respuesta y
+Repetir con otro modelo. Tu último mensaje se puede editar y volver a enviar (el lápiz, al pasar el cursor). Si subes
+en una conversación larga, «↓» baja al final. El historial guarda la hora, el modelo y el tiempo de cada mensaje; los de
+antes solo tienen la de la conversación.
 
 ## Acciones del shell
 
@@ -332,7 +338,7 @@ Harper que haga clic por ti.
 
 ## «Seguir en … ↗» (cualquier herramienta de IA)
 
-`hf-ai handoff` copia la conversación y el contexto elegido al portapapeles (Markdown, sin secretos), la deja también en
+El botón con la flecha hacia fuera de la cabecera del panel lo hace. `hf-ai handoff` copia la conversación y el contexto elegido al portapapeles (Markdown, sin secretos), la deja también en
 `$XDG_RUNTIME_DIR/hf-handoff.md` (solo legible por ti) y la lleva a la herramienta de `aiHandoff`
 (Ajustes › Asistente de IA › Integraciones):
 

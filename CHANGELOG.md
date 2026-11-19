@@ -3,6 +3,24 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.2] — 2026-11-19
+
+### Novedades
+- **Panel del asistente con hora y fecha:** cada mensaje enseña su hora (la fecha completa al pasar el cursor) y hay un
+  separador por día: «Hoy», «Ayer», «lun 17 nov». Bajo cada respuesta, el modelo y cuánto tardó.
+- **Editar tu último mensaje** y volver a enviarlo (el lápiz bajo el mensaje, con sus adjuntos).
+- **«↓»** para volver al final cuando subes en una conversación larga.
+
+### Cambios
+- Los chips de contexto caben en una sola fila («Ventana activa», «Portapapeles», «+ Captura»); «Seguir en…» pasa a
+  un botón de la cabecera.
+- Iconos de las respuestas algo más grandes; el pie se alinea con el texto.
+- El historial ya no enseña las visitas del modo compañero (retirado).
+
+### Arreglos
+- Tus mensajes cortos ya no se parten en dos líneas sin necesidad.
+- El final de la conversación se ve entero aunque un mensaje crezca después de cargarse.
+
 ## [0.11.1] — 2026-11-19
 
 ### Cambios
