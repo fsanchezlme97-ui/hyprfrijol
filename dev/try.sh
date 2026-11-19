@@ -44,6 +44,10 @@ hyprctl eval 'hl.window_rule({ name = "hf-try-hidden", match = { class = "^aquam
 BUSDIR=$(mktemp -d /tmp/hf-try/bus.XXXX)
 mkdir -p "$BUSDIR/services"
 printf '[D-BUS Service]\nName=org.freedesktop.portal.Documents\nExec=/bin/false\n' > "$BUSDIR/services/org.freedesktop.portal.Documents.service"
+# Ni portal de escritorio propio: el servicio de RustDesk saca el bus de tu sesión del environ del xdg-desktop-portal
+# más reciente; con uno de la prueba vivo se enganchaba a este bus y fallaba al conectarse («al portal de escritorio
+# le falta una función…», RemoteDesktop.CreateSession: «El objeto no existe en la ruta /org/freedesktop/portal/desktop»).
+printf '[D-BUS Service]\nName=org.freedesktop.portal.Desktop\nExec=/bin/false\n' > "$BUSDIR/services/org.freedesktop.portal.Desktop.service"
 printf '<busconfig>\n  <servicedir>%s/services</servicedir>\n  <include>/usr/share/dbus-1/session.conf</include>\n</busconfig>\n' "$BUSDIR" > "$BUSDIR/session.conf"
 dbus-run-session --config-file="$BUSDIR/session.conf" -- "$ROOT/scripts/hf-session" --nested $SAFE >"$LOG" 2>&1 &
 PID=$!
