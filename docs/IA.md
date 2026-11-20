@@ -32,8 +32,8 @@ En `~/.config/hyprfrijol/settings.json` (o Ajustes › IA):
 
 | Clave | Valores | Por defecto |
 |---|---|---|
-| `aiProvider` | `claude-code` · `gemini` · `ollama` · `openai-compatible` · `off` | `claude-code` |
-| `aiModel` | p. ej. `haiku`, `sonnet` · `gemini-2.5-flash` · `gemma4:e4b` · `gpt-4o-mini` | (el del proveedor) |
+| `aiProvider` | `claude-code` · `opencode` · `gemini` · `ollama` · `openai-compatible` · `off` | `claude-code` |
+| `aiModel` | p. ej. `haiku`, `sonnet` · `opencode/deepseek-v4.1-flash-free` · `gemini-2.5-flash` · `gemma4:e4b` · `gpt-4o-mini` | (el del proveedor) |
 | `aiEndpoint` | `http://localhost:11434` · `https://…/v1` | (el del proveedor) |
 | `aiKeyEnv` | variable de entorno con la clave (openai-compatible) | `HF_AI_KEY` |
 | `aiContextWindow` | enviar el título de la ventana activa | `true` |
@@ -87,24 +87,58 @@ scripts/hf-ai ask "¿qué hace hyprctl reload?"
 scripts/hf-ai chat '{"messages":[{"role":"user","text":"Pon la barra arriba"}],"context":{"window":false,"clipboard":false}}'
 ```
 
+### OpenCode (modelos gratuitos, sin herramientas)
+
+`aiProvider: "opencode"` usa los modelos de [OpenCode](https://opencode.ai) (Ajustes › Asistente de IA › **OpenCode**,
+sale si está instalado: `opencode` en el `PATH` o en `~/.opencode/bin`, donde lo deja su instalador). `aiModel` va
+como en `opencode models` (`proveedor/modelo`); vacío = `opencode/deepseek-v4.1-flash-free`. La lista de Ajustes sale
+de su servicio con los gratuitos primero, sin los de Ollama: OpenCode los carga con 4096 de contexto y el prompt del
+asistente (~4200 tokens) se corta (medido el 2026-11-19: «17 por 3 = 5» y respuestas vacías); para eso está el
+proveedor Ollama.
+
+- **No pasa por `opencode run`** (crea sesiones, cada carpeta nueva queda como un proyecto en su lista y actúa por su
+  cuenta). `hf-ai` habla con el servicio de fondo (`opencode service`) por su API local:
+  `POST /api/experimental/generate/text`, usuario `opencode` y la contraseña de
+  `~/.local/state/opencode/service.json`. Es una generación sin estado: sin sesión, sin proyecto y **sin
+  herramientas** (comprobado: no ejecuta, lee ni edita nada aunque se le pida). El prompt de sistema va delante, en
+  el mismo texto. Si el servicio no está en marcha, `hf-ai` lo arranca (`opencode service start`).
+- **Una sola cuota gratuita por cuenta**, compartida por todos los modelos gratuitos y con lo que programes en
+  OpenCode: no sirve rotar entre ellos. Al agotarse responde `502 rate_limit` con `retryAfterMs`; el panel dice
+  «Se agotó la cuota gratuita de OpenCode (se renueva mañana a las 19:00)» y contesta el **respaldo** (recomendado:
+  Ollama). Sin respaldo, sale ese error hasta que se renueve.
+- Solo texto (las imágenes van por OCR) y sin streaming (la respuesta llega entera). La ruta es «experimental» en
+  OpenCode 2.3: si cambia, el error lo dice y salta el respaldo.
+- Con OpenCode de principal, **la gráfica queda libre**: `voice-warm` no carga Ollama y las órdenes de voz que no
+  entienden las reglas van primero a OpenCode (8 s; si falla, Ollama). El resumen automático de avisos sigue en
+  Ollama si es el respaldo, para que tus notificaciones no salgan del equipo.
+
+```sh
+scripts/hf-ai models opencode    # {"models": [["opencode/deepseek-v4.1-flash-free", "DeepSeek V4.1 Flash Free · gratis"]…]}
+scripts/hf-ai test               # con aiProvider "opencode"
+scripts/hf-ai chat --print-request '{"messages":[{"role":"user","text":"Hola"}]}'
+```
+
 ### IA local con Ollama (respaldo y órdenes de voz)
 
 Ollama con `ollama-vulkan` usa la gráfica (AMD, Intel o NVIDIA). Con respaldo Ollama (`aiFallbackProvider`), si la
 nube falla o tarda contesta el modelo local. **Saltar al respaldo** (`aiFallbackWait`, 8 s de serie) se multiplica
 por tres al principal (las CLI, Claude Code y las demás, tienen el doble en total); con el principal mirando la
 pantalla (la consulta `ui`), el doble. Las órdenes de voz que las reglas no entienden usan ese mismo modelo local
-(`voiceLocalModel` vacío: el de Ollama del panel o del respaldo; si no, gemma4:e4b), así solo hay uno cargado.
+(`voiceLocalModel` vacío: el de Ollama del panel o del respaldo; si no, gemma4:e4b), así solo hay uno cargado. Con
+OpenCode de principal van primero a OpenCode (ver arriba), salvo que elijas `voiceLocalModel`.
 
 ### IA que ya tienes instalada
 
 `hf-ai clis` busca en el `PATH` las IA de terminal (Ajustes › Asistente de IA › Proveedor y permisos › **IA ya
-instalada en este equipo**): `claude` (proveedor `claude-code`, con `--tools ""`), `ollama` (proveedor `ollama`) y
+instalada en este equipo**): `claude` (proveedor `claude-code`, con `--tools ""`), `opencode` (proveedor `opencode`,
+por su API sin herramientas), `ollama` (proveedor `ollama`) y
 `llm` (proveedor `cli`, `aiCli` = `llm`). Cada una se elige de principal o de respaldo con un clic. `llm` recibe la
 conversación por la entrada estándar (nunca en los argumentos, que se ven en `/proc`) en una carpeta temporal vacía.
 Solo entran IA que no pueden leer archivos, ejecutar órdenes ni salir a la web por su cuenta, porque el contexto puede
 traer texto de fuera (portapapeles, OCR). Fuera, según su documentación: Codex CLI (en solo lectura lee archivos y
 busca en la web de serie), Gemini CLI (lee archivos sin preguntar y no tiene cómo apagar todas sus herramientas), Qwen
-Code (su modo por defecto sin interacción no está claro) y opencode y Cursor Agent (ejecutan órdenes y editan).
+Code (su modo por defecto sin interacción no está claro) y Cursor Agent (ejecuta órdenes y edita). `opencode run`
+tampoco (actúa por su cuenta): opencode entra por su API, que no tiene herramientas.
 
 Pruebas del 2026-11-12 en una RX 6600 XT (8 GB) con 18 órdenes de voz reales (el prompt de verdad de `hf-ai`,
 temperatura 0). La mediana es el tiempo hasta tener el plan, con el modelo ya cargado; la primera carga son 4-6 s.

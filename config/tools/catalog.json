@@ -137,6 +137,7 @@
    "label": "IA",
    "ids": [
     "claudecode",
+    "opencode",
     "ollama",
     "alpaca",
     "newelle",
@@ -1279,6 +1280,26 @@
     "script": "curl -fsSL https://claude.ai/install.sh | bash"
    },
    "bin": "claude"
+  },
+  {
+   "id": "opencode",
+   "name": "OpenCode",
+   "cat": "ia",
+   "desc": "Agente de programación en la terminal; el asistente del panel puede usar sus modelos gratuitos",
+   "alt": "—",
+   "flags": "tn",
+   "icon": [
+    "utilities-terminal",
+    "terminal"
+   ],
+   "pkgs": {
+    "pacman": "opencode",
+    "dnf": "",
+    "apt": "",
+    "zypper": "",
+    "script": "curl -fsSL https://opencode.ai/install | bash"
+   },
+   "bin": "opencode"
   },
   {
    "id": "claudedesk",

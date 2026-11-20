@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.3] — 2026-11-19
+
+### Novedades
+- **OpenCode como proveedor del asistente** (Ajustes › Asistente de IA › OpenCode, si lo tienes instalado): usa sus
+  modelos gratuitos (de serie, DeepSeek V4.1 Flash Free) por su servicio local y **sin herramientas**: no puede
+  ejecutar, leer ni editar nada aunque se lo pidan. No crea sesiones ni proyectos en OpenCode.
+- Los modelos gratuitos de OpenCode comparten **una sola cuota por cuenta** (también con lo que programas en
+  OpenCode). Al agotarse, el panel lo dice («se renueva mañana a las 19:00») y contesta el respaldo: con Ollama de
+  respaldo nunca te quedas sin asistente.
+- Con OpenCode de principal, **la gráfica queda libre**: Ollama ya no se precarga y las órdenes de voz que no entienden
+  las reglas van primero a OpenCode (si falla, a Ollama). El resumen de avisos sigue en local.
+- OpenCode en el Centro de aplicaciones y en el instalador (Arch: paquete `opencode`; otras distros: su instalador).
+
 ## [0.11.2] — 2026-11-19
 
 ### Novedades

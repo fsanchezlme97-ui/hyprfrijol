@@ -182,6 +182,7 @@ vosk	recommended	python-vosk,vosk-api	-	-	-	-	Vosk: dictado en tiempo real, pala
 # — Ajustes › Asistente de IA
 ollama	optional	ollama	ollama	ollama	-	-	IA local con Ollama (en otras distros: ollama.com/download)	ia	ollama
 ollama-gpu	optional	ollama-vulkan	-	-	-	-	Ollama en la gráfica con Vulkan (AMD, Intel o NVIDIA): respuestas en ~1 s en vez de ~30 (en otras distros el instalador de ollama.com ya la usa)	ia	
+opencode	optional	opencode	-	-	-	-	OpenCode: el asistente puede usar sus modelos gratuitos, sin herramientas (en otras distros: opencode.ai/install)	ia	opencode
 # — Capturas y grabación
 screenshot	recommended	grim,slurp	grim,slurp	grim,slurp	grim,slurp	grim,slurp	capturas de pantalla	captura	grim,slurp
 recorder	recommended	wf-recorder	wf-recorder	wf-recorder	wf-recorder	wf-recorder	grabación de pantalla	captura	wf-recorder

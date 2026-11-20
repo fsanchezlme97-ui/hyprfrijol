@@ -65,6 +65,7 @@
   "ocr",
   "ollama",
   "ollama-gpu",
+  "opencode",
   "orca",
   "pacman-contrib",
   "pamkeyring",
@@ -120,12 +121,12 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.11.1-1-gaaa27cf",
+ "hyprfrijol": "v0.11.2",
  "ollama": [
   "gemma4:e4b",
   "qwen3.5:9b"
  ],
- "saved": "2026-11-19 10:00",
+ "saved": "2026-11-19 23:25",
  "services": [
   "ufw",
   "cups.socket",
@@ -140,10 +141,10 @@
   "aiAnnounceGreet": true,
   "aiAnnounceUrgent": true,
   "aiFallbackModel": "gemma4:e4b",
-  "aiFallbackProvider": "off",
+  "aiFallbackProvider": "ollama",
   "aiHistoryDays": 0,
-  "aiModel": "gemma4:e4b",
-  "aiProvider": "ollama",
+  "aiModel": "",
+  "aiProvider": "opencode",
   "aiVoice": true,
   "animPreset": "minimalista",
   "animSpeed": 1.5,

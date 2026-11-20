@@ -990,6 +990,12 @@ equipo_install() {
       run sh -c 'curl -fsSL https://ollama.com/install.sh | sh' && again=1
     fi
   fi
+  # OpenCode (opcional): sus modelos gratuitos para el asistente; Arch lo trae en packages.tsv, el resto con su instalador
+  if [ "$FAMILY" != arch ] && ! have opencode && [ ! -x "$HOME/.opencode/bin/opencode" ] && [ "$DRY" = 0 ]; then
+    if ask "¿Instalo también OpenCode (opencode.ai/install) para que el asistente pueda usar sus modelos gratuitos?" n; then
+      run sh -c 'curl -fsSL https://opencode.ai/install | bash'
+    fi
+  fi
   if [ "$eq" = gpu ] && [ "$DRY" = 0 ] && [ "$("$HERE/scripts/hf-dictate" status 2>/dev/null | jq -r .vosk)" != true ]; then
     run "$HERE/scripts/hf-dictate" install-vosk && again=1   # el híbrido escribe en vivo con Vosk
   fi

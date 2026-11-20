@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """hf-voice — comandos de voz de hyprfrijol: entiende frases en español («Reproduce Walk de los Foo Fighters desde
 YouTube», «sube el volumen al 50 por ciento», «lee el archivo notas.md»…) y las ejecuta. Primero expresiones
-regulares; lo que no entienden se lo pregunta a la IA local (Ollama, siempre en este equipo), que solo puede elegir
+regulares; lo que no entienden se lo pregunta a la IA local (Ollama, en este equipo) o, con OpenCode de proveedor del
+asistente, primero a OpenCode (sin herramientas; si falla, Ollama), que solo puede elegir
 una de las órdenes de ORDENES (nunca un comando suyo). Si tampoco es ninguna, va escrito al asistente del panel lateral.
 
   hf-voice parse "<frase>"          imprime la intención en JSON sin ejecutar nada (prueba en seco)
@@ -20,7 +21,8 @@ una de las órdenes de ORDENES (nunca un comando suyo). Si tampoco es ninguna, v
   hf-voice test                     prueba el analizador con frases de ejemplo (en seco)
 
 Ajustes: voiceLocalAI (true: lo que no entienden las reglas se lo pregunta a la IA local) · voiceLocalModel (su modelo
-de Ollama; vacío: aiModel si el proveedor es ollama, si no gemma4:e4b) · voiceAiFallback (true: lo no entendido va al asistente) · voiceMusicService youtube|music|spotify (al decir
+de Ollama; vacío: aiModel si el proveedor es ollama, si no gemma4:e4b; si lo eliges, la voz no pasa por OpenCode) ·
+voiceAiFallback (true: lo no entendido va al asistente) · voiceMusicService youtube|music|spotify (al decir
 «pon X» sin decir dónde) · dictationWakeWord (palabra de activación, «Distro»: «Distro, …», «oye Distro …») ·
 voiceCommands (órdenes propias: [{"phrase":"modo cine","do":"run|app|url|orden","value":"…"}], «*» en la frase → {x})
 · voiceAliases ({"toca":"reproduce"}: palabras tuyas para las órdenes de serie). Van antes que las de serie.
@@ -780,25 +782,48 @@ def ai_ctx(s):
     # el mismo num_ctx que hf-ai (aiOllamaCtx): con otro, Ollama volvería a cargar el modelo en cada orden
     return int(s.get("aiOllamaCtx") or 16384)
 
+def ai_cloud(s):
+    """¿Las órdenes van primero a OpenCode? Con OpenCode de proveedor, sin modelo de voz propio (voiceLocalModel) ni
+    modo local: la gráfica queda libre y Ollama solo carga si OpenCode falla (p. ej. cuota gratuita agotada)."""
+    return s.get("aiProvider") == "opencode" and not s.get("voiceLocalModel") and not s.get("aiLocalOnly")
+
 def ai_warm(s=None):
     """hf-voice warm: carga el modelo mientras hablas (hf-dictate record --command), para que la respuesta no espere."""
     s = s or settings()
-    if s.get("voiceLocalAI") is False:
+    if s.get("voiceLocalAI") is False or ai_cloud(s):
         return
     try:
         ai_post(ai_endpoint(s), "/api/generate", {"model": ai_model(s), "keep_alive": "30m", "options": {"num_ctx": ai_ctx(s)}}, 90)
     except Exception:
         pass
 
+def oc_choose(text, s, system, ids, timeout=None):
+    """La misma elección por OpenCode (hf-ai opencode_generate: sin sesión ni herramientas) → (orden, valor, ms, None),
+    o None si falla o no da un JSON válido: entonces sigue Ollama."""
+    t0 = time.time()
+    try:
+        h = hfai()
+        prompt = (system + '\n\nResponde SOLO con un objeto JSON {"orden": "<una de la lista>", "valor": "<texto>"}, '
+                  "sin explicaciones ni nada más.\n\nFrase: " + text)
+        raw = h.opencode_generate(prompt, h.opencode_model(dict(s, aiModel=s.get("aiModelQuick") or s.get("aiModel"))), timeout or 8)
+        j = json.loads(re.search(r"\{.*\}", raw, re.S).group(0))
+        orden, valor = str(j.get("orden") or "ninguna"), str(j.get("valor") or "").strip()
+    except Exception:
+        return None
+    return (orden if orden in ids else "ninguna"), valor, round((time.time() - t0) * 1000), None
+
 def ai_choose(text, s, model=None, timeout=None):
-    """→ (orden, valor, ms, error). timeout por defecto: 3 s con el modelo cargado; 15 s si hay que cargarlo."""
-    ep, model = ai_endpoint(s), model or ai_model(s)
-    if timeout is None:
-        timeout = 3 if ai_loaded(ep, model) else 15
+    """→ (orden, valor, ms, error). timeout por defecto: 3 s con el modelo cargado; 15 s si hay que cargarlo.
+    Con OpenCode de proveedor (ai_cloud) y sin --model, primero OpenCode (8 s)."""
     own = [str(c.get("phrase")) for c in s.get("voiceCommands") or [] if isinstance(c, dict) and c.get("phrase")]
     lines = [f"- {k}: {d}" for k, (d, _) in ORDENES.items() if k != "orden_propia" or own]
     system = AI_SYSTEM + "\n".join(lines) + (("\nÓrdenes propias: " + " · ".join(f"«{p}»" for p in own)) if own else "")
     ids = [k for k in ORDENES if k != "orden_propia" or own]
+    if ai_cloud(s) and not model and (r := oc_choose(text, s, system, ids, timeout)):
+        return r
+    ep, model = ai_endpoint(s), model or ai_model(s)
+    if timeout is None:
+        timeout = 3 if ai_loaded(ep, model) else 15
     body = {"model": model, "stream": False, "think": False, "keep_alive": "30m",
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": text}],
             "format": {"type": "object", "properties": {"orden": {"type": "string", "enum": ids}, "valor": {"type": "string"}},

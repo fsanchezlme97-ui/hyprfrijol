@@ -15,7 +15,7 @@ ColumnLayout {
     AiTabs { current: "ia" }
 
     readonly property string prov: Settings.get("aiProvider", "claude-code")
-    readonly property var provNames: ({ "claude-code": "Claude Code", gemini: "Gemini", ollama: "Ollama",
+    readonly property var provNames: ({ "claude-code": "Claude Code", gemini: "Gemini", ollama: "Ollama", opencode: "OpenCode",
                                         "openai-compatible": "API compatible con OpenAI", mock: "Prueba", off: "Apagado",
                                         cli: "IA de terminal (" + (Settings.get("aiCli", "") || "?") + ")" })
     readonly property bool localOnly: Settings.get("aiLocalOnly", false) === true
@@ -52,7 +52,7 @@ ColumnLayout {
     readonly property string effProv: localOnly && prov !== "off" ? "ollama" : prov
     readonly property string modelTxt: {
         if (localOnly && prov !== "ollama") return Settings.get("aiFallbackProvider", "") === "ollama" ? (Settings.get("aiFallbackModel", "") || "gemma4:e4b") : "gemma4:e4b";
-        return st?.model || ({ "claude-code": "predeterminado", ollama: "gemma4:e4b", "openai-compatible": "gpt-4o-mini" })[prov] || "";
+        return st?.model || ({ "claude-code": "predeterminado", ollama: "gemma4:e4b", "openai-compatible": "gpt-4o-mini", opencode: "opencode/deepseek-v4.1-flash-free" })[prov] || "";
     }
     readonly property bool ready: prov !== "off" && !!st?.available
     readonly property string stateTxt: prov === "off" ? "apagado" : st === null ? "comprobando…" : st.available ? "listo" : (st.hint || "no disponible").toLowerCase()
