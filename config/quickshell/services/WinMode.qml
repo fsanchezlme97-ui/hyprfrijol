@@ -96,8 +96,9 @@ Singleton {
         for (const c of fl) {
             const w = 'window = "address:' + c.address + '"';
             if (floatOrder === "atenuadas")
-                Shell.dispatch('hl.dsp.window.set_prop({ prop = "opacity_inactive_override", value = "'
-                    + (c.address === act ? "unset" : "0.25") + '", ' + w + ' })');
+                // La opacidad va como número, sin comillas: entrecomillada, Hyprland la ignora
+                Shell.dispatch('hl.dsp.window.set_prop({ prop = "opacity_inactive_override", value = '
+                    + (c.address === act ? '"unset"' : '0.25') + ', ' + w + ' })');
             else
                 Shell.dispatch('hl.dsp.window.move({ workspace = "special:special", follow = false, ' + w + ' })');
         }
