@@ -32,6 +32,9 @@ antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X
   bajo cada respuesta del panel.
 - **Las imágenes van de verdad a los modelos que las ven**: con OpenCode, si el modelo admite imágenes, la imagen se le
   manda tal cual (por sesión, que se borra al terminar) en vez de por OCR; los que no las admiten, siguen con el OCR.
+- **El panel del asistente se cierra al hacer clic fuera**: al abrirlo toma el teclado (se puede escribir de
+  inmediato) y, al hacer clic en otra ventana, el foco vuelve a ella y el panel se cierra como con la ×. Con el panel
+  fijado no se cierra: es parte del mosaico y se queda siempre a la vista.
 - **La ventana de RustDesk flota**: RustDesk no abre el chat aparte, lo dibuja dentro de su ventana (la del escritorio
   remoto), y en mosaico esa ventana se comía media pantalla con el chat encogido encima de la sesión. Ahora flota con
   su tamaño y sale centrada.

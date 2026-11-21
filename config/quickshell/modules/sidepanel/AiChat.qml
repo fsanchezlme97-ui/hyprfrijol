@@ -646,7 +646,13 @@ print(json.dumps(out[:300]))
     }
     Timer { id: histUndoT; interval: 8000; onTriggered: root.purgeDeleted() }
     // lo que quedó a medio borrar si el shell se cerró antes de los 8 s
-    Component.onCompleted: Quickshell.execDetached(["sh", "-c", 'rm -f "$1"/*.json.borrado', "sh", root.historyDir])
+    Component.onCompleted: {
+        Quickshell.execDetached(["sh", "-c", 'rm -f "$1"/*.json.borrado', "sh", root.historyDir]);
+        // El chat se carga la primera vez que se abre el panel: la entrada toma el foco, para poder escribir de
+        // inmediato y para que el panel tenga el teclado (al hacer clic fuera, el foco vuelve a la ventana de
+        // debajo y el panel se cierra).
+        if (Shell.view === "ia") Qt.callLater(() => input.forceActiveFocus());
+    }
     function histWhen(t) {
         const d = new Date(t * 1000), now = new Date();
         const days = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);

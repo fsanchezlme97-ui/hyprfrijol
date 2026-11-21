@@ -13,6 +13,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
 import "../.."
@@ -84,8 +85,26 @@ PanelWindow {
     property bool chatHeld: false
     onShownChanged: {
         Shell.sideShown = shown;
-        if (shown) chatHeld = true;
+        if (shown) {
+            chatHeld = true;
+            // El panel toma el teclado (la entrada de la pregunta): al abrirlo se puede escribir de inmediato y, al
+            // hacer clic fuera, el foco vuelve a la ventana de debajo (que es lo que avisa del clic fuera).
+            Qt.callLater(() => win.chat.focusInput?.());
+        }
         else modelMenu = false;      // el desplegable de proveedor no se queda abierto al cerrar el panel
+    }
+    // Clic fuera: el panel se cierra como con la ×. Al abrirse toma el teclado, así que al hacer clic en otra
+    // ventana el foco vuelve a ella (evento «activewindowv2») y aquí se cierra. Con el panel fijado no: es parte
+    // del mosaico y se queda siempre a la vista.
+    Connections {
+        target: Hyprland
+        function onRawEvent(ev) {
+            if (ev.name !== "activewindowv2") return;
+            if (Shell.view !== "ia" || win.pinActive) return;
+            if (!ev.data) return;                                    // el foco se fue al escritorio (sin ventana)
+            if (Date.now() - Shell.openedAt < 600) return;             // abrirlo no lo cierra
+            Shell.close();
+        }
     }
     Timer {
         interval: 60000
