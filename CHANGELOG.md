@@ -36,6 +36,9 @@ antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X
   lo cierra, como con la × (igual que Spotlight o los ajustes rápidos: ese clic no llega a la ventana de debajo, hay
   que volver a clicar para seguir con la app). Al abrirlo, además, toma el teclado y se puede escribir de inmediato.
   Con el panel fijado no se cierra: es parte del mosaico y se queda siempre a la vista.
+- **Prioridad de las ventanas flotantes** (Ajustes › Escritorio y gestos › Ventanas flotantes): «Encima» (como
+  siempre), «Atenuadas» (se quedan delante pero transparentes mientras no tienen el foco: el mosaico se ve a través)
+  o «Espacio oculto» (se van al espacio de Super + S y el mosaico queda siempre limpio).
 - **La ventana de RustDesk flota**: RustDesk no abre el chat aparte, lo dibuja dentro de su ventana (la del escritorio
   remoto), y en mosaico esa ventana se comía media pantalla con el chat encogido encima de la sesión. Ahora flota con
   su tamaño y sale centrada.

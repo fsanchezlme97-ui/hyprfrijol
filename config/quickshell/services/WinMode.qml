@@ -65,6 +65,46 @@ Singleton {
     }
     readonly property bool dry: Quickshell.env("HF_TRY") === "1"
 
+    // ---------- prioridad de las flotantes (floatOrder) ----------
+    // "encima" (por defecto): las flotantes van sobre el mosaico, como siempre.
+    // "atenuadas": se quedan encima, pero transparentes mientras no tienen el foco: el mosaico se ve a través y
+    //               al enfocarlas vuelven a opacas.
+    // "espacio": se van al espacio oculto (Super + S) y se ven allí, encima del mosaico: el mosaico queda limpio.
+    // «Detrás» no es posible: Hyprland dibuja las flotantes por encima de las del mosaico (solo una ventana
+    // maximizada las tapa); la única forma de que el mosaico mande es apartarlas del espacio.
+    readonly property string floatOrder: {
+        const v = String(Settings.get("floatOrder", "encima") ?? "encima");
+        return ["encima", "atenuadas", "espacio"].includes(v) ? v : "encima";
+    }
+    property string _floatOrderKey: ""
+    // Se llama con cada cambio de ventanas. La clave evita repetir los cambios en cada refresco.
+    function applyFloatOrder(): void {
+        const act = HyprClients.activeAddress;
+        const fl = HyprClients.clients.filter(c => c.floating && !keep(c) && (c.workspace?.id ?? 0) > 0);
+        if (floatOrder === "encima") {
+            // Al volver a «encima», las flotantes recuperan su opacidad (una vez)
+            if (root._floatOrderKey === "encima") return;
+            root._floatOrderKey = "encima";
+            for (const c of fl)
+                Shell.dispatch('hl.dsp.window.set_prop({ prop = "opacity_inactive_override", value = "unset", window = "address:' + c.address + '" })');
+            return;
+        }
+        const key = floatOrder + "|" + act + "|"
+            + fl.map(c => c.address + (c.address === act ? "*" : "") + "@" + (c.workspace?.id ?? 0)).join(",");
+        if (key === root._floatOrderKey) return;
+        root._floatOrderKey = key;
+        for (const c of fl) {
+            const w = 'window = "address:' + c.address + '"';
+            if (floatOrder === "atenuadas")
+                Shell.dispatch('hl.dsp.window.set_prop({ prop = "opacity_inactive_override", value = "'
+                    + (c.address === act ? "unset" : "0.25") + '", ' + w + ' })');
+            else
+                Shell.dispatch('hl.dsp.window.move({ workspace = "special:special", follow = false, ' + w + ' })');
+        }
+    }
+    // Al cambiar el ajuste se rehace entero (y las flotantes recuperan su opacidad si se vuelve a «encima»)
+    onFloatOrderChanged: { root._floatOrderKey = ""; HyprClients.refresh(); }
+
     // Modo de un espacio (con su excepción) · ¿flotan sus ventanas? · diseño de Hyprland de un modo
     function modeOf(ws: int): string { return overrides[String(ws)] ?? mode; }
     function baseFloat(ws: int, m: string): bool { return ws > 0 && m === "flotante"; }
@@ -263,7 +303,7 @@ Singleton {
         lastAct = act;
         if (changed || JSON.stringify(h) !== JSON.stringify(held)) held = h;
     }
-    Connections { target: HyprClients; function onRefreshesChanged() { root.stackStep(); root.syncFrames(); } }
+    Connections { target: HyprClients; function onRefreshesChanged() { root.stackStep(); root.syncFrames(); root.applyFloatOrder(); } }
 
     // ---------- barra de título del modo clásico (ajuste "titleBars") ----------
     // Las islas de modules/desktop/TitleBar.qml (título, asa y botones dentro de la ventana activa) no salen en las
@@ -374,6 +414,16 @@ Singleton {
             && !/^(xdg-desktop-portal-.*|org\.pulseaudio\.pavucontrol|pavucontrol|nm-connection-editor|blueman-manager|polkit.*)$/i.test(c.class ?? "");
     }
     function maximize(c): void { Shell.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "set", ' + win(c.address) + ' })'); }
+    // Quitarle el flotado a una ventana: si está en el espacio oculto (Super + S) vuelve antes al espacio actual
+    // (en un espacio especial solo caben ventanas flotantes).
+    function unfloat(c): void {
+        const w = 'window = "address:' + c.address + '"';
+        if ((c.workspace?.id ?? 0) <= 0) {
+            const ws = Hyprland.focusedMonitor?.activeWorkspace?.id ?? 1;
+            Shell.dispatch('hl.dsp.window.move({ workspace = ' + ws + ', follow = false, ' + w + ' })');
+        }
+        Shell.dispatch('hl.dsp.window.float({ action = "disable", ' + w + ' })');
+    }
 
     function convert(list, on: bool): void {
         const placed = [];
@@ -388,7 +438,7 @@ Singleton {
                 place(c, true, placed);
                 if (opensMax(c)) maximize(c);
             } else if (!on && c.floating && !small(c) && !isFloatApp(c.class)) {
-                Shell.dispatch('hl.dsp.window.float({ action = "disable", ' + w + ' })');
+                unfloat(c);
             }
         }
         HyprClients.refresh();

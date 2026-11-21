@@ -137,6 +137,24 @@ ColumnLayout {
         headerRight: Mono { text: root.winMode === "flotante" ? "modo clásico activo" : "también en espacios flotantes" }
         SwRow { label: "Encajar al soltar en los bordes"; sub: "contra un lado: mitad · en una esquina: cuarto · arriba: toda el área · fuera: recupera su tamaño"; key: "dragSnap"; def: true }
         SwRow { label: "Recordar dónde estaba cada app"; sub: "al volver a abrirla flotando: el mismo sitio y tamaño y, en el modo clásico, maximizada o no como la cerraste"; key: "floatRemember"; def: true }
+        LabeledRow {
+            label: "Prioridad"
+            labelWidth: 150
+            Pills {
+                fill: false
+                model: [["encima", "Encima"], ["atenuadas", "Atenuadas"], ["espacio", "Espacio oculto"]]
+                current: Settings.get("floatOrder", "encima")
+                onPicked: k => Settings.set("floatOrder", k)
+            }
+        }
+        Txt {
+            Layout.fillWidth: true
+            Layout.leftMargin: 150
+            text: ({ "encima": "Las flotantes van sobre el mosaico, como siempre.",
+                      "atenuadas": "Se quedan delante, pero transparentes mientras no tienen el foco: el mosaico se ve a través y, al enfocarlas, vuelven a opacas.",
+                      "espacio": "Las flotantes se van al espacio oculto (Super + S) y se ven allí, encima del mosaico: el mosaico queda siempre limpio." })[Settings.get("floatOrder", "encima")] ?? ""
+            muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+        }
         SwRow {
             label: "Barras de título"; key: "titleBars"; def: true
             sub: "en las apps que no traen la suya: al acercar el puntero al borde de arriba de la ventana activa salen tres islas, con su título, un asa para moverla (doble clic maximiza) y minimizar, maximizar y cerrar"

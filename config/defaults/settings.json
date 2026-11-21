@@ -424,6 +424,7 @@
   "wineTweaks": true,
   "protonWayland": false,
   "dragSnap": true,
+  "floatOrder": "encima",
   "floatRemember": true,
   "lazyModules": true,
   "recFormat": "video",
