@@ -20,6 +20,17 @@ HF.rules.pip = hl.window_rule({
     move  = { "(monitor_w-window_w-12)", "12" },
 })
 
+-- La ventana de chat de RustDesk: flota y sale centrada. Es un cuadro aparte (la conversación con el otro equipo):
+-- en mosaico se comía media pantalla, con la conversación encima de la sesión remota. Solo el chat: la ventana
+-- principal («… - RustDesk») sigue en mosaico como cualquier app. El título se compara entero («^(…)$»), por eso
+-- el «.*» de los dos lados.
+hl.window_rule({
+    name  = "rustdesk-chat",
+    match = { class = "^rustdesk$", title = "^(.*[Cc]hat.*|.*[Cc]onversaci..n.*)$" },
+    float = true,
+    center = true,
+})
+
 -- (Las apps no maximizan por su cuenta en mosaico y desplazamiento: regla "no-maximize" de config/apply/35-windows.py)
 
 -- Juegos y apps de Windows (Wine / Proton: Genshin desde Epic, HoYoPlay, Battle.net…): flotan centradas a su tamaño.
