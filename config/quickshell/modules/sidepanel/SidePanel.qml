@@ -87,24 +87,11 @@ PanelWindow {
         Shell.sideShown = shown;
         if (shown) {
             chatHeld = true;
-            // El panel toma el teclado (la entrada de la pregunta): al abrirlo se puede escribir de inmediato y, al
-            // hacer clic fuera, el foco vuelve a la ventana de debajo (que es lo que avisa del clic fuera).
-            Qt.callLater(() => win.chat.focusInput?.());
+            // El panel toma el teclado (la entrada de la pregunta): al abrirlo se puede escribir de inmediato. Con el
+            // panel fijado no: es parte del mosaico y no debe robarle el teclado a lo que estés haciendo.
+            if (!win.pinActive) Qt.callLater(() => win.chat.focusInput?.());
         }
         else modelMenu = false;      // el desplegable de proveedor no se queda abierto al cerrar el panel
-    }
-    // Clic fuera: el panel se cierra como con la ×. Al abrirse toma el teclado, así que al hacer clic en otra
-    // ventana el foco vuelve a ella (evento «activewindowv2») y aquí se cierra. Con el panel fijado no: es parte
-    // del mosaico y se queda siempre a la vista.
-    Connections {
-        target: Hyprland
-        function onRawEvent(ev) {
-            if (ev.name !== "activewindowv2") return;
-            if (Shell.view !== "ia" || win.pinActive) return;
-            if (!ev.data) return;                                    // el foco se fue al escritorio (sin ventana)
-            if (Date.now() - Shell.openedAt < 600) return;             // abrirlo no lo cierra
-            Shell.close();
-        }
     }
     Timer {
         interval: 60000
@@ -240,11 +227,11 @@ PanelWindow {
     WlrLayershell.namespace: "hf-ia"
     WlrLayershell.keyboardFocus: shown ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore
-    anchors { top: true; bottom: true; right: !onLeft; left: onLeft }
+    // La capa ocupa toda la pantalla (es transparente): así el clic fuera del panel lo cierra. Antes la ventana era
+    // solo la franja del panel y el clic fuera no llegaba a ninguna parte.
+    anchors { top: true; bottom: true; left: true; right: true }
     implicitWidth: panelW + mR + 48          // margen para la sombra; el ratón lo atraviesa (mask)
-    // Por geometría y no por «item»: la Region se calculaba con el panel aún desplazado por la animación de entrada
-    // (24 px hacia el borde) y no se actualiza con el Translate; con el panel a la izquierda, la X quedaba fuera
-    mask: Region { x: panel.x; y: panel.y; width: panel.width; height: panel.height }
+    mask: Region { x: 0; y: 0; width: win.width; height: win.height }
 
     // ======================================================================= apertura
     property var pendingArg: null
@@ -268,6 +255,15 @@ PanelWindow {
         function onOpened(v) { if (v === "ia") win.handleArg(Shell.arg); }
     }
     // ======================================================================= dibujo
+    // Clic fuera del panel: lo cierra, como la × (los demás paneles del shell hacen lo mismo: Spotlight, Ajustes
+    // rápidos, portapapeles…). El clic se queda aquí y no llega a la ventana de debajo: al cerrarse el panel, el
+    // siguiente clic sí llega. Con el panel fijado no: es parte del mosaico y se queda siempre a la vista.
+    MouseArea {
+        anchors.fill: parent
+        z: -1
+        enabled: win.shown && !win.pinActive && Shell.view === "ia"
+        onPressed: Shell.close()
+    }
     Item {
         id: panel
         x: win.onLeft ? win.mR : parent.width - win.mR - width
@@ -285,6 +281,8 @@ PanelWindow {
         Behavior on opacity { NumberAnimation { id: slide; duration: win.shown ? Theme.durIn : 160; easing.type: Easing.OutCubic } }
 
         Glass { anchors.fill: parent; kind: "panel" }
+        // Los clics dentro del panel no lo cierran (los que no pilla ningún botón)
+        MouseArea { anchors.fill: parent; z: -1; acceptedButtons: Qt.AllButtons; onClicked: {} }
 
         ColumnLayout {
             anchors.fill: parent
