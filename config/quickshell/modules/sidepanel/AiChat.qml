@@ -301,10 +301,12 @@ Item {
         messages = messages.slice(0, i + 1);
         send(model);
     }
-    // «Otro modelo»: lista de `hf-ai models` (se pide al abrir el menú; modelMenu = índice del mensaje, -1 cerrado)
+    // «Otro modelo»: lista de `hf-ai models` (se pide al abrir el menú; modelMenu = índice del mensaje, -1 cerrado).
+    // Con OpenCode la lista trae «Automático» (el que elige OpenCode por su cuenta: hf-ai "auto").
     property int modelMenu: -1
     property var modelList: []
     property string modelErr: ""
+    property string modelAuto: ""
     function openModels(i) {
         if (modelMenu === i) { modelMenu = -1; return; }
         modelMenu = i;
@@ -315,7 +317,7 @@ Item {
         command: [Paths.script("hf-ai"), "models"]
         stdout: StdioCollector {
             onStreamFinished: {
-                try { const j = JSON.parse(text); root.modelList = j.models ?? []; root.modelErr = j.error ?? ""; }
+                try { const j = JSON.parse(text); root.modelList = j.models ?? []; root.modelErr = j.error ?? ""; root.modelAuto = j.auto ?? ""; }
                 catch (e) { root.modelList = []; root.modelErr = "No pude leer la lista de modelos"; }
             }
         }
@@ -344,6 +346,7 @@ Item {
                         // filtro de secretos de hf-ai: se avisa cuántos datos sensibles no salieron del equipo
                         steps: (r.steps ?? []).concat(r.redacted ? [(r.redacted === 1 ? "Se ocultó 1 dato sensible" : "Se ocultaron " + r.redacted + " datos sensibles") + " del contexto"] : []),
                         code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto, model: r.model ?? "",
+                        caps: r.caps?.label ?? "",       // lo que puede hacer el modelo que respondió («ve imágenes»)
                         choices: r.choices ?? [] });
             // Se aplica ya, con Deshacer: sin confirmación (Ajustes › IA) o todo «aprobado siempre» (aiAlwaysApprove)
             const n = r.actions?.length ?? 0;
@@ -1015,13 +1018,14 @@ print(json.dumps(out[:300]))
                             visible: !msg.mine && msg.footer
                             anchors { left: parent.left; top: bubble.bottom; topMargin: 4; leftMargin: 12 }
                             spacing: 2
-                            // hora · modelo · cuánto tardó (siempre a la vista; la fecha completa al pasar el cursor)
+                            // hora · modelo · qué puede hacer · cuánto tardó (la fecha completa al pasar el cursor)
                             Txt {
                                 visible: msg.hasTime || (msg.modelData.model ?? "") !== ""
                                 anchors.verticalCenter: parent.verticalCenter
                                 HoverHandler { id: timeHover }
                                 text: [msg.hasTime ? (timeHover.hovered ? root.fullWhen(msg.when) : Time.fmt(new Date(msg.when))) : "",
-                                       msg.modelData.model ?? "", msg.modelData.ms ? root.secs(msg.modelData.ms) : ""].filter(x => x).join(" · ")
+                                       msg.modelData.model ?? "", msg.modelData.caps ?? "",
+                                       msg.modelData.ms ? root.secs(msg.modelData.ms) : ""].filter(x => x).join(" · ")
                                 size: 10.5; muted: true; tabular: true; rightPadding: 8
                             }
                             IconBtn {
@@ -1065,8 +1069,11 @@ print(json.dumps(out[:300]))
                                 Chip {
                                     required property var modelData
                                     readonly property string mid: String(modelData[0] ?? "")
-                                    text: String(modelData[1] ?? modelData[0] ?? "") || "Predeterminado"
-                                    on: mid !== "" && mid === (msg.modelData.model ?? "")
+                                    // «Automático» (OpenCode): el modelo que elige él solo; se marca si fue el que respondió
+                                    readonly property bool auto: mid === "" && root.modelAuto !== ""
+                                    text: auto ? "Automático" : (String(modelData[1] ?? modelData[0] ?? "") || "Predeterminado")
+                                    on: auto ? (root.modelAuto === (msg.modelData.model ?? ""))
+                                             : (mid !== "" && mid === (msg.modelData.model ?? ""))
                                     outline: true
                                     onClicked: root.regenerate(mid)
                                 }

@@ -33,7 +33,7 @@ En `~/.config/hyprfrijol/settings.json` (o Ajustes › IA):
 | Clave | Valores | Por defecto |
 |---|---|---|
 | `aiProvider` | `claude-code` · `opencode` · `gemini` · `ollama` · `openai-compatible` · `off` | `claude-code` |
-| `aiModel` | p. ej. `haiku`, `sonnet` · `opencode/deepseek-v4.1-flash-free` · `gemini-2.5-flash` · `gemma4:e4b` · `gpt-4o-mini` | (el del proveedor) |
+| `aiModel` | p. ej. `haiku`, `sonnet` · `minimax/MiniMax-M3.1-Flash` · `gemini-2.5-flash` · `gemma4:e4b` · `gpt-4o-mini` | (el del proveedor; con OpenCode, el que tengas configurado en él) |
 | `aiEndpoint` | `http://localhost:11434` · `https://…/v1` | (el del proveedor) |
 | `aiKeyEnv` | variable de entorno con la clave (openai-compatible) | `HF_AI_KEY` |
 | `aiContextWindow` | enviar el título de la ventana activa | `true` |
@@ -87,15 +87,23 @@ scripts/hf-ai ask "¿qué hace hyprctl reload?"
 scripts/hf-ai chat '{"messages":[{"role":"user","text":"Pon la barra arriba"}],"context":{"window":false,"clipboard":false}}'
 ```
 
-### OpenCode (modelos gratuitos, sin herramientas)
+### OpenCode (los modelos que tengas en OpenCode, sin herramientas)
 
 `aiProvider: "opencode"` usa los modelos de [OpenCode](https://opencode.ai) (Ajustes › Asistente de IA › **OpenCode**,
 sale si está instalado: `opencode` en el `PATH` o en `~/.opencode/bin`, donde lo deja su instalador). `aiModel` va
-como en `opencode models` (`proveedor/modelo`); vacío = `opencode/deepseek-v4.1-flash-free`. La lista de Ajustes sale
-de su servicio con los gratuitos primero, sin los de Ollama: OpenCode los carga con 4096 de contexto y el prompt del
-asistente (~4200 tokens) se corta (medido el 2026-11-19: «17 por 3 = 5» y respuestas vacías); para eso está el
-proveedor Ollama.
+como en `opencode models` (`proveedor/modelo`). La lista de Ajustes sale de su servicio con los gratuitos primero. Los
+modelos se filtran por **contexto**, no por proveedor: el prompt del asistente son ~4200 tokens, así que por debajo de
+8k el modelo se queda corto y responde cualquier cosa (el 2026-11-19 OpenCode cargaba los de Ollama con 4096: «17 por 3 = 5»
+y respuestas vacías; hoy cada uno declara su contexto —`ollama/gemma4:e4b`: 131072— y ya entra).
 
+- **El modelo se elige solo si en Ajustes no hay ninguno** (lo pone «Automático»): primero el que tiene configurado
+  OpenCode en `~/.config/opencode/opencode.json` (p. ej. `minimax/MiniMax-M3.1-Flash`), si no el último que respondió y
+  si no el primero disponible. Así, con un proveedor propio en OpenCode (MiniMax, Anthropic…), el panel lo usa sin
+  tocar nada. `hf-ai models opencode` dice cuál sería (`"auto"`).
+- **Si el modelo que toca no puede** (cuota agotada, sin clave, saturado), se prueba con otro sin preguntar: se
+  saltan los modelos del proveedor que falló (la cuota gratuita es una sola para todos) y se sigue con los de otro
+  proveedor. En el panel se ve: «OpenCode: … no pudo (…); se probó con otro modelo». El que respondió se apunta para
+  no repetir el que se quedó sin cuota.
 - **No pasa por `opencode run`** (crea sesiones, cada carpeta nueva queda como un proyecto en su lista y actúa por su
   cuenta). `hf-ai` habla con el servicio de fondo (`opencode service`) por su API local:
   `POST /api/experimental/generate/text`, usuario `opencode` y la contraseña de
@@ -104,16 +112,29 @@ proveedor Ollama.
   el mismo texto. Si el servicio no está en marcha, `hf-ai` lo arranca (`opencode service start`).
 - **Una sola cuota gratuita por cuenta**, compartida por todos los modelos gratuitos y con lo que programes en
   OpenCode: no sirve rotar entre ellos. Al agotarse responde `502 rate_limit` con `retryAfterMs`; el panel dice
-  «Se agotó la cuota gratuita de OpenCode (se renueva mañana a las 19:00)» y contesta el **respaldo** (recomendado:
-  Ollama). Sin respaldo, sale ese error hasta que se renueve.
-- Solo texto (las imágenes van por OCR) y sin streaming (la respuesta llega entera). La ruta es «experimental» en
-  OpenCode 2.3: si cambia, el error lo dice y salta el respaldo.
+  «Se agotó la cuota gratuita de OpenCode (se renueva mañana a las 19:00)» y, si hay otro modelo que sí puede,
+  contesta con ese; si no, contesta el **respaldo** (recomendado: Ollama).
+- **Las imágenes van de verdad a los modelos que las admiten**: el catálogo de OpenCode dice qué admite cada modelo
+  (`capabilities.input`: `text`, `image`, `audio`, `video`) y si es así la imagen se manda **por sesión**
+  (`POST /api/session` + `POST /api/session/<id>/prompt` con el archivo), no por OCR; al terminar **la sesión se
+  borra**, así que no queda rastro de lo que se le enseñó. A los modelos que no ven imágenes, su OCR de siempre.
+  `hf-ai caps` dice lo que puede hacer el modelo elegido.
+- Sin streaming (la respuesta llega entera). La ruta es «experimental» en OpenCode 2.3: si cambia, el error lo dice
+  y salta el respaldo.
+- **Elegir proveedor y modelo desde el panel**: la línea de la cabecera («OpenCode · MiniMax-M3.1-Flash») es pulsable y
+  abre la lista de proveedores y de modelos (con «Automático» en OpenCode y las **prestaciones** de cada modelo al
+  lado: «ve imágenes», «oye audio»). Al elegir proveedor, el desplegable **sigue abierto** con los modelos del
+  nuevo: no hay que salir y volver a entrar. También en Ajustes › Asistente de IA.
+- **Cambiar de proveedor o de modelo no recarga el shell**: esas claves no necesitan `hf-apply` (antes, al guardarlas,
+  se recargaba Hyprland y el panel se cerraba justo al elegir).
 - Con OpenCode de principal, **la gráfica queda libre**: `voice-warm` no carga Ollama y las órdenes de voz que no
   entienden las reglas van primero a OpenCode (8 s; si falla, Ollama). El resumen automático de avisos sigue en
   Ollama si es el respaldo, para que tus notificaciones no salgan del equipo.
 
 ```sh
-scripts/hf-ai models opencode    # {"models": [["opencode/deepseek-v4.1-flash-free", "DeepSeek V4.1 Flash Free · gratis"]…]}
+scripts/hf-ai models opencode    # {"models": [["", "Automático"], ["minimax/MiniMax-M3.1-Flash", "MiniMax-M3.1-Flash · minimax", "ve imágenes"]…],
+                                #  "auto": "minimax/MiniMax-M3.1-Flash", "caps": {"minimax/MiniMax-M3.1-Flash": {"in": ["image"], "out": []}}}
+scripts/hf-ai caps opencode      # {"provider": "opencode", "model": "minimax/MiniMax-M3.1-Flash", "in": ["image"], "out": [], "label": "ve imágenes"}
 scripts/hf-ai test               # con aiProvider "opencode"
 scripts/hf-ai chat --print-request '{"messages":[{"role":"user","text":"Hola"}]}'
 ```

@@ -33,7 +33,9 @@
                              la lista con sus herramientas, comprobar uno (lee y guarda sus herramientas) o probar una
   hf-ai chat --print-request '<json>'   no llama al modelo: imprime la petición que enviaría (sin la clave)
   hf-ai models [proveedor]   modelos que se pueden elegir (por defecto, los del proveedor que responde)
-                             → {"models": [[id, nombre]…], "error": …}
+                             → {"models": [[id, nombre, prestaciones]…], "error": …, "auto": "el que se usaría sin elegir" (opencode)
+  hf-ai caps [proveedor]     prestaciones del modelo elegido: qué admite y qué devuelve
+                             → {"provider", "model", "in": [...], "out": [...], "label": "ve imágenes"}}
   hf-ai test                 prueba la conexión con el proveedor → {"ok": bool, "text": "…"}
   hf-ai transform "instrucción" < texto   aplica la instrucción al texto y lo imprime en plano (hf-dictate)
   hf-ai digest [--local] < '[{"app","summary","body"}…]'     resume avisos en una o dos frases (local si Ollama está configurado;
@@ -52,10 +54,13 @@
 
 Proveedor (Ajustes › IA, settings.json):
   aiProvider  "claude-code" (CLI `claude -p`, por defecto) | "opencode" | "ollama" | "openai-compatible" | "gemini" | "off"
-  aiModel     p. ej. "haiku" / "sonnet" (claude-code), "opencode/deepseek-v4.1-flash-free" (opencode), "gemma4:e4b"
+  aiModel     p. ej. "haiku" / "sonnet" (claude-code), "minimax/MiniMax-M3.1-Flash" (opencode), "gemma4:e4b"
               (ollama), "gpt-4o-mini", "gemini-flash-latest"…
-  OpenCode    su servicio de fondo por la API local, sin herramientas ni sesión; los modelos gratuitos comparten una
-              cuota por cuenta: al agotarse responde el respaldo (aiFallbackProvider, p. ej. "ollama")
+  OpenCode    su servicio de fondo por la API local, sin herramientas; los modelos gratuitos comparten una
+              cuota por cuenta: al agotarse responde el respaldo (aiFallbackProvider, p. ej. "ollama").
+              Sin modelo elegido (aiModel vacío) se usa el que tenga configurado OpenCode (~/.config/opencode/opencode.json),
+              si no el último que respondió y si no el primero disponible; si ese falla, se prueba con otro solo.
+              Las imágenes van por sesión (se borra al terminar) solo si el modelo las admite: lo dice su catálogo.
   aiEndpoint  http://localhost:11434 (ollama) · https://api…/v1 (openai-compatible)
   aiKeyEnv    variable de entorno con la clave (openai-compatible), por defecto HF_AI_KEY
   Gemini      clave de https://aistudio.google.com/apikey: $GEMINI_API_KEY / $GOOGLE_API_KEY, o guardada con
@@ -2601,9 +2606,11 @@ def gather(ctx, ocr=True):
 
 # ---------------------------------------------------------------- proveedores
 class AIError(Exception):
-    def __init__(self, msg, code=0):
+    def __init__(self, msg, code=0, reason="", quota=False):
         super().__init__(msg)
         self.code = code     # código HTTP (400/415/422 con imágenes → se reintenta con OCR)
+        self.reason = reason # lo que dice el proveedor ("rate_limit", "overloaded"…): para probar con otro
+        self.quota = quota   # la cuota del proveedor está agotada: sus modelos no sirven
 
 # Respuesta en directo (`hf-ai chat` con "stream": true, lo pide el panel): cada proveedor llama a LIVE.add() con
 # los trozos que llegan y aquí se imprime, como mucho cada 80 ms, una línea {"partial": "<texto visible>"}. Lo que
@@ -2816,14 +2823,46 @@ def call_cli(system, messages, ctx_text, s):
 # Los modelos gratuitos (opencode/*-free) comparten UNA cuota por cuenta, también con lo que programas en OpenCode:
 # al agotarse responde 502 rate_limit con retryAfterMs y contesta el respaldo (Ollama). La ruta es «experimental»:
 # si cambia en otra versión, el error lo dice y también salta el respaldo.
+# Modelo: si en Ajustes no hay ninguno elegido (aiModel vacío), se usa el de la propia configuración de OpenCode
+# (~/.config/opencode/opencode.json, p. ej. «minimax/MiniMax-M3.1-Flash»), si no el último que respondió y si no el
+# primero que hay. Si el que toca falla (cuota agotada, sin clave, saturado) se prueba con otro sin preguntar: el
+# de OpenCode primero y, si su cuota está agotada, el de otro proveedor (el «minimax» de tu configuración).
 OPENCODE_STATE = HOME / ".local/state/opencode/service.json"
+OPENCODE_CFG = HOME / ".config/opencode/opencode.json"        # su configuración: el modelo que usa por su cuenta
+OPENCODE_PICK = HOME / ".cache/hyprfrijol/ai-opencode-model"  # el último modelo que respondió
 OPENCODE_DEFAULT = "opencode/deepseek-v4.1-flash-free"
 
-def opencode_model(s):
+def opencode_pair(m):
     """«proveedor/modelo» (como en `opencode models`; sin «/», de OpenCode Zen) → {"providerID", "id"}."""
-    m = (str(s.get("aiModel") or "").strip() or OPENCODE_DEFAULT).split("#")[0]
+    m = str(m or "").strip().split("#")[0]
     p, _, mid = m.partition("/")
     return {"providerID": p, "id": mid} if mid else {"providerID": "opencode", "id": p}
+
+def opencode_configured():
+    """El modelo que OpenCode tiene configurado por su cuenta (el «model» de ~/.config/opencode/opencode.json)."""
+    j = load(OPENCODE_CFG, {}) or {}
+    return str(j.get("model") or "").strip().split("#")[0]
+
+def opencode_last():
+    """El último modelo que respondió bien (no se vuelve a probar el que se quedó sin cuota)."""
+    try:
+        return OPENCODE_PICK.read_text().strip()
+    except OSError:
+        return ""
+
+def opencode_remember(m):
+    """El modelo que respondió: se apunta para no probar otra vez con el que se quedó sin cuota."""
+    try:
+        OPENCODE_PICK.parent.mkdir(parents=True, exist_ok=True)
+        OPENCODE_PICK.write_text(str(m).strip())
+    except OSError:
+        pass
+
+def opencode_model(s):
+    """El modelo que se pide: el elegido en Ajustes; si no hay ninguno, el que se elige solo (opencode_auto). Sin
+    llamar al servicio (lo usa también la voz): si el modelo no está, el de serie."""
+    m = str(s.get("aiModel") or "").strip()
+    return opencode_pair(m or opencode_configured() or opencode_last() or OPENCODE_DEFAULT)
 
 def opencode_when(ms):
     """Milisegundos desde ahora → «a las 14:30» / «mañana a las 9:05»."""
@@ -2844,7 +2883,7 @@ def opencode_error(code, d):
     if reason == "authentication":
         return f"OpenCode: falta iniciar sesión en {d.get('providerID') or 'ese proveedor'} (opencode auth)"
     if tag == "ModelNotFoundError":
-        return f"OpenCode no tiene el modelo {d.get('providerID')}/{d.get('modelID')}: elige otro en Ajustes › Asistente de IA"
+        return f"OpenCode no tiene el modelo {d.get('providerID')}/{d.get('modelID')}: elige otro en Ajustes › Asistente de IA o en «Repetir con otro modelo»"
     if tag == "ProviderNotFoundError":
         return f"OpenCode no tiene el proveedor {d.get('providerID')}: elige otro modelo en Ajustes › Asistente de IA"
     if code == 401:
@@ -2875,7 +2914,10 @@ def opencode_http(method, path, body=None, timeout=None, start=True):
                 d = json.loads(e.read().decode(errors="replace"))
             except ValueError:
                 d = {}
-            raise AIError(opencode_error(e.code, d if isinstance(d, dict) else {}), (d.get("status") if isinstance(d, dict) else None) or e.code)
+            d = d if isinstance(d, dict) else {}
+            raise AIError(opencode_error(e.code, d), d.get("status") or e.code,
+                          reason=str(d.get("reason") or d.get("_tag") or ""),
+                          quota="free usage" in str(d.get("message") or "").lower())
         except urllib.error.URLError as e:
             down = isinstance(e.reason, (ConnectionRefusedError, FileNotFoundError))
             if not down:
@@ -2900,30 +2942,250 @@ def opencode_generate(prompt, model, timeout=None):
         raise AIError("Respuesta vacía de OpenCode")
     return txt
 
-def call_opencode(system, messages, ctx_text, s):
-    prompt = claude_input(messages, ctx_text)[0]
-    return opencode_generate(f"{system}\n\n=====\n\n{prompt}", opencode_model(s))
+# Los proveedores que corren en este equipo: sus modelos se enseñan con su nombre bonito («Gemma 4 (e4b)») y
+# marcados como locales, para que se distinguan de un golpe de los remotos de OpenCode.
+LOCAL_PROVIDERS = {"ollama": "Ollama local", "lmstudio": "LM Studio local", "vllm": "vLLM local"}
+QUANT_TAG = re.compile(r"^(q\d+(_.*)?|f(16|32)|bf16|fp16)$", re.I)   # q4_K_M, fp16…: no dicen nada del modelo
 
-def opencode_models():
-    """Modelos de chat que OpenCode tiene activos: primero los gratuitos de OpenCode Zen (comparten tu cuota)."""
+def pretty_model(mid):
+    """«gemma4:e4b» → «Gemma 4 (e4b)». Los modelos de Ollama/LM Studio llevan etiquetas, no nombres."""
+    base, _, tag = str(mid or "").partition(":")
+    base = base.split("/")[-1]                       # lmstudio/google/gemma-4-26b-a4b → gemma-4-26b-a4b
+    s = re.sub(r"([A-Za-z])(\d)", r"\1 \2", base)
+    s = re.sub(r"(\d)([A-Za-z])", r"\1 \2", s)
+    s = re.sub(r"[-_.]+", " ", s).strip()
+    def tok(w):
+        if re.fullmatch(r"\d+[a-z]", w) or re.fullmatch(r"[a-z]\d[a-z]", w):
+            return w.upper()                        # 26b → 26B, a4b → A4B
+        return w.capitalize()
+    s = " ".join(tok(w) for w in s.split())
+    if tag and not QUANT_TAG.match(tag) and tag.lower() != "latest":
+        s = f"{s} ({tag})"
+    return s or str(mid or "")
+
+def opencode_available():
+    """Los modelos de chat que OpenCode tiene activos: [{"id", "provider", "name", "free", "local"}…]. Los gratuitos de
+    OpenCode Zen (comparten tu cuota) van primero."""
     try:
         j = opencode_http("GET", "/api/model", timeout=10)
     except AIError as e:
-        return {"models": [[OPENCODE_DEFAULT, OPENCODE_DEFAULT]], "error": str(e)}
+        return [], str(e)
     out = []
     for m in (j.get("data") if isinstance(j, dict) else None) or []:
         if not isinstance(m, dict) or m.get("type", "chat") != "chat" or m.get("enabled") is False or m.get("status", "active") != "active":
             continue
         p, i = str(m.get("providerID") or ""), str(m.get("id") or "")
-        # los de Ollama no: OpenCode los carga con 4096 de contexto y el prompt del asistente (~4200) se corta (medido
-        # 2026-11-19: «17 por 3 = 5» y respuestas vacías). Para eso está el proveedor Ollama, con aiOllamaCtx
-        if not p or not i or p == "ollama":
+        ctx = int((m.get("limit") or {}).get("context") or 0)
+        # Contexto: el prompt del asistente son ~4200 tokens, así que por debajo de 8k el modelo se queda corto y
+        # responde cualquier cosa (el 2026-11-19 OpenCode cargaba los de Ollama con 4096: «17 por 3 = 5» y respuestas
+        # vacías). Antes se apartaban todos los de Ollama por eso; ahora cada uno declara su contexto (ollama/gemma4:e4b
+        # : 131072) y se filtra por lo que de verdad cabe, no por proveedor.
+        if ctx and ctx < 8192:
+            continue
+        if p == "ollama" and not ctx:
+            continue               # sin contexto conocido: no nos fiamos
+        if not p or not i:
             continue
         free = p == "opencode" and all(not (c.get("input") or c.get("output")) for c in (m.get("cost") or [{}]) if isinstance(c, dict))
-        name = str(m.get("name") or i) + (" · gratis" if free else "" if p == "opencode" else f" · {p}")
-        out.append((not free, p != "opencode", name.lower(), [f"{p}/{i}", name]))
-    out.sort(key=lambda x: x[:3])
-    return {"models": [x[3] for x in out] or [[OPENCODE_DEFAULT, OPENCODE_DEFAULT]], "error": None if out else "OpenCode no tiene modelos activos"}
+        local = p in LOCAL_PROVIDERS
+        if local:
+            # «Gemma 4 (e4b) · Ollama local»: el nombre bonito y de dónde sale, para no buscarlo a ciegas
+            name = f"{pretty_model(i)} · {LOCAL_PROVIDERS[p]}"
+        else:
+            name = str(m.get("name") or i) + (" · gratis" if free else "" if p == "opencode" else f" · {p}")
+        # Prestaciones (lo que declara el catálogo de OpenCode): qué admite y qué devuelve, además del texto.
+        caps = m.get("capabilities") if isinstance(m.get("capabilities"), dict) else {}
+        cin = [str(x) for x in (caps.get("input") or []) if str(x) != "text"]
+        cout = [str(x) for x in (caps.get("output") or []) if str(x) != "text"]
+        out.append({"id": f"{p}/{i}", "provider": p, "name": name, "free": free, "local": local, "ctx": ctx,
+                    "in": cin, "out": cout})
+    # Este orden es el de uso (a quién se recurre cuando el elegido falla): los gratuitos de OpenCode Zen primero.
+    # El de presentación (los locales arriba) lo hace opencode_models, sobre una copia.
+    out.sort(key=lambda a: (not a["free"], a["provider"] != "opencode", a["name"].lower()))
+    return out, None
+
+def opencode_auto(avail=None):
+    """El modelo que se usaría sin elegir ninguno: el de la configuración de OpenCode (el que usa por su cuenta),
+    si no el último que respondió y si no el primero que hay."""
+    if avail is None:
+        avail, _ = opencode_catalog()
+    ids = [a["id"] for a in avail]
+    for x in (opencode_configured(), opencode_last()):
+        if x and (not ids or x in ids):
+            return x
+    return ids[0] if ids else OPENCODE_DEFAULT
+
+# El catálogo tarda un poco (son unos cuantos modelos): se guarda un minuto, que da para varias preguntas seguidas.
+_OC_CAT = {"t": 0.0, "avail": None, "err": None}
+
+def opencode_catalog(max_age=60):
+    """El catálogo de modelos de OpenCode con sus prestaciones ({"id", "in", "out"…]), guardado un minuto. Si el
+    servicio no está, se reintenta antes (a los 20 s)."""
+    t = time.time()
+    age = t - _OC_CAT["t"]
+    if _OC_CAT["t"] and age < max_age and (_OC_CAT["avail"] is not None or age < 20):
+        return _OC_CAT["avail"] or [], _OC_CAT["err"]
+    avail, err = opencode_available()
+    _OC_CAT.update(t=t, avail=avail or None, err=err)
+    return _OC_CAT["avail"] or [], err
+
+# Lo que significa cada prestación, para enseñarla en el panel y en los ajustes.
+CAP_LABEL = {"image": "ve imágenes", "audio": "oye audio", "video": "ve vídeo", "files": "lee archivos",
+             "pdf": "lee PDF", "text": "texto"}
+
+def cap_label(caps):
+    """Las prestaciones de un modelo, en palabras: «ve imágenes», «oye audio»…"""
+    c = caps if isinstance(caps, dict) else {}
+    extra = [x for x in (c.get("in") or []) if x != "text"]
+    out = [CAP_LABEL.get(x, x) for x in extra]
+    return " · ".join(out)
+
+def opencode_caps(mid):
+    """Las prestaciones de un modelo de OpenCode: {"in": [...], "out": [...]}. Vacío si el catálogo no lo dice."""
+    avail, _ = opencode_catalog()
+    for a in avail or []:
+        if a["id"] == str(mid or ""):
+            return {"in": a.get("in") or [], "out": a.get("out") or []}
+    return {"in": [], "out": []}
+
+def opencode_model_id(s):
+    """El modelo que se usaría ahora mismo (el elegido, o el automático)."""
+    return str(s.get("aiModel") or "").strip() or opencode_auto()
+
+def opencode_sees_images(s):
+    """¿El modelo que va a responder ve imágenes de verdad? Lo dice el catálogo de OpenCode."""
+    return "image" in (opencode_caps(opencode_model_id(s)).get("in") or [])
+
+def opencode_candidates(s):
+    """Los modelos a probar, en orden: el que elegiste (en Ajustes o al repetir con otro), el que tiene OpenCode
+    configurado, el último que respondió y los que hay disponibles. Con el de este turno («repetir con otro modelo»)
+    solo se prueba ese."""
+    avail, _ = opencode_catalog()
+    ids = [a["id"] for a in avail]
+    out = []
+    def add(x):
+        x = str(x or "").strip()
+        if x and x not in out:
+            out.append(x)
+    want = str(s.get("aiModel") or "").strip()
+    if want:
+        add(want)
+        if s.get("_pinned"):
+            return out          # el que pediste para este turno: solo ese
+    add(opencode_configured())
+    add(opencode_last())
+    for x in ids:
+        add(x)
+    add(OPENCODE_DEFAULT)
+    return out
+
+def opencode_retry(e):
+    """Tras un fallo: (probar con otro modelo, dejar el proveedor entero)."""
+    if e.quota or e.reason == "authentication":
+        return True, True      # la cuota del proveedor (o su clave) no sirve: sus modelos tampoco
+    if e.reason in ("rate_limit", "overloaded", "ModelNotFoundError"):
+        return True, False
+    if e.reason == "ProviderNotFoundError":
+        return True, True
+    return (True, False) if e.code in (429, 502, 503, 504) else (False, False)
+
+def opencode_answer(prompt, s, timeout=None, files=None):
+    """La respuesta de OpenCode: se prueba con el modelo que toca y, si falla (cuota agotada, sin clave, saturado),
+    con otro sin preguntar. → (texto, modelo que respondió). Con «files» (imágenes) va por sesión: el generador de
+    texto no admite adjuntos."""
+    dead = set()      # proveedores que no sirven (cuota agotada o sin clave): se saltan todos sus modelos
+    last = None
+    for cand in opencode_candidates(s):
+        p = opencode_pair(cand)["providerID"]
+        if p in dead:
+            continue
+        try:
+            if files:
+                out = opencode_session_ask(prompt, opencode_pair(cand), files, timeout)
+            else:
+                out = opencode_generate(prompt, opencode_pair(cand), timeout)
+        except AIError as e:
+            last = e
+            skip, dead_prov = opencode_retry(e)
+            if not skip:
+                raise
+            if dead_prov:
+                dead.add(p)
+            s["_note"] = f"OpenCode: {cand} no pudo ({str(e)[:70]}); se probó con otro modelo"
+            continue
+        opencode_remember(cand)
+        s["_model"] = cand
+        return out, cand
+    raise last or AIError("OpenCode no tiene modelos que respondan")
+
+def opencode_file(img):
+    """Una imagen para la sesión de OpenCode: (mime, base64, ruta) → {"uri", "name", "mime", "source"}."""
+    import base64, hashlib
+    mime, b64, _path = img
+    ext = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif"}.get(mime, ".png")
+    try:
+        IMG_DIR.mkdir(parents=True, exist_ok=True)
+        dst = IMG_DIR / ("oc-" + hashlib.sha1(str(b64).encode()).hexdigest()[:16] + ext)
+        if not dst.exists():
+            dst.write_bytes(base64.b64decode(b64))
+        uri = "file://" + str(dst)
+        name = dst.name
+    except Exception:
+        uri, name = "file://" + str(_path), pathlib.Path(str(_path)).name
+    return {"uri": uri, "name": name, "mime": mime, "source": {"type": "inline", "data": str(b64)}}
+
+def opencode_session_ask(prompt, model, files=None, timeout=None):
+    """Pregunta a OpenCode por una sesión (la vía que admite archivos: los modelos que ven imágenes las reciben de
+    verdad). Al terminar, la sesión se borra: no queda rastro de lo que se le enseñó."""
+    lim = timeout or WAIT or 120
+    s = opencode_http("POST", "/api/session", {"title": "hyprfrijol", "model": model}, timeout)
+    sid = ((s or {}).get("data") or {}).get("id")
+    if not sid:
+        raise AIError("OpenCode no creó la sesión")
+    try:
+        body = {"text": prompt}
+        if files:
+            body["files"] = [opencode_file(f) for f in files]
+        opencode_http("POST", f"/api/session/{sid}/prompt", body, timeout)
+        t0 = time.time()
+        while time.time() - t0 < lim:
+            j = opencode_http("GET", f"/api/session/{sid}/message", timeout=20)
+            for m in ((j or {}).get("data") or []):
+                if not isinstance(m, dict) or m.get("type") != "assistant":
+                    continue
+                txt = "".join(c.get("text") or "" for c in (m.get("content") or [])
+                              if isinstance(c, dict) and c.get("type") == "text")
+                if txt.strip():
+                    return txt
+            time.sleep(0.7)
+        raise AIError("OpenCode no respondió a tiempo")
+    finally:
+        try:
+            opencode_http("DELETE", f"/api/session/{sid}", timeout=10)
+        except AIError:
+            pass
+
+def call_opencode(system, messages, ctx_text, s):
+    prompt = claude_input(messages, ctx_text)[0]
+    # Las imágenes van de verdad si el modelo las ve (lo dice el catálogo de OpenCode); si no, su OCR.
+    imgs = [x for m in messages for x in (m.get("_imgs") or [])]
+    files = imgs if imgs and opencode_sees_images(s) else None
+    out, _ = opencode_answer(f"{system}\n\n=====\n\n{prompt}", s, files=files)
+    return out
+
+def opencode_models():
+    """Modelos de chat que OpenCode tiene activos: primero los gratuitos de OpenCode Zen (comparten tu cuota)."""
+    avail, err = opencode_catalog()
+    if not avail:
+        return {"models": [["", "Automático (el que usa OpenCode)", ""]], "error": err or "OpenCode no tiene modelos activos",
+                "auto": OPENCODE_DEFAULT, "caps": {}}
+    # Para verlos: los de este equipo (Ollama, LM Studio, vLLM) primero —se distinguen de un golpe— y detrás los
+    # remotos, los gratuitos de OpenCode Zen antes que los de pago.
+    shown = sorted(avail, key=lambda a: (not a.get("local"), not a["free"], a["name"].lower()))
+    out = [[a["id"], a["name"], cap_label(a)] for a in shown]
+    # «Automático» primero: el modelo que se usa si no eliges ninguno (el de OpenCode, el último que respondió…)
+    return {"models": [["", "Automático (el que usa OpenCode)", ""]] + out, "error": None, "auto": opencode_auto(avail),
+            "caps": {a["id"]: {"in": a.get("in") or [], "out": a.get("out") or []} for a in avail}}
 
 def ollama_warm():
     """La conversación por voz empieza (hf-ai voice-warm): Ollama, si es el principal o el respaldo, ya cargado en la
@@ -3072,12 +3334,14 @@ def call_openai(system, messages, ctx_text, s):
 
 def provider_vision(prov, s):
     """¿Se le pueden mandar imágenes? aiVision (true/false, oculto) lo fuerza; si no: Claude/Gemini/OpenAI sí,
-    Ollama según el modelo."""
+    Ollama según el modelo y OpenCode según lo que declare su catálogo del modelo."""
     v = s.get("aiVision")
     if isinstance(v, bool):
         return v
     if prov == "ollama":
         return ollama_vision(s)
+    if prov == "opencode":
+        return opencode_sees_images(s)
     return prov in ("claude-code", "gemini", "openai-compatible", "mock")
 
 # ---------------------------------------------------------------- Gemini (Google AI Studio, plan gratuito)
@@ -4425,8 +4689,9 @@ def _do_chat(req, print_request=False):
     if fallback_for(s0, prov)[0]:
         # con respaldo no se espera los 120 s de serie: el triple de aiFallbackWait
         WAIT = 3 * fallback_wait(s0)
-    if req.get("model") and not req.get("_fallback"):   # «Repetir con otro modelo» del panel
-        s["aiModel"] = str(req["model"])[:80]
+    if "model" in req and not req.get("_fallback"):   # «Repetir con otro modelo» del panel (vacío = el automático)
+        s["aiModel"] = str(req.get("model") or "")[:80]
+        s["_pinned"] = True
     fn = PROVIDERS.get(prov)
     if not fn:
         return {"error": f"Proveedor desconocido: {prov}"}
@@ -4580,9 +4845,10 @@ def _do_chat(req, print_request=False):
     # Con el portapapeles en el contexto, tampoco lo que no tiene vuelta atrás (abrir webs, descargas…).
     if out.get("plan") and (ctx.get("_untrusted") or (ctx.get("clipboard", True) and any(not p.get("undo") for p in out["plan"]))):
         out["auto"], out["confirm"] = False, True
-    out["steps"] = list(dict.fromkeys(steps))
+    out["steps"] = list(dict.fromkeys(([s["_note"]] if s.get("_note") else []) + steps))
     out["provider"] = prov
     out["model"] = model_name(prov, s)
+    out["caps"] = caps(prov, s)          # lo que puede hacer el que respondió (ve imágenes, oye audio…)
     if hidden:
         out["redacted"] = hidden
     return out
@@ -4640,7 +4906,10 @@ def model_name(prov, s):
     m = str(s.get("aiModel") or "").strip()
     if prov == "gemini":
         return gemini_model(s)
-    return m or {"ollama": "gemma4:e4b", "openai-compatible": "gpt-4o-mini", "opencode": OPENCODE_DEFAULT}.get(prov, "")
+    if prov == "opencode":
+        # el que respondió de verdad (puede ser otro al que eligió si el suyo no podía)
+        return str(s.get("_model") or m or opencode_configured() or OPENCODE_DEFAULT)
+    return m or {"ollama": "gemma4:e4b", "openai-compatible": "gpt-4o-mini"}.get(prov, "")
 
 CLAUDE_CODE_MODELS = [["", "Predeterminado de Claude Code"], ["haiku", "Haiku (rápido)"], ["sonnet", "Sonnet (equilibrado)"],
                       ["opus", "Opus (el más capaz)"]]
@@ -4660,7 +4929,8 @@ def models_for(prov):
             ep = ollama_ep(dict(s, aiProvider="ollama"))
             with urllib.request.urlopen(ep + "/api/tags", timeout=5) as r:
                 names = sorted(m.get("name", "") for m in json.loads(r.read()).get("models", []))
-            return {"models": [[n, n] for n in names if n], "error": None if names else "Ollama no tiene modelos descargados"}
+            # el id es la etiqueta de Ollama (la que se le pide); el nombre, legible («Gemma 4 (e4b)»)
+            return {"models": [[n, pretty_model(n)] for n in names if n], "error": None if names else "Ollama no tiene modelos descargados"}
         except (AIError, OSError, ValueError) as e:
             return {"models": [], "error": f"No puedo hablar con Ollama: {getattr(e, 'reason', e)}"}
     if prov == "openai-compatible":
@@ -5149,9 +5419,45 @@ def status():
         hint = "" if ok else "No encuentro esa IA de terminal"
     elif prov == "off":
         ok, hint = False, "Desactivado"
-    model = gemini_model(s) if prov == "gemini" else (s.get("aiModel") or (OPENCODE_DEFAULT if prov == "opencode" else ""))
+    if prov == "gemini":
+        model = gemini_model(s)
+    elif prov == "opencode":
+        # el elegido en Ajustes o, si no hay ninguno, el de la configuración de OpenCode (no hace falta el servicio)
+        model = str(s.get("aiModel") or "").strip() or opencode_configured() or OPENCODE_DEFAULT
+    else:
+        model = str(s.get("aiModel") or "").strip()
+    cap = {"in": [], "out": [], "label": ""}
+    if ok:
+        try:
+            cap = caps(prov, s)
+        except Exception:
+            pass
     return {"provider": prov, "model": model, "available": ok, "hint": hint,
+            "caps": cap,
             "desktop": bool(shutil.which("claude-desktop") or shutil.which("claude-desktop-bin")), "voiceLocal": piper_ready()}
+
+def caps(prov=None, s=None):
+    """Las prestaciones del proveedor elegido: qué admite y qué devuelve, además del texto.
+    → {"in": [...], "out": [...], "label": "ve imágenes"}"""
+    s = s if s is not None else settings()
+    prov = prov or (s.get("aiProvider") or "claude-code")
+    cin, cout = [], []
+    if prov == "opencode":
+        c = opencode_caps(opencode_model_id(s))
+        cin, cout = c.get("in") or [], c.get("out") or []
+    elif prov == "ollama":
+        try:
+            ep = ollama_ep(s)
+            cl = http_json(ep + "/api/show", {"model": s.get("aiModel") or "gemma4:e4b"}, timeout=5).get("capabilities") or []
+            if "vision" in cl:
+                cin = ["image"]
+        except Exception:
+            pass
+    elif prov in ("claude-code", "gemini"):
+        cin = ["image"]           # los dos aceptan imágenes
+    elif prov == "openai-compatible":
+        cin = []                  # depende del modelo; no se presupone
+    return {"in": cin, "out": cout, "label": cap_label({"in": cin})}
 
 def main(argv):
     if not argv or argv[0] in ("-h", "--help"):
@@ -5299,6 +5605,11 @@ def main(argv):
     elif cmd == "models":
         prov = arg or provider_for(settings())[0]      # el que responde de verdad (en modo local, Ollama)
         out = models_for(prov)
+    elif cmd == "caps":
+        # hf-ai caps [proveedor] → qué admite y qué devuelve el modelo elegido
+        s = settings()
+        prov = arg or provider_for(s)[0]
+        out = {"provider": prov, "model": model_name(prov, s), **caps(prov, s)}
     elif cmd == "test":
         out = test_provider()
     elif cmd == "transform":

@@ -18,8 +18,21 @@ ColumnLayout {
     readonly property string prov: Settings.get("aiProvider", "claude-code")
     property var ollamaModels: []
     property var geminiModels: []
-    property var ocModels: []           // hf-ai models opencode: [[proveedor/modelo, nombre]…], los gratuitos primero
+    property var ocModels: []           // hf-ai models opencode: [[proveedor/modelo, nombre, prestaciones]…], los gratuitos primero
     property string ocModelsErr: ""
+    property string ocAuto: ""           // hf-ai models opencode "auto": el modelo que se usaría sin elegir ninguno
+    property var ocCaps: ({})            // hf-ai models opencode "caps": {modelo: {"in": [...], "out": [...]}}
+    function capName(x) { return ({ image: "imágenes", audio: "audio", video: "vídeo", files: "archivos", pdf: "PDF" })[x] ?? x; }
+    // Lo que puede hacer el modelo elegido (o el automático): lo admite y lo que devuelve
+    readonly property string capTxt: {
+        if (root.prov !== "opencode") return "";
+        const mid = root.curModel || root.ocAuto;
+        if (!mid) return "";
+        const c = root.ocCaps[mid] ?? null;
+        const lab = (root.ocModels.find(m => m[0] === mid) ?? [])[2] ?? "";
+        const outs = (c?.out ?? []).length ? (c.out ?? []).map(root.capName).join(", ") : "solo texto";
+        return lab !== "" ? "Prestaciones: " + lab + " · devuelve " + outs : "";
+    }
     property string geminiModelsErr: ""
     property string status: ""
     property var key: ({ stored: false, where: "", hint: "" })
@@ -89,7 +102,7 @@ ColumnLayout {
     Process {
         running: root.prov === "opencode"
         command: [Paths.script("hf-ai"), "models", "opencode"]
-        stdout: StdioCollector { onStreamFinished: { try { const j = JSON.parse(text); root.ocModels = j.models ?? []; root.ocModelsErr = j.error ?? ""; } catch (e) {} } }
+        stdout: StdioCollector { onStreamFinished: { try { const j = JSON.parse(text); root.ocModels = j.models ?? []; root.ocModelsErr = j.error ?? ""; root.ocAuto = j.auto ?? ""; root.ocCaps = j.caps ?? {}; } catch (e) {} } }
     }
     Process {
         id: keySet
@@ -130,13 +143,12 @@ ColumnLayout {
     readonly property var models: prov === "claude-code" ? [["", "Predeterminado de Claude Code"], ["haiku", "Haiku (rápido)"], ["sonnet", "Sonnet (equilibrado)"], ["opus", "Opus (el más capaz)"]]
         : prov === "ollama" ? (ollamaModels.length ? ollamaModels.map(m => [m, m]) : [["gemma4:e4b", "gemma4:e4b"]])
         : prov === "gemini" ? (geminiModels.length ? geminiModels : [["gemini-flash-latest", "Gemini Flash (recomendado)"]])
-        : prov === "opencode" ? (ocModels.length ? ocModels : [["", "DeepSeek V4.1 Flash Free · gratis"]])
+        : prov === "opencode" ? (ocModels.length ? ocModels : [["", "Automático (el que usa OpenCode)"]])
         : prov === "cli" ? [["", "Predeterminado de " + cliLabel]]
         : [["gpt-4o-mini", "gpt-4o-mini"], ["claude-sonnet-5-5", "claude-sonnet-5-5"]]
     readonly property string curModel: {
         const m = Settings.get("aiModel", "");
-        return prov === "gemini" && !/^(gemini|gemma|learnlm)/.test(m) ? "gemini-flash-latest"
-            : prov === "opencode" && m === "" && ocModels.length ? "opencode/deepseek-v4.1-flash-free" : m;
+        return prov === "gemini" && !/^(gemini|gemma|learnlm)/.test(m) ? "gemini-flash-latest" : m;
     }
 
     RowLayout {
@@ -166,7 +178,7 @@ ColumnLayout {
                 Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
                 text: root.prov === "claude-code" ? "Usa la CLI de Claude Code (`claude -p`) con tu cuenta. Nada se envía si no escribes al asistente."
                     : root.prov === "gemini" ? "Google Gemini con una clave gratuita de Google AI Studio. Ve las imágenes que adjuntes. En el plan gratuito Google puede usar lo que envías para mejorar sus modelos."
-                    : root.prov === "opencode" ? "Los modelos de OpenCode, por su servicio local y sin herramientas: no puede ejecutar, leer ni editar nada. Los gratuitos comparten una cuota por cuenta (también lo que programas con OpenCode); al agotarse responde el respaldo. No ve imágenes (van por OCR)."
+                    : root.prov === "opencode" ? "Los modelos de OpenCode, por su servicio local y sin herramientas: no puede ejecutar, leer ni editar nada. Los gratuitos comparten una cuota por cuenta (también lo que programas con OpenCode); al agotarse responde el respaldo. Las imágenes van de verdad a los modelos que las admiten (lo dice su catálogo) y a los demás, por OCR. Si no eliges modelo, se usa el que tenga configurado OpenCode y, si ese no puede, otro disponible."
                     : root.prov === "ollama" ? "Todo se queda en tu equipo. Necesita Ollama en marcha y un modelo descargado (ollama pull gemma4:e4b)."
                     : root.prov === "openai-compatible" ? "Cualquier servidor con la API /v1/chat/completions (LM Studio, vLLM, OpenRouter…). La clave se lee de una variable de entorno."
                     : root.prov === "cli" ? root.cliLabel + " ya instalado en tu equipo: responde por la terminal, sin herramientas y en una carpeta vacía. No ve imágenes (van por OCR)."
@@ -210,6 +222,21 @@ ColumnLayout {
                 visible: root.prov !== "off"
                 label: "Modelo"; labelWidth: 120
                 Dropdown { model: root.models; current: root.curModel; onPicked: k => Settings.set("aiModel", k) }
+            }
+            Txt {
+                visible: root.prov === "opencode" && Settings.get("aiModel", "") === ""
+                Layout.fillWidth: true; Layout.leftMargin: 130
+                size: 11; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                text: root.ocAuto !== ""
+                    ? "Automático: se usará «" + root.ocAuto + "» (el modelo que tiene configurado OpenCode; si no puede, se prueba con otro disponible)."
+                    : "Automático: se usará el modelo que tenga configurado OpenCode; si no puede, se prueba con otro disponible."
+            }
+            Txt {
+                // Las prestaciones del modelo elegido (las declara el catálogo de OpenCode): qué admite y qué devuelve
+                visible: root.prov === "opencode" && root.capTxt !== ""
+                Layout.fillWidth: true; Layout.leftMargin: 130
+                size: 11; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                text: root.capTxt
             }
             Txt {
                 visible: root.prov === "opencode" && root.ocModelsErr !== ""
@@ -345,7 +372,7 @@ ColumnLayout {
             Field {
                 icon: ""
                 text: Settings.get("aiFallbackModel", "")
-                placeholder: ({ ollama: "gemma4:e4b", "claude-code": "haiku", gemini: "gemini-flash-latest", opencode: "opencode/deepseek-v4.1-flash-free" })[Settings.get("aiFallbackProvider", "")] ?? ""
+                placeholder: ({ ollama: "gemma4:e4b", "claude-code": "haiku", gemini: "gemini-flash-latest", opencode: "" })[Settings.get("aiFallbackProvider", "")] ?? ""
                 onAccepted: Settings.set("aiFallbackModel", text.trim())
             }
         }

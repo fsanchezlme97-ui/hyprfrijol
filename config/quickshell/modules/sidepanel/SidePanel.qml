@@ -85,6 +85,7 @@ PanelWindow {
     onShownChanged: {
         Shell.sideShown = shown;
         if (shown) chatHeld = true;
+        else modelMenu = false;      // el desplegable de proveedor no se queda abierto al cerrar el panel
     }
     Timer {
         interval: 60000
@@ -101,20 +102,82 @@ PanelWindow {
         target: Shell
         function onPreloadRequested(v) { if (v === "ia") win.chatHeld = true; }   // cursor sobre el botón de la IA
     }
-    readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, toggleHistory: () => {}, showHistory: false, toggleLog: () => {}, showLog: false, setWindow: () => {}, handoffTo: null, handoff: () => {} })
+    readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, toggleHistory: () => {}, showHistory: false, toggleLog: () => {}, showLog: false, setWindow: () => {}, handoffTo: null, handoff: () => {}, messages: [] })
 
     readonly property string aiLabel: String(Settings.get("aiName", "") ?? "").trim() || "IA"
     // Bajo el nombre: quién responde y su respaldo («Gemini · respaldo Ollama»)
     readonly property var provNames: ({ "claude-code": "Claude Code", claude: "Claude", gemini: "Gemini", ollama: "Ollama", opencode: "OpenCode", openai: "OpenAI",
-                                        openrouter: "OpenRouter", lmstudio: "LM Studio", mistral: "Mistral", groq: "Groq", deepseek: "DeepSeek",
+                                        "openai-compatible": "OpenAI compatible", openrouter: "OpenRouter", lmstudio: "LM Studio", mistral: "Mistral", groq: "Groq", deepseek: "DeepSeek",
                                         cli: Settings.get("aiCli", "") || "Terminal" })
     function provName(k): string { k = String(k ?? ""); return provNames[k] ?? (k ? k.charAt(0).toUpperCase() + k.slice(1) : ""); }
+    // El modelo que está respondiendo (con OpenCode, el que elige él solo si en Ajustes no hay ninguno): se ve tras la
+    // primera respuesta (el pie de cada respuesta también lo enseña).
+    readonly property string aiModel: {
+        const ms = win.chat.messages ?? [];
+        for (let i = ms.length - 1; i >= 0; i--)
+            if ((ms[i]?.role ?? "") === "ai" && (ms[i]?.model ?? "") !== "") return String(ms[i].model);
+        return "";
+    }
+    // Lo que dejan los botones de la cabecera (≈ 200 px): el subtítulo se mide y se recorta por lo que cabe
+    FontMetrics {
+        id: subM
+        font.family: Theme.font
+        font.pixelSize: Theme.px(Theme.typeStep(10.5))
+    }
     readonly property string aiSub: {
         // respaldo solo si es un proveedor conocido, como hf-ai (fallback_for): "off" de versiones viejas = sin respaldo
         const fk = String(Settings.get("aiFallbackProvider", "") ?? "");
         const p = provName(Settings.get("aiProvider", "")), f = fk in provNames ? provName(fk) : "";
-        return p + (f && f !== p ? " · respaldo " + f : "");
+        const m = win.aiModel.split("/").pop();       // el nombre del modelo, sin el proveedor delante
+        const fb = (f && f !== p) ? "↩ " + f : "";    // «↩ Ollama»: si el principal falla, responde este
+        // lo que queda libre entre el icono y los botones: si el modelo no cabe entero, no se enseña (el pie de cada
+        // respuesta sí lo dice)
+        const room = win.panelW - (win.chat.handoffTo ? 234 : 208);
+        const fits = t => subM.advanceWidth(t) <= room;
+        const full = p + (m ? " · " + m : "") + (fb ? " · " + fb : "");
+        if (fits(full)) return full;
+        const withModel = m ? p + " · " + m : "";
+        if (withModel && fits(withModel)) return withModel;
+        const withFb = fb ? p + " · " + fb : "";
+        if (withFb && fits(withFb)) return withFb;
+        return p;
     }
+
+    // ---- proveedor y modelo (la cabecera): el desplegable
+    readonly property var provList: ["claude-code", "gemini", "opencode", "ollama", "openai-compatible", "cli"]
+    property bool modelMenu: false
+    // Los modelos del proveedor elegido (hf-ai models <proveedor>); «auto» es el que se usaría sin elegir ninguno.
+    property var provModels: []
+    property string provAuto: ""
+    property bool provLoading: false
+    function loadProvModels(p) {
+        if (!p || p === "off") { provModels = []; provAuto = ""; provLoading = false; return; }
+        provLoading = true;
+        provProc.command = [Paths.script("hf-ai"), "models", p];
+        provProc.running = false; provProc.running = true;
+    }
+    Process {
+        id: provProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { const j = JSON.parse(text); win.provModels = j.models ?? []; win.provAuto = j.auto ?? ""; }
+                catch (e) { win.provModels = []; win.provAuto = ""; }
+                win.provLoading = false;
+            }
+        }
+    }
+    function toggleModelMenu() {
+        modelMenu = !modelMenu;
+        if (modelMenu) loadProvModels(Settings.get("aiProvider", "claude-code"));
+    }
+    // Cambiar de proveedor deja el modelo vacío (el que toque en el nuevo) y el desplegable sigue abierto: así se elige
+    // el modelo sin volver a entrar. En el mismo proveedor no se toca nada.
+    function pickProvider(p) {
+        if (String(p) === String(Settings.get("aiProvider", ""))) return;
+        Settings.setMany({ aiProvider: p, aiModel: "" });
+        loadProvModels(p);
+    }
+    function pickModel(m) { Settings.set("aiModel", m ?? ""); modelMenu = false; }
 
     // ---- márgenes como Overlay (respetan la barra)
     readonly property string barPos: Settings.get("barPos", "abajo")
@@ -193,7 +256,10 @@ PanelWindow {
         width: win.panelW
         height: parent.height - win.mT - win.mB
         focus: true
-        Keys.onEscapePressed: win.pinPref ? win.releaseFocus() : Shell.close()
+        Keys.onEscapePressed: {
+            if (win.modelMenu) { win.modelMenu = false; return; }   // primero se cierra el desplegable
+            win.pinPref ? win.releaseFocus() : Shell.close();
+        }
 
         opacity: win.shown ? 1 : 0
         transform: Translate { x: win.shown ? 0 : (win.onLeft ? -24 : 24); Behavior on x { NumberAnimation { duration: Theme.durIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } } }
@@ -231,11 +297,21 @@ PanelWindow {
                             }
                         }
                         ColumnLayout {
+                            id: labels
                             spacing: -1
                             // lo que dejan los botones (≈ 200 px): un proveedor largo se corta y no los empuja fuera
                             Layout.maximumWidth: win.panelW - 200
                             Txt { Layout.fillWidth: true; text: win.aiLabel; weight: Font.DemiBold; size: 13 }
-                            Txt { Layout.fillWidth: true; visible: win.aiSub !== ""; text: win.aiSub; size: 10.5; muted: true }
+                            Txt { id: aiSubTxt; Layout.fillWidth: true; visible: win.aiSub !== ""; text: win.aiSub; size: 10.5; muted: true }
+                            // la línea de quién responde es pulsable: abre el proveedor y el modelo (sin ir a Ajustes)
+                            MouseArea {
+                                parent: aiSubTxt
+                                anchors.fill: parent
+                                enabled: win.aiSub !== ""
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: win.toggleModelMenu()
+                            }
                         }
                     }
                     IconBtn {
@@ -298,6 +374,109 @@ PanelWindow {
                 onLoaded: {
                     item.active = Qt.binding(() => win.shown);
                     if (win.pendingArg !== null) { const a = win.pendingArg; win.pendingArg = null; win.handleArg(a); }
+                }
+            }
+        }
+
+        // ---------------------------------------------------- proveedor y modelo
+        // Desplegable bajo la cabecera: el proveedor (y su modelo) sin ir a Ajustes. El modelo que se marca es el
+        // elegido en Ajustes; con OpenCode, «Automático» es el que elige él solo.
+        Rectangle {
+            id: modelDD
+            visible: win.modelMenu
+            z: 60
+            x: 8
+            y: win.headH + 4
+            width: Math.min(320, win.panelW - 16)
+            height: modelDDCol.implicitHeight + 14
+            radius: Theme.r(10)
+            color: Theme.s3
+            border.width: 1
+            border.color: Theme.ov
+            ColumnLayout {
+                id: modelDDCol
+                x: 8; y: 8
+                width: parent.width - 16
+                spacing: 8
+                Txt { text: "Proveedor"; size: 10; muted: true }
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    Repeater {
+                        model: win.provList
+                        Rectangle {
+                            required property var modelData
+                            readonly property bool on: String(Settings.get("aiProvider", "")) === modelData
+                            implicitWidth: provTxt.implicitWidth + 16
+                            implicitHeight: 22
+                            radius: Theme.r(6)
+                            color: on ? Theme.pc : "transparent"
+                            border.width: on ? 0 : 1
+                            border.color: Theme.ov
+                            Txt { id: provTxt; anchors.centerIn: parent; text: win.provName(modelData); size: 11.5; color: on ? Theme.pcText : Theme.t }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: win.pickProvider(modelData)      // el desplegable sigue abierto: luego el modelo
+                            }
+                        }
+                    }
+                }
+                Rectangle { Layout.fillWidth: true; height: 1; color: Theme.ov }
+                Txt { text: "Modelo"; size: 10; muted: true }
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    Repeater {
+                        model: win.provModels
+                        Rectangle {
+                            required property var modelData
+                            readonly property string mid: String(modelData[0] ?? "")
+                            readonly property string caps: String(modelData[2] ?? "")   // lo que puede hacer («ve imágenes»)
+                            readonly property bool on: String(Settings.get("aiModel", "")) === mid
+                            // El ancho sale del texto (y del rótulo de prestaciones): sin Measure, el texto y la píldora
+                            // se estiran el uno al otro (bucle de enlaces) y las fichas se pisan.
+                            implicitWidth: Math.min(290, mdlTxt.implicitWidth + (capTxt.visible ? capTxt.implicitWidth + 12 : 0) + 16)
+                            implicitHeight: 22
+                            radius: Theme.r(6)
+                            color: on ? Theme.pc : "transparent"
+                            border.width: on ? 0 : 1
+                            border.color: Theme.ov
+                            Txt {
+                                id: mdlTxt
+                                x: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: Math.max(24, parent.width - 16 - (capTxt.visible ? capTxt.implicitWidth + 12 : 0))
+                                text: String(modelData[1] ?? modelData[0] ?? "") || "Predeterminado"
+                                size: 11.5
+                                color: on ? Theme.pcText : Theme.t
+                                elide: Text.ElideRight
+                            }
+                            // Las prestaciones, a la derecha del nombre (las declara el catálogo del modelo)
+                            Txt {
+                                id: capTxt
+                                anchors.right: parent.right
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: parent.caps !== ""
+                                text: parent.caps
+                                size: 10
+                                muted: true
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: win.pickModel(mid)
+                            }
+                        }
+                    }
+                }
+                Txt {
+                    Layout.fillWidth: true
+                    visible: win.provModels.length === 0
+                    text: win.provLoading ? "Cargando modelos…" : "Este proveedor no tiene modelos que elegir"
+                    size: 11
+                    muted: true
                 }
             }
         }

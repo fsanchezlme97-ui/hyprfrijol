@@ -3,6 +3,36 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.4] — 2026-11-21
+
+### Arreglos
+- **El asistente con OpenCode usa el modelo que tengas en él, solo.** Si en Ajustes no has elegido ninguno, se usa el
+  que tiene configurado OpenCode (p. ej. `minimax/MiniMax-M3.1-Flash`), si no el último que respondió y si no el
+  primero disponible: antes se usaba siempre un modelo gratuito fijo, que se quedaba sin cuota y dejaba el panel sin
+  respuesta.
+- **Si el modelo no puede, se prueba con otro sin preguntar**: se saltan los modelos del proveedor que falló (la cuota
+  gratuita es una sola para todos) y se sigue con los de otro (el «minimax» de tu configuración). El panel lo dice:
+  «OpenCode: … no pudo (…); se probó con otro modelo».
+- **Los modelos de Ollama ya salen en la lista de OpenCode** (`ollama/gemma4:e4b`): antes se apartaban todos por
+  proveedor, cuando OpenCode los cargaba con 4096 de contexto y el prompt del asistente se cortaba. Ahora se filtran
+  por contexto (por debajo de 8k no sirven) y `gemma4:e4b` responde bien a través de OpenCode.
+- En Ajustes, el modelo de OpenCode sale como «Automático» (con el que se usaría escrito debajo) y en el panel, junto
+  a cada respuesta, se ve el modelo que respondió; la cabecera lo enseña también.
+- **Elegir el proveedor ya no cierra el panel**: antes, al guardar el proveedor, se recargaba Hyprland y el panel se
+  cerraba (había que volver a abrirlo y entrar otra vez para elegir el modelo). Ahora los ajustes del asistente no
+  recargan nada.
+- **Al elegir el proveedor, el desplegable sigue abierto** con los modelos del nuevo: no hay que salir y volver a
+  entrar para elegir el modelo.
+
+### Novedades
+- **Elegir proveedor y modelo desde el panel**: la línea de la cabecera («OpenCode · MiniMax-M3.1-Flash») es pulsable y
+  abre el desplegable con los proveedores y los modelos de cada uno (con «Automático» en OpenCode), sin ir a Ajustes.
+- **Las prestaciones del modelo, a la vista**: el catálogo de OpenCode dice qué admite cada modelo (texto, imágenes,
+  audio, vídeo) y el desplegable lo enseña al lado de su nombre («ve imágenes», «oye audio»); también en Ajustes y
+  bajo cada respuesta del panel.
+- **Las imágenes van de verdad a los modelos que las ven**: con OpenCode, si el modelo admite imágenes, la imagen se le
+  manda tal cual (por sesión, que se borra al terminar) en vez de por OCR; los que no las admiten, siguen con el OCR.
+
 ## [0.11.3] — 2026-11-19
 
 ### Novedades

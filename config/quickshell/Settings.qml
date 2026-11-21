@@ -39,9 +39,17 @@ Singleton {
         _gone = _gone.filter(k => !(k in (obj ?? {}))).concat(remove ?? []);
     }
     // Claves que solo usa el shell: guardarlas no necesita hf-apply (tema, Hyprland, kitty…)
+    // Las de la IA también: las leen los scripts y el panel al usarlas, así que cambiar de proveedor o de modelo
+    // no recarga nada (antes hf-apply recargaba Hyprland y el panel se cerraba al elegir el proveedor).
     readonly property var _shellOnly: ["alarms", "timerMin", "worldClocks", "dockApps", "bongoSleep", "calendarCollapsed", "spotlightOrder",
                                        "storeSources", "welcomeDone", "aiOnboarded", "aiAlwaysApprove", "voiceCommands", "voiceAliases", "remoteHosts",
-                                       "deskOrder", "barTrayHidden"]
+                                       "deskOrder", "barTrayHidden",
+                                       "aiProvider", "aiModel", "aiModelQuick", "aiModelVision", "aiName", "aiPersona", "aiVoice",
+                                       "aiAnnounceGreet", "aiAnnounceUrgent", "aiContextWindow", "aiContextClipboard", "aiContextCapture",
+                                       "aiTerminal", "aiControlShell", "aiScreenControl", "aiReadDesktop", "aiConfirm", "aiSpotlight",
+                                       "aiHistory", "aiHistoryDays", "aiEndpoint", "aiKeyEnv", "aiFallbackProvider", "aiFallbackModel",
+                                       "aiOllamaCtx", "aiFallbackWait", "aiCli", "aiHandoff", "aiHandoffCmd", "aiHandoffLabel",
+                                       "aiLocalOnly", "aiRedactSecrets", "aiSensitiveWindows", "aiMcpServers"]
     property string _written: ""
     // Como setMany, y además borra de settings.json las claves de «remove» (vuelven a su valor por defecto).
     //   Settings.patch({ barPos: "arriba" }, ["barHeight"])
