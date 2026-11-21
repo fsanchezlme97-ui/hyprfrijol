@@ -32,9 +32,9 @@ antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X
   bajo cada respuesta del panel.
 - **Las imágenes van de verdad a los modelos que las ven**: con OpenCode, si el modelo admite imágenes, la imagen se le
   manda tal cual (por sesión, que se borra al terminar) en vez de por OCR; los que no las admiten, siguen con el OCR.
-- **La ventana de chat de RustDesk flota**: es un cuadro aparte (la conversación con el otro equipo) y en mosaico se
-  comía media pantalla, con la conversación encima de la sesión remota. Ahora flota y sale centrada; la ventana
-  principal de RustDesk sigue en mosaico.
+- **La ventana de RustDesk flota**: RustDesk no abre el chat aparte, lo dibuja dentro de su ventana (la del escritorio
+  remoto), y en mosaico esa ventana se comía media pantalla con el chat encogido encima de la sesión. Ahora flota con
+  su tamaño y sale centrada.
 
 ## [0.11.3] — 2026-11-19
 
