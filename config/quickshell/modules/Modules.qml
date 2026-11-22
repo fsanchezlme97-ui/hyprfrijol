@@ -63,6 +63,7 @@ Scope {
     AltTab {}
     Snap {}
     Desktop {}
+    ScreenCorners {}      // esquinas redondeadas de la pantalla (screenCorners); apagado no crea ventanas
     SettingsApp {}
     Tools {}
     Dictado {}

@@ -128,6 +128,7 @@ portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si o
 | `roundness` | `recto` · `sobrio` · `auto` · `redondo` · `maximo` | multiplica los radios del shell (`Theme.r()`, `Theme.ctl()`) |
 | `roundingShape` | `auto` · `circular` · `continua` · `squircle` | `decoration:rounding_power` de las ventanas |
 | `rounding` | `null` o px | radio de las ventanas (null = el del estilo) |
+| `screenCorners` | `false` (por defecto) · `true` | esquinas de la pantalla redondeadas (Ajustes › Apariencia › Redondeo, `modules/desktop/ScreenCorners.qml`): un trozo negro con la esquina en cuarto de círculo en cada esquina de cada monitor, en la capa de encima y sin recibir el ratón; radio el doble del de las ventanas (mín. 12 px). Se quitan en el monitor con una ventana a pantalla completa y salen en las capturas |
 | `barHeight` | 24–56 | grosor de la barra; el contenido se escala (`Settings.barScale`) |
 | `barPos` / `barMode` | `abajo` `arriba` `izquierda` `derecha` / `fija` `flotante` `isla` `archipielago` | posición y forma (archipiélago: cada grupo en su propia píldora; si flota, el margen con el borde es `gapsOut`, entre 2 y 4 px) |
 | `gapsIn` / `gapsOut` | 0–20 | hueco entre ventanas / con el borde y la barra |

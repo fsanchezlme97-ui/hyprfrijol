@@ -522,6 +522,11 @@ ColumnLayout {
                 onPicked: v => Confirm.change("Esquinas de las ventanas", { rounding: v === "auto" ? null : v })
             }
         }
+        SwRow {
+            label: "Esquinas de la pantalla redondeadas"
+            sub: "cada monitor con las esquinas en curva, del doble del radio de las ventanas · se quitan con una ventana a pantalla completa y salen en las capturas"
+            key: "screenCorners"; def: false
+        }
     }
 
     Section {

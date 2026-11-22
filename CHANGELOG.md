@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.9] — 2026-11-22
+
+### Novedades
+- **Esquinas de la pantalla redondeadas** (Ajustes › Apariencia › Redondeo, apagado por defecto): cada monitor con
+  las esquinas en curva, del doble del radio de las ventanas. No reciben el ratón, se quitan en el monitor con una
+  ventana a pantalla completa (juegos, vídeo) y salen en las capturas.
+
 ## [0.11.8] — 2026-11-21
 
 ### Novedades

@@ -329,6 +329,7 @@
   "osdPos": "arriba",
   "osdOffset": 4,
   "rounding": 4,
+  "screenCorners": false,
   "clock24": true,
   "weekStart": 1,
   "lockOnSuspend": true,
