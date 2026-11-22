@@ -4,7 +4,8 @@
 //            otra amplia y difusa) y un filo de luz de 1 px arriba en los paneles y popups
 //   cristal  (transparencia) vidrio esmerilado como el de macOS, el mismo en la barra, el dock y los paneles
 //            (Theme.frost): translúcido y muy desenfocado, con el esmerilado plano (igual de claro arriba que abajo)
-//            y un filo de luz muy tenue, más visible arriba y que se desvanece hacia abajo, sin contorno oscuro
+//            y un filo de luz muy tenue, más visible arriba y que se desvanece hacia abajo, sin contorno oscuro.
+////            Con el filo plano (Theme.flatRim, Ajustes › Apariencia) no hay luz: el contorno es uniforme
 //   tonal    (transparencia con «Reducir transparencia») superficie tonal sólida con borde fino
 //   Glass { kind: "panel" }   kinds: "bar" (S.bg), "panel" (S.bgPanel), "popup" (S.bgPopup), "fill" (S.bg2)
 import QtQuick
@@ -54,8 +55,9 @@ Item {
         anchors.fill: parent
         radius: root.rr
         color: root.color
-        // Cristal: el borde lo dibujan los dos trazos de abajo
-        border.width: root.showBorder && !root.glass ? Theme.borderWidth : 0
+        // Cristal: el borde lo dibujan los dos trazos de abajo. Sólido: el filo de luz de arriba (o, con el filo plano,
+        // un contorno de 1 px en todo el borde).
+        border.width: root.showBorder && !root.glass ? (Theme.borderWidth > 0 ? Theme.borderWidth : (Theme.flatRim ? 1 : 0)) : 0
         border.color: Theme.border
         Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
@@ -79,23 +81,25 @@ Item {
             strokeColor: Theme.edge
             PathRectangle { x: 0.5; y: 0.5; width: fx.width - 1; height: fx.height - 1; radius: Math.max(0, root.rr - 0.5) }
         }
-        // Filo interior de luz: brillante arriba, tenue en los lados y casi nada abajo (el grosor del cristal)
+        // Filo interior de luz: brillante arriba, tenue en los lados y casi nada abajo (el grosor del cristal).
+        // Con el filo plano (Theme.flatRim) no hay luz: el contorno es uniforme en todo el borde.
         ShapePath {
             fillColor: "transparent"
             strokeWidth: root.showBorder ? 1 : 0
             strokeGradient: LinearGradient {
                 x1: 0; y1: 0; x2: 0; y2: fx.height
-                GradientStop { position: 0.0; color: Theme.rimTop }
-                GradientStop { position: Math.min(0.45, 40 / Math.max(1, fx.height)); color: Qt.alpha(Theme.border, Theme.border.a * 0.5) }
-                GradientStop { position: 1.0; color: Theme.rimBottom }
+                GradientStop { position: 0.0; color: Theme.flatRim ? Theme.border : Theme.rimTop }
+                GradientStop { position: Math.min(0.45, 40 / Math.max(1, fx.height)); color: Theme.flatRim ? Theme.border : Qt.alpha(Theme.border, Theme.border.a * 0.5) }
+                GradientStop { position: 1.0; color: Theme.flatRim ? Theme.border : Theme.rimBottom }
             }
             // En el mismo filo del cristal (sin hueco entre el borde y la luz, que se leía como una línea)
             PathRectangle { x: 0.5; y: 0.5; width: Math.max(0, fx.width - 1); height: Math.max(0, fx.height - 1); radius: Math.max(0, root.rr - 0.5) }
         }
     }
-    // Sólido: filo de luz arriba que se apaga en las esquinas superiores (no en la barra ni en los rellenos)
+    // Sólido: filo de luz arriba que se apaga en las esquinas superiores (no en la barra ni en los rellenos).
+    // Con el filo plano no se dibuja: el borde es el de la superficie, igual en todo el contorno.
     Shape {
-        visible: !root.glass && root.kind !== "bar" && root.kind !== "fill" && Theme.rimTop.a > 0 && root.width > 24 && root.height > 24
+        visible: !root.glass && !Theme.flatRim && root.kind !== "bar" && root.kind !== "fill" && Theme.rimTop.a > 0 && root.width > 24 && root.height > 24
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
         ShapePath {

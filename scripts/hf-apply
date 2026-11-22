@@ -604,6 +604,10 @@ def style_tokens(c, s):
             shadow=argb(K, .12 if LT else .30), shadowBig=argb(K, .20 if LT else .45),
             win=argb(sur, 1), winSolid=argb(sur, 1), winBorder=argb(c["ov"], 1))
     S.update(GEOMETRY, estilo="math", material=mat)
+    # Filo del cristal (Ajustes › Apariencia › «Filo del cristal»): "luz" deja el filo de luz brillante arriba
+    # (el canto del cristal, como en las referencias); "plano" lo quita y el borde es un contorno uniforme.
+    # Lo aplica Glass.qml (barra, dock, paneles, popups, notificaciones) en todas las superficies del shell.
+    S["flatRim"] = s.get("glassRim", "luz") == "plano"
     if mat == "cristal":   # controles algo más redondos con cristal (los paneles van como las ventanas, más abajo)
         S.update(ctlRad=8)
     # Sombras de los paneles del shell (Glass): radio/desplazamiento del estilo y «Sombras» de Apariencia

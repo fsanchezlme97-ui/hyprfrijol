@@ -3,6 +3,29 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.23] — 2026-11-22
+
+### Correcciones
+- **Las flotantes «Ocultas» ya no se esconden al pasar el ratón por encima de otra ventana**: el clic que las
+  escondía se detectaba a los 360 ms de esperar, y como el foco sigue al cursor, mover el ratón después de hacer clic
+  ya era «cambiar de ventana»: la flotante que tenías debajo desaparecía y se quedaba la otra, sin poder elegir
+  entre las dos. Ahora solo se esconde al hacer clic: se guarda qué flotantes había a la vista en el momento del
+  clic y dónde cayó, y solo se van al espacio oculto las que no están bajo el cursor. La ventana en la que hiciste
+  clic se queda, la que acabas de abrir con ese clic (el dock) también —no estaba a la vista cuando hiciste clic— y
+  la que restauraste con ese clic, igual. Alt + Tab esconde solo la flotante que deja el foco, no todas.
+- **Los clics ya se detectaban**: el bind de ratón le faltaba la marca «mouse = true», así que Hyprland no lo
+  trataba como un bind de ratón y nunca avisaba de los clics (por eso las flotantes se seguían escondiendo al
+  cambiar el foco). Ahora cada botón tiene su nombre (el shell solo puede reclamar un atajo global por nombre).
+
+## [0.11.23] — 2026-11-22
+
+### Mejoras
+- **El borde de los paneles ya no brilla solo arriba**: el filo de luz del cristal (la barra, el dock, el centro de
+  notificaciones, los popups y el resto de paneles) se veía como una línea blanca arriba y nada abajo, por donde
+  el degradado del filo se apagaba hacia el final. Ahora hay un ajuste (Ajustes › Apariencia › «Filo del cristal»):
+  «Con luz» (como antes) o «Plano», con el contorno igual en todo el borde. Con «Plano» el filo de arriba desaparece
+  de todas las superficies del shell a la vez.
+
 ## [0.11.22] — 2026-11-22
 
 ### Correcciones

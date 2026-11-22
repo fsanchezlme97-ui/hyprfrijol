@@ -160,6 +160,26 @@ ColumnLayout {
                 sub: "el cristal de la barra, los paneles y el dock se vuelve claro sobre fondos claros y oscuro sobre oscuros (lo decide el fondo de la pantalla principal junto a la barra; las apps siguen tu modo)"
                 key: "glassWallpaper"; def: true
             }
+            // Filo del cristal: con luz, el borde de los paneles y popups brilla arriba (el canto del cristal);
+            // plano, un contorno uniforme en todo el borde, como el de abajo
+            LabeledRow {
+                visible: Theme.glassy
+                label: "Filo del cristal"; labelWidth: 70
+                Seg {
+                    model: [["luz", "Con luz"], ["plano", "Plano"]]
+                    current: Settings.get("glassRim", "luz")
+                    onPicked: k => Confirm.change("Filo del cristal", { glassRim: k })
+                }
+            }
+            Txt {
+                visible: Theme.glassy
+                Layout.fillWidth: true
+                Layout.leftMargin: 80
+                muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                text: Settings.get("glassRim", "luz") === "plano"
+                    ? "Sin luz: el borde de la barra, el dock, los paneles, las notificaciones y los popups es el mismo en todo el contorno."
+                    : "Con luz: el borde de la barra, el dock, los paneles, las notificaciones y los popups brilla arriba y se apaga hacia abajo."
+            }
             LabeledRow {
                 label: "Color"; labelWidth: 70
                 Seg {

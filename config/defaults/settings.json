@@ -5,6 +5,7 @@
   "estilo": "math",
   "transparencia": false,
   "glassWallpaper": true,
+  "glassRim": "luz",
   "reduceTransparency": false,
   "reduceMotion": false,
   "animado": true,

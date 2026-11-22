@@ -107,6 +107,9 @@ Singleton {
     // Cristal (transparencia): filo interior de luz (arriba → abajo), filo exterior, esmerilado y resplandor
     readonly property color rimTop: st.rimTop ?? "transparent"
     readonly property color rimBottom: st.rimBottom ?? "transparent"
+    // Filo plano (Ajustes › Apariencia › «Filo del cristal»): sin la luz de arriba, el borde es un contorno
+    // uniforme en todo el contorno (Glass.qml)
+    readonly property bool flatRim: st.flatRim ?? false
     readonly property color sheen: st.sheen ?? "transparent"
     readonly property color tint: st.tint ?? "transparent"
     readonly property color tint2: st.tint2 ?? "transparent"

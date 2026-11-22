@@ -174,8 +174,8 @@ PanelWindow {
                 // Fija: solo la línea del lado de las ventanas
                 Rectangle {
                     visible: !bar.floating && (Theme.borderWidth > 0 || Theme.glassy)
-                    color: Theme.glassy ? Theme.rimTop : Theme.border
-                    opacity: Theme.glassy ? 0.6 : 1
+                    color: Theme.glassy && !Theme.flatRim ? Theme.rimTop : Theme.border
+                    opacity: Theme.glassy && !Theme.flatRim ? 0.6 : 1
                     width: bar.vertical ? 1 : parent.width
                     height: bar.vertical ? parent.height : 1
                     x: bar.pos === "izquierda" ? parent.width - 1 : 0
