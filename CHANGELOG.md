@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.22] — 2026-11-22
+
+### Correcciones
+- **Las ventanas minimizadas volvían invisibles**: al desvanecerse, la ventana se quedaba en opacidad 0 y, al
+  restaurarla (Super + Mayús + H, el dock o Alt + Tab), no se le devolvía la opacidad: el espacio de trabajo salía
+  vacío y la ventana parecía no abrirse (la que fuera T3 Code, por ejemplo). Ahora vuelve desvanaciéndose desde 0, como
+  cuando se esconde. También al arrancar el shell se le devuelve la opacidad normal a las ventanas que se quedaron a
+  medias de un desvanecido.
+- **Abrir una flotante desde el dock ya no la esconde**: «Ocultas» escondía las flotantes 90 ms después del clic,
+  antes de que el dock enfocara la ventana (el dock enfoca al soltar el botón), así que la que acababas de abrir o de
+  enfocar se iba al espacio oculto. Ahora se espera a que el foco se asiente: se queda la que tiene el foco y se
+  esconden las demás.
+
 ## [0.11.21] — 2026-11-22
 
 ### Novedades

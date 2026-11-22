@@ -84,6 +84,7 @@ Singleton {
     // reinicio del shell (hf-shell refresh en cada actualización) y al arrancar se rehace la lista desde ellas
     property var _hiddenTagged: []
     property bool _tagsRead: false
+    property bool _opacitiesFixed: false   // una vez al arrancar: opacidad de las minimizadas
     on_HiddenChanged: {
         const tag = (h, op) => {
             const p = h.split("|");
@@ -95,12 +96,15 @@ Singleton {
     }
     // ---------- esconder al hacer clic fuera («Ocultas») ----------
     // Hyprland avisa de cada clic (bind de mouse:272/273 sin consumir → hf:clic, config/hypr/frijol/binds.lua). Se
-    // apunta dónde cayó y, 90 ms después (con el foco ya asentado), se esconden las flotantes que no estén bajo el
-    // cursor: la que abriste o enfocaste con ese clic se queda. Pasar el ratón por encima de otra ventana no esconde
-    // nada (el foco sigue al cursor en este escritorio).
+    // apunta dónde cayó y se espera a que el foco se asiente: el clic puede darle el foco a otra ventana (el dock
+    // y los menús enfocan al soltar el botón) y, si se escondieran antes, se escondería justo la que se acababa de
+    // enfocar. Cuando el foco ya ha cambiado (o si no cambia, pasado un momento), se esconden las flotantes que no
+    // estén bajo el cursor: la que acabas de abrir o de enfocar con ese clic se queda. Pasar el ratón por encima de
+    // otra ventana no esconde nada (el foco sigue al cursor en este escritorio).
     property point _clickAt: Qt.point(0, 0)
-    property string _clickPrev: ""     // ventana activa al hacer clic: la que ese clic abre no estaba enfocada antes
+    property string _clickPrev: ""     // ventana activa al hacer clic: si el clic se la da a otra, cambia
     property bool _clicked: false      // hay un clic esperando a aplicarse (lo consume applyFloatOrder)
+    property bool _clickArmed: false   // el clic espera a que el foco se asiente
     function armHide(byKeyboard): void {
         if (floatOrder !== "ocultas") return;
         const activeWs = HyprClients.monitors.map(m => m.activeWorkspace?.id ?? 0);
@@ -120,11 +124,28 @@ Singleton {
         stdout: StdioCollector {
             onStreamFinished: {
                 try { const p = JSON.parse(text); root._clickAt = Qt.point(p.x, p.y); } catch (e) {}
-                clickSettle.restart();
+                root._clickArmed = true;      // desde aquí se espera a que el foco se asiente
+                clickWait.restart();
             }
         }
     }
     Timer { id: clickSettle; interval: 90; onTriggered: { root._clicked = true; root.applyFloatOrder(); } }
+    // El foco del clic: si ha cambiado, el clic ya dio el foco a su ventana (el dock la enfoca al soltar el botón) y
+    // se puede esconder: la que tiene el foco se queda. Si no cambia (un clic en el escritorio, en la barra o en el
+    // dock), se espera un poco más y se esconde igualmente.
+    Timer {
+        id: clickWait
+        interval: 40
+        repeat: true
+        running: root._clickArmed
+        onTriggered: {
+            if (HyprClients.activeAddress !== root._clickPrev || clickWait.count > 8) {
+                root._clickArmed = false;
+                root._clicked = true;
+                root.applyFloatOrder();
+            }
+        }
+    }
     GlobalShortcut {
         appid: "hf"; name: "clic"; description: "HyprFrijol: clic (esconder las flotantes al hacer clic fuera)"
         onPressed: root.armHide(false)
@@ -144,6 +165,13 @@ Singleton {
             root._hidden = e;
             if (floatOrder !== "ocultas") { root._hidden = []; for (const h of e) root.unhide(h); }
         }
+        // Al arrancar, las ventanas pueden seguir en opacidad 0 (el desvanecido no se puede deshacer al reiniciar el
+        // shell): se les devuelve la opacidad normal, que si no las dejaba invisibles. Las escondidas («ocultas»)
+        // vuelven a desvanecerse cuando se esconden otra vez.
+        if (!root._opacitiesFixed && HyprClients.clients.length) {
+            root._opacitiesFixed = true;
+            for (const c of HyprClients.clients) root.clearOpacity(HyprClients.norm(c.address));
+        }
         const act = HyprClients.client(HyprClients.activeAddress);
         const focused = !!act && !isMin(act);
         if (floatOrder === "ocultas") {
@@ -159,9 +187,20 @@ Singleton {
                 for (const h of hs) root.unhide(h);
                 return;
             }
+            // La flotante que tiene el foco se queda: la que acabas de abrir o de enfocar con ese clic. Si estaba
+            // escondida y la has traído al frente (el dock), vuelve a su sitio en vez de quedarse fuera.
+            if (focused && act.floating) {
+                const h = root._hidden.find(x => x.split("|")[0] === act.address);
+                if (h) {
+                    root._hidden = root._hidden.filter(x => x !== h);
+                    root.unhide(h);
+                    return;
+                }
+            }
             if (!clicked) return;      // pasar el ratón no esconde: solo un clic fuera (o Alt + Tab)
-            // La flotante con el foco se queda si el clic fue dentro de ella o si ese mismo clic se la dio (acabas de
-            // abrirla o de hacer clic en ella); un clic en el escritorio también la esconde. Las demás, todas fuera.
+            // Se esconden las flotantes que no están bajo el cursor y no se han enfocado con ese clic. La flotante
+            // con el foco se queda si el clic fue dentro de ella o si ese mismo clic se la dio (acabas de abrirla o
+            // de enfocarla: el dock la enfoca al soltar el botón). Un clic en el escritorio también la esconde.
             const p = root._clickAt;
             const inside = c => {
                 const x = c.at?.[0] ?? 0, y = c.at?.[1] ?? 0;
@@ -347,12 +386,15 @@ Singleton {
         const a = HyprClients.norm(address);
         const ws = Hyprland.focusedMonitor?.activeWorkspace?.id ?? 1;
         const h = root._hidden.find(h => h.split("|")[0] === a);
-        if (h && root.animMin) root.setOpacity(a, 0);       // vuelve desvaneciéndose desde 0
+        // Al desvanecerse quedó en opacidad 0 (al minimizarla o al esconderla): al volver, se desvanece desde 0. Sin
+        // esto la ventana volvía invisible (la opacidad se queda en 0 hasta que se le quite a mano).
+        if (root.animMin) root.setOpacity(a, 0);
         Shell.dispatch('hl.dsp.window.move({ workspace = ' + ws + ', follow = false, ' + win(a) + ' })');
         minOrder = minOrder.filter(x => x !== a);
         if (h) { root._hidden = root._hidden.filter(x => x !== h); backToSpot(a, h); }   // ya no la esconde «ocultas»
         HyprClients.focusWindow(a);
-        if (h) root.fadeTo(a, 1, () => root.clearOpacity(a));
+        if (root.animMin) root.fadeTo(a, 1, () => root.clearOpacity(a));
+        else root.clearOpacity(a);     // sin animaciones, la opacidad normal de una vez
         HyprClients.refresh();
     }
     // Devuelve una ventana escondida («dirección|espacio|x|y») a su espacio y a su sitio, sin darle el foco («Ocultas»)
