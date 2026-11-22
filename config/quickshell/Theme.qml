@@ -31,14 +31,14 @@ Singleton {
     // todas las pantallas: si el fondo de alguna, junto a la barra, es del tono contrario al cristal (cristal oscuro
     // sobre fondo claro o al revés), todo se vuelve más opaco poco a poco, hasta 0,74, y el texto se sigue leyendo.
     readonly property real frostAlpha: {
-        const base = light ? Settings.get("glassOpacityLight", 0.56) : Settings.get("glassOpacity", 0.40);
+        const base = light ? _num("glassOpacityLight", 0.56) : _num("glassOpacity", 0.40);
         if (!Settings.get("glassWallpaper", true)) return base;
         let m = 0;
         for (const k in wallLumas) {
             const L = wallLumas[k];
             m = Math.max(m, Math.min(1, light ? (0.6 - L) / 0.2 : (L - 0.4) / 0.2));
         }
-        const max = Settings.get("glassMaxOpacity", 0.74);
+        const max = _num("glassMaxOpacity", 0.74);
         return base + Math.max(0, m) * Math.max(0, max - base);
     }
     readonly property color frost: Qt.alpha(s1, frostAlpha)
@@ -91,7 +91,7 @@ Singleton {
     property color win: st.win
     // Ventanas grandes (Ajustes, Centro de aplicaciones): con transparencia más opaco que los paneles, para que no se transparente
     // lo de detrás; en Material/tonal, sólido. (hf-apply: S.winSolid; ajustable con winOpacity)
-    readonly property color winSolid: st.winSolid ?? (glassy ? Qt.alpha(win, Settings.get("winOpacity", 0.94)) : s1)
+    readonly property color winSolid: st.winSolid ?? (glassy ? Qt.alpha(win, _num("winOpacity", 0.94)) : s1)
     readonly property int barRadius: st.barRad
     readonly property int panelRadius: st.panelRad
     readonly property int winRadius: st.winRad
@@ -106,17 +106,26 @@ Singleton {
     // Radios concéntricos (Math): lo que va dentro de otra superficie redondeada, a `pad` px de su borde, lleva el
     // radio de fuera menos ese margen (y nunca menos de r(4)), para que las curvas vayan paralelas
     function inner(outer: real, pad: real): real { return Math.max(r(4), Math.round(outer - pad)); }
-    // Cristal (transparencia): filo interior de luz (arriba → abajo), filo exterior, esmerilado y resplandor
-    readonly property color rimTop: st.rimTop ?? "transparent"
-    readonly property color rimBottom: st.rimBottom ?? "transparent"
+    // Lee un ajuste numérico con default; protege contra NaN/undefined cuando Settings aún no está listo.
+    function _num(k, d): real { const v = Settings.get(k, d); return Number.isFinite(v) ? v : d; }
+    // Multiplica el alfa de un color (para sliders sheenOpacity/rimOpacity); transparente si no hay color.
+    function _mulAlpha(c, f): color {
+        const factor = parseFloat(f) || 0;
+        if (!c || c.a <= 0 || factor <= 0) return "transparent";
+        return Qt.alpha(c, Math.min(1, c.a * factor));
+    }
+    // Cristal (transparencia): filo interior de luz (arriba → abajo), filo exterior, esmerilado y resplandor.
+    // sheenOpacity y rimOpacity de Ajustes › Apariencia permiten apagar o atenuar estos detalles.
+    readonly property color rimTop: _mulAlpha(st.rimTop ?? "transparent", _num("rimOpacity", 1.0))
+    readonly property color rimBottom: _mulAlpha(st.rimBottom ?? "transparent", _num("rimOpacity", 1.0))
     // Filo plano (Ajustes › Apariencia › «Filo del cristal»): sin la luz de arriba, el borde es un contorno
     // uniforme en todo el contorno (Glass.qml)
     readonly property bool flatRim: st.flatRim ?? false
-    readonly property color sheen: st.sheen ?? "transparent"
+    readonly property color sheen: _mulAlpha(st.sheen ?? "transparent", _num("sheenOpacity", 1.0))
     readonly property color tint: st.tint ?? "transparent"
     readonly property color tint2: st.tint2 ?? "transparent"
     readonly property color tint3: st.tint3 ?? "transparent"
-    readonly property color edge: st.edge ?? "transparent"           // cristal: filo exterior oscuro casi invisible
+    readonly property color edge: _mulAlpha(st.edge ?? "transparent", _num("rimOpacity", 1.0))   // cristal: filo exterior oscuro casi invisible
     // glassy: estilo Math con transparencia (S.material «cristal»). theme.json de antes de 0.9.0: el estilo SkySoul
     readonly property bool glassy: st.material ? st.material === "cristal" : ["skysoul", "aurora", "liquid"].includes(st.estilo)
     // Marca deslizante de los segmentos (y su texto): el contenedor primario (Material)

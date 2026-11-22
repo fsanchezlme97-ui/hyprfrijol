@@ -3,6 +3,18 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.26] — 2026-11-22
+
+### Cambios
+- **Bordes del cristal atenuados globalmente**: `rimOpacity` y `sheenOpacity` ahora se aplican a todos los bordes
+  del material cristal (barra, dock, paneles, popups, Ajustes…), no solo a la barra. El filo de luz (`rimTop`/`rimBottom`),
+  el filo exterior (`edge`) y el esmerilado (`sheen`) se multiplican por estos sliders.
+
+### Correcciones
+- **Cristal uniforme con `glassWallpaper: false`**: la opacidad del cristal ya no varía según la luz del fondo cuando
+  el ajuste está desactivado.
+- Protegidos los sliders de transparencia contra valores `NaN` cuando `Settings` aún no está cargado.
+
 ## [0.11.25] — 2026-11-22
 
 ### Correcciones
