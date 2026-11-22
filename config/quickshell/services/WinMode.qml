@@ -283,7 +283,7 @@ Singleton {
         HyprClients.refresh();
     }
     // Al espacio oculto (Super + S), en el primer paso de cascada libre (taken: sitios ocupados, se le añade el suyo)
-    // desde arriba a la izquierda del área útil
+    // desde el centro del área útil
     function stash(c, taken): void {
         const mon = HyprClients.monitorById(c.monitor) ?? HyprClients.focusedMonitor;
         Shell.dispatch('hl.dsp.window.move({ workspace = "' + stashWs + '", follow = false, ' + win(c.address) + ' })');
@@ -291,8 +291,8 @@ Singleton {
         const U = HyprClients.usableRect(mon), w = c.size?.[0] ?? 0, h = c.size?.[1] ?? 0;
         let x = 0, y = 0;
         for (let k = 0; k < 10; k++) {
-            x = Math.max(U.x, Math.min(U.x + 48 + 32 * k, U.x + U.w - w));
-            y = Math.max(U.y, Math.min(U.y + 48 + 32 * k, U.y + U.h - h));
+            x = Math.max(U.x, Math.min(Math.round(U.x + (U.w - w) / 2) + 32 * k, U.x + U.w - w));
+            y = Math.max(U.y, Math.min(Math.round(U.y + (U.h - h) / 2) + 32 * k, U.y + U.h - h));
             if (!taken.some(o => Math.abs(o.x - x) < 16 && Math.abs(o.y - y) < 16)) break;
         }
         taken.push({ x: x, y: y });

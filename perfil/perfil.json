@@ -120,11 +120,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.11.4",
+ "hyprfrijol": "v0.11.5",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-21 19:43",
+ "saved": "2026-11-21 19:55",
  "services": [
   "ufw",
   "cups.socket",
