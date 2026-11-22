@@ -67,44 +67,83 @@ Singleton {
 
     // ---------- prioridad de las flotantes (floatOrder) ----------
     // "encima" (por defecto): las flotantes van sobre el mosaico, como siempre.
-    // "atenuadas": se quedan encima, pero transparentes mientras no tienen el foco: el mosaico se ve a través y
-    //               al enfocarlas vuelven a opacas.
+    // "ocultas": no se ven mientras una ventana del mosaico tiene el foco: se esconden (se minimizan, como con
+    //            Super + H) y vuelven al enfocar una flotante (Alt + Tab, la vista general) o al quedarse el
+    //            escritorio a la vista.
     // "espacio": se van al espacio oculto (Super + S) y se ven allí, encima del mosaico: el mosaico queda limpio.
     // «Detrás» no es posible: Hyprland dibuja las flotantes por encima de las del mosaico (solo una ventana
-    // maximizada las tapa); la única forma de que el mosaico mande es apartarlas del espacio.
+    // maximizada las tapa); la única forma de que el mosaico mande es esconderlas.
     readonly property string floatOrder: {
         const v = String(Settings.get("floatOrder", "encima") ?? "encima");
-        return ["encima", "atenuadas", "espacio"].includes(v) ? v : "encima";
+        return ["encima", "ocultas", "espacio"].includes(v) ? v : "encima";
     }
     property string _floatOrderKey: ""
+    property var _hidden: []           // «dirección|espacio» de las que escondió «ocultas» (no las minimizadas a mano)
+    property bool _hiding: false
+    property string _hideKey: ""
+    // Esconder espera un poco: una ventana flotante que acaba de abrirse (el chat de RustDesk, una calculadora…)
+    // puede estar cogiendo el foco; si ya lo tiene, no se esconde
+    Timer { id: hideTimer; interval: 260; onTriggered: { root._hiding = true; root.applyFloatOrder(); root._hiding = false; } }
     // Se llama con cada cambio de ventanas. La clave evita repetir los cambios en cada refresco.
     function applyFloatOrder(): void {
-        const act = HyprClients.activeAddress;
+        const act = HyprClients.client(HyprClients.activeAddress);
+        const focused = !!act && !isMin(act);
+        if (floatOrder === "ocultas") {
+            const activeWs = HyprClients.monitors.map(m => m.activeWorkspace?.id ?? 0).filter(i => i > 0);
+            const fl = HyprClients.clients.filter(c => c.floating && !keep(c) && !isDialog(c)
+                && activeWs.includes(c.workspace?.id ?? 0));
+            const tiled = HyprClients.clients.filter(c => !c.floating && !keep(c) && activeWs.includes(c.workspace?.id ?? 0));
+            // Con el escritorio a la vista (sin foco y sin mosaico) vuelven todas; si no, se esconden las flotantes
+            // que no tengan el foco (si la que lo tiene es del mosaico, todas)
+            const desktop = !focused && tiled.length === 0;
+            const hide = desktop ? [] : focused && !act.floating ? fl : fl.filter(c => c.address !== act?.address);
+            const key = "ocultas|" + hide.map(c => c.address).join(",") + "|" + (desktop ? "" : root._hidden.join(","));
+            // Nada que cambiar: se anula un esconder pendiente (si no, su clave vieja impedía volver a lanzarlo)
+            if (key === root._floatOrderKey) { hideTimer.stop(); root._hideKey = ""; return; }
+            // Esperar solo cuando cambia lo que hay que esconder: así un refresco detrás de otro no aplaza el esconder
+            if (hide.length && !root._hiding) {
+                if (root._hideKey !== key) { root._hideKey = key; hideTimer.restart(); }
+                return;
+            }
+            root._hideKey = "";
+            root._floatOrderKey = key;
+            if (desktop) {
+                const hs = root._hidden;
+                root._hidden = [];
+                for (const h of hs) { const [a, ws] = h.split("|"); root.unhide(a, parseInt(ws)); }
+                return;
+            }
+            for (const c of hide) {
+                // Si está a la vista no está escondida, aunque su entrada siga (volvió sin pasar por restore)
+                root._hidden = root._hidden.filter(h => h.split("|")[0] !== c.address)
+                    .concat([c.address + "|" + (c.workspace?.id ?? 0)]);
+                root.minimize(c.address);
+            }
+            return;
+        }
         const fl = HyprClients.clients.filter(c => c.floating && !keep(c) && (c.workspace?.id ?? 0) > 0);
         if (floatOrder === "encima") {
-            // Al volver a «encima», las flotantes recuperan su opacidad (una vez)
+            // Al volver a «encima», las flotantes recuperan su opacidad (por si venían de «atenuadas»)
             if (root._floatOrderKey === "encima") return;
             root._floatOrderKey = "encima";
             for (const c of fl)
                 Shell.dispatch('hl.dsp.window.set_prop({ prop = "opacity_inactive_override", value = "unset", window = "address:' + c.address + '" })');
             return;
         }
-        const key = floatOrder + "|" + act + "|"
-            + fl.map(c => c.address + (c.address === act ? "*" : "") + "@" + (c.workspace?.id ?? 0)).join(",");
+        const key = "espacio|" + fl.map(c => c.address + "@" + (c.workspace?.id ?? 0)).join(",");
         if (key === root._floatOrderKey) return;
         root._floatOrderKey = key;
-        for (const c of fl) {
-            const w = 'window = "address:' + c.address + '"';
-            if (floatOrder === "atenuadas")
-                // La opacidad va como número, sin comillas: entrecomillada, Hyprland la ignora
-                Shell.dispatch('hl.dsp.window.set_prop({ prop = "opacity_inactive_override", value = '
-                    + (c.address === act ? '"unset"' : '0.25') + ', ' + w + ' })');
-            else
-                Shell.dispatch('hl.dsp.window.move({ workspace = "special:special", follow = false, ' + w + ' })');
-        }
+        for (const c of fl)
+            Shell.dispatch('hl.dsp.window.move({ workspace = "special:special", follow = false, window = "address:' + c.address + '" })');
     }
-    // Al cambiar el ajuste se rehace entero (y las flotantes recuperan su opacidad si se vuelve a «encima»)
-    onFloatOrderChanged: { root._floatOrderKey = ""; HyprClients.refresh(); }
+    // Al cambiar el ajuste se rehace entero (y vuelven las que se escondieron)
+    onFloatOrderChanged: {
+        root._floatOrderKey = "";
+        const hs = root._hidden;
+        root._hidden = [];
+        for (const h of hs) { const [a, ws] = h.split("|"); root.unhide(a, parseInt(ws)); }
+        HyprClients.refresh();
+    }
 
     // Modo de un espacio (con su excepción) · ¿flotan sus ventanas? · diseño de Hyprland de un modo
     function modeOf(ws: int): string { return overrides[String(ws)] ?? mode; }
@@ -197,7 +236,16 @@ Singleton {
         const ws = Hyprland.focusedMonitor?.activeWorkspace?.id ?? 1;
         Shell.dispatch('hl.dsp.window.move({ workspace = ' + ws + ', follow = false, ' + win(a) + ' })');
         minOrder = minOrder.filter(x => x !== a);
+        root._hidden = root._hidden.filter(h => h.split("|")[0] !== a);   // ya no la esconde «ocultas»
         HyprClients.focusWindow(a);
+        HyprClients.refresh();
+    }
+    // Devuelve una ventana escondida a su espacio, sin darle el foco (prioridad «Ocultas»)
+    function unhide(address, ws): void {
+        const a = HyprClients.norm(address);
+        const dest = ws > 0 ? ws : (Hyprland.focusedMonitor?.activeWorkspace?.id ?? 1);
+        Shell.dispatch('hl.dsp.window.move({ workspace = ' + dest + ', follow = false, ' + win(a) + ' })');
+        minOrder = minOrder.filter(x => x !== a);
         HyprClients.refresh();
     }
     function toggleMinimize(address): void { const c = HyprClients.client(address); if (c) isMin(c) ? restore(c.address) : minimize(c.address); }

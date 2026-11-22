@@ -142,7 +142,7 @@ ColumnLayout {
             labelWidth: 150
             Pills {
                 fill: false
-                model: [["encima", "Encima"], ["atenuadas", "Atenuadas"], ["espacio", "Espacio oculto"]]
+                model: [["encima", "Encima"], ["ocultas", "Ocultas"], ["espacio", "Espacio oculto"]]
                 current: Settings.get("floatOrder", "encima")
                 onPicked: k => Settings.set("floatOrder", k)
             }
@@ -151,7 +151,7 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.leftMargin: 150
             text: ({ "encima": "Las flotantes van sobre el mosaico, como siempre.",
-                      "atenuadas": "Se quedan delante, pero transparentes mientras no tienen el foco: el mosaico se ve a través y, al enfocarlas, vuelven a opacas.",
+                      "ocultas": "Mientras una ventana del mosaico tiene el foco, las flotantes no se ven: se esconden (se minimizan) y vuelven al enfocarlas con Alt + Tab o la vista general. En el escritorio, a la vista.",
                       "espacio": "Las flotantes se van al espacio oculto (Super + S) y se ven allí, encima del mosaico: el mosaico queda siempre limpio." })[Settings.get("floatOrder", "encima")] ?? ""
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }

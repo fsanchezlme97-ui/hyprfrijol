@@ -107,8 +107,7 @@
    "vosk-model-small-es-0.42"
   ],
   "whisper": [
-   "small",
-   "turbo"
+   "small"
   ]
  },
  "greeter": true,
@@ -121,12 +120,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.11.2",
+ "hyprfrijol": "v0.11.3-7-g13c8239",
  "ollama": [
-  "gemma4:e4b",
-  "qwen3.5:9b"
+  "gemma4:e4b"
  ],
- "saved": "2026-11-19 23:25",
+ "saved": "2026-11-21 19:32",
  "services": [
   "ufw",
   "cups.socket",
@@ -196,7 +194,7 @@
   "barWeatherText": false,
   "blurQuality": "alta",
   "bongoSleep": false,
-  "calendarCollapsed": false,
+  "calendarCollapsed": true,
   "clipExpireDays": 0,
   "colorMode": "elegir",
   "deskIconSize": "pequeno",
@@ -211,6 +209,7 @@
   "dockInTiling": false,
   "estilo": "math",
   "fileManager": "nautilus",
+  "floatOrder": "ocultas",
   "floatWorkspace": 6,
   "fontFamily": "Inter",
   "fontScale": 1,
@@ -259,10 +258,10 @@
   "palette": "vesper",
   "pip": true,
   "pipAuto": false,
-  "pipCorner": "inf-der",
+  "pipCorner": "sup-der",
   "pipFree": [
-   0.8281,
-   0.465
+   0.7813,
+   0.2317
   ],
   "pipHoverControls": true,
   "pipMargin": 4,
