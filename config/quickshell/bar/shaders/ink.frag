@@ -1,7 +1,8 @@
 // Tinta de la barra adaptable (barAdaptive, bar/Bar.qml), en una sola pasada:
-//  · Color de la tinta por píxel: blanco sobre fondo de pantalla oscuro y negro sobre claro, mirando el propio fondo
-//    (wallA/wallB, recortado como en la pantalla) justo debajo de ese punto; con un degradado suave donde el fondo
-//    pasa de claro a oscuro. wallMix funde el fondo viejo con el nuevo mientras cambia (como el fundido del fondo).
+//  · Color de la tinta, uno solo para toda la barra: blanco sobre fondo de pantalla oscuro y negro sobre claro, según
+//    la luz media del fondo (wallA/wallB, recortado como en la pantalla) bajo la barra entera (una rejilla de 16 × 2
+//    muestras; mezclar blanco y negro en la misma barra se veía desigual). wallMix funde el fondo viejo con el nuevo
+//    mientras cambia (como el fundido del fondo).
 //  · Cantidad de tinta: lo claro que es cada píxel del contenido (lo oscuro con el tema claro: invert = 1), así los
 //    iconos de color quedan como un grabado y el número del espacio activo se lee recortado en su píldora.
 //  · Sombra suave del color contrario (8 muestras alrededor, un píxel hacia abajo) para leerse sobre cualquier fondo.
@@ -64,10 +65,16 @@ void main() {
     vec2 uv = qt_TexCoord0;
     vec4 c = texture(source, uv);
 
-    vec2 s = area.xy + uv * area.zw;
-    vec2 w = 0.5 + (s - 0.5) * crop.xy;
-    float lw = mix(luma(texture(wallA, w).rgb), luma(texture(wallB, w).rgb), wallMix);
-    // franja estrecha: o blanca o negra (un gris intermedio se lee mal); el degradado lo pone la distancia, no el tono
+    float lw = 0.0;
+    for (int i = 0; i < 16; i++) {
+        for (int j = 0; j < 2; j++) {
+            vec2 s = area.xy + vec2((float(i) + 0.5) / 16.0, (float(j) + 0.5) / 2.0) * area.zw;
+            vec2 w = 0.5 + (s - 0.5) * crop.xy;
+            lw += mix(luma(texture(wallA, w).rgb), luma(texture(wallB, w).rgb), wallMix);
+        }
+    }
+    lw /= 32.0;
+    // franja estrecha: o blanca o negra (un gris intermedio se lee mal)
     float dark = smoothstep(threshold - 0.035, threshold + 0.035, lw);   // 0 = tinta blanca · 1 = negra
     vec3 ink = vec3(1.0 - dark);
 
@@ -83,7 +90,7 @@ void main() {
     sh += inkAt(o + vec2(-1.1,  1.1) * px);
     sh += inkAt(o + vec2( 1.1, -1.1) * px);
     sh += inkAt(o + vec2(-1.1, -1.1) * px);
-    // más sombra donde la tinta duda entre blanco y negro
+    // más sombra si la luz media queda cerca del umbral
     float sa = sh / 8.0 * (mix(0.5, 0.35, dark) + 0.25 * (1.0 - abs(dark * 2.0 - 1.0))) * mix(1.0, 0.45, glass);
 
     // Velo: la unión de las formas, con 1 px de suavizado en el borde

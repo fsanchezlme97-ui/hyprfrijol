@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.15] — 2026-11-22
+
+### Mejoras
+- **Barra adaptable de un solo color**: el blanco o el negro se elige con la luz media del fondo de pantalla bajo toda
+  la barra, no punto a punto; ya no salen las dos tintas mezcladas en la misma barra.
+- **Paneles con las mismas esquinas que las ventanas**: el centro de notificaciones, el asistente, la música y el
+  resto de paneles usan el redondeo de las ventanas (el de Ajustes › Apariencia › Redondeo, o el del estilo en
+  automático). Antes iban algo más redondos.
+
 ## [0.11.14] — 2026-11-22
 
 ### Novedades

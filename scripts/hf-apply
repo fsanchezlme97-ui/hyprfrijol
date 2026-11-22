@@ -603,8 +603,8 @@ def style_tokens(c, s):
             shadow=argb(K, .12 if LT else .30), shadowBig=argb(K, .20 if LT else .45),
             win=argb(sur, 1), winSolid=argb(sur, 1), winBorder=argb(c["ov"], 1))
     S.update(GEOMETRY, estilo="math", material=mat)
-    if mat == "cristal":   # el cristal se ve más blando con esquinas más amplias (antes de «Redondeo»)
-        S.update(panelRad=14, ctlRad=8)
+    if mat == "cristal":   # controles algo más redondos con cristal (los paneles van como las ventanas, más abajo)
+        S.update(ctlRad=8)
     # Sombras de los paneles del shell (Glass): radio/desplazamiento del estilo y «Sombras» de Apariencia
     base_sh = {"solido": (14, 3, 52, 18, -2), "tonal": (20, 6, 48, 16, 0)}.get(mat)
     if base_sh:
@@ -633,6 +633,11 @@ def style_tokens(c, s):
         S[key] = max(0, round(S[key] * k))
     S["roundK"] = round(S["roundK"] * k, 3)
     S["pill"] = k >= 2.0
+    # Paneles (centro de notificaciones, asistente, música…) con las mismas esquinas que las ventanas: el redondeo
+    # elegido en Apariencia (decoration:rounding) o, en automático, el del estilo
+    if isinstance(s.get("rounding"), (int, float)) and not isinstance(s.get("rounding"), bool):
+        S["winRad"] = max(0, int(s["rounding"]))
+    S["panelRad"] = S["winRad"]
     if high:   # también Material: bordes de verdad en lugar de solo tono
         S["borderWidth"] = max(S["borderWidth"], 1)
         S["border"] = argb(c["o"], 1)

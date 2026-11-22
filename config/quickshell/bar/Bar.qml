@@ -10,8 +10,8 @@
 //                        flotantes no reserva nada; vuelve con el cursor en el borde — WinMode.covered)
 //   barScreens           por pantalla: completa · sencilla (espacios y consumo por programa) · oculta (Shell.barModeFor)
 //   barAllScreens        false → las pantallas sin elegir en barScreens, sin barra
-//   barAdaptive          textos e iconos de un solo color, blanco o negro según lo claro que sea el
-//                        fondo de pantalla debajo de cada punto (como elementary OS o CutefishOS), con una sombra
+//   barAdaptive          textos e iconos de un solo color, blanco o negro según la luz media del fondo
+//                        de pantalla bajo la barra (como macOS o elementary OS), con una sombra
 //                        suave; los iconos de la bandeja conservan sus colores (shaders/ink.frag). Transiciones: al
 //                        activarla, al cambiar de fondo y al taparla ventanas (barra que se esconde: vuelve el fondo).
 //   barAdaptiveStyle     "vidrio" (velo esmerilado del color contrario a la tinta, como macOS) · "transparente"

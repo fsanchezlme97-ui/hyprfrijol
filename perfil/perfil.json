@@ -120,11 +120,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.11.13",
+ "hyprfrijol": "v0.11.14",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-22 00:44",
+ "saved": "2026-11-22 00:52",
  "services": [
   "ufw",
   "cups.socket",
@@ -149,7 +149,7 @@
   "animado": true,
   "appFontPx": 12,
   "appsInstallMode": "terminal",
-  "barAdaptive": false,
+  "barAdaptive": true,
   "barAutoHide": false,
   "barHeight": 34,
   "barMode": "archipielago",
@@ -261,8 +261,8 @@
   "pipAuto": false,
   "pipCorner": "inf-der",
   "pipFree": [
-   0.7813,
-   0.2317
+   -0.1521,
+   0.7133
   ],
   "pipHoverControls": true,
   "pipMargin": 4,
