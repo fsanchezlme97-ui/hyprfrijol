@@ -26,6 +26,14 @@ Item {
         return m ? { name: decodeURIComponent(m[1]), path: m[2] ? decodeURIComponent(m[2]) : "" } : null;
     }
     property string found: ""            // archivo encontrado en el IconThemePath
+    // Mapeo explícito de apps de bandeja problemáticas a iconos del tema.
+    // title/id pueden contener el nombre real cuando el icono reportado es genérico o no está en el tema.
+    function mapName(name: string, id: string, title: string): string {
+        const n = name.toLowerCase(), i = id.toLowerCase(), t = title.toLowerCase();
+        if (n.includes("telegram") || i.includes("telegram") || t.includes("telegram")) return "org.telegram.desktop";
+        if (n.includes("tailscale") || i.includes("tailscale") || t.includes("tailscale")) return "network-vpn";
+        return name;
+    }
     // Nombres de estado largos («cachy-update_updates-available-blue»): se acortan por el final, con y sin el último
     // trozo («cachy-update-blue», «cachy-update»…), por si el tema solo trae el de la app
     // Icono del tema para un título de app («EpicGamesLauncher» → epic-games-launcher, epic-games…); "" si no hay
@@ -47,15 +55,21 @@ Item {
     readonly property string source: {
         const raw = String(item?.icon ?? "");
         const p = parts;
-        if (!p) return raw;                                            // pixmap de la app (image://qspixmap/…)
+        if (!p) {
+            // pixmap de la app (image://qspixmap/…): si sabemos de qué app se trata, preferimos el icono del tema
+            const mapped = mapName("", item?.id ?? "", item?.title ?? "");
+            if (mapped && Quickshell.hasThemeIcon(mapped)) return Quickshell.iconPath(mapped);
+            return raw;
+        }
         // Ruta absoluta como nombre. Si es un PNG que la app genera al vuelo (/run, /tmp: el crate tray-icon de Epic o
         // RustDesk, 32 px que a 16 quedaban borrosos) y el tema trae el icono de esa app, mejor el del tema
         if (p.name.startsWith("/")) return (/^\/(run|tmp)\//.test(p.name) ? themed(String(item?.title ?? "")) : "") || "file://" + p.name;
         if (p.name && Quickshell.hasThemeIcon(p.name)) return Quickshell.iconPath(p.name);
         if (found) return "file://" + found;
         const id = String(item?.id ?? "").toLowerCase(), title = String(item?.title ?? "").toLowerCase();
-        const base = p.name.replace(/([-_](tray|panel|indicator|status|symbolic|mono|dark|light|active|passive|attention))+$/i, "");
-        for (const n of [base, base.toLowerCase(), id, id.replace(/[\s_]+/g, "-"), title, title.replace(/\s+/g, "-")].concat(trims(p.name)))
+        const mapped = mapName(p.name, item?.id ?? "", item?.title ?? "");
+        const base = mapped.replace(/([-_](tray|panel|indicator|status|symbolic|mono|dark|light|active|passive|attention))+$/i, "");
+        for (const n of [base, base.toLowerCase(), id, id.replace(/[\s_]+/g, "-"), title, title.replace(/\s+/g, "-")].concat(trims(mapped)))
             if (n && Quickshell.hasThemeIcon(n)) return Quickshell.iconPath(n);
         return p.path ? "" : Quickshell.iconPath("application-x-executable");
     }
