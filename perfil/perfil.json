@@ -120,11 +120,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.11.8",
+ "hyprfrijol": "v0.11.9",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-22 00:07",
+ "saved": "2026-11-22 00:11",
  "services": [
   "ufw",
   "cups.socket",
@@ -247,7 +247,7 @@
    "clima"
   ],
   "lowBatterySaver": false,
-  "musicLyrics": false,
+  "musicLyrics": true,
   "naturalScroll": true,
   "nightLight": "off",
   "nightTemp": 5500,

@@ -198,5 +198,20 @@ RowLayout {
             Button { kind: "link"; text: "Sonido de las notificaciones"; onClicked: Shell.open("ajustesapp", "notificaciones") }
         }
     }
+    Section {
+        Layout.fillWidth: true
+        title: "Música"
+        SwRow {
+            separator: false
+            label: "Buscar la letra de las canciones"
+            sub: "se la pide a lrclib.net con el artista, el título y la duración de lo que suena"
+            key: "musicLyrics"; def: false
+        }
+        SwRow {
+            label: "Letra a pantalla completa"
+            sub: "botón en el panel de música (Super + M): carátula, controles y la letra sincronizada en grande"
+            key: "lyricsView"; def: true
+        }
+    }
     }
 }

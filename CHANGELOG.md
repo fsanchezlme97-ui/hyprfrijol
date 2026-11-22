@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.10] — 2026-11-22
+
+### Novedades
+- **Letra a pantalla completa**: el panel de música (Super + M) tiene un botón nuevo en la cabecera que abre una vista
+  grande con la carátula, el título y los controles a la izquierda y la letra sincronizada a la derecha, con la línea
+  que suena en el centro, grande y encendida (clic en una línea = saltar ahí). El fondo se tiñe con los colores de la
+  carátula. Se quita en Ajustes › Sonido › Música («Letra a pantalla completa»), donde también está ahora el
+  interruptor para buscar las letras en lrclib.net (sigue apagado hasta que lo actives).
+
 ## [0.11.9] — 2026-11-22
 
 ### Novedades

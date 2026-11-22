@@ -91,6 +91,7 @@ Scope {
     LazyView { views: ["bienvenida"]; Welcome {} }
     LazyView { views: ["atajos"]; Cheatsheet {} }
     LazyView { views: ["musica"]; MediaControls {} }
+    LazyView { views: ["letra"]; LyricsView {} }            // letra a pantalla completa (botón del panel de música, lyricsView)
     LazyView { views: ["w-dispositivos"]; DevicesPopup {} }   // unidades extraíbles (icono USB de la barra; hf-devices)
     LazyView { views: ["w-descargas"]; DownloadsPopup {} }    // cola de descargas (indicador de la barra, Spotlight «descargar …»; hf-download)
 

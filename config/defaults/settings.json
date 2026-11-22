@@ -197,6 +197,7 @@
   "barAllScreens": true,
   "barScreens": {},
   "musicLyrics": false,
+  "lyricsView": true,
   "barSecondaryClock": true,
   "barOrder": {},
   "barActions": {},
