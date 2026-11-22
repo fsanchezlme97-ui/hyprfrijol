@@ -23,6 +23,18 @@ Singleton {
     // (Wallpaper.qml → wallLuma), con margen para no cambiar de ida y vuelta: clara por encima de 0,55, oscura por
     // debajo de 0,47. Solo el shell (barra, paneles, dock, Ajustes): las apps siguen el modo elegido (sysLight).
     property real wallLuma: -1
+    // Luz del fondo de cada pantalla en la franja de la barra (Wallpaper.qml): { "HDMI-A-2": 0.72, … }
+    property var wallLumas: ({})
+    // Vidrio esmerilado de la barra y el dock (con Transparencia), como el de macOS: la superficie del tema (lleva su
+    // tinte) translúcida, para que Hyprland la desenfoque (su alfa pasa el ignore_alpha 0,2 de la capa). Si el fondo de
+    // esa pantalla es del tono contrario al cristal (cristal oscuro sobre fondo claro o al revés) se vuelve más opaca
+    // poco a poco, hasta 0,8: el texto del tema se sigue leyendo sin cambiar de color.
+    function frost(screenName: string): color {
+        const L = wallLumas[screenName] ?? -1;
+        const base = light ? 0.42 : 0.36;
+        const m = L < 0 ? 0 : Math.max(0, Math.min(1, light ? (0.6 - L) / 0.2 : (L - 0.4) / 0.2));
+        return Qt.alpha(s1, base + m * (0.8 - base));
+    }
     property bool wallLight: false
     onWallLumaChanged: if (wallLuma >= 0) wallLight = wallLight ? wallLuma > 0.47 : wallLuma > 0.55
     readonly property bool sysLight: data.light ?? false

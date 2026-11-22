@@ -10,11 +10,9 @@
 //                        flotantes no reserva nada; vuelve con el cursor en el borde — WinMode.covered)
 //   barScreens           por pantalla: completa · sencilla (espacios y consumo por programa) · oculta (Shell.barModeFor)
 //   barAllScreens        false → las pantallas sin elegir en barScreens, sin barra
-//   (Transparencia)      la barra de cristal es vidrio esmerilado como el de macOS: textos e iconos de un solo
-//                        color, blanco o negro según el tono del cristal (o la luz media del fondo bajo la barra), sobre un
-//                        velo del color contrario que Hyprland desenfoca; la bandeja conserva sus colores
-//                        (shaders/ink.frag). Transiciones: al activarla, al cambiar de fondo y al taparla ventanas
-//                        (barra que se esconde: vuelve el fondo normal).
+//   (Transparencia)      la barra es de vidrio esmerilado como la de macOS (Theme.frost: la superficie del tema, del
+//                        tono del cristal, más opaca si el fondo de pantalla bajo la barra es del tono contrario, para que
+//                        se lea); el contenido con los colores del tema (acento, onda, paleta)
 //   visualBell           parpadea al llegar un aviso (alerta visual en vez de sonido)
 // Isla: la barra flota y mide lo que su contenido; media: dos tercios del borde (o lo que pida el contenido). El resto
 // de la franja deja pasar el ratón.
@@ -23,7 +21,6 @@
 // Super + J (Shell.barHidden) la deja escondida: vuelve al llevar el cursor al borde.
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import ".."
@@ -82,69 +79,9 @@ PanelWindow {
         return { x: Math.floor(body.x + p.x * k), y: Math.floor(body.y + p.y * k), w: Math.ceil(p.width * k) + 1, h: Math.ceil(p.height * k) + 1 };
     }
 
-    // Vidrio esmerilado (con Transparencia: material cristal; antes «Barra adaptable», barAdaptive): sin el fondo de siempre y con la tinta de shaders/ink.frag, que mira el fondo de pantalla de esta
-    // pantalla bajo cada punto de la barra. Con la barra que se esconde (automática / inteligente) y ventanas debajo
-    // vuelve el fondo normal: lo que hay debajo no es el fondo de pantalla.
-    readonly property bool adaptive: Theme.glassy
-    readonly property bool overWindows: {
-        if (!edgeMode) return false;
-        const m = HyprClients.monitorByName(screen?.name ?? "");
-        return !!m && HyprClients.onWorkspace(m.activeWorkspace?.id).length > 0;
-    }
-    readonly property bool inkOn: adaptive && !overWindows
-    // 0 → 1 al activarla (y al revés): de los colores de siempre a la tinta, sin salto
-    property real inkAmount: inkOn ? 1 : 0
-    Behavior on inkAmount { NumberAnimation { duration: Theme.durLong; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
-    // Fondo de esta pantalla (wallpaper.json: el propio o el general; de un vídeo, su primer cuadro), pequeño: el
-    // escalado ya lo difumina. Al cambiar, el shader funde el viejo con el nuevo al ritmo del fundido del fondo.
-    property var wp: ({})
-    readonly property string wallSrc: {
-        const p = (wp.monitors ?? {})[screen?.name ?? ""] || wp.image || "";
-        return p ? "file://" + p : "";
-    }
-    property real wallMix: 0
-    property bool wallPending: false
-    onWallSrcChanged: {
-        if (!wallSrc) return;
-        if (String(wallA.source) === "" || inkAmount === 0) { wallA.source = wallSrc; wallMixAnim.stop(); wallMix = 0; return; }
-        const toB = wallMix < 0.5;
-        (toB ? wallB : wallA).source = wallSrc;
-        wallMixAnim.to = toB ? 1 : 0;
-        wallMixAnim.duration = Number(wp.fadeMs ?? 1200) || 1200;
-        wallPending = true;
-        startMix();
-    }
-    function startMix(): void {
-        const img = wallMixAnim.to === 1 ? wallB : wallA;
-        if (wallPending && img.status !== Image.Loading) { wallPending = false; wallMixAnim.restart(); }
-    }
-    NumberAnimation { id: wallMixAnim; target: bar; property: "wallMix"; easing.type: Easing.InOutQuad }
-    component WallTex: Image {
-        asynchronous: true
-        sourceSize.width: 48             // ~40 px de pantalla por punto: la tinta no cambia a mitad de palabra
-        fillMode: Image.Stretch
-        onStatusChanged: bar.startMix()
-    }
-    WallTex { id: wallA }
-    WallTex { id: wallB }
-    // Un Image oculto no da textura al shader: se pasa por ShaderEffectSource (hideSource lo quita de la vista)
-    ShaderEffectSource { id: wallTexA; sourceItem: wallA; hideSource: true; visible: false }
-    ShaderEffectSource { id: wallTexB; sourceItem: wallB; hideSource: true; visible: false }
-    // Recorte del fondo como en la pantalla (PreserveAspectCrop, centrado)
-    readonly property var wallCrop: {
-        const img = wallMix > 0.5 ? wallB : wallA;
-        const ia = img.implicitWidth / Math.max(1, img.implicitHeight);
-        const sa = (screen?.width ?? 1) / Math.max(1, screen?.height ?? 1);
-        return ia > sa ? Qt.vector4d(sa / ia, 1, 0, 0) : Qt.vector4d(1, ia / Math.max(0.01, sa), 0, 0);
-    }
-    FileView {
-        id: wpFile
-        path: Paths.state + "/wallpaper.json"
-        watchChanges: bar.adaptive
-        printErrors: false
-        onFileChanged: reload()
-        onLoaded: { try { bar.wp = JSON.parse(text() || "{}"); } catch (e) {} }
-    }
+    // Relleno de la barra y de las píldoras: con Transparencia, vidrio esmerilado (Theme.frost, según el fondo de esta
+    // pantalla); si no, el del estilo
+    readonly property color frost: Theme.glassy ? Theme.frost(screen?.name ?? "") : Theme.glass
 
     WlrLayershell.namespace: "hf-bar"
     WlrLayershell.layer: edgeMode ? WlrLayer.Overlay : WlrLayer.Top
@@ -239,8 +176,7 @@ PanelWindow {
                 effects: bar.floating
                 // Archipiélago: el fondo lo ponen las píldoras de cada grupo (BarPill)
                 visible: !bar.archi
-                opacity: bar.inkOn ? 0 : 1
-                Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                color: bar.frost
                 // Fija: solo la línea del lado de las ventanas
                 Rectangle {
                     visible: !bar.floating && (Theme.borderWidth > 0 || Theme.glassy)
@@ -251,57 +187,6 @@ PanelWindow {
                     x: bar.pos === "izquierda" ? parent.width - 1 : 0
                     y: bar.pos === "arriba" ? parent.height - 1 : 0
                 }
-            }
-
-            // Adaptable: el contenido con la tinta de shaders/ink.frag (color según el fondo de pantalla debajo, cantidad
-            // según lo claro de cada píxel, sombra suave), salvo los iconos de la bandeja, que conservan sus colores.
-            // En el body, sin escalar: nítido con barScale. Se apaga cuando la transición de salida termina.
-            // La barra en la pantalla (0-1), para mirar el fondo justo debajo
-            readonly property var screenArea: {
-                const sw = Math.max(1, bar.screen?.width ?? 1), sh = Math.max(1, bar.screen?.height ?? 1);
-                const wx = bar.pos === "derecha" ? sw - bar.width : 0, wy = bar.pos === "abajo" ? sh - bar.height : 0;
-                return Qt.vector4d((wx + x) / sw, (wy + y) / sh, width / sw, height / sh);
-            }
-            // Iconos de la bandeja (0-1 de la barra) que no llevan tinta
-            readonly property var keepRect: {
-                const t = content.item?.trayItem ?? null;
-                width; height; bar.k; content.item?.width;
-                const r = t?.iconsRect;
-                t?.x; t?.y; t?.parent?.x; t?.parent?.y; t?.parent?.width;
-                if (!t || !t.visible || !r || r.width <= 0 || width <= 0 || height <= 0) return Qt.vector4d(-1, -1, -1, -1);
-                const p = t.mapToItem(body, r.x, r.y, r.width, r.height);
-                return Qt.vector4d(p.x / width, p.y / height, (p.x + p.width) / width, (p.y + p.height) / height);
-            }
-            // Formas del velo de vidrio (0-1 de la barra): la barra entera, o cada píldora del archipiélago
-            function veilShape(i: int): var {
-                if (!bar.archi) return i === 0 ? Qt.vector4d(0, 0, 1, 1) : Qt.vector4d(0, 0, 0, 0);
-                const r = bar.pillRect(i);
-                if (r.w <= 0 || width <= 0 || height <= 0) return Qt.vector4d(0, 0, 0, 0);
-                return Qt.vector4d((r.x - x) / width, (r.y - y) / height, (r.x - x + r.w - 1) / width, (r.y - y + r.h - 1) / height);
-            }
-            layer.enabled: bar.inkAmount > 0.001
-            layer.effect: ShaderEffect {
-                property var wallA: wallTexA
-                property var wallB: wallTexB
-                property var area: body.screenArea
-                property var crop: bar.wallCrop
-                property var keep: body.keepRect
-                readonly property real dpr: bar.screen?.devicePixelRatio ?? 1
-                property var texel: Qt.vector4d(1 / Math.max(1, body.width * dpr), 1 / Math.max(1, body.height * dpr), 0, 0)
-                property real amount: bar.inkAmount
-                property real invert: Theme.light ? 1 : 0
-                property real wallMix: bar.wallMix
-                // Con el cristal según el fondo manda el tema (tinta negra sobre cristal claro, blanca sobre oscuro): la
-                // barra y los paneles no se contradicen. Un umbral fuera de 0-1 fija la tinta sin tocar el shader.
-                property real threshold: Theme.followsWall ? (Theme.light ? -1 : 2) : 0.55
-                property var shape0: body.veilShape(0)
-                property var shape1: body.veilShape(1)
-                property var shape2: body.veilShape(2)
-                property var shape3: body.veilShape(3)
-                property real radius: (bar.archi ? bar.pillRadius * bar.k : bg.radius) * dpr
-                property real glass: 1
-                property real rim: bar.floating ? 1 : 0
-                fragmentShader: Qt.resolvedUrl("shaders/ink.frag.qsb")
             }
 
             // Alerta visual (visualBell): dos destellos del color primario

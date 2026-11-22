@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.18] — 2026-11-22
+
+### Correcciones
+- **La barra y el dock con los colores del tema**: con Transparencia, la barra pintaba todo en blanco o negro y no
+  tomaba la paleta, el acento ni el color de la onda de audio. Ahora el vidrio esmerilado es el fondo de la barra (y de
+  cada píldora) y del dock: la superficie del tema translúcida y desenfocada, con su tinte, y el contenido con sus
+  colores de siempre. Barra, dock y paneles van del mismo tono.
+- **Se lee sobre cualquier fondo**: si el fondo de una pantalla junto a la barra es del tono contrario al cristal
+  (cristal oscuro sobre un fondo claro o al revés), el vidrio de esa pantalla se vuelve más opaco poco a poco.
+
 ## [0.11.17] — 2026-11-22
 
 ### Cambios

@@ -149,6 +149,8 @@ PanelWindow {
         height: dockWin.bottom ? 54 : dockCol.implicitHeight + 16
         radius: Theme.r(14)
         kind: "panel"
+        // Con Transparencia, el mismo vidrio esmerilado que la barra (según el fondo de esta pantalla)
+        color: Theme.glassy ? Theme.frost(dockWin.monName) : Theme.glassPanel
         opacity: dockWin.shown ? 1 : 0
         Behavior on opacity { NumberAnimation { id: fade; duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
         transform: Translate {

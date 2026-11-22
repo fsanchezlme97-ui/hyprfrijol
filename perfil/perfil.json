@@ -120,11 +120,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.11.16",
+ "hyprfrijol": "v0.11.17",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-22 01:12",
+ "saved": "2026-11-22 01:18",
  "services": [
   "ufw",
   "cups.socket",
@@ -260,7 +260,7 @@
   "numlock": true,
   "osdOffset": 4,
   "osdPos": "arriba",
-  "palette": "oxocarbon",
+  "palette": "violet-dusk",
   "pip": true,
   "pipAuto": false,
   "pipCorner": "inf-der",

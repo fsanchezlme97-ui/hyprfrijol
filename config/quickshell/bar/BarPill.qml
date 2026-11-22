@@ -19,8 +19,6 @@ Glass {
     showBorder: false
     effects: true
     color: "transparent"                 // el relleno lo pinta la forma de abajo
-    opacity: bar.inkOn ? 0 : 1
-    Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
     readonly property real bw: bar.pillBorderW
     readonly property real feather: 1 / bar.k
@@ -41,7 +39,7 @@ Glass {
         preferredRendererType: Shape.CurveRenderer
         // Relleno de vidrio de la barra
         ShapePath {
-            fillColor: Theme.glass
+            fillColor: pill.bar.frost
             strokeWidth: -1
             PathSvg { path: pill.svg(pill.width, pill.height, pill.rr, 0) }
         }
@@ -50,7 +48,7 @@ Glass {
         ShapePath {
             fillColor: "transparent"
             strokeWidth: pill.feather
-            strokeColor: Qt.alpha(Theme.glass, Theme.glass.a * 0.38)
+            strokeColor: Qt.alpha(pill.bar.frost, pill.bar.frost.a * 0.38)
             joinStyle: ShapePath.RoundJoin
             PathSvg { path: pill.svg(pill.width, pill.height, pill.rr, -pill.feather / 2) }
         }

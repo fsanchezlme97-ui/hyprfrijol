@@ -21,7 +21,6 @@ Item {
     readonly property bool secondary: Shell.barModeFor(barWindow.screen) === "sencilla"
     // Píldoras del archipiélago (Bar.qml las usa de máscara para el ratón)
     readonly property var pills: [pillL, pillC, pillR, pillS]
-    readonly property Item trayItem: tray          // el vidrio de la barra deja sus iconos con sus colores
     readonly property real gapC: 14
     readonly property real naturalLength: left.implicitWidth + (wave.active ? wave.width + gapC * 2 : gapC) + (secondary ? usage.width : right.implicitWidth) + 6
     // Título de la ventana activa: tope fijo (isla) o 30 % de la barra (máx. 300 px), y nunca hasta la onda

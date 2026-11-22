@@ -118,12 +118,13 @@ PanelWindow {
         Behavior on sat { NumberAnimation { id: satAnim; duration: Theme.ms(600); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
 
-    // Luz media del fondo en la franja del lado de la barra (el 30 % de la pantalla; 0-1, la misma fórmula que la tinta
-    // de la barra, bar/shaders/ink.frag). La de la pantalla principal decide el tono del cristal (Theme.wallLuma: claro u
-    // oscuro según el fondo). Con vídeo, su fotograma fijo. ColorQuantizer va en un hilo aparte, a 64 px; la media de
-    // sus 16 colores (corte por medianas: cada uno cubre una parte parecida) ≈ la de la imagen. imageRect va en px de
-    // la imagen original: su tamaño sale de `dims`, que la carga una vez y la suelta.
-    readonly property string lumaSrc: primary && image ? "file://" + image : ""
+    // Luz media del fondo de cada pantalla en la franja del lado de la barra (el 30 % de la pantalla; 0-1, luma de sRGB):
+    //  · Theme.wallLumas[pantalla]: lo opaco del vidrio de la barra y el dock (Theme.frost)
+    //  · la de la pantalla principal (Theme.wallLuma) decide además el tono del cristal: claro u oscuro según el fondo
+    // Con vídeo, su fotograma fijo. ColorQuantizer va en un hilo aparte, a 64 px; la media de sus 16 colores (corte
+    // por medianas: cada uno cubre una parte parecida) ≈ la de la imagen. imageRect va en px de la imagen original:
+    // su tamaño sale de `dims`, que la carga una vez y la suelta.
+    readonly property string lumaSrc: image ? "file://" + image : ""
     property size imgSize: Qt.size(0, 0)
     onLumaSrcChanged: { imgSize = Qt.size(0, 0); dims.source = lumaSrc; }
     Component.onCompleted: dims.source = lumaSrc
@@ -154,7 +155,10 @@ PanelWindow {
             if (!colors.length || !win.lumaRect) return;
             let l = 0;
             for (const c of colors) l += 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
-            Theme.wallLuma = l / colors.length;
+            const v = l / colors.length, all = Object.assign({}, Theme.wallLumas);
+            all[win.outName] = v;
+            Theme.wallLumas = all;
+            if (win.primary) Theme.wallLuma = v;
         }
     }
 
