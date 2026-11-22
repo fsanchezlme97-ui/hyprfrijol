@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.25] — 2026-11-22
+
+### Correcciones
+- **Cristal uniforme con `glassWallpaper: false`**: antes el shell seguía adaptando la opacidad del cristal a la luz
+  del fondo aunque el ajuste estuviera desactivado. Ahora `glassWallpaper: false` deja la barra, dock y paneles con
+  un tinte y opacidad fijos, sin variar según las ventanas que haya detrás.
+
 ## [0.11.24] — 2026-11-22
 
 ### Novedades

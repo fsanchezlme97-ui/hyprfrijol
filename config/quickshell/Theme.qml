@@ -31,18 +31,19 @@ Singleton {
     // todas las pantallas: si el fondo de alguna, junto a la barra, es del tono contrario al cristal (cristal oscuro
     // sobre fondo claro o al revés), todo se vuelve más opaco poco a poco, hasta 0,74, y el texto se sigue leyendo.
     readonly property real frostAlpha: {
+        const base = light ? Settings.get("glassOpacityLight", 0.56) : Settings.get("glassOpacity", 0.40);
+        if (!Settings.get("glassWallpaper", true)) return base;
         let m = 0;
         for (const k in wallLumas) {
             const L = wallLumas[k];
             m = Math.max(m, Math.min(1, light ? (0.6 - L) / 0.2 : (L - 0.4) / 0.2));
         }
-        const base = light ? Settings.get("glassOpacityLight", 0.56) : Settings.get("glassOpacity", 0.40);
         const max = Settings.get("glassMaxOpacity", 0.74);
         return base + Math.max(0, m) * Math.max(0, max - base);
     }
     readonly property color frost: Qt.alpha(s1, frostAlpha)
     readonly property bool sysLight: data.light ?? false
-    readonly property bool followsWall: !!data.alt && wallLuma >= 0
+    readonly property bool followsWall: Settings.get("glassWallpaper", true) && !!data.alt && wallLuma >= 0
     readonly property var cur: followsWall && wallLight !== sysLight ? data.alt : data
     readonly property var c: cur.c ?? fallback.c
     readonly property var st: cur.S ?? fallback.st
