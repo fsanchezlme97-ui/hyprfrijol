@@ -70,7 +70,9 @@ PanelWindow {
     WlrLayershell.layer: behavior === "fijo" || onTop ? WlrLayer.Top : WlrLayer.Overlay
     WlrLayershell.namespace: "hf-dock"
     exclusionMode: ExclusionMode.Normal
-    exclusiveZone: reserve ? gap + 54 + 4 : 0
+    // Reserva hasta el filo del dock: Hyprland añade gaps_out, así que las ventanas quedan a la misma distancia de él que
+    // de la barra
+    exclusiveZone: reserve ? gap + 54 : 0
     anchors { top: side !== "abajo"; bottom: side !== "arriba"; left: side !== "derecha"; right: side !== "izquierda" }
     // Sitio para el menú y el nombre: al lado del dock vertical, hacia el centro del horizontal
     implicitWidth: horiz ? 0 : gap + 54 + 8 + 220

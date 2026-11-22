@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.20] — 2026-11-22
+
+### Correcciones
+- **Dock a la misma distancia de las ventanas que la barra**: reservaba 4 px de más y las ventanas quedaban más
+  lejos de él que de la barra. Ahora reserva hasta su filo y el hueco es el mismo (el de Apariencia).
+
 ## [0.11.19] — 2026-11-22
 
 ### Novedades

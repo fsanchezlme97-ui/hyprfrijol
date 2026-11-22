@@ -253,7 +253,7 @@ Scope {
             readonly property bool active: { WinMode.deskIcons; return WinMode.isDeskWs(wsId) && !Shell.focusMode; }
             readonly property string dockSide: { HyprClients.monitors; return WinMode.dockSide(modelData?.name ?? ""); }
             // Franja del dock que el escritorio deja libre si el dock no la reserva (lado: dockSide)
-            readonly property int dockFree: dockShown && Settings.get("dockBehavior", "inteligente") !== "fijo" ? Settings.dockGap + 54 + 4 : 0
+            readonly property int dockFree: dockShown && Settings.get("dockBehavior", "inteligente") !== "fijo" ? Settings.dockGap + 54 : 0
             readonly property bool dockShown: { WinMode.mode; WinMode.overrides; WinMode.dockInTiling; return wsId > 0 && WinMode.dockOn(wsId) && !Shell.focusMode; }
             readonly property bool deskOn: active && root.deskMode !== "no"
 
