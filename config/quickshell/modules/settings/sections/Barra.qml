@@ -203,16 +203,6 @@ ColumnLayout {
         }
         SwRow { visible: Quickshell.screens.length > 1; label: "Reloj en la barra sencilla"; sub: "la hora también en las otras pantallas"; key: "barSecondaryClock"; def: true }
         SwRow { label: "Barra en las pantallas nuevas"; sub: "sencilla al conectar otra pantalla; si no, sin barra hasta que la elijas"; key: "barAllScreens"; def: true }
-        SwRow { label: "Barra adaptable"; sub: "textos e iconos en blanco o negro según lo claro que sea el fondo de pantalla bajo la barra (como macOS o elementary OS)"; key: "barAdaptive" }
-        LabeledRow {
-            visible: Settings.get("barAdaptive", false) === true
-            label: "Fondo"; labelWidth: 60
-            Seg {
-                model: [["vidrio", "Vidrio esmerilado"], ["transparente", "Sin fondo"]]
-                current: Settings.get("barAdaptiveStyle", "vidrio")
-                onPicked: k => Settings.set("barAdaptiveStyle", k)
-            }
-        }
         SwRow { label: "Barra viva"; sub: "el icono del clima se mueve con el tiempo que hace y el anillo del pomodoro late al final; quietos en pantalla completa y en modo juego"; key: "barLive"; def: true }
     }
     // Bandeja del sistema (bar/Tray.qml): barTray · barTrayMax · barTrayHidden (ids que van al «›»)

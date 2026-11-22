@@ -10,11 +10,11 @@
 //                        flotantes no reserva nada; vuelve con el cursor en el borde — WinMode.covered)
 //   barScreens           por pantalla: completa · sencilla (espacios y consumo por programa) · oculta (Shell.barModeFor)
 //   barAllScreens        false → las pantallas sin elegir en barScreens, sin barra
-//   barAdaptive          textos e iconos de un solo color, blanco o negro según la luz media del fondo
-//                        de pantalla bajo la barra (como macOS o elementary OS), con una sombra
-//                        suave; los iconos de la bandeja conservan sus colores (shaders/ink.frag). Transiciones: al
-//                        activarla, al cambiar de fondo y al taparla ventanas (barra que se esconde: vuelve el fondo).
-//   barAdaptiveStyle     "vidrio" (velo esmerilado del color contrario a la tinta, como macOS) · "transparente"
+//   (Transparencia)      la barra de cristal es vidrio esmerilado como el de macOS: textos e iconos de un solo
+//                        color, blanco o negro según el tono del cristal (o la luz media del fondo bajo la barra), sobre un
+//                        velo del color contrario que Hyprland desenfoca; la bandeja conserva sus colores
+//                        (shaders/ink.frag). Transiciones: al activarla, al cambiar de fondo y al taparla ventanas
+//                        (barra que se esconde: vuelve el fondo normal).
 //   visualBell           parpadea al llegar un aviso (alerta visual en vez de sonido)
 // Isla: la barra flota y mide lo que su contenido; media: dos tercios del borde (o lo que pida el contenido). El resto
 // de la franja deja pasar el ratón.
@@ -82,10 +82,10 @@ PanelWindow {
         return { x: Math.floor(body.x + p.x * k), y: Math.floor(body.y + p.y * k), w: Math.ceil(p.width * k) + 1, h: Math.ceil(p.height * k) + 1 };
     }
 
-    // Barra adaptable (barAdaptive): sin fondo y con la tinta de shaders/ink.frag, que mira el fondo de pantalla de esta
+    // Vidrio esmerilado (con Transparencia: material cristal; antes «Barra adaptable», barAdaptive): sin el fondo de siempre y con la tinta de shaders/ink.frag, que mira el fondo de pantalla de esta
     // pantalla bajo cada punto de la barra. Con la barra que se esconde (automática / inteligente) y ventanas debajo
     // vuelve el fondo normal: lo que hay debajo no es el fondo de pantalla.
-    readonly property bool adaptive: Settings.get("barAdaptive", false) === true
+    readonly property bool adaptive: Theme.glassy
     readonly property bool overWindows: {
         if (!edgeMode) return false;
         const m = HyprClients.monitorByName(screen?.name ?? "");
@@ -299,7 +299,7 @@ PanelWindow {
                 property var shape2: body.veilShape(2)
                 property var shape3: body.veilShape(3)
                 property real radius: (bar.archi ? bar.pillRadius * bar.k : bg.radius) * dpr
-                property real glass: Settings.get("barAdaptiveStyle", "vidrio") === "transparente" ? 0 : 1
+                property real glass: 1
                 property real rim: bar.floating ? 1 : 0
                 fragmentShader: Qt.resolvedUrl("shaders/ink.frag.qsb")
             }

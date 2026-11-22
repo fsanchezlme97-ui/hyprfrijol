@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.17] — 2026-11-22
+
+### Cambios
+- **El vidrio esmerilado es la barra de la Transparencia**: con Transparencia activada (Ajustes › Apariencia), la barra
+  es de vidrio esmerilado como la de macOS, con textos e iconos en blanco o negro y la bandeja con sus colores. Se
+  quita la opción aparte «Barra adaptable» (y su «Fondo») de Ajustes › Barra; sin Transparencia, la barra de siempre.
+
 ## [0.11.16] — 2026-11-22
 
 ### Novedades

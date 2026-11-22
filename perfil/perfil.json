@@ -120,11 +120,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.11.15",
+ "hyprfrijol": "v0.11.16",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-22 01:06",
+ "saved": "2026-11-22 01:12",
  "services": [
   "ufw",
   "cups.socket",
@@ -150,6 +150,7 @@
   "appFontPx": 12,
   "appsInstallMode": "terminal",
   "barAdaptive": true,
+  "barAdaptiveStyle": "vidrio",
   "barAutoHide": false,
   "barHeight": 34,
   "barMode": "archipielago",
@@ -208,6 +209,8 @@
   "disableWhileTyping": true,
   "dockBehavior": "inteligente",
   "dockInTiling": true,
+  "dockOnTop": false,
+  "dockPos": "izquierda",
   "estilo": "math",
   "fileManager": "nautilus",
   "floatOrder": "ocultas",
@@ -216,6 +219,7 @@
   "fontScale": 1,
   "gapsIn": 1,
   "gapsOut": 1,
+  "glassWallpaper": false,
   "greeterWidgets": [
    "reloj",
    "fecha",
@@ -256,7 +260,7 @@
   "numlock": true,
   "osdOffset": 4,
   "osdPos": "arriba",
-  "palette": "vesper",
+  "palette": "oxocarbon",
   "pip": true,
   "pipAuto": false,
   "pipCorner": "inf-der",
@@ -283,7 +287,7 @@
   "sliderGlow": false,
   "tapToClick": true,
   "themeApps": true,
-  "themeMode": "claro",
+  "themeMode": "oscuro",
   "timerMin": 10,
   "transparencia": true,
   "wallpaperFps": 30,

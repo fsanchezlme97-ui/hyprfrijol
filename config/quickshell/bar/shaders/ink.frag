@@ -1,4 +1,4 @@
-// Tinta de la barra adaptable (barAdaptive, bar/Bar.qml), en una sola pasada:
+// Vidrio esmerilado de la barra con Transparencia (bar/Bar.qml; antes «Barra adaptable»), en una sola pasada:
 //  · Color de la tinta, uno solo para toda la barra: blanco sobre fondo de pantalla oscuro y negro sobre claro, según
 //    la luz media del fondo (wallA/wallB, recortado como en la pantalla) bajo la barra entera (una rejilla de 16 × 2
 //    muestras; mezclar blanco y negro en la misma barra se veía desigual). wallMix funde el fondo viejo con el nuevo
