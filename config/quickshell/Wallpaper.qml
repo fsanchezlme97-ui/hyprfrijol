@@ -119,7 +119,7 @@ PanelWindow {
     }
 
     // Luz media del fondo de cada pantalla en la franja del lado de la barra (el 30 % de la pantalla; 0-1, luma de sRGB):
-    //  · Theme.wallLumas[pantalla]: lo opaco del vidrio de la barra y el dock (Theme.frost)
+    //  · Theme.wallLumas[pantalla]: lo opaco del vidrio esmerilado (Theme.frost)
     //  · la de la pantalla principal (Theme.wallLuma) decide además el tono del cristal: claro u oscuro según el fondo
     // Con vídeo, su fotograma fijo. ColorQuantizer va en un hilo aparte, a 64 px; la media de sus 16 colores (corte
     // por medianas: cada uno cubre una parte parecida) ≈ la de la imagen. imageRect va en px de la imagen original:

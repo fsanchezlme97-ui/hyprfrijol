@@ -183,9 +183,10 @@ Singleton {
     // ¿Hay dock en este espacio? Donde las ventanas flotan, o en todos con «Mostrar el dock también en mosaico»
     readonly property bool dockInTiling: Settings.get("dockInTiling", false) === true
     function dockOn(ws: int): bool { return ws > 0 && (isFloat(ws) || dockInTiling); }
-    // Lado del dock en cada pantalla (ajuste "dockPos"): "izquierda" · "abajo" · "auto" (por defecto: a la izquierda,
-    // salvo que ese borde toque otra pantalla —el cursor se pasaría a ella en vez de tocar el borde—; entonces abajo)
-    readonly property string dockPos: { const p = Settings.get("dockPos", "auto"); return ["izquierda", "abajo"].includes(p) ? p : "auto"; }
+    // Lado del dock en cada pantalla (ajuste "dockPos"): "izquierda" · "derecha" · "abajo" · "arriba" · "auto" (por
+    // defecto: a la izquierda, salvo que ese borde toque otra pantalla —el cursor se pasaría a ella en vez de tocar el
+    // borde—; entonces abajo)
+    readonly property string dockPos: { const p = Settings.get("dockPos", "auto"); return ["izquierda", "derecha", "abajo", "arriba"].includes(p) ? p : "auto"; }
     function dockSide(monName: string): string {
         if (dockPos !== "auto") return dockPos;
         const ms = HyprClients.monitors, m = ms.find(x => x.name === monName);

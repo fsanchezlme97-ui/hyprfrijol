@@ -150,7 +150,7 @@ ColumnLayout {
                 label: "Transparencia"
                 sub: Settings.get("reduceTransparency", false) || Settings.get("highContrast", false)
                     ? "sin efecto: Accesibilidad reduce la transparencia"
-                    : "paneles de cristal, muy desenfocados, con un resplandor del acento, y la barra de vidrio esmerilado · algo más de GPU"
+                    : "barra, dock, paneles y notificaciones de vidrio esmerilado, translúcidos y muy desenfocados · algo más de GPU"
                 checked: Theme.glassy || Settings.get("transparencia", false)
                 onToggled: v => Confirm.change("Transparencia", { transparencia: v })
             }

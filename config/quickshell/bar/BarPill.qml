@@ -39,7 +39,7 @@ Glass {
         preferredRendererType: Shape.CurveRenderer
         // Relleno de vidrio de la barra
         ShapePath {
-            fillColor: pill.bar.frost
+            fillColor: Theme.glass
             strokeWidth: -1
             PathSvg { path: pill.svg(pill.width, pill.height, pill.rr, 0) }
         }
@@ -48,7 +48,7 @@ Glass {
         ShapePath {
             fillColor: "transparent"
             strokeWidth: pill.feather
-            strokeColor: Qt.alpha(pill.bar.frost, pill.bar.frost.a * 0.38)
+            strokeColor: Qt.alpha(Theme.glass, Theme.glass.a * 0.38)
             joinStyle: ShapePath.RoundJoin
             PathSvg { path: pill.svg(pill.width, pill.height, pill.rr, -pill.feather / 2) }
         }

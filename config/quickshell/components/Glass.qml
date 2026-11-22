@@ -2,9 +2,9 @@
 // de nombres "hf-…" de la ventana); aquí se dibuja todo lo demás. Según el material (S.material):
 //   sólido   Material 3: superficie tonal sólida, sin borde; elevación con sombra en dos capas (una cercana y nítida,
 //            otra amplia y difusa) y un filo de luz de 1 px arriba en los paneles y popups
-//   cristal  (transparencia) la estructura de Material hecha de cristal: muy transparente y muy desenfocado, con un
-//            esmerilado más claro arriba, un resplandor suave del acento que se desliza despacio y un filo de luz muy
-//            tenue, más visible arriba y que se desvanece hacia abajo, sin contorno oscuro, como las ventanas de macOS
+//   cristal  (transparencia) vidrio esmerilado como el de macOS, el mismo en la barra, el dock y los paneles
+//            (Theme.frost): translúcido y muy desenfocado, con un esmerilado más claro arriba y un filo de luz muy
+//            tenue, más visible arriba y que se desvanece hacia abajo, sin contorno oscuro
 //   tonal    (transparencia con «Reducir transparencia») superficie tonal sólida con borde fino
 //   Glass { kind: "panel" }   kinds: "bar" (S.bg), "panel" (S.bgPanel), "popup" (S.bgPopup), "fill" (S.bg2)
 import QtQuick
@@ -60,30 +60,6 @@ Item {
         Behavior on color { ColorAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
 
-    // Resplandor del acento que se desliza despacio por los paneles abiertos (el cristal se siente vivo).
-    // Nunca en la barra (siempre visible); se para con «Reducir movimiento» o sin animaciones.
-    Shape {
-        id: flow
-        visible: root.glass && root.kind !== "bar" && Theme.tint.a > 0 && root.width > 40 && root.height > 40
-        anchors.fill: parent
-        preferredRendererType: Shape.CurveRenderer
-        property real ph: 0.25
-        NumberAnimation on ph { from: 0; to: 1; duration: 22000; loops: Animation.Infinite; running: flow.visible && root.visible && !Theme.still }
-        readonly property real cx: width * (0.2 + 0.6 * (0.5 - 0.5 * Math.cos(ph * 2 * Math.PI)))
-        readonly property real cy: height * (0.25 + 0.4 * (0.5 - 0.5 * Math.sin(ph * 2 * Math.PI)))
-        ShapePath {
-            strokeWidth: -1
-            fillGradient: RadialGradient {
-                centerX: flow.cx; centerY: flow.cy
-                centerRadius: Math.max(70, Math.min(Math.min(flow.width, flow.height) * 0.7, 300))
-                focalX: centerX; focalY: centerY
-                GradientStop { position: 0.0; color: Theme.tint }
-                GradientStop { position: 0.5; color: Qt.alpha(Theme.tint, Theme.tint.a * 0.35) }
-                GradientStop { position: 1.0; color: Qt.alpha(Theme.tint, 0) }
-            }
-            PathRectangle { x: 0; y: 0; width: flow.width; height: flow.height; radius: root.rr }
-        }
-    }
     Shape {
         id: fx
         visible: root.glass

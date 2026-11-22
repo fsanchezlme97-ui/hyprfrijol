@@ -3,6 +3,22 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.19] — 2026-11-22
+
+### Novedades
+- **Dock arriba y a la derecha** (Ajustes › Escritorio y gestos › Dock › Posición): además de a la izquierda y abajo.
+  Arriba se coloca debajo de la barra; los puntos de las ventanas miran al borde y el menú y el nombre de la app
+  salen hacia el centro de la pantalla.
+
+### Mejoras
+- **Todo del mismo vidrio**: con Transparencia, las notificaciones, el centro de control, los menús de la bandeja,
+  los avisos de la barra, el OSD del volumen y el resto de paneles usan el mismo vidrio esmerilado que la barra y el
+  dock, con una sola opacidad en todas las pantallas (la segunda ya no se ve distinta). Se quita el resplandor del
+  acento que se movía por los paneles: solo lo tenían ellos.
+- **Dock**: a la misma distancia del borde que las ventanas y la barra flotante (el hueco de Apariencia), con las
+  esquinas de las píldoras de la barra y los mosaicos de los iconos concéntricos; con cristal, sin trazo, como la
+  barra.
+
 ## [0.11.18] — 2026-11-22
 
 ### Correcciones

@@ -1,5 +1,7 @@
-// Dock vertical a la izquierda, u horizontal abajo (bottom: WinMode.dockSide, ajuste "dockPos"; una ventana por
-// pantalla; lo crea Desktop.qml). Se ve donde las ventanas flotan
+// Dock en un borde de la pantalla (side: WinMode.dockSide, ajuste "dockPos"): vertical a la izquierda o a la derecha,
+// horizontal abajo o arriba (una ventana por pantalla; lo crea Desktop.qml). Del borde le separa el mismo hueco que a
+// las ventanas y a la barra flotante (Settings.dockGap = gapsOut) y sus esquinas son las de las píldoras de la barra
+// (las de las ventanas + Ajustes › Barra › Esquinas). Se ve donde las ventanas flotan
 // (modo flotante, o un espacio con la excepción de los ajustes rápidos) y en todos con "dockInTiling".
 // Comportamiento ("dockBehavior", Ajustes › Escritorio y gestos › Dock):
 //   "fijo"         siempre visible y reserva su franja (las ventanas maximizadas se quedan a su lado)
@@ -25,7 +27,13 @@ PanelWindow {
     required property var desk          // Desktop.qml (dockItems, activate, launch, togglePin)
     property bool shown: false          // hay dock en el espacio activo de esta pantalla
     property int wsId: -1
-    property bool bottom: false         // abajo y en horizontal (si no, a la izquierda y en vertical)
+    property string side: "izquierda"   // "izquierda" · "derecha" (vertical) · "abajo" · "arriba" (horizontal)
+    readonly property bool horiz: side === "abajo" || side === "arriba"
+    readonly property int gap: Settings.dockGap
+    // Esquinas como las píldoras de la barra (Bar.pillRadius) y los mosaicos de dentro concéntricos (a 9 px del borde)
+    readonly property real radius: Math.min((Settings.get("rounding", null) ?? Theme.winRadius)
+        + Math.max(0, Math.min(4, Number(Settings.get("barRoundExtra", 4)) || 0)), 27)
+    readonly property real tileRadius: Theme.inner(radius, 9)
     readonly property int step: 46      // cada icono mide 42 + 4 de separación
 
     readonly property string behavior: { const b = Settings.get("dockBehavior", "inteligente"); return ["fijo", "auto", "inteligente"].includes(b) ? b : "inteligente"; }
@@ -37,14 +45,16 @@ PanelWindow {
         const m = HyprClients.monitorByName(monName);
         if (!m) return null;
         const L = HyprClients.logical(m), r = m.reserved ?? [0, 0, 0, 0];
-        if (bottom) {
-            const below = behavior === "fijo" ? 0 : r[3];       // con el dock fijo, r[3] ya incluye su franja
-            const w = L.w - r[0] - r[2];
-            return { x: L.x + r[0] + (w - dock.width) / 2 - 8, y: L.y + L.h - below - (6 + dock.height + 8), w: dock.width + 16, h: 6 + dock.height + 8 };
+        // Con el dock fijo, la franja reservada de su lado ya incluye la suya
+        const own = behavior === "fijo" && !onTop;
+        if (horiz) {
+            const w = L.w - r[0] - r[2], x = L.x + r[0] + (w - dock.width) / 2 - 8, h = gap + dock.height + 8;
+            return side === "abajo" ? { x: x, y: L.y + L.h - (own ? 0 : r[3]) - h, w: dock.width + 16, h: h }
+                                    : { x: x, y: L.y + (own ? 0 : r[1]), w: dock.width + 16, h: h };
         }
-        const left = behavior === "fijo" ? 0 : r[0];          // con el dock fijo, r[0] ya incluye su franja
-        const top = L.y + r[1], h = L.h - r[1] - r[3];
-        return { x: L.x + left, y: top + (h - dock.height) / 2 - 8, w: 6 + dock.width + 8, h: dock.height + 16 };
+        const top = L.y + r[1], hh = L.h - r[1] - r[3], w = gap + dock.width + 8;
+        return side === "izquierda" ? { x: L.x + (own ? 0 : r[0]), y: top + (hh - dock.height) / 2 - 8, w: w, h: dock.height + 16 }
+                                    : { x: L.x + L.w - (own ? 0 : r[2]) - w, y: top + (hh - dock.height) / 2 - 8, w: w, h: dock.height + 16 };
     }
     readonly property bool covered: !onTop && behavior === "inteligente" && shown && WinMode.covered(monName, zone)
     readonly property bool reserve: { WinMode.overrides; WinMode.mode;
@@ -60,20 +70,32 @@ PanelWindow {
     WlrLayershell.layer: behavior === "fijo" || onTop ? WlrLayer.Top : WlrLayer.Overlay
     WlrLayershell.namespace: "hf-dock"
     exclusionMode: ExclusionMode.Normal
-    exclusiveZone: reserve ? 6 + 54 + 4 : 0
-    anchors { top: !bottom; bottom: true; left: true; right: bottom }
-    // Sitio para el menú y el nombre: a la derecha del dock vertical, encima del horizontal
-    implicitWidth: bottom ? 0 : 6 + 54 + 8 + 220
-    implicitHeight: bottom ? 6 + 54 + 8 + 240 : 0
+    exclusiveZone: reserve ? gap + 54 + 4 : 0
+    anchors { top: side !== "abajo"; bottom: side !== "arriba"; left: side !== "derecha"; right: side !== "izquierda" }
+    // Sitio para el menú y el nombre: al lado del dock vertical, hacia el centro del horizontal
+    implicitWidth: horiz ? 0 : gap + 54 + 8 + 220
+    implicitHeight: horiz ? gap + 54 + 8 + 240 : 0
     // Entrada: el dock (o una franja de 2 px en el borde si está escondido); con el menú abierto, toda la ventana
     mask: Region { item: dockWin.menuOpen ? full : dockWin.revealed ? hitDock : strip }
 
     property int hover: -1
 
     Item { id: full; anchors.fill: parent }
-    Item { id: strip; x: 0; y: dockWin.bottom ? parent.height - 2 : 0; width: dockWin.bottom ? parent.width : 2; height: dockWin.bottom ? 2 : parent.height }
+    Item {
+        id: strip
+        x: dockWin.side === "derecha" ? parent.width - 2 : 0
+        y: dockWin.side === "abajo" ? parent.height - 2 : 0
+        width: dockWin.horiz ? parent.width : 2
+        height: dockWin.horiz ? 2 : parent.height
+    }
     // el dock y el hueco hasta el borde
-    Item { id: hitDock; x: dockWin.bottom ? dock.x : 0; y: dock.y; width: dockWin.bottom ? dock.width : dock.x + dock.width; height: dockWin.bottom ? parent.height - dock.y : dock.height }
+    Item {
+        id: hitDock
+        x: dockWin.horiz ? dock.x : dockWin.side === "izquierda" ? 0 : dock.x
+        y: !dockWin.horiz ? dock.y : dockWin.side === "arriba" ? 0 : dock.y
+        width: dockWin.horiz ? dock.width : dockWin.side === "izquierda" ? dock.x + dock.width : parent.width - dock.x
+        height: !dockWin.horiz ? dock.height : dockWin.side === "arriba" ? dock.y + dock.height : parent.height - dock.y
+    }
     // Con el menú abierto: clic fuera de él (en esta ventana o en otra) lo cierra
     MouseArea { anchors.fill: parent; enabled: dockWin.menuOpen; acceptedButtons: Qt.AllButtons; onClicked: dockWin.menuOpen = false }
     HyprlandFocusGrab { windows: [dockWin]; active: dockWin.menuOpen; onCleared: dockWin.menuOpen = false }
@@ -85,7 +107,7 @@ PanelWindow {
         menuOpen = true;
     }
     // Minimizar al dock (animMinimize): la ventana (su miniatura, o su icono si no hay captura) vuela y se encoge
-    // hasta su icono; sin dock a la vista, hacia el centro del borde de abajo
+    // hasta su icono; sin dock a la vista, hacia el centro del borde de abajo. La ventana del dock está pegada a su borde.
     property var fx: null
     Connections {
         target: WinMode
@@ -96,10 +118,11 @@ PanelWindow {
             const L = HyprClients.logical(m), sw = dockWin.screen?.width ?? L.w, sh = dockWin.screen?.height ?? L.h;
             const i = dockWin.desk.dockItems.findIndex(d => (d.wins ?? []).some(w => w.address === c.address));
             const on = dockWin.revealed && i >= 0, at = 8 + i * dockWin.step + 21;
+            const wx = dockWin.side === "derecha" ? sw - dockWin.width : 0, wy = dockWin.side === "abajo" ? sh - dockWin.height : 0;
             dockWin.fx = { address: c.address, cls: c.class ?? "", title: c.title ?? "",
                            x: c.at[0] - L.x, y: c.at[1] - L.y, w: c.size[0], h: c.size[1],
-                           tx: !on ? sw / 2 : dockWin.bottom ? dock.x + at : dock.x + 27,
-                           ty: !on ? sh : dockWin.bottom ? sh - dockWin.height + dock.y + 27 : dock.y + at };
+                           tx: !on ? sw / 2 : wx + dock.x + (dockWin.horiz ? at : 27),
+                           ty: !on ? sh : wy + dock.y + (dockWin.horiz ? 27 : at) };
         }
     }
     LazyLoader {
@@ -143,19 +166,20 @@ PanelWindow {
 
     Glass {
         id: dock
-        x: dockWin.bottom ? (parent.width - width) / 2 : 6
-        y: dockWin.bottom ? parent.height - 6 - height : (parent.height - height) / 2
-        width: dockWin.bottom ? dockCol.implicitWidth + 16 : 54
-        height: dockWin.bottom ? 54 : dockCol.implicitHeight + 16
-        radius: Theme.r(14)
+        x: dockWin.horiz ? (parent.width - width) / 2 : dockWin.side === "izquierda" ? dockWin.gap : parent.width - dockWin.gap - width
+        y: !dockWin.horiz ? (parent.height - height) / 2 : dockWin.side === "arriba" ? dockWin.gap : parent.height - dockWin.gap - height
+        width: dockWin.horiz ? dockCol.implicitWidth + 16 : 54
+        height: dockWin.horiz ? 54 : dockCol.implicitHeight + 16
+        radius: dockWin.radius
         kind: "panel"
-        // Con Transparencia, el mismo vidrio esmerilado que la barra (según el fondo de esta pantalla)
-        color: Theme.glassy ? Theme.frost(dockWin.monName) : Theme.glassPanel
+        // Como las píldoras de la barra: con cristal, sin trazo (el filo lo da el propio vidrio)
+        showBorder: !Theme.glassy
         opacity: dockWin.shown ? 1 : 0
         Behavior on opacity { NumberAnimation { id: fade; duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
         transform: Translate {
-            x: dockWin.revealed || dockWin.bottom ? 0 : -(6 + dock.width + 32)   // también la sombra
-            y: dockWin.revealed || !dockWin.bottom ? 0 : 6 + dock.height + 32
+            // escondido: fuera por su borde, también la sombra
+            x: dockWin.revealed || dockWin.horiz ? 0 : (dockWin.side === "izquierda" ? -1 : 1) * (dockWin.gap + dock.width + 32)
+            y: dockWin.revealed || !dockWin.horiz ? 0 : (dockWin.side === "arriba" ? -1 : 1) * (dockWin.gap + dock.height + 32)
             Behavior on x { NumberAnimation { id: slide; duration: Theme.still ? 0 : Theme.durIn; easing.type: Easing.OutCubic } }
             Behavior on y { NumberAnimation { id: slideY; duration: Theme.still ? 0 : Theme.durIn; easing.type: Easing.OutCubic } }
         }
@@ -163,7 +187,7 @@ PanelWindow {
         Grid {
             id: dockCol
             anchors.centerIn: parent
-            columns: dockWin.bottom ? 99 : 1    // una fila (abajo) o una columna (izquierda)
+            columns: dockWin.horiz ? 99 : 1     // una fila (abajo / arriba) o una columna (izquierda / derecha)
             spacing: 4
             horizontalItemAlignment: Grid.AlignHCenter
             verticalItemAlignment: Grid.AlignVCenter
@@ -177,17 +201,17 @@ PanelWindow {
                     readonly property bool allMin: wins.length > 0 && wins.every(w => WinMode.isMin(w))
                     readonly property bool focused: wins.some(w => w.address === HyprClients.activeAddress && !WinMode.isMin(w))
                     readonly property string name: modelData.entry?.name ?? HyprClients.appName(modelData.cls)
-                    width: dockWin.bottom ? 42 : 54; height: dockWin.bottom ? 54 : 42
+                    width: dockWin.horiz ? 42 : 54; height: dockWin.horiz ? 54 : 42
                     // Separador entre fijadas y abiertas
                     Rectangle {
                         visible: !di.modelData.pinned && di.index > 0 && dockWin.desk.dockItems[di.index - 1].pinned
-                        x: dockWin.bottom ? -3 : (parent.width - width) / 2
-                        y: dockWin.bottom ? (parent.height - height) / 2 : -3
-                        width: dockWin.bottom ? 1 : 28; height: dockWin.bottom ? 28 : 1; color: Theme.ov
+                        x: dockWin.horiz ? -3 : (parent.width - width) / 2
+                        y: dockWin.horiz ? (parent.height - height) / 2 : -3
+                        width: dockWin.horiz ? 1 : 28; height: dockWin.horiz ? 28 : 1; color: Theme.ov
                     }
                     Rectangle {
                         anchors.centerIn: parent
-                        width: 36; height: 36; radius: Theme.r(9)
+                        width: 36; height: 36; radius: dockWin.tileRadius
                         color: dockIcon.visible ? (dma.containsMouse || dockWin.menuOpen && dockWin.menuIndex === di.index ? Theme.fill2 : "transparent")
                                                 : (di.index % 3 === 0 ? Theme.pc : di.index % 3 === 1 ? Theme.s4 : Theme.sc)
                         scale: dma.pressed ? 0.92 : 1
@@ -211,19 +235,19 @@ PanelWindow {
                             color: di.index % 3 === 0 ? Theme.pcText : di.index % 3 === 1 ? Theme.t : Theme.scText
                         }
                     }
-                    // Un punto por ventana (hasta 4): alargado = la activa · apagado = minimizada. A la izquierda del
-                    // icono en vertical, debajo en horizontal
+                    // Un punto por ventana (hasta 4): alargado = la activa · apagado = minimizada. Del lado del borde de
+                    // la pantalla: a la izquierda o a la derecha del icono en vertical, debajo o encima en horizontal
                     Grid {
-                        columns: dockWin.bottom ? 4 : 1
-                        x: dockWin.bottom ? (parent.width - width) / 2 : 2
-                        y: dockWin.bottom ? parent.height - height - 4 : (parent.height - height) / 2
+                        columns: dockWin.horiz ? 4 : 1
+                        x: dockWin.horiz ? (parent.width - width) / 2 : dockWin.side === "izquierda" ? 2 : parent.width - width - 2
+                        y: !dockWin.horiz ? (parent.height - height) / 2 : dockWin.side === "abajo" ? parent.height - height - 4 : 4
                         spacing: 2
                         Repeater {
                             model: di.wins.slice(0, 4)
                             Rectangle {
                                 required property var modelData
                                 readonly property bool act: modelData.address === HyprClients.activeAddress && !WinMode.isMin(modelData)
-                                width: dockWin.bottom ? (act ? 12 : 4) : 3; height: dockWin.bottom ? 3 : (act ? 12 : 4); radius: 1.5
+                                width: dockWin.horiz ? (act ? 12 : 4) : 3; height: dockWin.horiz ? 3 : (act ? 12 : 4); radius: 1.5
                                 color: WinMode.isMin(modelData) ? Theme.o : Theme.p
                                 Behavior on width { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                                 Behavior on height { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
@@ -244,12 +268,12 @@ PanelWindow {
                     }
                 }
             }
-            Rectangle { width: dockWin.bottom ? 1 : 28; height: dockWin.bottom ? 28 : 1; color: Theme.ov }
+            Rectangle { width: dockWin.horiz ? 1 : 28; height: dockWin.horiz ? 28 : 1; color: Theme.ov }
             Item {
-                width: dockWin.bottom ? 42 : 54; height: dockWin.bottom ? 54 : 42
+                width: dockWin.horiz ? 42 : 54; height: dockWin.horiz ? 54 : 42
                 Rectangle {
                     anchors.centerIn: parent
-                    width: 36; height: 36; radius: Theme.r(9)
+                    width: 36; height: 36; radius: dockWin.tileRadius
                     color: allMa.containsMouse ? Theme.s4 : Theme.s3
                     Icon { anchors.centerIn: parent; name: "apps"; size: 16; color: Theme.t }
                 }
@@ -267,11 +291,12 @@ PanelWindow {
     // Menú de la app (clic derecho)
     DockMenu {
         id: menu
-        // vertical: a la derecha, con la primera acción a la altura del icono · horizontal: encima, centrado en el icono
-        x: dockWin.bottom ? Math.max(8, Math.min(dockWin.width - width - 8, dock.x + 8 + dockWin.menuIndex * dockWin.step + 21 - width / 2))
-                          : dock.x + dock.width + 8
-        y: dockWin.bottom ? dock.y - height - 8
-                          : Math.max(8, Math.min(dockWin.height - height - 8, dock.y + 8 + dockWin.menuIndex * dockWin.step + 21 - 45))
+        // vertical: a su lado (hacia el centro), con la primera acción a la altura del icono · horizontal: encima o
+        // debajo (hacia el centro), centrado en el icono
+        x: dockWin.horiz ? Math.max(8, Math.min(dockWin.width - width - 8, dock.x + 8 + dockWin.menuIndex * dockWin.step + 21 - width / 2))
+                         : dockWin.side === "izquierda" ? dock.x + dock.width + 8 : dock.x - width - 8
+        y: !dockWin.horiz ? Math.max(8, Math.min(dockWin.height - height - 8, dock.y + 8 + dockWin.menuIndex * dockWin.step + 21 - 45))
+                          : dockWin.side === "abajo" ? dock.y - height - 8 : dock.y + dock.height + 8
         visible: dockWin.menuOpen && dockWin.revealed
         item: dockWin.menuItem
         desk: dockWin.desk
@@ -283,8 +308,8 @@ PanelWindow {
         readonly property var item: dockWin.hover === 999 ? null : dockWin.desk.dockItems[dockWin.hover]
         visible: dockWin.hover >= 0 && dockWin.revealed && !dockWin.menuOpen
         readonly property real at: 8 + (dockWin.hover === 999 ? dockWin.desk.dockItems.length * dockWin.step + 5 : dockWin.hover * dockWin.step) + 21
-        x: dockWin.bottom ? dock.x + at - width / 2 : dock.x + dock.width + 8
-        y: dockWin.bottom ? dock.y - height - 8 : dock.y + at - height / 2
+        x: dockWin.horiz ? dock.x + at - width / 2 : dockWin.side === "izquierda" ? dock.x + dock.width + 8 : dock.x - width - 8
+        y: !dockWin.horiz ? dock.y + at - height / 2 : dockWin.side === "abajo" ? dock.y - height - 8 : dock.y + dock.height + 8
         width: tip.implicitWidth + 16
         height: 24
         radius: Theme.r(6)

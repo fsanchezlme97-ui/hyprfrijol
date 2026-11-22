@@ -82,6 +82,8 @@ Singleton {
     // Margen de la barra flotante con el borde: el mismo hueco que las ventanas (gaps_out), así barra, ventanas y
     // paneles quedan a la misma distancia del borde y entre sí (antes se forzaba a 2–4 px y no casaba)
     readonly property int barOffset: barFloating ? Math.max(0, Math.min(24, Math.round(Number(get("gapsOut", 1)) || 0))) : 0
+    // Hueco del dock con el borde: el de las ventanas (gapsOut), como la barra flotante
+    readonly property int dockGap: Math.max(0, Math.min(24, Math.round(Number(get("gapsOut", 1)) || 0)))
     readonly property int barThickness: barVertical ? barSize + 2 : barSize - 2 - (barFloating ? 2 : 0)
     readonly property real barScale: barThickness / (barVertical ? 36 : barFloating ? 30 : 32)
     // Comportamiento (Ajustes › Barra): "siempre" · "auto" (se esconde y vuelve con el cursor en el borde) ·

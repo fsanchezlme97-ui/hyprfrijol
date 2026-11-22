@@ -243,7 +243,7 @@ ColumnLayout {
             label: "Posición"
             labelWidth: 150
             Seg {
-                model: [["auto", "Automática"], ["izquierda", "Izquierda"], ["abajo", "Abajo"]]
+                model: [["auto", "Automática"], ["izquierda", "Izquierda"], ["abajo", "Abajo"], ["arriba", "Arriba"], ["derecha", "Derecha"]]
                 current: Settings.get("dockPos", "auto")
                 onPicked: k => Settings.set("dockPos", k)
             }

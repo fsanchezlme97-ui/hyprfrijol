@@ -10,9 +10,8 @@
 //                        flotantes no reserva nada; vuelve con el cursor en el borde — WinMode.covered)
 //   barScreens           por pantalla: completa · sencilla (espacios y consumo por programa) · oculta (Shell.barModeFor)
 //   barAllScreens        false → las pantallas sin elegir en barScreens, sin barra
-//   (Transparencia)      la barra es de vidrio esmerilado como la de macOS (Theme.frost: la superficie del tema, del
-//                        tono del cristal, más opaca si el fondo de pantalla bajo la barra es del tono contrario, para que
-//                        se lea); el contenido con los colores del tema (acento, onda, paleta)
+//   (Transparencia)      la barra es de vidrio esmerilado como la de macOS (Theme.glass = Theme.frost, el mismo de los
+//                        paneles y el dock); el contenido con los colores del tema (acento, onda, paleta)
 //   visualBell           parpadea al llegar un aviso (alerta visual en vez de sonido)
 // Isla: la barra flota y mide lo que su contenido; media: dos tercios del borde (o lo que pida el contenido). El resto
 // de la franja deja pasar el ratón.
@@ -78,10 +77,6 @@ PanelWindow {
         if (!archi || !revealed || !p || !p.visible) return { x: 0, y: 0, w: 0, h: 0 };
         return { x: Math.floor(body.x + p.x * k), y: Math.floor(body.y + p.y * k), w: Math.ceil(p.width * k) + 1, h: Math.ceil(p.height * k) + 1 };
     }
-
-    // Relleno de la barra y de las píldoras: con Transparencia, vidrio esmerilado (Theme.frost, según el fondo de esta
-    // pantalla); si no, el del estilo
-    readonly property color frost: Theme.glassy ? Theme.frost(screen?.name ?? "") : Theme.glass
 
     WlrLayershell.namespace: "hf-bar"
     WlrLayershell.layer: edgeMode ? WlrLayer.Overlay : WlrLayer.Top
@@ -176,7 +171,6 @@ PanelWindow {
                 effects: bar.floating
                 // Archipiélago: el fondo lo ponen las píldoras de cada grupo (BarPill)
                 visible: !bar.archi
-                color: bar.frost
                 // Fija: solo la línea del lado de las ventanas
                 Rectangle {
                     visible: !bar.floating && (Theme.borderWidth > 0 || Theme.glassy)

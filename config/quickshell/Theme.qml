@@ -25,18 +25,21 @@ Singleton {
     property real wallLuma: -1
     // Luz del fondo de cada pantalla en la franja de la barra (Wallpaper.qml): { "HDMI-A-2": 0.72, … }
     property var wallLumas: ({})
-    // Vidrio esmerilado de la barra y el dock (con Transparencia), como el de macOS: la superficie del tema (lleva su
-    // tinte) translúcida, para que Hyprland la desenfoque (su alfa pasa el ignore_alpha 0,2 de la capa). Si el fondo de
-    // esa pantalla es del tono contrario al cristal (cristal oscuro sobre fondo claro o al revés) se vuelve más opaca
-    // poco a poco, hasta 0,8: el texto del tema se sigue leyendo sin cambiar de color.
-    function frost(screenName: string): color {
-        const L = wallLumas[screenName] ?? -1;
-        const base = light ? 0.42 : 0.36;
-        const m = L < 0 ? 0 : Math.max(0, Math.min(1, light ? (0.6 - L) / 0.2 : (L - 0.4) / 0.2));
-        return Qt.alpha(s1, base + m * (0.8 - base));
+    // Vidrio esmerilado (con Transparencia), como el de macOS: la barra, el dock, los paneles, las notificaciones, los
+    // menús y el OSD usan el mismo (glass, glassPanel, glassPopup): la superficie del tema (lleva su tinte) translúcida,
+    // para que Hyprland la desenfoque (su alfa pasa el ignore_alpha 0,2 de la capa). Una sola opacidad para todo y en
+    // todas las pantallas: si el fondo de alguna, junto a la barra, es del tono contrario al cristal (cristal oscuro
+    // sobre fondo claro o al revés), todo se vuelve más opaco poco a poco, hasta 0,82, y el texto se sigue leyendo.
+    readonly property real frostAlpha: {
+        let m = 0;
+        for (const k in wallLumas) {
+            const L = wallLumas[k];
+            m = Math.max(m, Math.min(1, light ? (0.6 - L) / 0.2 : (L - 0.4) / 0.2));
+        }
+        const base = light ? 0.62 : 0.46;
+        return base + Math.max(0, m) * (0.82 - base);
     }
-    property bool wallLight: false
-    onWallLumaChanged: if (wallLuma >= 0) wallLight = wallLight ? wallLuma > 0.47 : wallLuma > 0.55
+    readonly property color frost: Qt.alpha(s1, frostAlpha)
     readonly property bool sysLight: data.light ?? false
     readonly property bool followsWall: !!data.alt && wallLuma >= 0
     readonly property var cur: followsWall && wallLight !== sysLight ? data.alt : data
@@ -73,9 +76,9 @@ Singleton {
     readonly property color aiSpeak: ansi[5] ?? (light ? "#6D28D9" : "#8B5CF6")
 
     // Estilo
-    property color glass: st.bg
-    property color glassPanel: st.bgPanel
-    property color glassPopup: st.bgPopup
+    property color glass: glassy ? frost : st.bg
+    property color glassPanel: glassy ? frost : st.bgPanel
+    property color glassPopup: glassy ? frost : st.bgPopup
     property color fill2: st.bg2
     property color border: st.border
     readonly property int borderWidth: st.borderWidth

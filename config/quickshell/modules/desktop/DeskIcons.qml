@@ -17,6 +17,7 @@ PanelWindow {
     // Hueco a la izquierda para el dock cuando no reserva su franja (Dock.qml en modo auto / inteligente)
     property int leftReserve: 0
     property int bottomReserve: 0       // lo mismo con el dock abajo
+    property int topReserve: 0          // y arriba
     // Hueco a la derecha para los widgets del escritorio (Widgets.qml: 312 + 24)
     readonly property int rightReserve: 0      // (los widgets ya no ocupan la derecha del escritorio)
 
@@ -47,6 +48,7 @@ PanelWindow {
     anchors { top: true; bottom: true; left: true }
     margins.left: leftReserve
     margins.bottom: bottomReserve
+    margins.top: topReserve
     implicitWidth: cols * cellW + pad * 2
     mask: Region { item: grid }
     onShownChanged: if (!shown) selected = ""
