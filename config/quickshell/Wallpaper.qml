@@ -118,6 +118,46 @@ PanelWindow {
         Behavior on sat { NumberAnimation { id: satAnim; duration: Theme.ms(600); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
 
+    // Luz media del fondo en la franja del lado de la barra (el 30 % de la pantalla; 0-1, la misma fórmula que la tinta
+    // de la barra, bar/shaders/ink.frag). La de la pantalla principal decide el tono del cristal (Theme.wallLuma: claro u
+    // oscuro según el fondo). Con vídeo, su fotograma fijo. ColorQuantizer va en un hilo aparte, a 64 px; la media de
+    // sus 16 colores (corte por medianas: cada uno cubre una parte parecida) ≈ la de la imagen. imageRect va en px de
+    // la imagen original: su tamaño sale de `dims`, que la carga una vez y la suelta.
+    readonly property string lumaSrc: primary && image ? "file://" + image : ""
+    property size imgSize: Qt.size(0, 0)
+    onLumaSrcChanged: { imgSize = Qt.size(0, 0); dims.source = lumaSrc; }
+    Component.onCompleted: dims.source = lumaSrc
+    Image {
+        id: dims
+        visible: false
+        asynchronous: true
+        cache: false
+        onStatusChanged: if (status === Image.Ready) { win.imgSize = sourceSize; source = ""; }
+    }
+    // La parte visible de la imagen (PreserveAspectCrop, centrada) y, en ella, la franja de la barra
+    readonly property var lumaRect: {
+        const iw = imgSize.width, ih = imgSize.height, W = width, H = height;
+        if (iw <= 0 || ih <= 0 || W <= 0 || H <= 0) return null;
+        const k = Math.max(W / iw, H / ih), vw = W / k, vh = H / k, ox = (iw - vw) / 2, oy = (ih - vh) / 2, f = 0.3;
+        const pos = Settings.barPos;
+        return pos === "abajo" ? Qt.rect(ox, oy + vh * (1 - f), vw, vh * f)
+             : pos === "izquierda" ? Qt.rect(ox, oy, vw * f, vh)
+             : pos === "derecha" ? Qt.rect(ox + vw * (1 - f), oy, vw * f, vh)
+             : Qt.rect(ox, oy, vw, vh * f);
+    }
+    ColorQuantizer {
+        source: win.lumaRect ? win.lumaSrc : ""
+        imageRect: win.lumaRect ?? Qt.rect(0, 0, 0, 0)
+        depth: 4
+        rescaleSize: 64
+        onColorsChanged: {
+            if (!colors.length || !win.lumaRect) return;
+            let l = 0;
+            for (const c of colors) l += 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+            Theme.wallLuma = l / colors.length;
+        }
+    }
+
     // ── Estado de las ventanas (pantalla completa / maximizada en algún espacio visible) ──
     readonly property var visibleWs: HyprClients.monitors.map(m => m.activeWorkspace?.id)
     readonly property var shownClients: HyprClients.clients.filter(c => visibleWs.includes(c.workspace?.id))

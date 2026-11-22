@@ -875,6 +875,12 @@ def main(argv):
     c = fix_contrast(c, bool(s.get("highContrast")))
     c["ansi"] = ansi_colors(c)   # 16 colores del terminal (kitty, btop, KDE): los de la paleta o armónicos
     S = style_tokens(c, s)
+
+    def shell_theme(s2):
+        _, c2 = resolve_palette(s2)
+        c2 = fix_contrast(apply_accent(c2, s2), bool(s2.get("highContrast")))
+        c2["ansi"] = ansi_colors(c2)
+        return c2, style_tokens(c2, s2)
     theme = {
         "paletteKey": key, "paletteName": c.get("name", key), "light": bool(c.get("light")),
         "colorMode": s.get("colorMode"), "c": {k: v for k, v in c.items() if k not in ("name", "light")},
@@ -882,6 +888,11 @@ def main(argv):
         "reduceMotion": bool(s.get("reduceMotion")), "highContrast": bool(s.get("highContrast")),
         "motion": motion_shell(s),
     }
+    # Cristal según el fondo (Ajustes › Apariencia, glassWallpaper): la variante del otro modo para el shell, que elige
+    # la que casa con la luz del fondo (Theme.qml). Solo con cristal de verdad: no con «Reducir transparencia» (tonal)
+    if S.get("material") == "cristal" and s.get("glassWallpaper", True) is not False:
+        c2, S2 = shell_theme(dict(s, themeMode="oscuro" if c.get("light") else "claro"))
+        theme["alt"] = {"light": bool(c2.get("light")), "c": {k: v for k, v in c2.items() if k not in ("name", "light")}, "S": S2}
     if "--print" in argv:
         print(json.dumps(theme, indent=2)); return
     theme_changed = write_if_changed(STATE / "theme.json", json.dumps(theme, indent=2) + "\n")

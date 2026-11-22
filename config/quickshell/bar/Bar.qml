@@ -291,7 +291,9 @@ PanelWindow {
                 property real amount: bar.inkAmount
                 property real invert: Theme.light ? 1 : 0
                 property real wallMix: bar.wallMix
-                property real threshold: 0.55
+                // Con el cristal según el fondo manda el tema (tinta negra sobre cristal claro, blanca sobre oscuro): la
+                // barra y los paneles no se contradicen. Un umbral fuera de 0-1 fija la tinta sin tocar el shader.
+                property real threshold: Theme.followsWall ? (Theme.light ? -1 : 2) : 0.55
                 property var shape0: body.veilShape(0)
                 property var shape1: body.veilShape(1)
                 property var shape2: body.veilShape(2)

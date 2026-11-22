@@ -154,6 +154,12 @@ ColumnLayout {
                 checked: Theme.glassy || Settings.get("transparencia", false)
                 onToggled: v => Confirm.change("Transparencia", { transparencia: v })
             }
+            SwRow {
+                visible: Theme.glassy && Settings.get("transparencia", false) === true
+                label: "Claro u oscuro según el fondo"
+                sub: "el cristal de la barra, los paneles y el dock se vuelve claro sobre fondos claros y oscuro sobre oscuros (lo decide el fondo de la pantalla principal junto a la barra; las apps siguen tu modo)"
+                key: "glassWallpaper"; def: true
+            }
             LabeledRow {
                 label: "Color"; labelWidth: 70
                 Seg {

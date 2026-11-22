@@ -3,6 +3,17 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.16] — 2026-11-22
+
+### Novedades
+- **Cristal claro u oscuro según el fondo** (con Transparencia; Ajustes › Apariencia › «Claro u oscuro según el
+  fondo», activado por defecto): la barra, los paneles, el dock y Ajustes se vuelven de cristal claro con texto oscuro
+  sobre fondos claros, y oscuro con texto claro sobre fondos oscuros, como el vidrio de la barra adaptable. Lo decide
+  la luz del fondo de la pantalla principal en la franja de la barra (con vídeo, su fotograma), con un margen para
+  que no cambie de ida y vuelta. Las apps siguen tu modo claro u oscuro. Con la barra adaptable, su tinta va a juego.
+- **Dock siempre por encima de las ventanas** (Ajustes › Escritorio y gestos › Dock, apagado por defecto): a la
+  vista sobre ellas, sin apartarse ni reservar sitio. Una ventana a pantalla completa sí lo tapa.
+
 ## [0.11.15] — 2026-11-22
 
 ### Mejoras

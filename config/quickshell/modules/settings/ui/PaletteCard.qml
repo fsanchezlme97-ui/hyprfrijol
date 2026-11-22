@@ -14,7 +14,7 @@ Rectangle {
     property string current: ""
     property string themeMode: "oscuro"
     readonly property var base: pals[key] ?? ({})
-    readonly property var pal: base.pair && pals[base.pair] && !!pals[base.pair].light === Theme.light ? pals[base.pair] : base
+    readonly property var pal: base.pair && pals[base.pair] && !!pals[base.pair].light === Theme.sysLight ? pals[base.pair] : base
     readonly property bool on: current === key || (base.pair !== undefined && current === base.pair)
     readonly property var ansi: pal.ansi ?? [pal.s4, "#E06C75", "#98C379", "#E5C07B", pal.p, pal.ter, "#56B6C2"]
     signal picked(string key, string mode)

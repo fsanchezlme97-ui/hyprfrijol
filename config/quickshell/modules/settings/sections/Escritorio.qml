@@ -1,6 +1,6 @@
 // Ajustes › Escritorio y gestos — modo de ventanas ("windowMode": mosaico / desplazamiento / flotante, con
 // muestras ui/WinModePreview.qml; services/WinMode.qml, config/apply/30-layout.py y 35-windows.py), columnas del
-// desplazamiento ("scrollColumnWidth", "scrollFocusFit", "scrollOneFull"), dock ("dockBehavior": fijo / auto / inteligente, "dockInTiling"; modules/desktop),
+// desplazamiento ("scrollColumnWidth", "scrollFocusFit", "scrollOneFull"), dock ("dockBehavior": fijo / auto / inteligente, "dockOnTop", "dockInTiling"; modules/desktop),
 // espacios ("wsNumerals", "wsShowAll"; bar/Workspaces.qml), iconos del escritorio ("deskIcons") y widgets; esquinas calientes (Daemons.qml), gestos del touchpad (hl.gesture),
 // apps en ventana flotante ("floatApps", "floatAppsSize"; ui/FloatApps.qml, 35-windows.py),
 // diseño de mosaico (general:layout), enfocar al pasar el cursor y acoplar a los bordes; nombres e iconos de los
@@ -215,9 +215,16 @@ ColumnLayout {
         Layout.fillWidth: true
         title: "Dock"
         headerRight: Mono { text: root.winMode === "flotante" || Settings.get("dockInTiling", false) ? "en todos los espacios" : "solo en espacios flotantes" }
+        SwRow {
+            label: "Siempre por encima de las ventanas"
+            sub: "a la vista sobre ellas, sin apartarse ni reservar sitio; una ventana a pantalla completa sí lo tapa"
+            key: "dockOnTop"
+        }
         LabeledRow {
             label: "Mostrar el dock"
             labelWidth: 150
+            enabled: !Settings.get("dockOnTop", false)
+            opacity: enabled ? 1 : 0.5
             Seg {
                 model: [["fijo", "Siempre visible"], ["auto", "Ocultar automáticamente"], ["inteligente", "Ocultación inteligente"]]
                 current: Settings.get("dockBehavior", "inteligente")
@@ -227,6 +234,7 @@ ColumnLayout {
         Txt {
             Layout.fillWidth: true
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+            visible: !Settings.get("dockOnTop", false)
             text: ({ fijo: "Siempre a la vista y las ventanas maximizadas se quedan a su lado.",
                      auto: "Se esconde y aparece al llevar el cursor a su borde.",
                      inteligente: "Esquiva las ventanas: se aparta cuando una ventana pasa por encima de él y vuelve cuando queda sitio libre (o al llevar el cursor al borde)." })[Settings.get("dockBehavior", "inteligente")] ?? ""

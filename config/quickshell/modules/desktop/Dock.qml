@@ -7,6 +7,8 @@
 //   "inteligente"  (por defecto) esquiva las ventanas: se aparta cuando una ventana pasa por su zona y vuelve
 //                  cuando queda libre (WinMode.covered); en un espacio en mosaico reserva su sitio salvo con una
 //                  ventana maximizada / a pantalla completa
+// "dockOnTop": siempre a la vista por encima de las ventanas, sin apartarse ni reservar su franja (manda sobre
+// dockBehavior); en la capa Top, así una ventana a pantalla completa (vídeo, juegos) sí lo tapa.
 // Apps: las fijadas ("dockApps") y las abiertas, con un punto por ventana (alargado = la activa, apagado =
 // minimizada). Clic: ir a la app · en la activa: minimizarla · en una minimizada: traerla al espacio actual ·
 // clic central: nueva ventana · clic derecho: DockMenu.qml.
@@ -27,6 +29,7 @@ PanelWindow {
     readonly property int step: 46      // cada icono mide 42 + 4 de separación
 
     readonly property string behavior: { const b = Settings.get("dockBehavior", "inteligente"); return ["fijo", "auto", "inteligente"].includes(b) ? b : "inteligente"; }
+    readonly property bool onTop: Settings.get("dockOnTop", false) === true
     readonly property string monName: screen?.name ?? ""
     // Zona del dock en coordenadas globales (para saber si una ventana la tapa), con 8 px de margen
     readonly property var zone: {
@@ -43,18 +46,18 @@ PanelWindow {
         const top = L.y + r[1], h = L.h - r[1] - r[3];
         return { x: L.x + left, y: top + (h - dock.height) / 2 - 8, w: 6 + dock.width + 8, h: dock.height + 16 };
     }
-    readonly property bool covered: behavior === "inteligente" && shown && WinMode.covered(monName, zone)
+    readonly property bool covered: !onTop && behavior === "inteligente" && shown && WinMode.covered(monName, zone)
     readonly property bool reserve: { WinMode.overrides; WinMode.mode;
-        return shown && (behavior === "fijo" || (behavior === "inteligente" && !WinMode.isFloat(wsId) && !WinMode.hasFullscreen(monName))); }
+        return shown && !onTop && (behavior === "fijo" || (behavior === "inteligente" && !WinMode.isFloat(wsId) && !WinMode.hasFullscreen(monName))); }
     property bool menuOpen: false
     property var menuItem: null
     property int menuIndex: -1
-    readonly property bool revealed: shown && (behavior === "fijo" || (behavior === "inteligente" && !covered)
+    readonly property bool revealed: shown && (onTop || behavior === "fijo" || (behavior === "inteligente" && !covered)
                                                || hov.hovered || hideDelay.running || menuOpen)
 
     visible: shown || fade.running || slide.running || slideY.running
     color: "transparent"
-    WlrLayershell.layer: behavior === "fijo" ? WlrLayer.Top : WlrLayer.Overlay
+    WlrLayershell.layer: behavior === "fijo" || onTop ? WlrLayer.Top : WlrLayer.Overlay
     WlrLayershell.namespace: "hf-dock"
     exclusionMode: ExclusionMode.Normal
     exclusiveZone: reserve ? 6 + 54 + 4 : 0

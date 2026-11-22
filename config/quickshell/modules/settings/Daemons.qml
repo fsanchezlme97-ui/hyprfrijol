@@ -54,7 +54,7 @@ Scope {
         if (lastLight !== null && light !== lastLight) {
             Settings.apply();
             if (Settings.get("themeWallpaper", false)) Quickshell.execDetached([Paths.script("hf-wallpaper"), "next"]);
-        } else if (light !== Theme.light && Date.now() - lastFix > 120000) {
+        } else if (light !== Theme.sysLight && Date.now() - lastFix > 120000) {
             // hf-apply decide por su cuenta (mismo cálculo): si el tema aplicado no coincide, se reaplica
             lastFix = Date.now();
             Settings.apply();

@@ -120,11 +120,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.11.14",
+ "hyprfrijol": "v0.11.15",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-22 00:52",
+ "saved": "2026-11-22 01:06",
  "services": [
   "ufw",
   "cups.socket",
@@ -207,7 +207,7 @@
   "dimInactive": true,
   "disableWhileTyping": true,
   "dockBehavior": "inteligente",
-  "dockInTiling": false,
+  "dockInTiling": true,
   "estilo": "math",
   "fileManager": "nautilus",
   "floatOrder": "ocultas",
@@ -283,9 +283,9 @@
   "sliderGlow": false,
   "tapToClick": true,
   "themeApps": true,
-  "themeMode": "oscuro",
+  "themeMode": "claro",
   "timerMin": 10,
-  "transparencia": false,
+  "transparencia": true,
   "wallpaperFps": 30,
   "wallpaperHora": false,
   "wallpaperMotion": true,

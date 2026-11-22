@@ -12,7 +12,7 @@ Item {
     property string current: ""
     property string themeMode: "oscuro"
     readonly property var base: pals[key] ?? ({})
-    readonly property var pal: base.pair && pals[base.pair] && !!pals[base.pair].light === Theme.light ? pals[base.pair] : base
+    readonly property var pal: base.pair && pals[base.pair] && !!pals[base.pair].light === Theme.sysLight ? pals[base.pair] : base
     readonly property bool on: current === key
     // mode: "" = no tocar el modo; si no, «claro»/«oscuro» que fija la paleta
     signal picked(string key, string mode)

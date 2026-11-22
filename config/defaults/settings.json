@@ -4,6 +4,7 @@
   "themeMode": "oscuro",
   "estilo": "math",
   "transparencia": false,
+  "glassWallpaper": true,
   "reduceTransparency": false,
   "reduceMotion": false,
   "animado": true,
@@ -136,6 +137,7 @@
   "dockApps": [],
   "dockBehavior": "auto",
   "dockInTiling": false,
+  "dockOnTop": false,
   "dockPos": "auto",
   "widgets": [
     "clima",

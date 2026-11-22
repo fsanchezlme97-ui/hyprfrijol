@@ -18,10 +18,20 @@ import Quickshell.Io
 Singleton {
     id: root
     property var data: ({})
-    readonly property var c: data.c ?? fallback.c
-    readonly property var st: data.S ?? fallback.st
+    // Cristal según el fondo (transparencia + glassWallpaper): hf-apply deja en data.alt la variante del otro modo
+    // (c, S, light) y aquí se usa la que casa con la luz del fondo de la pantalla principal en el lado de la barra
+    // (Wallpaper.qml → wallLuma), con margen para no cambiar de ida y vuelta: clara por encima de 0,55, oscura por
+    // debajo de 0,47. Solo el shell (barra, paneles, dock, Ajustes): las apps siguen el modo elegido (sysLight).
+    property real wallLuma: -1
+    property bool wallLight: false
+    onWallLumaChanged: if (wallLuma >= 0) wallLight = wallLight ? wallLuma > 0.47 : wallLuma > 0.55
+    readonly property bool sysLight: data.light ?? false
+    readonly property bool followsWall: !!data.alt && wallLuma >= 0
+    readonly property var cur: followsWall && wallLight !== sysLight ? data.alt : data
+    readonly property var c: cur.c ?? fallback.c
+    readonly property var st: cur.S ?? fallback.st
 
-    readonly property bool light: data.light ?? false
+    readonly property bool light: cur.light ?? false
     readonly property string paletteName: data.paletteName ?? "Grafito"
     readonly property bool reduceMotion: data.reduceMotion ?? false
     readonly property bool highContrast: data.highContrast ?? false     // Ajustes › Accesibilidad (hf-apply ya ajusta c y S)
