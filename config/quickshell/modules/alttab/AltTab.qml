@@ -136,6 +136,8 @@ Overlay {
 
             GridLayout {
                 visible: win.items.length > 0
+                // Centradas: con pocas ventanas la línea de ayuda (mín. 520 px) es más ancha y sobraba un hueco a la derecha
+                Layout.alignment: Qt.AlignHCenter
                 columns: win.perRow
                 columnSpacing: 12
                 rowSpacing: 12
