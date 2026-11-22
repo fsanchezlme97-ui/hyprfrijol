@@ -492,8 +492,7 @@
   {"f": "Sonido", "l": "Perfiles de los dispositivos", "t": "card"},
   {"f": "Sonido", "l": "Sonidos del sistema", "t": "card"},
   {"f": "Sonido", "l": "Música", "t": "card"},
-  {"f": "Sonido", "l": "Buscar la letra de las canciones", "t": "row", "s": "se la pide a lrclib.net con el artista, el título y la duración de lo que suena", "g": "Música"},
-  {"f": "Sonido", "l": "Letra a pantalla completa", "t": "row", "s": "botón en el panel de música (Super + M): carátula, controles y la letra sincronizada en grande", "g": "Música"},
+  {"f": "Sonido", "l": "Buscar la letra de las canciones", "t": "row", "s": "sale en el panel de música (Super + M o clic en la onda de la barra), desplazándose con la canción · se la pide a lrclib.net con el artista, el título y la duración", "g": "Música"},
   {"f": "Teclado", "l": "Distribuciones", "t": "card"},
   {"f": "Teclado", "l": "Cambiar de distribución", "t": "row", "g": "Distribuciones"},
   {"f": "Teclado", "l": "Escritura", "t": "card"},
@@ -555,7 +554,7 @@
   "Raton": ["clickMethod", "disableWhileTyping", "leftHanded", "middlePaste", "mouseAccel", "mouseNatural", "mouseScroll", "mouseSpeed", "naturalScroll", "tabletLeftHanded", "tabletOutput", "tapAndDrag", "tapToClick", "touchpadNames", "touchpadScroll", "touchpadScrollFactor", "touchpadSpeed"],
   "Remoto": ["rdpListen", "rdpOutput", "rdpServer", "remoteClient", "remoteHosts", "vncListen", "vncOutput"],
   "Sistema": ["hfUpdateCheck", "safeModeCrashLimit", "updatesFirmware", "updatesFlatpak", "updatesMode", "updatesSnapshot"],
-  "Sonido": ["audioAutoSwitch", "lyricsView", "musicLyrics", "noiseSuppression", "overAmplify", "systemSounds"],
+  "Sonido": ["audioAutoSwitch", "musicLyrics", "noiseSuppression", "overAmplify", "systemSounds"],
   "Teclado": ["capsEscape", "kbLayouts", "kbRepeatDelay", "kbRepeatRate", "kbSwitch", "keybinds", "numlock"],
   "Usuarios": ["profileCard"]
 }}

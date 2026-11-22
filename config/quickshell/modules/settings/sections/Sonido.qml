@@ -204,13 +204,8 @@ RowLayout {
         SwRow {
             separator: false
             label: "Buscar la letra de las canciones"
-            sub: "se la pide a lrclib.net con el artista, el título y la duración de lo que suena"
+            sub: "sale en el panel de música (Super + M o clic en la onda de la barra), desplazándose con la canción · se la pide a lrclib.net con el artista, el título y la duración"
             key: "musicLyrics"; def: false
-        }
-        SwRow {
-            label: "Letra a pantalla completa"
-            sub: "botón en el panel de música (Super + M): carátula, controles y la letra sincronizada en grande"
-            key: "lyricsView"; def: true
         }
     }
     }

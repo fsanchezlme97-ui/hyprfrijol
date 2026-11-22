@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.11] — 2026-11-22
+
+### Cambios
+- **La letra va dentro del panel de música** (el que se abre con Super + M o al pulsar la onda de la barra), no a
+  pantalla completa: se desplaza sola con la línea que suena en el centro, encendida, y las de alrededor apagándose;
+  clic en una línea salta ahí. Se quita la vista a pantalla completa de la 0.11.10 y su ajuste. La búsqueda de letras
+  se activa o se quita en Ajustes › Sonido › Música.
+
 ## [0.11.10] — 2026-11-22
 
 ### Novedades

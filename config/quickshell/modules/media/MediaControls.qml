@@ -3,9 +3,9 @@
 //   y «Abrir» (trae la app al frente).
 //   Tarjeta: carátula, título, artista y álbum · barra de progreso con tiempos (clic o arrastrar = buscar) ·
 //   aleatorio, anterior, reproducir/pausar, siguiente, repetir.
-//   Letra (services/Lyrics.qml, lrclib.net): la línea que suena y la siguiente; se activa a mano (musicLyrics).
-//   Botón «Letra a pantalla completa» en la cabecera (lyricsView, por defecto sí): abre la vista "letra"
-//   (LyricsView.qml) con este mismo reproductor.
+//   Letra (services/Lyrics.qml, lrclib.net): se desplaza sola con la línea que suena en el centro, encendida, y las
+//   de alrededor apagándose (clic en una línea = saltar ahí); se activa a mano (musicLyrics, también en
+//   Ajustes › Sonido › Música).
 //   Volumen de la salida + salida de audio (desplegable con los dispositivos).
 //   Reproductores: lista solo si hay más de uno, ya sin duplicados (services/Media.qml: fuera playerctld, el puente de
 //   plasma-browser-integration, instancias vacías del navegador y copias de la misma pista).
@@ -160,12 +160,6 @@ Overlay {
                 spacing: 8
                 AppIcon { info: win.app; size: 18 }
                 Txt { Layout.fillWidth: true; text: win.app.name; size: 12; weight: Font.Medium; color: Theme.tv }
-                IconBtn {
-                    visible: Settings.get("lyricsView", true) === true
-                    icon: "maximize"; iconSize: 12; implicitWidth: 28; implicitHeight: 24
-                    tooltip: "Letra a pantalla completa"
-                    onClicked: Shell.open("letra", win.player?.dbusName ?? "")
-                }
                 Rectangle {
                     visible: win.player?.canRaise ?? false
                     implicitHeight: 24; implicitWidth: openRow.implicitWidth + 16
@@ -350,20 +344,43 @@ Overlay {
                         : Lyrics.state === "error" ? "No se pudo buscar la letra (¿sin conexión?)" : ""
                     size: 11.5; muted: true
                 }
-                // sincronizada: la que suena, grande, y la siguiente
-                Txt {
+                // sincronizada: se desplaza con la que suena en el centro, encendida; las de alrededor se apagan
+                ListView {
+                    id: lyricList
                     visible: Lyrics.enabled && Lyrics.lines.length > 0
                     Layout.fillWidth: true
-                    text: win.lyricIdx >= 0 ? (Lyrics.lines[win.lyricIdx].text || "♪") : "♪"
-                    size: 14; weight: Font.DemiBold; wrapMode: Text.WordWrap; elide: Text.ElideNone
-                    horizontalAlignment: Text.AlignHCenter
-                }
-                Txt {
-                    visible: Lyrics.enabled && Lyrics.lines.length > 0 && win.lyricIdx + 1 < Lyrics.lines.length
-                    Layout.fillWidth: true
-                    text: Lyrics.lines[win.lyricIdx + 1]?.text ?? ""
-                    size: 12; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
-                    horizontalAlignment: Text.AlignHCenter
+                    Layout.preferredHeight: 168
+                    clip: true
+                    interactive: false
+                    model: Lyrics.lines
+                    spacing: 8
+                    currentIndex: Math.max(0, win.lyricIdx)
+                    highlightRangeMode: ListView.StrictlyEnforceRange
+                    preferredHighlightBegin: height / 2 - 12
+                    preferredHighlightEnd: height / 2 + 12
+                    highlightMoveDuration: 400
+                    delegate: Txt {
+                        id: line
+                        required property var modelData
+                        required property int index
+                        readonly property int d: Math.abs(index - win.lyricIdx)
+                        width: lyricList.width
+                        text: modelData.text || "♪"
+                        size: 14; weight: Font.DemiBold
+                        color: d === 0 ? Theme.t : Theme.tv
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap; elide: Text.ElideNone
+                        scale: d === 0 ? 1 : 0.88
+                        opacity: d === 0 ? 1 : Math.max(0.2, 0.6 - d * 0.15)
+                        Behavior on scale { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                        Behavior on opacity { NumberAnimation { duration: Theme.dur } }
+                        MouseArea {
+                            anchors.fill: parent
+                            enabled: win.player?.canSeek ?? false
+                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: { win.player.position = line.modelData.t; win.pos = line.modelData.t; }
+                        }
+                    }
                 }
                 // sin sincronizar: el texto entero en una caja con desplazamiento
                 Flickable {
