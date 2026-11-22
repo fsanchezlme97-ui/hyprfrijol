@@ -151,7 +151,7 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.leftMargin: 150
             text: ({ "encima": "Las flotantes van sobre el mosaico, como siempre.",
-                      "ocultas": "Mientras una ventana del mosaico tiene el foco, las flotantes no se ven: se esconden (se minimizan) y vuelven al enfocarlas con Alt + Tab o la vista general. En el escritorio, a la vista.",
+                      "ocultas": "Mientras una ventana del mosaico tiene el foco, las flotantes se van al espacio oculto (Super + S), apiladas en cascada. Alt + Tab o el dock las traen a tu espacio, a su sitio; con el escritorio a la vista vuelven todas.",
                       "espacio": "Las flotantes se van al espacio oculto (Super + S) y se ven allí, encima del mosaico: el mosaico queda siempre limpio." })[Settings.get("floatOrder", "encima")] ?? ""
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }

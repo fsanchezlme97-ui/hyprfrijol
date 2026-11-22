@@ -67,9 +67,9 @@ Singleton {
 
     // ---------- prioridad de las flotantes (floatOrder) ----------
     // "encima" (por defecto): las flotantes van sobre el mosaico, como siempre.
-    // "ocultas": no se ven mientras una ventana del mosaico tiene el foco: se esconden (se minimizan, como con
-    //            Super + H) y vuelven al enfocar una flotante (Alt + Tab, la vista general) o al quedarse el
-    //            escritorio a la vista.
+    // "ocultas": no se ven mientras una ventana del mosaico tiene el foco: se van al espacio oculto (Super + S),
+    //            apiladas en cascada, y cuentan como minimizadas: Alt + Tab o el dock las traen al espacio normal (a
+    //            su sitio) y vuelven todas al quedarse el escritorio a la vista.
     // "espacio": se van al espacio oculto (Super + S) y se ven allí, encima del mosaico: el mosaico queda limpio.
     // «Detrás» no es posible: Hyprland dibuja las flotantes por encima de las del mosaico (solo una ventana
     // maximizada las tapa); la única forma de que el mosaico mande es esconderlas.
@@ -78,7 +78,20 @@ Singleton {
         return ["encima", "ocultas", "espacio"].includes(v) ? v : "encima";
     }
     property string _floatOrderKey: ""
-    property var _hidden: []           // «dirección|espacio» de las que escondió «ocultas» (no las minimizadas a mano)
+    property var _hidden: []           // «dirección|espacio|x|y» de las que escondió «ocultas» (no las de Super + S a mano)
+    // Cada entrada va también como etiqueta de la ventana en Hyprland («hf-oculta@espacio@x@y»): así sobrevive a un
+    // reinicio del shell (hf-shell refresh en cada actualización) y al arrancar se rehace la lista desde ellas
+    property var _hiddenTagged: []
+    property bool _tagsRead: false
+    on_HiddenChanged: {
+        const tag = (h, op) => {
+            const p = h.split("|");
+            Shell.dispatch('hl.dsp.window.tag({ tag = "' + op + 'hf-oculta@' + p.slice(1).join("@") + '", ' + win(p[0]) + ' })');
+        };
+        for (const h of root._hiddenTagged) if (!root._hidden.includes(h)) tag(h, "-");
+        for (const h of root._hidden) if (!root._hiddenTagged.includes(h)) tag(h, "+");
+        root._hiddenTagged = root._hidden.slice();
+    }
     property bool _hiding: false
     property string _hideKey: ""
     // Esconder espera un poco: una ventana flotante que acaba de abrirse (el chat de RustDesk, una calculadora…)
@@ -86,6 +99,16 @@ Singleton {
     Timer { id: hideTimer; interval: 260; onTriggered: { root._hiding = true; root.applyFloatOrder(); root._hiding = false; } }
     // Se llama con cada cambio de ventanas. La clave evita repetir los cambios en cada refresco.
     function applyFloatOrder(): void {
+        if (!root._tagsRead && HyprClients.clients.length) {
+            root._tagsRead = true;
+            const e = [];   // sin flatMap: el motor de QML no lo tiene
+            for (const c of HyprClients.clients)
+                for (const t of c.tags ?? [])
+                    if (String(t).startsWith("hf-oculta@")) e.push([c.address].concat(String(t).split("@").slice(1)).join("|"));
+            root._hiddenTagged = e;
+            root._hidden = e;
+            if (floatOrder !== "ocultas") { root._hidden = []; for (const h of e) root.unhide(h); }
+        }
         const act = HyprClients.client(HyprClients.activeAddress);
         const focused = !!act && !isMin(act);
         if (floatOrder === "ocultas") {
@@ -110,14 +133,17 @@ Singleton {
             if (desktop) {
                 const hs = root._hidden;
                 root._hidden = [];
-                for (const h of hs) { const [a, ws] = h.split("|"); root.unhide(a, parseInt(ws)); }
+                for (const h of hs) root.unhide(h);
                 return;
             }
+            // Cascada: cada una en el primer paso en diagonal libre del espacio oculto
+            const taken = HyprClients.clients.filter(c => (c.workspace?.name ?? "") === stashWs)
+                .map(c => ({ x: c.at?.[0] ?? 0, y: c.at?.[1] ?? 0 }));
             for (const c of hide) {
                 // Si está a la vista no está escondida, aunque su entrada siga (volvió sin pasar por restore)
                 root._hidden = root._hidden.filter(h => h.split("|")[0] !== c.address)
-                    .concat([c.address + "|" + (c.workspace?.id ?? 0)]);
-                root.minimize(c.address);
+                    .concat([[c.address, c.workspace?.id ?? 0, c.at?.[0] ?? 0, c.at?.[1] ?? 0].join("|")]);
+                root.stash(c, taken);
             }
             return;
         }
@@ -141,7 +167,7 @@ Singleton {
         root._floatOrderKey = "";
         const hs = root._hidden;
         root._hidden = [];
-        for (const h of hs) { const [a, ws] = h.split("|"); root.unhide(a, parseInt(ws)); }
+        for (const h of hs) root.unhide(h);
         HyprClients.refresh();
     }
 
@@ -217,7 +243,12 @@ Singleton {
 
     // ---------- minimizar ----------
     readonly property string minWs: "special:minimized"
-    function isMin(c): bool { return (c?.workspace?.name ?? "") === minWs; }
+    readonly property string stashWs: "special:special"
+    // Minimizada: en su espacio, o escondida por «Ocultas» en el de Super + S (las puestas allí a mano no)
+    function isMin(c): bool {
+        const n = c?.workspace?.name ?? "";
+        return n === minWs || n === stashWs && root._hidden.some(h => h.split("|")[0] === c.address);
+    }
     readonly property var minimized: { HyprClients.refreshes; return HyprClients.clients.filter(c => isMin(c)); }
     property var minOrder: []          // direcciones, la última minimizada al final
     function win(address): string { return 'window = "address:' + HyprClients.norm(address) + '"'; }
@@ -236,17 +267,42 @@ Singleton {
         const ws = Hyprland.focusedMonitor?.activeWorkspace?.id ?? 1;
         Shell.dispatch('hl.dsp.window.move({ workspace = ' + ws + ', follow = false, ' + win(a) + ' })');
         minOrder = minOrder.filter(x => x !== a);
-        root._hidden = root._hidden.filter(h => h.split("|")[0] !== a);   // ya no la esconde «ocultas»
+        const h = root._hidden.find(h => h.split("|")[0] === a);
+        if (h) { root._hidden = root._hidden.filter(x => x !== h); backToSpot(a, h); }   // ya no la esconde «ocultas»
         HyprClients.focusWindow(a);
         HyprClients.refresh();
     }
-    // Devuelve una ventana escondida a su espacio, sin darle el foco (prioridad «Ocultas»)
-    function unhide(address, ws): void {
-        const a = HyprClients.norm(address);
-        const dest = ws > 0 ? ws : (Hyprland.focusedMonitor?.activeWorkspace?.id ?? 1);
+    // Devuelve una ventana escondida («dirección|espacio|x|y») a su espacio y a su sitio, sin darle el foco («Ocultas»)
+    function unhide(entry): void {
+        const [address, ws] = entry.split("|");
+        const a = HyprClients.norm(address), id = parseInt(ws);
+        const dest = id > 0 ? id : (Hyprland.focusedMonitor?.activeWorkspace?.id ?? 1);
         Shell.dispatch('hl.dsp.window.move({ workspace = ' + dest + ', follow = false, ' + win(a) + ' })');
+        backToSpot(a, entry);
         minOrder = minOrder.filter(x => x !== a);
         HyprClients.refresh();
+    }
+    // Al espacio oculto (Super + S), en el primer paso de cascada libre (taken: sitios ocupados, se le añade el suyo)
+    // desde arriba a la izquierda del área útil
+    function stash(c, taken): void {
+        const mon = HyprClients.monitorById(c.monitor) ?? HyprClients.focusedMonitor;
+        Shell.dispatch('hl.dsp.window.move({ workspace = "' + stashWs + '", follow = false, ' + win(c.address) + ' })');
+        if (!mon) return;
+        const U = HyprClients.usableRect(mon), w = c.size?.[0] ?? 0, h = c.size?.[1] ?? 0;
+        let x = 0, y = 0;
+        for (let k = 0; k < 10; k++) {
+            x = Math.max(U.x, Math.min(U.x + 48 + 32 * k, U.x + U.w - w));
+            y = Math.max(U.y, Math.min(U.y + 48 + 32 * k, U.y + U.h - h));
+            if (!taken.some(o => Math.abs(o.x - x) < 16 && Math.abs(o.y - y) < 16)) break;
+        }
+        taken.push({ x: x, y: y });
+        Shell.dispatch('hl.dsp.window.move({ x = ' + x + ', y = ' + y + ', exact = true, ' + win(c.address) + ' })');
+    }
+    // El sitio que tenía antes de esconderla, si vuelve a la misma pantalla
+    function backToSpot(a, entry): void {
+        const p = entry.split("|"), c = HyprClients.client(a);
+        if (p.length < 4 || !c || c.monitor !== (Hyprland.focusedMonitor?.id ?? c.monitor)) return;
+        Shell.dispatch('hl.dsp.window.move({ x = ' + parseInt(p[2]) + ', y = ' + parseInt(p[3]) + ', exact = true, ' + win(a) + ' })');
     }
     function toggleMinimize(address): void { const c = HyprClients.client(address); if (c) isMin(c) ? restore(c.address) : minimize(c.address); }
     function restoreLast(): void {
