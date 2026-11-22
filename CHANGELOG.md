@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.28] — 2026-11-22
+
+### Cambios
+- **Preajustes de transparencia simplificados**: solo quedan «Por defecto» y «Personalizado». El preset por defecto
+  ahora usa los valores afinados (opacidad alta, bordes muy atenuados). Se eliminan «Aurora» y «Vidrio clásico».
+- **Eliminado el ajuste «Filo del cristal»**: el filo de luz ya no es configurable; el cristal usa un borde plano
+  sutil controlado por `rimOpacity`.
+- Añadidos los nuevos sliders de transparencia (`glassOpacity`, `blurSize`, `rimOpacity`…) a los valores por defecto.
+
 ## [0.11.27] — 2026-11-22
 
 ### Cambios

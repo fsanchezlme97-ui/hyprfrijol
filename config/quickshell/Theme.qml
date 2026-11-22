@@ -120,7 +120,7 @@ Singleton {
     readonly property color rimBottom: _mulAlpha(st.rimBottom ?? "transparent", _num("rimOpacity", 1.0))
     // Filo plano (Ajustes › Apariencia › «Filo del cristal»): sin la luz de arriba, el borde es un contorno
     // uniforme en todo el contorno (Glass.qml)
-    readonly property bool flatRim: st.flatRim ?? false
+    readonly property bool flatRim: st.flatRim ?? true
     readonly property color sheen: _mulAlpha(st.sheen ?? "transparent", _num("sheenOpacity", 1.0))
     readonly property color tint: st.tint ?? "transparent"
     readonly property color tint2: st.tint2 ?? "transparent"

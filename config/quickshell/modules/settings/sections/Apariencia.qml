@@ -87,11 +87,10 @@ ColumnLayout {
     }
     readonly property string fontFamily: Settings.get("fontFamily", "Inter")
 
-    // Preajustes de transparencia/cristal: aplican todos los sliders de golpe
+    // Preajustes de transparencia/cristal: aplican todos los sliders de golpe.
+    // Solo quedan «Por defecto» (el estado afinado actual) y «Personalizado».
     readonly property var glassPresets: ({
-        "default":   { label: "Por defecto",         glassOpacity: 0.40, glassOpacityLight: 0.56, glassMaxOpacity: 0.74, sheenOpacity: 1.0, rimOpacity: 1.0, winOpacity: 0.94, blurSize: 8,  blurPasses: 3, blurNoise: 0.015, blurContrast: 0.95, blurBrightness: 0.90, blurBrightnessLight: 1.05, blurVibrancy: 0.35, blurVibrancyDarkness: 0.20 },
-        "aurora":    { label: "Aurora",              glassOpacity: 0.30, glassOpacityLight: 0.48, glassMaxOpacity: 0.65, sheenOpacity: 0.9, rimOpacity: 1.1, winOpacity: 0.88, blurSize: 10, blurPasses: 3, blurNoise: 0.012, blurContrast: 0.93, blurBrightness: 0.92, blurBrightnessLight: 1.08, blurVibrancy: 0.55, blurVibrancyDarkness: 0.18 },
-        "glass":     { label: "Vidrio clásico",      glassOpacity: 0.32, glassOpacityLight: 0.46, glassMaxOpacity: 0.70, sheenOpacity: 0.8, rimOpacity: 0.9, winOpacity: 0.90, blurSize: 12, blurPasses: 3, blurNoise: 0.012, blurContrast: 0.94, blurBrightness: 0.88, blurBrightnessLight: 1.05, blurVibrancy: 0.35, blurVibrancyDarkness: 0.15 }
+        "default":   { label: "Por defecto",         glassOpacity: 0.70, glassOpacityLight: 0.70, glassMaxOpacity: 0.74, sheenOpacity: 0.25, rimOpacity: 0.15, winOpacity: 0.88, blurSize: 10, blurPasses: 3, blurNoise: 0.012, blurContrast: 0.93, blurBrightness: 0.92, blurBrightnessLight: 1.08, blurVibrancy: 0.55, blurVibrancyDarkness: 0.18 }
     })
     readonly property var glassPresetKeys: Object.keys(glassPresets)
     function glassPresetMatch(key) {
@@ -189,14 +188,6 @@ ColumnLayout {
                     label: "Claro u oscuro según el fondo"
                     sub: "el cristal se vuelve claro sobre fondos claros y oscuro sobre oscuros; las apps siguen la paleta"
                     key: "glassWallpaper"; def: true
-                }
-                LabeledRow {
-                    label: "Filo del cristal"; labelWidth: 70
-                    Seg {
-                        model: [["luz", "Con luz"], ["plano", "Plano"]]
-                        current: Settings.get("glassRim", "luz")
-                        onPicked: k => Confirm.change("Filo del cristal", { glassRim: k })
-                    }
                 }
 
                 Expander {
