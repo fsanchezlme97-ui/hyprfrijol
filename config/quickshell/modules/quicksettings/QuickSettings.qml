@@ -182,20 +182,10 @@ Overlay {
                         Layout.fillWidth: true
                         spacing: 12
                         Item {
-                            implicitWidth: win.profile ? 48 : 30; implicitHeight: implicitWidth
-                            // anillo: círculo en degradado (primario → terciario, en diagonal) asomando 3 px alrededor de la foto
-                            Rectangle {
-                                visible: win.profile
-                                anchors.fill: parent; radius: width / 2; rotation: 45
-                                gradient: Gradient {
-                                    orientation: Gradient.Horizontal
-                                    GradientStop { position: 0; color: Theme.p }
-                                    GradientStop { position: 1; color: Theme.ter }
-                                }
-                            }
+                            implicitWidth: win.profile ? 42 : 30; implicitHeight: implicitWidth
                         Rectangle {
                             anchors.centerIn: parent
-                            implicitWidth: win.profile ? 42 : 30; implicitHeight: implicitWidth; radius: implicitWidth / 2
+                            implicitWidth: win.profile ? 42 : 30; implicitHeight: implicitWidth; radius: Theme.r(6)
                             border.width: win.profile ? 1.5 : 0; border.color: Theme.glassPanel
                             color: Theme.pc
                             clip: true
@@ -207,14 +197,14 @@ Overlay {
                                 fillMode: Image.PreserveAspectCrop
                                 sourceSize: Qt.size(96, 96)
                                 visible: status === Image.Ready
-                                // clip no recorta en redondo: máscara circular
+                                // clip no recorta redondeado: máscara con el mismo radio
                                 layer.enabled: visible
                                 layer.effect: MultiEffect { maskEnabled: true; maskSource: faceMask; maskThresholdMin: 0.5; maskSpreadAtMin: 1.0 }
                             }
                             Item {
                                 id: faceMask
                                 anchors.fill: parent; visible: false; layer.enabled: true
-                                Rectangle { anchors.fill: parent; radius: width / 2 }
+                                Rectangle { anchors.fill: parent; radius: parent.parent.radius }
                             }
                         }
                         }
@@ -440,11 +430,10 @@ Overlay {
                                     rowSpacing: 4; columnSpacing: 4
                                     AjusteTile {
                                         Layout.fillWidth: true; Layout.preferredWidth: 10
-                                        icon: "contrast"; label: "Claro/oscuro auto"
-                                        readonly property bool auto: Settings.get("themeMode", "oscuro") === "auto"
-                                        active: auto
-                                        sub: !auto ? "Manual" : Settings.get("themeSchedule", "horas") === "sol" ? "Según el sol" : "Según la hora"
-                                        onClicked: Settings.set("themeMode", auto ? (Theme.light ? "claro" : "oscuro") : "auto")
+                                        icon: "palette"; label: "Paleta"
+                                        active: false
+                                        sub: Theme.paletteName.replace(" · claro", "")
+                                        onClicked: Shell.open("ajustes", "apariencia")
                                     }
                                     AjusteTile {
                                         Layout.fillWidth: true; Layout.preferredWidth: 10

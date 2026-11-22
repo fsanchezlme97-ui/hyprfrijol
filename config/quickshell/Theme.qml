@@ -36,8 +36,9 @@ Singleton {
             const L = wallLumas[k];
             m = Math.max(m, Math.min(1, light ? (0.6 - L) / 0.2 : (L - 0.4) / 0.2));
         }
-        const base = light ? 0.56 : 0.40;
-        return base + Math.max(0, m) * (0.74 - base);
+        const base = light ? Settings.get("glassOpacityLight", 0.56) : Settings.get("glassOpacity", 0.40);
+        const max = Settings.get("glassMaxOpacity", 0.74);
+        return base + Math.max(0, m) * Math.max(0, max - base);
     }
     readonly property color frost: Qt.alpha(s1, frostAlpha)
     readonly property bool sysLight: data.light ?? false
@@ -88,8 +89,8 @@ Singleton {
     readonly property color shadowBig: st.shadowBig
     property color win: st.win
     // Ventanas grandes (Ajustes, Centro de aplicaciones): con transparencia más opaco que los paneles, para que no se transparente
-    // lo de detrás; en Material/tonal, sólido. (hf-apply: S.winSolid)
-    readonly property color winSolid: st.winSolid ?? (glassy ? Qt.alpha(win, 0.94) : s1)
+    // lo de detrás; en Material/tonal, sólido. (hf-apply: S.winSolid; ajustable con winOpacity)
+    readonly property color winSolid: st.winSolid ?? (glassy ? Qt.alpha(win, Settings.get("winOpacity", 0.94)) : s1)
     readonly property int barRadius: st.barRad
     readonly property int panelRadius: st.panelRad
     readonly property int winRadius: st.winRad

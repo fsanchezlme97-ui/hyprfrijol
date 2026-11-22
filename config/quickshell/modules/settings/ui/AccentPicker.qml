@@ -1,5 +1,6 @@
-// Color de acento (Ajustes › Apariencia): el de la paleta o uno elegido, que sustituye al principal (p, pc…)
-// en todo el tema (hf-apply apply_accent; el contraste del texto sobre él se calcula solo).
+// Color de acento (Ajustes › Apariencia): automático según la paleta, colores extraídos de la paleta actual,
+// blanco siempre disponible, o un color personalizado. Sustituye al primario (p, pc…) en todo el tema
+// (hf-apply apply_accent; el contraste del texto sobre él se calcula solo).
 //   AccentPicker { }   → Settings "accent" = "" | "#RRGGBB"
 import QtQuick
 import QtQuick.Layouts
@@ -10,20 +11,30 @@ ColumnLayout {
     id: root
     spacing: 8
     readonly property string accent: Settings.get("accent", "") ?? ""
-    readonly property var presets: [
-        ["#7AA2F7", "Azul"], ["#5CC8E0", "Cian"], ["#4FB8A0", "Verde azulado"], ["#8BC273", "Verde"],
-        ["#D8C35A", "Lima"], ["#F2B84B", "Ámbar"], ["#F28C4B", "Naranja"], ["#EE6B6B", "Rojo"],
-        ["#F07AAE", "Rosa"], ["#C38AF0", "Violeta"], ["#9A8CF2", "Índigo"], ["#9AA5B4", "Gris"]
-    ]
-    readonly property bool custom: accent !== "" && !presets.some(p => p[0].toUpperCase() === accent.toUpperCase())
+    // Colores compatibles con el tema actual: primario, terciario y los colores del terminal
+    readonly property var themeColors: {
+        const base = [Theme.p, Theme.ter];
+        const ansi = Theme.ansi || [];
+        const out = [];
+        for (const c of base.concat(ansi.slice(1, 7))) {
+            const hex = root.hex(c);
+            if (hex && !out.includes(hex)) out.push(hex);
+        }
+        return out.slice(0, 8);
+    }
+    readonly property bool custom: accent !== "" && accent.toUpperCase() !== "#FFFFFF" && !root.themeColors.includes(accent.toUpperCase())
     property bool editing: false
     function valid(h) { return /^#[0-9a-fA-F]{6}$/.test(h); }
+    function hex(c) {
+        const h = n => Math.round(n * 255).toString(16).padStart(2, "0");
+        return "#" + h(c.r) + h(c.g) + h(c.b).toUpperCase();
+    }
     function pick(h) { Settings.set("accent", h); }
 
     Flow {
         Layout.fillWidth: true
         spacing: 4
-        // De la paleta
+        // Automático: el de la paleta
         Rectangle {
             width: 21; height: 21; radius: 10.5
             color: "transparent"
@@ -38,21 +49,34 @@ ColumnLayout {
                 }
             }
             MouseArea { id: autoMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.pick("") }
-            HoverTip { shown: autoMa.containsMouse; text: "El de la paleta" }
+            HoverTip { shown: autoMa.containsMouse; text: "Automático según la paleta" }
         }
+        // Blanco siempre
+        Rectangle {
+            id: whiteSw
+            readonly property bool on: root.accent.toUpperCase() === "#FFFFFF"
+            width: 21; height: 21; radius: 10.5
+            color: "#FFFFFF"
+            border.width: on ? 2 : 1
+            border.color: on ? Theme.t : Theme.ov
+            Icon { anchors.centerIn: parent; visible: whiteSw.on; name: "check"; size: 12; color: "#1A1A1A" }
+            MouseArea { id: wma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.pick("#FFFFFF") }
+            HoverTip { shown: wma.containsMouse; text: "Blanco" }
+        }
+        // Colores de la paleta actual
         Repeater {
-            model: root.presets
+            model: root.themeColors
             Rectangle {
                 id: sw
-                required property var modelData
-                readonly property bool on: root.accent.toUpperCase() === modelData[0].toUpperCase()
+                required property color modelData
+                readonly property bool on: root.accent.toUpperCase() === root.hex(modelData)
                 width: 21; height: 21; radius: 10.5
-                color: modelData[0]
+                color: modelData
                 border.width: on ? 2 : 0
                 border.color: Theme.t
                 Icon { anchors.centerIn: parent; visible: sw.on; name: "check"; size: 12; color: "#1A1A1A" }
-                MouseArea { id: sma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.pick(sw.modelData[0]) }
-                HoverTip { shown: sma.containsMouse; text: sw.modelData[1] }
+                MouseArea { id: sma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.pick(root.hex(modelData)) }
+                HoverTip { shown: sma.containsMouse; text: "Del tema" }
             }
         }
         // Personalizado

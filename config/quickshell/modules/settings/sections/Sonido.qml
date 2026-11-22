@@ -184,28 +184,24 @@ RowLayout {
     }
     Section {
         Layout.fillWidth: true
-        title: "Sonidos del sistema"
+        title: "Sonidos y música"
         SwRow {
             separator: false
             label: "Sonidos del sistema"; sub: "avisos, pomodoro y sonidos de las apps (tema freedesktop)"
             key: "systemSounds"; def: true
             onToggled: v => Quickshell.execDetached(["gsettings", "set", "org.gnome.desktop.sound", "event-sounds", v ? "true" : "false"])
         }
+        SwRow {
+            separator: false
+            label: "Buscar la letra de las canciones"
+            sub: "sale en el panel de música (Super + M o clic en la onda de la barra), desplazándose con la canción · lrclib.net"
+            key: "musicLyrics"; def: false
+        }
         RowLayout {
             spacing: 4
             Button { kind: "outline"; h: 26; text: "Probar"; onClicked: Quickshell.execDetached(["sh", "-c", "canberra-gtk-play -i bell 2>/dev/null || pw-play /usr/share/sounds/freedesktop/stereo/bell.oga"]) }
             Txt { text: "·"; color: Theme.p }
             Button { kind: "link"; text: "Sonido de las notificaciones"; onClicked: Shell.open("ajustesapp", "notificaciones") }
-        }
-    }
-    Section {
-        Layout.fillWidth: true
-        title: "Música"
-        SwRow {
-            separator: false
-            label: "Buscar la letra de las canciones"
-            sub: "sale en el panel de música (Super + M o clic en la onda de la barra), desplazándose con la canción · se la pide a lrclib.net con el artista, el título y la duración"
-            key: "musicLyrics"; def: false
         }
     }
     }

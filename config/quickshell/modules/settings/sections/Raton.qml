@@ -1,8 +1,7 @@
 // Ajustes › Ratón y panel táctil — ratón (velocidad input:sensitivity, aceleración, botón principal, desplazamiento
 // natural y velocidad, pegar con el botón central), panel táctil (velocidad y modo de desplazamiento por dispositivo,
-// tocar para hacer clic, tocar y arrastrar, natural, desactivar al escribir, clic por zonas o por dedos) y tableta
-// gráfica (pantalla asignada, zurdos; OpenTabletDriver). Todo → config/apply/20-input.py. Los gestos siguen en
-// Escritorio y gestos.
+// tocar para hacer clic, tocar y arrastrar, natural, desactivar al escribir, clic por zonas o por dedos), gestos con
+// 3 y 4 dedos, y tableta gráfica (pantalla asignada, zurdos; OpenTabletDriver). Todo → config/apply/20-input.py.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -152,55 +151,95 @@ RowLayout {
         }
     }
 
-    // ---------- panel táctil ----------
-    Section {
+    // ---------- panel táctil y gestos ----------
+    ColumnLayout {
         id: right
         Layout.fillWidth: true
         Layout.preferredWidth: 1
         Layout.alignment: Qt.AlignTop
-        title: "Panel táctil"
-        headerRight: Mono { text: root.touchpads.length ? root.touchpads[0] : "no detectado" }
-        Txt {
-            visible: root.touchpads.length === 0
-            Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
-            text: "No hay ningún panel táctil conectado. Estos ajustes se aplicarán cuando lo haya."
-        }
-        LabeledRow {
-            label: "Velocidad"; labelWidth: 130
-            hint: "por dispositivo"
-            Speed { value: root.tpSpeed; onMoved: v => { root.tpSpeed = v; saveTp.restart(); } }
-        }
-        LabeledRow {
-            label: "Desplazamiento"; labelWidth: 130
-            hint: "scroll_method"
-            Seg {
-                model: [["2fg", "Con dos dedos"], ["edge", "Por el borde"]]
-                current: Settings.get("touchpadScroll", "2fg")
-                onPicked: k => Settings.set("touchpadScroll", k)
+        spacing: 12
+        Section {
+            Layout.fillWidth: true
+            title: "Panel táctil"
+            headerRight: Mono { text: root.touchpads.length ? root.touchpads[0] : "no detectado" }
+            Txt {
+                visible: root.touchpads.length === 0
+                Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
+                text: "No hay ningún panel táctil conectado. Estos ajustes se aplicarán cuando lo haya."
             }
-        }
-        LabeledRow {
-            label: "Clic secundario"; labelWidth: 130
-            hint: "clickfinger"
-            Seg {
-                model: [["areas", "Esquina inferior derecha"], ["clickfinger", "Dos dedos"]]
-                current: Settings.get("clickMethod", "areas")
-                onPicked: k => Settings.set("clickMethod", k)
+            LabeledRow {
+                label: "Velocidad"; labelWidth: 130
+                hint: "por dispositivo"
+                Speed { value: root.tpSpeed; onMoved: v => { root.tpSpeed = v; saveTp.restart(); } }
             }
+            LabeledRow {
+                label: "Desplazamiento"; labelWidth: 130
+                hint: "scroll_method"
+                Seg {
+                    model: [["2fg", "Con dos dedos"], ["edge", "Por el borde"]]
+                    current: Settings.get("touchpadScroll", "2fg")
+                    onPicked: k => Settings.set("touchpadScroll", k)
+                }
+            }
+            LabeledRow {
+                label: "Clic secundario"; labelWidth: 130
+                hint: "clickfinger"
+                Seg {
+                    model: [["areas", "Esquina inferior derecha"], ["clickfinger", "Dos dedos"]]
+                    current: Settings.get("clickMethod", "areas")
+                    onPicked: k => Settings.set("clickMethod", k)
+                }
+            }
+            LabeledRow {
+                label: "Velocidad de desplazamiento"; labelWidth: 130
+                Pills { model: [[0.5, "0,5×"], [0.8, "0,8×"], [1, "1×"], [1.5, "1,5×"], [2, "2×"]]; current: Number(Settings.get("touchpadScrollFactor", 1)); onPicked: v => Settings.set("touchpadScrollFactor", v) }
+            }
+            SwRow { label: "Tocar para hacer clic"; sub: "input:touchpad:tap_to_click"; mono: true; key: "tapToClick"; def: true }
+            SwRow { label: "Tocar y arrastrar"; sub: "doble toque y desliza para arrastrar"; key: "tapAndDrag"; def: true; enabled: Settings.get("tapToClick", true) }
+            SwRow { label: "Desplazamiento natural"; sub: "input:touchpad:natural_scroll"; mono: true; key: "naturalScroll"; def: true }
+            SwRow { label: "Desactivar mientras escribes"; sub: "input:touchpad:disable_while_typing"; mono: true; key: "disableWhileTyping"; def: true }
         }
-        LabeledRow {
-            label: "Velocidad de desplazamiento"; labelWidth: 130
-            Pills { model: [[0.5, "0,5×"], [0.8, "0,8×"], [1, "1×"], [1.5, "1,5×"], [2, "2×"]]; current: Number(Settings.get("touchpadScrollFactor", 1)); onPicked: v => Settings.set("touchpadScrollFactor", v) }
-        }
-        SwRow { label: "Tocar para hacer clic"; sub: "input:touchpad:tap_to_click"; mono: true; key: "tapToClick"; def: true }
-        SwRow { label: "Tocar y arrastrar"; sub: "doble toque y desliza para arrastrar"; key: "tapAndDrag"; def: true; enabled: Settings.get("tapToClick", true) }
-        SwRow { label: "Desplazamiento natural"; sub: "input:touchpad:natural_scroll"; mono: true; key: "naturalScroll"; def: true }
-        SwRow { label: "Desactivar mientras escribes"; sub: "input:touchpad:disable_while_typing"; mono: true; key: "disableWhileTyping"; def: true }
-        RowLayout {
-            Layout.topMargin: 4
-            spacing: 4
-            Txt { text: "Gestos con 3 y 4 dedos:"; muted: true; size: 11.5 }
-            Button { kind: "link"; text: "Escritorio y gestos"; onClicked: Shell.open("ajustesapp", "escritorio") }
+
+        Section {
+            id: gestures
+            Layout.fillWidth: true
+            title: "Gestos del touchpad"
+            readonly property var actions: [["ninguna", "Nada"], ["vista", "Vista general"], ["ia", "Asistente de IA"], ["spotlight", "Spotlight"],
+                ["notificaciones", "Notificaciones"], ["ajustes", "Ajustes rápidos"], ["bloquear", "Bloquear pantalla"], ["escritorio", "Mostrar escritorio"]]
+            Repeater {
+                model: [
+                    { key: "gesture3h", fingers: "3 dedos", dir: "← →", fixed: "Cambiar de espacio" },
+                    { key: "gesture3Up", fingers: "3 dedos", dir: "↑", def: "vista" },
+                    { key: "gesture3Down", fingers: "3 dedos", dir: "↓", def: "escritorio" },
+                    { key: "gesture4Up", fingers: "4 dedos", dir: "↑", def: "spotlight" },
+                    { key: "gesture4Down", fingers: "4 dedos", dir: "↓", def: "ninguna" }
+                ]
+                Item {
+                    id: g
+                    required property var modelData
+                    required property int index
+                    Layout.fillWidth: true
+                    implicitHeight: 40
+                    Rectangle { visible: g.index > 0; width: parent.width; height: 1; color: Theme.ov }
+                    RowLayout {
+                        anchors.fill: parent
+                        spacing: 12
+                        Rectangle { implicitWidth: 64; implicitHeight: 24; radius: 12; color: Theme.s4; Txt { anchors.centerIn: parent; text: g.modelData.fingers; size: 11.5; weight: Font.DemiBold } }
+                        Txt { Layout.preferredWidth: 34; text: g.modelData.dir; size: 15; horizontalAlignment: Text.AlignHCenter }
+                        Item { Layout.fillWidth: true }
+                        Txt { visible: !!g.modelData.fixed; text: g.modelData.fixed ?? ""; weight: Font.Medium }
+                        Dropdown {
+                            visible: !g.modelData.fixed
+                            flat: true
+                            Layout.preferredWidth: 190
+                            model: gestures.actions
+                            current: Settings.get(g.modelData.key, g.modelData.def)
+                            onPicked: k => Settings.set(g.modelData.key, k)
+                        }
+                    }
+                }
+            }
+            SwRow { label: "Inercia al cambiar de espacio"; sub: "un deslizamiento rápido cambia de espacio aunque sea corto"; key: "gestureInertia"; def: true }
         }
     }
 }

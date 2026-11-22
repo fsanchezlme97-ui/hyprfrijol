@@ -111,13 +111,16 @@ ColumnLayout {
                             }
                         }
                     }
-                    Field {
+                    LabeledRow {
                         visible: root.pwFor === nw.modelData.ssid
-                        Layout.fillWidth: true
-                        icon: "lock"
-                        placeholder: "Contraseña de «" + nw.modelData.ssid + "» (si no está guardada) · Enter"
-                        input.echoMode: TextInput.Password
-                        onAccepted: { Net.connect(nw.modelData.ssid, text); text = ""; root.pwFor = ""; }
+                        label: "Contraseña"; labelWidth: 110
+                        Field {
+                            Layout.fillWidth: true
+                            icon: "lock"
+                            placeholder: "Contraseña de «" + nw.modelData.ssid + "» (si no está guardada) · Enter"
+                            input.echoMode: TextInput.Password
+                            onAccepted: { Net.connect(nw.modelData.ssid, text); text = ""; root.pwFor = ""; }
+                        }
                     }
                 }
             }
@@ -132,6 +135,13 @@ ColumnLayout {
                 Txt { text: "·"; color: Theme.p }
                 Button { kind: "link"; text: "Buscar de nuevo"; onClicked: Net.scan() }
             }
+            SwRow {
+                visible: Net.wifiEnabled
+                separator: false
+                label: "Compartir conexión"; sub: "punto de acceso Wi-Fi con el nombre de tu equipo"
+                checked: root.hotspot
+                onToggled: v => { Quickshell.execDetached(v ? ["sh", "-c", "nmcli device wifi hotspot ssid \"$(hostname)-hl\" password \"$(head -c 6 /dev/urandom | base64 | tr -dc a-zA-Z0-9 | head -c 10)\" && nmcli device wifi show-password | notify-send -a Red 'Punto de acceso activo' \"$(cat)\""] : ["sh", "-c", "nmcli connection down Hotspot"]); later.restart(); }
+            }
         }
         ColumnLayout {
             id: side
@@ -141,6 +151,7 @@ ColumnLayout {
             spacing: 12
             Section {
                 Layout.fillWidth: true
+                title: "Conexión"
                 SwRow {
                     separator: false
                     label: "Cortafuegos"
@@ -150,20 +161,13 @@ ColumnLayout {
                     onToggled: v => { Quickshell.execDetached(["pkexec", "sh", "-c", root.fw === "ufw" ? (v ? "systemctl enable --now ufw && ufw --force enable" : "ufw disable && systemctl disable --now ufw") : (v ? "systemctl enable --now firewalld" : "systemctl disable --now firewalld")]); later.restart(); }
                 }
                 SwRow {
-                    label: "Compartir conexión"; sub: "punto de acceso Wi-Fi con el nombre de tu equipo"
-                    checked: root.hotspot
-                    onToggled: v => { Quickshell.execDetached(v ? ["sh", "-c", "nmcli device wifi hotspot ssid \"$(hostname)-hl\" password \"$(head -c 6 /dev/urandom | base64 | tr -dc a-zA-Z0-9 | head -c 10)\" && nmcli device wifi show-password | notify-send -a Red 'Punto de acceso activo' \"$(cat)\""] : ["sh", "-c", "nmcli connection down Hotspot"]); later.restart(); }
-                }
-                SwRow {
                     label: "Conexión medida"; sub: "pausa actualizaciones y sincronización · " + (root.activeCon || "sin conexión")
                     enabled: root.activeCon !== ""
                     checked: root.metered
                     onToggled: v => { Quickshell.execDetached(["nmcli", "connection", "modify", root.activeCon, "connection.metered", v ? "yes" : "no"]); root.metered = v; }
                 }
-            }
-            Section {
-                Layout.fillWidth: true
-                title: "DNS"
+                Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.ov }
+                Txt { text: "DNS"; weight: Font.DemiBold; size: 12 }
                 Seg {
                     Layout.fillWidth: true
                     model: [["auto", "Automático"], ["cf", "Cloudflare"], ["q9", "Quad9"], ["custom", "Propio"]]
@@ -282,6 +286,7 @@ ColumnLayout {
             muted: true
             text: "No tienes ninguna VPN. Importa el archivo que te dio tu proveedor o tu empresa (.ovpn de OpenVPN, .conf de WireGuard, .pcf de Cisco, copia .conf de FortiClient…) o añádela por tipo: FortiGate y GlobalProtect admiten SSO en el navegador."
         }
+        Txt { visible: vs.conns.length > 0; text: "Conexiones guardadas"; weight: Font.DemiBold; size: 12 }
         Repeater {
             model: vs.conns
             ColumnLayout {
@@ -375,6 +380,7 @@ ColumnLayout {
             }
         }
         // clientes oficiales instalados: solo se abren (su configuración es suya)
+        Txt { visible: vs.official.length > 0; text: "Clientes oficiales"; weight: Font.DemiBold; size: 12 }
         Repeater {
             model: vs.official
             InfoRow {
@@ -394,6 +400,7 @@ ColumnLayout {
             visible: vs.adding
             Layout.fillWidth: true
             spacing: 12
+            Txt { text: "Añadir conexión"; weight: Font.DemiBold; size: 12 }
             Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.ov; visible: vs.conns.length > 0 }
             Txt { text: "Tipo de VPN"; muted: true; size: 11.5 }
             GridLayout {
@@ -482,7 +489,7 @@ ColumnLayout {
     // ---------- VPN en malla ----------
     component MeshSection: Section {
         id: ms
-        title: "VPN en malla"
+        title: "Tailscale y ZeroTier"
         headerRight: Mono { tech: true; text: "tailscale · zerotier-cli" }
         readonly property string cmd: Paths.script("hf-vpn")
         property var ts: ({ installed: false })
@@ -508,6 +515,7 @@ ColumnLayout {
         }
 
         // ---------- Tailscale ----------
+        Txt { text: "Tailscale"; weight: Font.DemiBold; size: 12 }
         InfoRow {
             id: tsRow
             separator: false
@@ -548,6 +556,7 @@ ColumnLayout {
         }
 
         // ---------- ZeroTier ----------
+        Txt { text: "ZeroTier"; weight: Font.DemiBold; size: 12 }
         InfoRow {
             id: ztRow
             label: "ZeroTier"

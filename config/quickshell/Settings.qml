@@ -66,14 +66,14 @@ Singleton {
     // barHeight (Ajustes › Barra › Tamaño): grosor en px, de 24 a 56 (34 = «Normal», las medidas del diseño:
     // fija 32 px, flotante/isla/archipiélago 30 px + margen, lateral 36 px de ancho). El contenido se escala en
     // proporción (barScale), así iconos y textos crecen con la barra.
-    // barMode: "fija" · "flotante" · "media" (flotante y más corta, unos dos tercios del borde) · "isla" (mide lo que su
-    // contenido) · "archipielago" (cada grupo en su propia píldora). barAlign: "inicio" · "centro" · "fin" (media e isla)
+    // barMode: "fija" · "flotante" · "isla" (mide lo que su contenido) · "archipielago" (cada grupo en su propia píldora).
+    // barAlign: "inicio" · "centro" · "fin" (isla) controla la posición a lo largo del borde.
     readonly property int barSize: Math.max(24, Math.min(56, Math.round(Number(get("barHeight", 34)) || 34)))
     readonly property string barPos: get("barPos", "abajo")
-    readonly property string barMode: get("barMode", "fija")
-    readonly property bool barFloating: ["flotante", "media", "isla", "archipielago"].includes(barMode)
+    // "media" se eliminó de la UI: se comporta como "isla" (flotante y mide lo que pida el contenido).
+    readonly property string barMode: { const v = get("barMode", "fija"); return v === "media" ? "isla" : v; }
+    readonly property bool barFloating: ["flotante", "isla", "archipielago"].includes(barMode)
     readonly property bool barIsland: barMode === "isla"
-    readonly property bool barMedium: barMode === "media"
     readonly property string barAlign: ["inicio", "fin"].includes(get("barAlign", "centro")) ? get("barAlign", "centro") : "centro"
     readonly property bool barArchipelago: barMode === "archipielago"
     readonly property bool barVertical: barPos === "izquierda" || barPos === "derecha"

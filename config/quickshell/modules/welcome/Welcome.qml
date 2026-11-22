@@ -17,7 +17,7 @@ Scope {
     id: root
     property int step: parseInt(Quickshell.env("HF_WELCOME_STEP") || "0") || 0
     property var packs: ({ esen: true })
-    property string fm: "nautilus"
+    property string fm: "dolphin"
     property var locales: []
     property var zones: []
     property string lang: ""
@@ -285,24 +285,19 @@ Scope {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 12
-                Repeater {
-                    model: [["auto", "Automático", Theme.p, Theme.pc], ["elegir", "Elegir", "#A9C1D9", "#2C3E50"], ["mono", "Monocromo", "#E8E8E8", "#3A3A3A"]]
-                    Rectangle {
-                        required property var modelData
-                        readonly property bool on: Settings.get("colorMode", "auto") === modelData[0]
-                        Layout.fillWidth: true
-                        implicitHeight: 56
-                        radius: Theme.r(8)
-                        color: "transparent"
-                        border.width: on ? 2 : 1
-                        border.color: on ? Theme.p : Theme.ov
-                        RowLayout {
-                            anchors.fill: parent; anchors.leftMargin: 12
-                            spacing: 12
-                            Row { spacing: 2; Rectangle { width: 12; height: 24; radius: Theme.r(3); color: parent.parent.parent.modelData[2] } Rectangle { width: 12; height: 24; radius: Theme.r(3); color: parent.parent.parent.modelData[3] } }
-                            Txt { Layout.fillWidth: true; text: parent.parent.modelData[1]; weight: Font.Medium }
-                        }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Settings.set("colorMode", parent.modelData[0]) }
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 56
+                    radius: Theme.r(8)
+                    color: "transparent"
+                    border.width: 1
+                    border.color: Theme.ov
+                    RowLayout {
+                        anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
+                        spacing: 12
+                        Row { spacing: 2; Rectangle { width: 12; height: 24; radius: Theme.r(3); color: Theme.p } Rectangle { width: 12; height: 24; radius: Theme.r(3); color: Theme.pc } }
+                        Txt { Layout.fillWidth: true; text: Theme.paletteName.replace(" · claro", ""); weight: Font.Medium }
+                        Button { kind: "ghost"; text: "Cambiar"; onClicked: { root.finish(); Shell.open("ajustes", "apariencia"); } }
                     }
                 }
             }
@@ -392,7 +387,7 @@ Scope {
                 Segmented {
                     Layout.fillWidth: true
                     h: 38
-                    model: [{ key: "nautilus", label: "Nautilus\n(recomendado)" }, { key: "dolphin", label: "Dolphin\n(alt. KDE)" }, { key: "yazi", label: "Yazi (terminal)" }]
+                    model: [{ key: "dolphin", label: "Dolphin\n(recomendado)" }, { key: "nautilus", label: "Nautilus\n(alt. GNOME)" }, { key: "yazi", label: "Yazi (terminal)" }]
                     current: root.fm
                     onPicked: k => root.fm = k
                 }
@@ -438,7 +433,7 @@ Scope {
                 model: [
                     ["Idioma", root.localeLabel(root.lang)],
                     ["Superficies", Theme.glassy ? "Transparentes" : "Sólidas"],
-                    ["Color", Settings.get("colorMode", "auto") === "auto" ? "Automático (del fondo)" : Settings.get("colorMode", "auto") === "mono" ? "Monocromo" : Theme.paletteName],
+                    ["Color", Theme.paletteName.replace(" · claro", "")],
                     ["Barra", Settings.get("barPos", "abajo") === "izquierda" ? "Lateral" : (Settings.get("barMode", "fija") === "fija" ? "Fija " : "Flotante ") + Settings.get("barPos", "abajo")],
                     ["Archivos", ({ nautilus: "Nautilus", dolphin: "Dolphin", yazi: "Yazi" })[root.fm]],
                     ["Aplicaciones", root.packDefs.filter(p => root.packs[p[0]]).map(p => p[1]).join(", ") || "Ninguna"]

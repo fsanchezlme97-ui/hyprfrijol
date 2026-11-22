@@ -33,7 +33,7 @@ RowLayout {
             + 'echo "$1" > "$2" && rm -f /etc/udev/rules.d/99-hypr-liquid-charge.rules && r=/etc/udev/rules.d/99-hyprfrijol-charge.rules && '
             + 'if [ -n "$3" ]; then printf "# hyprfrijol · Ajustes › Energía (límite de carga)\n%s\n" "$3" > "$r"; else rm -f "$r"; fi';
         if (hasPkexec) Quickshell.execDetached(["pkexec", "sh", "-c", cmd, "sh", String(n), battery, rule]);
-        else Pkg.runInTerminal("sudo sh -c '" + cmd.replace(/'/g, "'\\''") + "' sh " + n + " '" + battery + "' '" + rule.replace(/'/g, "'\\''") + "'", "Límite de carga");
+        else Pkg.runInTerminal("sudo sh -c '" + cmd.split("'").join("'\\''") + "' sh " + n + " '" + battery + "' '" + rule.split("'").join("'\\''") + "'", "Límite de carga");
         threshold = n;
         Settings.set("chargeLimit", n);
         thrLater.restart();
@@ -169,6 +169,7 @@ RowLayout {
         }
         Section {
             Layout.fillWidth: true
+            title: "Batería y carga"
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 12

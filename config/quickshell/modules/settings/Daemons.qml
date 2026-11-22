@@ -1,7 +1,5 @@
 // Lo que los ajustes necesitan «vivo» mientras corre el shell:
 //  · Luz nocturna (hyprsunset) según nightLight/nightTemp/nightFrom/nightTo (o el sol: services/Sun.qml)
-//  · Tema claro/oscuro automático (themeMode = "auto"): vuelve a aplicar al cruzar lightFrom/lightTo o, con
-//    themeSchedule = "sol", el amanecer/atardecer (la misma fuente que la luz nocturna)
 //  · Ahorro automático con batería baja y vidrio sin desenfoque con batería
 //  · Esquinas calientes (hotCorners)
 //  · Lector de pantalla (Orca) al iniciar si está activado
@@ -43,34 +41,15 @@ Scope {
     onNlModeChanged: nightTick()
     onNlTempChanged: { nlApplied = -1; nightTick(); }
 
-    // ---------- tema automático ----------
-    property var lastLight: null
-    property real lastFix: 0
-    function themeTick(): void {
-        if (Settings.get("themeMode", "oscuro") !== "auto") { lastLight = null; return; }
-        const d = new Date(), h = d.getHours();
-        const light = Settings.get("themeSchedule", "horas") === "sol" ? Sun.isDay(h * 60 + d.getMinutes())
-            : Settings.get("lightFrom", 7) <= h && h < Settings.get("lightTo", 19);
-        if (lastLight !== null && light !== lastLight) {
-            Settings.apply();
-            if (Settings.get("themeWallpaper", false)) Quickshell.execDetached([Paths.script("hf-wallpaper"), "next"]);
-        } else if (light !== Theme.sysLight && Date.now() - lastFix > 120000) {
-            // hf-apply decide por su cuenta (mismo cálculo): si el tema aplicado no coincide, se reaplica
-            lastFix = Date.now();
-            Settings.apply();
-        }
-        lastLight = light;
-    }
     // Al cambiar el horario (o las horas del sol) se recalcula enseguida. Sun solo se usa si hace falta
     // (así no se pregunta la ubicación a quien no usa el sol).
-    readonly property bool needSun: Settings.get("themeSchedule", "horas") === "sol" || nlMode === "atardecer"
-    readonly property string sched: Settings.get("themeMode", "oscuro") + Settings.get("themeSchedule", "horas") + Settings.get("lightFrom", 7)
-        + "-" + Settings.get("lightTo", 19) + (needSun ? Sun.sunrise + Sun.sunset : "")
-    onSchedChanged: if (Settings.loaded) { nightTick(); themeTick(); }
+    readonly property bool needSun: nlMode === "atardecer"
+    readonly property string sched: (needSun ? Sun.sunrise + Sun.sunset : "")
+    onSchedChanged: if (Settings.loaded) nightTick()
 
     Timer {
         interval: 30000; running: Settings.loaded; repeat: true; triggeredOnStart: true
-        onTriggered: { root.nightTick(); root.themeTick(); root.batteryTick(); }
+        onTriggered: { root.nightTick(); root.batteryTick(); }
     }
 
     // ---------- batería ----------

@@ -1,10 +1,8 @@
 pragma Singleton
-// Amanecer y atardecer de hoy, una sola fuente para la luz nocturna («Del atardecer al amanecer») y el tema
-// claro/oscuro «Según la salida y puesta del sol» (themeSchedule = "sol").
+// Amanecer y atardecer de hoy, para la luz nocturna («Del atardecer al amanecer»).
 //  · sunAuto (por defecto true): se calculan con la ecuación de NOAA a partir de la ubicación del clima
 //    (Weather.where: ciudad fija weatherLat/weatherLon o la última por IP, si weatherIpLocation lo permite).
 //  · Sin ubicación (o sunAuto = false): las horas a mano sunrise / sunset de Ajustes › Pantallas.
-// scripts/hf-apply hace el mismo cálculo (sun_times) para elegir la paleta clara u oscura.
 //   Sun.sunrise / Sun.sunset ("HH:MM"), Sun.riseMin / Sun.setMin (minutos desde las 0:00), Sun.computed,
 //   Sun.isDay(minutos), Sun.where (texto de la ubicación)
 import QtQuick

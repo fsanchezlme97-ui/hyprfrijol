@@ -269,24 +269,14 @@ Item {
                     anchors.fill: parent
                     anchors.leftMargin: 4; anchors.rightMargin: 4
                     spacing: 12
-                    // Tarjeta de perfil (profileCard): la foto con un anillo en degradado del tema asomando 2 px
+                    // Foto de perfil (profileCard): redondeada, sin marco
                     Item {
                         id: avBox
                         readonly property bool ring: Settings.get("profileCard", true) === true
-                        implicitWidth: 38; implicitHeight: 38
-                        Rectangle {
-                            visible: avBox.ring
-                            anchors.fill: parent; radius: Theme.r(6) + 2
-                            gradient: Gradient {
-                                orientation: Gradient.Horizontal
-                                GradientStop { position: 0; color: face.cP }
-                                GradientStop { position: 1; color: face.cTer }
-                            }
-                        }
-                    Rectangle {
-                        anchors.centerIn: parent
                         implicitWidth: avBox.ring ? 34 : 38; implicitHeight: implicitWidth
-                        radius: avBox.ring ? Theme.inner(Theme.r(6) + 2, 2) : Theme.r(6)
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: Theme.r(6)
                         color: face.cPc
                         clip: true
                         Icon { anchors.centerIn: parent; name: face.ctl?.hasFprint ? "fingerprint" : "user"; size: 17; color: face.cPcText; visible: avatar.status !== Image.Ready }

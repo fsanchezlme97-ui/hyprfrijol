@@ -103,7 +103,7 @@ RowLayout {
         property string initial: ""
         property real d: 40
         implicitWidth: d; implicitHeight: d
-        radius: d / 2
+        radius: Math.min(Theme.r(12), d * 0.25)
         color: Theme.pc
         Txt { anchors.centerIn: parent; visible: img.status !== Image.Ready; text: av.initial.charAt(0).toUpperCase(); size: av.d * 0.4; weight: Font.DemiBold; color: Theme.pcText }
         Image {

@@ -1,5 +1,5 @@
-// Barra del diseño. Posición: abajo / arriba / izquierda / derecha · forma: fija / flotante / media / isla / archipiélago
-// (media e isla, alineadas al inicio, al centro o al final del borde: barAlign)
+// Barra del diseño. Posición: abajo / arriba / izquierda / derecha · forma: fija / flotante / isla / archipiélago
+// (isla y archipiélago comparten acabado de vidrio; isla alineada al inicio, centro o final del borde: barAlign)
 // (Ajustes › Barra). Medidas en Settings: barThickness (grosor), barOffset (margen si flota) y barScale
 // (el contenido se diseña a 32 px y se escala en proporción al tamaño elegido).
 // Ajustes que lee aquí:
@@ -13,8 +13,7 @@
 //   (Transparencia)      la barra es de vidrio esmerilado como la de macOS (Theme.glass = Theme.frost, el mismo de los
 //                        paneles y el dock); el contenido con los colores del tema (acento, onda, paleta)
 //   visualBell           parpadea al llegar un aviso (alerta visual en vez de sonido)
-// Isla: la barra flota y mide lo que su contenido; media: dos tercios del borde (o lo que pida el contenido). El resto
-// de la franja deja pasar el ratón.
+// Isla: la barra flota y mide lo que su contenido; el resto de la franja deja pasar el ratón.
 // Archipiélago: cada grupo de módulos en su propia píldora flotante (BarPill), con el escritorio visible entre
 // ellas; solo las píldoras reciben el ratón (máscara con content.item.pills).
 // Super + J (Shell.barHidden) la deja escondida: vuelve al llevar el cursor al borde.
@@ -70,7 +69,7 @@ PanelWindow {
     // Con cristal (transparencia) sin filo: el borde lo da el propio cristal, suave; un trazo se veía marcado
     readonly property real pillBorderW: (borderMode === "ninguno" || Theme.glassy ? 0 : 1) / k
     readonly property color pillBorder: Theme.light ? Qt.rgba(0, 0, 0, 0.08) : Qt.rgba(0, 0, 0, 0.20)
-    readonly property real bellLevel: bell.opacity
+    property real bellLevel: 0
     // Rectángulo de la píldora i del archipiélago en px de la ventana (vacío si no toca)
     function pillRect(i: int): var {
         const p = content.item?.pills?.[i];
@@ -140,9 +139,8 @@ PanelWindow {
             // Largo natural del contenido (isla) ya escalado
             readonly property real natural: (content.item?.naturalLength ?? 400) * bar.k
             readonly property real full: bar.vertical ? parent.height : parent.width
-            readonly property real length: bar.island ? Math.min(natural, full)
-                                         : Settings.barMedium ? Math.min(full, Math.max(natural, Math.round(full * 0.66))) : full
-            // Hueco libre a lo largo del borde, repartido según la alineación (media e isla)
+            readonly property real length: bar.island ? Math.min(natural, full) : full
+            // Hueco libre a lo largo del borde, repartido según la alineación (isla)
             // (con el largo animado: el borde alineado se queda quieto mientras crece o encoge)
             readonly property real shown: bar.vertical ? height : width
             readonly property real along: Settings.barAlign === "inicio" ? 0 : Settings.barAlign === "fin" ? full - shown : (full - shown) / 2
@@ -150,8 +148,8 @@ PanelWindow {
             y: bar.vertical ? along : (bar.pos === "arriba" ? bar.inner : 0)
             width: bar.vertical ? bar.thickness : length
             height: bar.vertical ? length : bar.thickness
-            Behavior on width { enabled: (bar.island || Settings.barMedium) && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
-            Behavior on height { enabled: (bar.island || Settings.barMedium) && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+            Behavior on width { enabled: bar.island && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+            Behavior on height { enabled: bar.island && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
             // Escondida: se desliza hacia el borde
             readonly property real hiddenShift: bar.thickness + bar.off + 2
             transform: Translate {
@@ -161,42 +159,24 @@ PanelWindow {
                 Behavior on y { enabled: !Theme.still; NumberAnimation { duration: Theme.durIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
             }
 
-            Glass {
+            BarBg {
                 id: bg
                 anchors.fill: parent
-                kind: "bar"
-                radius: bar.floating ? (Theme.pill || bar.island || Settings.barMedium ? Math.min(Theme.barRadius * 2, bar.thickness / 2) : Theme.barRadius) : 0
+                radius: bar.floating ? (Theme.pill || bar.island ? Math.min(Theme.barRadius * 2, bar.thickness / 2) : Theme.barRadius) : 0
                 shadow: bar.floating
-                showBorder: bar.floating
-                effects: bar.floating
+                drawBorder: bar.floating
                 // Archipiélago: el fondo lo ponen las píldoras de cada grupo (BarPill)
                 visible: !bar.archi
-                // Fija: solo la línea del lado de las ventanas
-                Rectangle {
-                    visible: !bar.floating && (Theme.borderWidth > 0 || Theme.glassy)
-                    color: Theme.glassy && !Theme.flatRim ? Theme.rimTop : Theme.border
-                    opacity: Theme.glassy && !Theme.flatRim ? 0.6 : 1
-                    width: bar.vertical ? 1 : parent.width
-                    height: bar.vertical ? parent.height : 1
-                    x: bar.pos === "izquierda" ? parent.width - 1 : 0
-                    y: bar.pos === "arriba" ? parent.height - 1 : 0
-                }
+                bellLevel: bar.bellLevel
+                feather: 1
             }
 
-            // Alerta visual (visualBell): dos destellos del color primario
-            Rectangle {
-                id: bell
-                anchors.fill: parent
-                radius: bg.radius
-                color: Theme.p
-                opacity: 0
-                visible: !bar.archi
-                SequentialAnimation {
-                    id: flash
-                    loops: 2
-                    NumberAnimation { target: bell; property: "opacity"; to: 0.45; duration: 120 }
-                    NumberAnimation { target: bell; property: "opacity"; to: 0; duration: 220 }
-                }
+            // Alerta visual (visualBell): dos destellos del color primario sobre el fondo
+            SequentialAnimation {
+                id: flash
+                loops: 2
+                NumberAnimation { target: bar; property: "bellLevel"; to: 0.45; duration: 120 }
+                NumberAnimation { target: bar; property: "bellLevel"; to: 0; duration: 220 }
             }
 
             // Contenido diseñado a su tamaño normal y escalado (nítido: ver textScaled)

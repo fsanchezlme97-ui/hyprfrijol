@@ -2,7 +2,6 @@
 // hf-wallpaper escribe ~/.local/state/hyprfrijol/wallpaper.json y aquí se hace el fundido:
 //   { image, video, fadeMs, monitors: { "DP-1": "/ruta.jpg" } }   (monitors = fondo propio por pantalla)
 //   motions: { "DP-1": "/vídeo.mp4" } + motionOn: { "DP-1": true } = esa pantalla tiene vídeo propio y ya pinta
-// - Modo de color «mono» + ajuste monoFondo (por defecto sí) → el fondo se ve en blanco y negro.
 // - Rotación: wallpaperRotateMin > 0 cambia el fondo cada N minutos (wallpaperRandom = al azar);
 //   wallpaperHora = true pone el fondo de la hora del día (amanecer, bruma, lago, noche).
 // Si el fondo es un vídeo que reproduce mpvpaper, esta capa se oculta.
@@ -10,7 +9,6 @@
 // haya nada en pantalla completa), wallpaperPauseOn (pausa el fondo en movimiento: fullscreen | bateria | maximizada |
 // cubierto (las ventanas tapan ≥ 85 % de cada pantalla, en mosaico o flotantes) | juego | foco). wallpaperMotion / wallpaperMotionKind / wallpaperFps los aplica hf-wallpaper.
 import QtQuick
-import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -39,8 +37,6 @@ PanelWindow {
     readonly property string image: ownImage || wp.image
     // Se ve un vídeo detrás: el propio de la pantalla (cuando ya pinta) o, sin fondo propio, el global
     readonly property bool showVideo: ownImage !== "" ? !!(wp.motionOn ?? {})[outName] : wp.video
-    readonly property bool mono: Settings.get("colorMode", "auto") === "mono"
-                                 && Settings.get("monoFondo", true) !== false && Settings.get("monoFondo", true) !== "false"
     // Solo la primera pantalla se encarga de rotar (hay una instancia de esto por pantalla)
     readonly property bool primary: Quickshell.screens.length === 0 || screen === Shell.primaryScreen
 
@@ -108,14 +104,6 @@ PanelWindow {
             onStatusChanged: if (status === Image.Ready && win.showA) win.showA = false
             onOpacityChanged: if (opacity === 0 && win.showA) source = ""
         }
-        // Blanco y negro (modo mono), con transición suave
-        layer.enabled: win.mono || satAnim.running
-        layer.effect: MultiEffect {
-            saturation: stack.sat
-            contrast: -stack.sat * 0.05
-        }
-        property real sat: win.mono ? -1 : 0
-        Behavior on sat { NumberAnimation { id: satAnim; duration: Theme.ms(600); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
 
     // Luz media del fondo de cada pantalla en la franja del lado de la barra (el 30 % de la pantalla; 0-1, luma de sRGB):

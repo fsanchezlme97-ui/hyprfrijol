@@ -25,7 +25,6 @@ Rectangle {
     MultiEffect {   // el «desenfoque» del cristal detrás de la ventana
         anchors.fill: parent
         source: bgImg
-        saturation: Settings.get("colorMode", "auto") === "mono" && Settings.get("monoFondo", true) ? -1 : 0
     }
     // ventana (con la sombra de Ajustes › Ventanas › Sombras)
     RectangularShadow {

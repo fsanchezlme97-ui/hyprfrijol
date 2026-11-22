@@ -250,7 +250,7 @@ ColumnLayout {
                 Txt { text: t.name; weight: Font.Medium; textFormat: Text.PlainText }
                 Txt { text: t.light ? "claro" : "oscuro"; muted: true; size: 11 }
                 Item { Layout.fillWidth: true }
-                Button { h: 26; kind: Settings.get("palette", "") === modelData && Settings.get("colorMode", "auto") === "elegir" ? "primary" : "outline"; text: "Usar"; onClicked: Settings.setMany({ colorMode: "elegir", palette: modelData }) }
+                Button { h: 26; kind: Settings.get("palette", "") === modelData && Settings.get("colorMode", "elegir") === "elegir" ? "primary" : "outline"; text: "Usar"; onClicked: Settings.setMany({ colorMode: "elegir", palette: modelData }) }
                 Button { h: 26; kind: "link"; text: "Quitar"; onClicked: root.run(["theme-remove", modelData], "theme-remove") }
             }
         }

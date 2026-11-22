@@ -192,31 +192,26 @@ def is_light_now(s):
         return num(s, "lightFrom", 7, int) <= now.hour < num(s, "lightTo", 19, int)
     return False
 
-def resolve_palette(s):
+def resolve_palette(s, force_light=None):
     pals = load(ROOT / "config/themes/palettes.json", {})
     # Temas importados (hf-plugin theme: colors.toml de Omarchy) → ~/.config/hyprfrijol/palettes-user.json, mismo formato
     pals.update({k: v for k, v in (load(USER / "palettes-user.json", {}) or {}).items() if isinstance(v, dict) and v.get("p")})
-    mode = s.get("colorMode", "auto")
-    light = is_light_now(s)
-    if mode == "mono":
-        key = "monoclaro" if light else "mono"
-        return key, dict(pals[key])
+    mode = s.get("colorMode", "elegir")
+    # Modos antiguos: auto/mono ya no están en la UI; se migran a elegir con una paleta segura
+    if mode in ("auto", "mono"):
+        mode = "elegir"
     if mode == "elegir":
-        key = s.get("palette", "grafito")
-        c = dict(pals.get(key) or pals["grafito"])
-        # Las paletas del diseño son de un solo modo: si el modo pedido (Claro / Oscuro / Según la hora) es el
-        # otro, se usa su pareja si la tiene (las pastel: «rosa» ⇄ «rosa-claro») o se deriva la variante con el
-        # mismo acento sobre las superficies de «claro» o «grafito».
-        if bool(c.get("light")) != light:
+        key = s.get("palette", "oxocarbon")
+        c = dict(pals.get(key) or pals["oxocarbon"])
+        # Si se pide el modo opuesto (p. ej. glassWallpaper), usamos la pareja si existe
+        want_light = force_light if force_light is not None else bool(c.get("light"))
+        if bool(c.get("light")) != want_light:
             pair = pals.get(c.get("pair", ""))
-            c = dict(pair) if pair and bool(pair.get("light")) == light else flip_palette(c, light, pals)
+            c = dict(pair) if pair and bool(pair.get("light")) == want_light else flip_palette(c, want_light, pals)
         for k in ("pair", "group", "variant"):
             c.pop(k, None)
         return key, c
-    auto = load(STATE / "colors.json") or load(ROOT / "config/defaults/colors.json")
-    c = dict(auto["light" if light else "dark"])
-    c["name"] = "Automático"
-    return "auto", c
+    return "oxocarbon", dict(pals["oxocarbon"])
 
 def valid_hex(h):
     h = str(h or "").strip()
@@ -532,6 +527,17 @@ def motion_lua(s):
                    % (leaf, "true" if on else "false", sp, curve, st))
     return out
 
+def _mult_alpha(col, k):
+    """Multiplica el alfa de un color ARGB (#AARRGGBB) sin tocar el RGB."""
+    if not col or col == "none" or not str(col).startswith("#") or len(col) < 9:
+        return col
+    try:
+        a = int(col[1:3], 16) / 255
+        a = max(0.0, min(1.0, a * k))
+        return "#%02x%s" % (round(a * 255), col[3:9])
+    except Exception:
+        return col
+
 def style_tokens(c, s):
     """Tokens del estilo Math (los del diseño, objeto S). S.estilo es siempre «math»; S.material, el material:
       solido  superficies tonales sólidas teñidas por el color de acento (Material 3 / Android),
@@ -556,29 +562,34 @@ def style_tokens(c, s):
         # el acento y el terciario que se desliza despacio (tint), y un borde de dos trazos: filo exterior oscuro casi
         # invisible (edge) + filo interior de luz brillante arriba (rimTop → border → rimBottom). Los rellenos
         # (bg2) son capas de cristal más claras; lo elegido en los segmentos, una cápsula sólida en contraste.
-        # cristal cálido (referencias de glassmorphism): la base lleva algo del acento y del terciario, no gris neutro
+        # La base del cristal conserva más color del tema que antes: un tinte cálido del acento y el terciario
+        # para que cada paleta siga siendo reconocible aunque el fondo se transparente.
         warm = mix(c["p"], c["ter"], .5)
-        base = mix(mix(c["s1"], W, .55), warm, .05) if LT else mix(c["s1"], warm, .08)
+        base = mix(mix(c["s1"], W, .40), warm, .14) if LT else mix(c["s1"], warm, .22)
+        # Rellenos y tarjetas: s4 teñido con el acento, no blanco puro, para mantener la identidad del tema
+        fill = mix(mix(c["s4"], c["s3"], .5), warm, .12)
+        sheen_base = mix(W, warm, .18)
         S = dict(
             blur=True, pill=False,
             # la barra algo más velada: está siempre sobre el fondo y su texto tiene que leerse en cualquiera
-            # en claro, el cristal blanco necesita algo más de cuerpo: sobre zonas oscuras del fondo se volvía gris
             bg=argb(base, .68 if LT else .50), bgPanel=argb(base, .60 if LT else .34),
-            bgPopup=argb(base, .70 if LT else .44), bg2=argb(W, .52 if LT else .09),
+            bgPopup=argb(base, .70 if LT else .44), bg2=argb(fill, .58 if LT else .18),
             border=argb(W, .26 if LT else .08), borderWidth=1,
             highlight=none, glow=none,
             # filo de luz más vivo arriba y un esmerilado plano: el canto brillante del cristal de las referencias
-            rimTop=argb(W, .70 if LT else .16), rimBottom=argb(W, 0),
+            rimTop=argb(W, (.70 if LT else .16) * s.get("rimOpacity", 1.0)),
+            rimBottom=_mult_alpha(argb(W, 0), s.get("rimOpacity", 1.0)),
             edge=none,   # sin filo oscuro: sobre fondos claros o de colores se leía como un contorno
-            # el esmerilado es plano (igual en toda la superficie): en claro, menos blanco (si fuera degradado, 0,38 solo arriba)
-            sheen=argb(W, .22 if LT else .08), tint=argb(mix(c["p"], c["ter"], .4), .18 if LT else .13),
+            # el esmerilado es plano (igual en toda la superficie), ligeramente teñido con el acento
+            sheen=argb(sheen_base, (.20 if LT else .07) * s.get("sheenOpacity", 1.0)),
+            tint=argb(mix(c["p"], c["ter"], .4), .16 if LT else .11),
             tint2=none, tint3=none, rimInner=none,
             # sombras muy tenues: el cristal es translúcido y la sombra se transparentaba como una franja oscura
             # en el borde (y por encima de 0,2 Hyprland la desenfocaba con él)
             shadow=argb(K, .05 if LT else .12), shadowBig=argb(K, .08 if LT else .18),
             win=argb(base, .66 if LT else .48), winBorder=argb(W, .5 if LT else .10),
-            winSolid=argb(mix(c["s1"], W, .4) if LT else c["s1"], .62 if LT else .46),
-            card=argb(W, .42 if LT else .065), cardBorder=1,
+            winSolid=argb(mix(c["s1"], W, .35) if LT else c["s1"], s.get("winOpacity", .62 if LT else .46)),
+            card=argb(fill, .48 if LT else .12), cardBorder=1,
             shBlur=40, shY=14, shBigBlur=70, shBigY=26, shSpread=0)
     elif mat == "tonal":
         S = dict(
@@ -882,7 +893,7 @@ def main(argv):
     S = style_tokens(c, s)
 
     def shell_theme(s2):
-        _, c2 = resolve_palette(s2)
+        _, c2 = resolve_palette(s2, force_light=not bool(c.get("light")))
         c2 = fix_contrast(apply_accent(c2, s2), bool(s2.get("highContrast")))
         c2["ansi"] = ansi_colors(c2)
         return c2, style_tokens(c2, s2)

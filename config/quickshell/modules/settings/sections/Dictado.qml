@@ -151,7 +151,7 @@ ColumnLayout {
     // ---------- estado ----------
     Section {
         Layout.fillWidth: true
-        title: "Dictado por voz"
+        title: "Estado"
         headerRight: Kbd { text: "Super + Alt + D" }
         Txt {
             Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
@@ -225,21 +225,6 @@ ColumnLayout {
         }
     }
 
-    // ---------- Vosk: tiempo real de un clic ----------
-    Section {
-        visible: root.voskMissing
-        Layout.fillWidth: true
-        title: "Dictado en tiempo real"
-        InfoRow {
-            label: root.st.vosk === false ? "Falta Vosk" : "Falta el modelo de Vosk"
-            icon: "mic"
-            lit: false
-            sub: (root.st.vosk === false ? (root.arch ? "python-vosk y vosk-api" : "módulo vosk de Python") + (root.voskModelOk ? "" : " + modelo") : "modelo " + root.voskName)
-                 + " · palabra a palabra mientras hablas. Mientras, se dicta con whisper"
-            Button { kind: "primary"; text: "Instalar"; onClicked: root.installVosk() }
-        }
-    }
-
     RowLayout {
         Layout.fillWidth: true
         spacing: 12
@@ -248,8 +233,19 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.preferredWidth: 1
             Layout.alignment: Qt.AlignTop
-            title: "Modelo"
+            title: "Motor y modelo"
             headerRight: Button { text: "Gestionar modelos"; h: 26; onClicked: root.manage() }
+            InfoRow {
+                visible: root.voskMissing
+                separator: false
+                label: root.st.vosk === false ? "Falta Vosk" : "Falta el modelo de Vosk"
+                icon: "mic"
+                lit: false
+                sub: (root.st.vosk === false ? (root.arch ? "python-vosk y vosk-api" : "módulo vosk de Python") + (root.voskModelOk ? "" : " + modelo") : "modelo " + root.voskName)
+                     + " · palabra a palabra mientras hablas. Mientras, se dicta con whisper"
+                Button { kind: "primary"; text: "Instalar"; onClicked: root.installVosk() }
+            }
+            Txt { visible: root.st.models && root.st.models.length > 0 && root.st.engine !== "vosk"; text: "Modelos descargados"; weight: Font.DemiBold; size: 12 }
             Repeater {
                 model: root.st.engine === "vosk" ? [] : (root.st.models ?? [])
                 Item {
@@ -351,6 +347,12 @@ ColumnLayout {
                 }
             }
             Timer { id: delTimer; interval: 400; onTriggered: root.refresh() }
+            Txt {
+                visible: (root.st.nemotron === false && (root.eng === "auto" || root.eng === "nemotron"))
+                      || (root.st.parakeet === false && root.eng === "parakeet")
+                      || ((root.eng === "vosk" || root.eng === "hibrido") && root.st.vosk === false)
+                text: "Instalar motores"; weight: Font.DemiBold; size: 12
+            }
             Button {
                 visible: root.st.nemotron === false && (root.eng === "auto" || root.eng === "nemotron")
                 text: "Instalar Nemotron 3.5 (recomendado: escribe en español sin pasarse al inglés)"
@@ -383,12 +385,12 @@ ColumnLayout {
             }
         }
 
-        // ---------- preferencias ----------
+        // ---------- comportamiento ----------
         Section {
             Layout.fillWidth: true
             Layout.preferredWidth: 1
             Layout.alignment: Qt.AlignTop
-            title: "Preferencias"
+            title: "Comportamiento"
             LabeledRow {
                 label: "Atajo"
                 labelWidth: 110
@@ -475,6 +477,10 @@ ColumnLayout {
                        ? "Cada frase pasa por el modelo rápido de tu asistente antes de escribirse (~1–2 s más): arregla nombres de grupos, creadores, marcas, programas y términos de internet que el reconocedor oye mal. Lo que dictas sale de tu equipo salvo con «Solo en este equipo»."
                        : "Con «Siempre», cada frase dictada pasa por el modelo rápido de tu asistente (~1–2 s más) y arregla nombres de grupos, creadores, marcas, programas y términos de internet que el reconocedor oye mal.")
                     + " Si no responde en " + (Settings.get("dictationAiFixSec", 3)) + " s, se escribe lo que se oyó."
+            }
+            Txt {
+                Layout.fillWidth: true; muted: true; size: 11; wrapMode: Text.WordWrap
+                text: "Esta es la única opción del dictado que usa IA; todo lo demás se procesa en tu equipo."
             }
             SwRow { label: "Puntuación y mayúsculas automáticas"; sub: "comas, puntos y mayúscula al empezar frase; di «nueva línea» o «punto y aparte»"; key: "dictationPunct"; def: true }
             SwRow { label: "Ver el texto mientras hablas"; sub: "lo provisional aparece en la píldora antes de escribirse"; key: "dictationLive"; def: true }
@@ -640,12 +646,15 @@ ColumnLayout {
             }
         }
         Txt { visible: root.cmdErr !== ""; Layout.fillWidth: true; size: 11; color: Theme.danger; text: root.cmdErr }
+    }
 
-        // sinónimos de las órdenes de serie
-        Txt { Layout.topMargin: 8; text: "Otras palabras para las órdenes de serie"; weight: Font.DemiBold }
+    // ---------- sinónimos ----------
+    Section {
+        Layout.fillWidth: true
+        title: "Sinónimos"
         Txt {
             Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
-            text: "Por ejemplo «toca» → «reproduce»: «toca Walk en YouTube» se entiende como «reproduce Walk en YouTube»."
+            text: "Otras palabras para las órdenes de serie. Por ejemplo «toca» → «reproduce»: «toca Walk en YouTube» se entiende como «reproduce Walk en YouTube»."
         }
         Repeater {
             model: root.aliasList

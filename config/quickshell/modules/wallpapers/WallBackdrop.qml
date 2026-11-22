@@ -3,14 +3,12 @@
 // selección se queda quieta `settle` ms, el original decodificado al tamaño de la pantalla (libjpeg lo reduce al leer).
 // Solo se anima la opacidad de la capa que entra; la de debajo no se toca hasta que la tapa del todo.
 import QtQuick
-import QtQuick.Effects
 import "../.."
 
 Item {
     id: bd
     property string thumb: ""        // url de la miniatura
     property string full: ""         // url del original ("" = solo miniatura, p. ej. vídeos)
-    property bool mono: false        // modo de color monocromo con «fondo en blanco y negro»
     property int settle: 140
     signal requested()               // se pidió otra miniatura (para la sonda)
     signal shownReady(bool hi)       // la capa pedida ya se ve (para la sonda)
@@ -57,11 +55,6 @@ Item {
         smooth: true
         onStatusChanged: if (status === Image.Ready && bd.pending === this) bd.swap()
     }
-    Item {
-        anchors.fill: parent
-        layer.enabled: bd.mono
-        layer.effect: MultiEffect { saturation: -1 }
-        Layer { id: a }
-        Layer { id: b }
-    }
+    Layer { id: a; anchors.fill: parent }
+    Layer { id: b; anchors.fill: parent }
 }

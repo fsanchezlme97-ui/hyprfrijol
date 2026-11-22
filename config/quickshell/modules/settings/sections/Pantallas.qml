@@ -2,7 +2,7 @@
 // pantalla principal (primaryMonitor → espacio 1), identificar, VRR, HDR y duplicar
 // (Settings "monitors" → config/apply/monitors.py → hl.monitor; además se aplica al instante con hyprctl eval),
 // y luz nocturna (Daemons.qml · hyprsunset, con vista previa al arrastrar la temperatura); el amanecer y el
-// atardecer salen de services/Sun.qml (los comparte con el tema automático de Apariencia).
+// atardecer salen de services/Sun.qml.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -63,6 +63,7 @@ ColumnLayout {
         reload.restart();
     }
 
+    SectionLabel { text: "Monitores" }
     RowLayout {
         Layout.fillWidth: true
         spacing: 12
@@ -82,6 +83,8 @@ ColumnLayout {
                 implicitHeight: 200
                 radius: Theme.r(6)
                 color: Theme.bg
+                border.width: 1
+                border.color: Theme.ov
                 clip: true
                 readonly property var bounds: {
                     const ms = root.mons.filter(m => !m.disabled);
@@ -154,8 +157,8 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.preferredWidth: 1
             Layout.alignment: Qt.AlignTop
-            title: root.sel ? root.sel.name : "Monitor"
-            headerRight: Txt { text: root.sel?.description?.split(" ").slice(0, 3).join(" ") ?? ""; muted: true; size: 11 }
+            title: "Monitor seleccionado"
+            headerRight: Txt { text: (root.sel?.name ?? "") + (root.sel?.description ? " · " + root.sel.description.split(" ").slice(0, 3).join(" ") : ""); muted: true; size: 11 }
             LabeledRow {
                 label: "Resolución"; labelWidth: 90
                 Dropdown {
@@ -249,35 +252,7 @@ ColumnLayout {
     }
     Component.onDestruction: endPreview()
 
-    // Con varias pantallas: apps que abren en la secundaria (secondaryApps → regla hf-secondary-apps de
-    // frijol/workspaces.lua, que sigue a la secundaria al conectar o quitar pantallas) y dónde va el PiP (pipScreen)
-    Section {
-        Layout.fillWidth: true
-        title: "Con varias pantallas"
-        headerRight: Txt { visible: Quickshell.screens.length < 2; text: "ahora solo hay una"; muted: true; size: 11.5 }
-        LabeledRow {
-            label: "Imagen en imagen"; labelWidth: 150
-            Seg {
-                model: [["activa", "En la pantalla activa"], ["secundaria", "En la otra pantalla"]]
-                current: Settings.get("pipScreen", "activa")
-                onPicked: k => Settings.set("pipScreen", k)
-            }
-        }
-        FloatApps {
-            Layout.fillWidth: true
-            settingKey: "secondaryApps"
-            intro: "Estas apps se abren en la otra pantalla (la que no es la principal), para dejar la principal libre para trabajar. "
-                + "Con una sola pantalla se abren donde siempre."
-            groups: [
-                { key: "chat", label: "Chat", sub: "Discord, Vesktop, Slack, Telegram, Signal", classes: ["discord", "vesktop", "Slack", "org.telegram.desktop", "signal"] },
-                { key: "musica", label: "Música", sub: "Spotify, Amberol, Decibels", classes: ["spotify", "io.bassi.Amberol", "org.gnome.Decibels"] },
-                { key: "correo", label: "Correo y agenda", sub: "Thunderbird, Evolution, Geary, Calendario", classes: ["thunderbird", "org.gnome.Evolution", "org.gnome.Geary", "org.gnome.Calendar"] },
-                { key: "monitor", label: "Monitor del sistema", sub: "Monitor del sistema, Mission Center", classes: ["org.gnome.SystemMonitor", "io.missioncenter.MissionCenter"] }
-            ]
-            onApply: l => Settings.set("secondaryApps", l)
-        }
-    }
-
+    SectionLabel { text: "Brillo y color" }
     Section {
         Layout.fillWidth: true
         title: "Luz nocturna"
@@ -334,11 +309,10 @@ ColumnLayout {
             Dropdown { Layout.preferredWidth: 90; model: nlRow.hours; current: Settings.get("nightTo", "07:00"); onPicked: k => Settings.set("nightTo", k) }
             Item { Layout.fillWidth: true }
         }
-        // Amanecer y atardecer: una sola fuente (services/Sun.qml) para la luz nocturna y el tema automático
+        // Amanecer y atardecer: fuente de la luz nocturna «Del atardecer al amanecer»
         ColumnLayout {
             id: sunBox
             readonly property bool used: Settings.get("nightLight", "off") === "atardecer"
-                || (Settings.get("themeMode", "oscuro") === "auto" && Settings.get("themeSchedule", "horas") === "sol")
             visible: used
             Layout.fillWidth: true
             spacing: 8
@@ -361,12 +335,7 @@ ColumnLayout {
                 Item { Layout.fillWidth: true }
             }
         }
-        LinkRow {
-            label: "Tema claro y oscuro automático"; section: "apariencia"; sectionLabel: "Apariencia"; target: "Modo"
-            value: Settings.get("themeMode", "oscuro") !== "auto" ? "Desactivado"
-                : Settings.get("themeSchedule", "horas") === "sol" ? "Según el sol"
-                : "Claro de " + Settings.get("lightFrom", 7) + ":00 a " + Settings.get("lightTo", 19) + ":00"
-        }
+        LinkRow { label: "Ubicación para calcular el sol"; section: "barwidgets"; sectionLabel: "Widgets de la barra"; target: "Ciudad"; value: Sun.where || "Ciudad" }
         LinkRow { label: "Tamaño del texto"; section: "apariencia"; sectionLabel: "Apariencia"; target: "Tamaño del texto"; value: Settings.get("fontScale", 1) === 1 ? "Normal" : "×" + String(Settings.get("fontScale", 1)).replace(".", ",") }
     }
 

@@ -91,14 +91,7 @@ Overlay {
         Quickshell.execDetached(args);
         Shell.close();
     }
-    function cycleColors(): void {
-        const m = Settings.get("colorMode", "auto");
-        Settings.set("colorMode", m === "auto" ? "elegir" : m === "elegir" ? "mono" : "auto");
-    }
-    readonly property string colorName: {
-        const m = Settings.get("colorMode", "auto");
-        return m === "auto" ? "automáticos" : m === "mono" ? "monocromo" : Theme.paletteName;
-    }
+
     // Búsqueda por nombre: salta a la primera coincidencia (sin filtrar la tira)
     function search(q: string): void {
         query = q;
@@ -188,7 +181,6 @@ Overlay {
             anchors.fill: parent
             thumb: win.cur && win.cur.res !== "" ? "file://" + win.cur.thumb + (win.cur.rev ? "?" + win.cur.rev : "") : ""
             full: win.cur && !win.cur.video ? "file://" + win.cur.path : ""
-            mono: Settings.get("colorMode", "auto") === "mono" && Settings.get("monoFondo", true) !== false
             onRequested: probe.previewAsked()
             onShownReady: hi => { if (!hi) probe.previewReady(); }
         }
@@ -418,7 +410,7 @@ Overlay {
                     enabled: !whProc.running
                     onClicked: whProc.running = true
                 }
-                Btn { kind: "ghost"; icon: "palette"; text: "Colores: " + win.colorName; onClicked: win.cycleColors() }
+                Btn { kind: "ghost"; icon: "palette"; text: "Paleta: " + Theme.paletteName.replace(" · claro", ""); onClicked: Shell.open("ajustes", "apariencia") }
                 Sep {}
                 Btn { kind: "ghost"; text: "Cancelar"; onClicked: Shell.close() }
                 Btn { kind: "primary"; icon: "check"; text: win.monitor === "" ? "Aplicar" : "Aplicar en " + win.monitor; onClicked: win.apply() }

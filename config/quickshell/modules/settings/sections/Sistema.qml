@@ -1,6 +1,6 @@
-// Ajustes › Sistema y recuperación — puntos de restauración (snapper list, solo lectura), kernels instalados,
-// actualizaciones (updatesMode…), copia de /home, exportar/importar tus ajustes (settings.json) y enlace a
-// Apps predeterminadas e inicio; Diagnóstico, Actualizaciones de HyprFrijol y Modo seguro (ui/Mantenimiento.qml).
+// Ajustes › Sistema y recuperación — puntos de restauración (snapper list, solo lectura), copia de /home,
+// actualizaciones (updatesMode…), exportar/importar tus ajustes (settings.json), respaldo completo del perfil;
+// Diagnóstico, Actualizaciones de HyprFrijol y Modo seguro (ui/Mantenimiento.qml).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -17,8 +17,6 @@ RowLayout {
     property var snaps: []
     property string snapErr: ""
     property int sel: -1
-    property var kernels: []
-    property string running: ""
     property var has: ({})
     property bool app: false        // ventana «Puntos de restauración» (modules/apps): solo la lista de puntos
 
@@ -41,14 +39,12 @@ RowLayout {
     }
     Process {
         running: true
-        command: ["sh", "-c", "uname -r; pacman -Qq 2>/dev/null | grep -E '^linux(-[a-z0-9]+)*$' | grep -vE 'headers|firmware|api|docs|tools'; "
-            + "for p in snap-pac fwupd btrfs-assistant pika-backup deja-dup limine-snapper-sync flatpak; do (pacman -Qq $p || command -v $p) >/dev/null 2>&1 && echo has:$p; done"]
+        command: ["sh", "-c", "for p in snap-pac fwupd btrfs-assistant pika-backup deja-dup limine-snapper-sync flatpak; do (pacman -Qq $p || command -v $p) >/dev/null 2>&1 && echo has:$p; done"]
         stdout: StdioCollector {
             onStreamFinished: {
-                const l = text.split("\n").filter(Boolean);
-                root.running = l[0] ?? "";
-                root.kernels = l.slice(1).filter(x => !x.startsWith("has:"));
-                const h = {}; l.filter(x => x.startsWith("has:")).forEach(x => h[x.slice(4)] = true); root.has = h;
+                const h = {};
+                text.split("\n").filter(Boolean).filter(x => x.startsWith("has:")).forEach(x => h[x.slice(4)] = true);
+                root.has = h;
             }
         }
     }
@@ -136,27 +132,21 @@ RowLayout {
                 Button { visible: !!root.has["btrfs-assistant"]; text: "Restaurar archivos…"; onClicked: Quickshell.execDetached(["sh", "-c", "btrfs-assistant-launcher || btrfs-assistant"]) }
                 Button { text: "Actualizar"; onClicked: root.loadSnaps() }
             }
+            InfoRow {
+                separator: false
+                label: "Copia de seguridad de /home"
+                sub: root.has["pika-backup"] ? "Pika Backup · cifrada y programada" : root.has["deja-dup"] ? "Déjà Dup" : "Sin herramienta · te recomendamos Pika Backup"
+                icon: "folder"
+                Button {
+                    text: root.has["pika-backup"] || root.has["deja-dup"] ? "Configurar" : "Instalar Pika Backup"
+                    onClicked: root.has["pika-backup"] ? Quickshell.execDetached(["pika-backup"]) : root.has["deja-dup"] ? Quickshell.execDetached(["deja-dup"]) : Shell.open("herramientas", "pika")
+                }
+            }
             Txt {
                 Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
                 text: "Snapper " + (root.has["snap-pac"] ? "+ snap-pac crean" : "crea") + " un punto antes y después de cada actualización"
                     + (root.has["limine-snapper-sync"] ? ", y aparecen en el menú de arranque de Limine." : ".")
                     + " Un punto de restauración no reemplaza una copia de seguridad: vive en el mismo disco."
-            }
-        }
-        Section {
-            visible: !root.app
-            Layout.fillWidth: true
-            RowLayout {
-                Layout.fillWidth: true
-                ColumnLayout {
-                    Layout.fillWidth: true; spacing: 1
-                    Txt { Layout.fillWidth: true; text: "Copia de seguridad de /home"; weight: Font.DemiBold }
-                    Txt { Layout.fillWidth: true; muted: true; size: 11.5; text: root.has["pika-backup"] ? "Pika Backup · cifrada y programada" : root.has["deja-dup"] ? "Déjà Dup" : "Sin herramienta de copias · te recomendamos Pika Backup" }
-                }
-                Button {
-                    text: root.has["pika-backup"] || root.has["deja-dup"] ? "Configurar" : "Instalar Pika Backup"
-                    onClicked: root.has["pika-backup"] ? Quickshell.execDetached(["pika-backup"]) : root.has["deja-dup"] ? Quickshell.execDetached(["deja-dup"]) : Shell.open("herramientas", "pika")
-                }
             }
         }
         // Diagnóstico (hf-doctor), Actualizaciones de HyprFrijol (hf-update) y Modo seguro (hf-safe) → ui/Mantenimiento.qml
@@ -192,7 +182,7 @@ RowLayout {
         Section {
             id: bk
             Layout.fillWidth: true
-            title: "Respaldo"
+            title: "Respaldo completo del perfil"
             headerRight: Mono { tech: true; text: "hf-perfil respaldo" }
             readonly property string tool: Paths.root + "/scripts/hf-perfil"
             property string msg: ""
@@ -256,7 +246,7 @@ RowLayout {
                         const f = text.trim();
                         if (f === "CANCEL" || f === "") return;
                         if (f === "NOZENITY") { bk.bad = true; bk.msg = "Falta zenity para elegir el archivo: en una terminal, hf-perfil aplicar RUTA.tar.gz"; return; }
-                        const q = s => "'" + s.replace(/'/g, "'\\''") + "'";
+                        const q = s => "'" + s.split("'").join("'\\''") + "'";
                         Pkg.runInTerminal(q(bk.tool) + " aplicar " + q(f), "Cargar respaldo");
                         bk.bad = false; bk.file = "";
                         bk.msg = "Cargando en la terminal. Al terminar, cierra sesión y vuelve a entrar para verlo todo.";
@@ -267,7 +257,7 @@ RowLayout {
         // ---------- copia de los ajustes (~/.config/hyprfrijol/settings.json) → services/SettingsIO.qml ----------
         Section {
             Layout.fillWidth: true
-            title: "Tus ajustes"
+            title: "Exportar e importar ajustes"
             headerRight: Mono { tech: true; text: "settings.json" }
             InfoRow {
                 separator: false
@@ -284,33 +274,6 @@ RowLayout {
                 text: SettingsIO.msg
                 size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
                 color: SettingsIO.bad ? Theme.danger : Theme.tv
-            }
-        }
-        Section {
-            Layout.fillWidth: true
-            title: "Kernel"
-            headerRight: Mono { tech: true; text: "uname -r → " + root.running }
-            // Solo informa: el kernel se elige en el menú de arranque, no aquí
-            Txt { visible: root.kernels.length > 0; text: "Instalados: " + root.kernels.join(" · "); muted: true; size: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-            SwRow {
-                visible: Pkg.family === "arch"
-                label: "Mantener un kernel LTS de respaldo"; sub: "aparece como opción en el arranque"
-                checked: root.kernels.some(k => /lts/.test(k))
-                enabled: !root.kernels.some(k => /lts/.test(k))
-                onToggled: v => { if (v) Pkg.runInTerminal("sudo pacman -S --needed " + (root.kernels.some(k => /cachyos/.test(k)) ? "linux-cachyos-lts linux-cachyos-lts-headers" : "linux-lts linux-lts-headers"), "Kernel LTS"); }
-            }
-        }
-        Section {
-            visible: !root.app
-            Layout.fillWidth: true
-            RowLayout {
-                Layout.fillWidth: true
-                ColumnLayout {
-                    Layout.fillWidth: true; spacing: 1
-                    Txt { Layout.fillWidth: true; text: "Apps predeterminadas e inicio"; weight: Font.DemiBold }
-                    Txt { Layout.fillWidth: true; muted: true; size: 11.5; text: "Navegador, correo, fotos, PDF e inicio de sesión" }
-                }
-                Button { text: "Abrir"; onClicked: Shell.open("ajustesapp", "predeterminadas") }
             }
         }
     }

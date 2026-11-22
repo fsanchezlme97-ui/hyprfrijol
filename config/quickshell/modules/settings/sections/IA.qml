@@ -207,7 +207,7 @@ ColumnLayout {
             RowLayout {
                 visible: root.needKey
                 Layout.fillWidth: true
-                Layout.leftMargin: 130
+                Layout.leftMargin: 128
                 spacing: 16
                 Button { kind: "link"; text: "Obtener una clave gratis ↗"; onClicked: Qt.openUrlExternally("https://aistudio.google.com/apikey") }
                 Txt {
@@ -225,7 +225,7 @@ ColumnLayout {
             }
             Txt {
                 visible: root.prov === "opencode" && Settings.get("aiModel", "") === ""
-                Layout.fillWidth: true; Layout.leftMargin: 130
+                Layout.fillWidth: true; Layout.leftMargin: 128
                 size: 11; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
                 text: root.ocAuto !== ""
                     ? "Automático: se usará «" + root.ocAuto + "» (el modelo que tiene configurado OpenCode; si no puede, se prueba con otro disponible)."
@@ -234,19 +234,19 @@ ColumnLayout {
             Txt {
                 // Las prestaciones del modelo elegido (las declara el catálogo de OpenCode): qué admite y qué devuelve
                 visible: root.prov === "opencode" && root.capTxt !== ""
-                Layout.fillWidth: true; Layout.leftMargin: 130
+                Layout.fillWidth: true; Layout.leftMargin: 128
                 size: 11; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
                 text: root.capTxt
             }
             Txt {
                 visible: root.prov === "opencode" && root.ocModelsErr !== ""
-                Layout.fillWidth: true; Layout.leftMargin: 130
+                Layout.fillWidth: true; Layout.leftMargin: 128
                 size: 11; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
                 text: "No pude leer la lista de modelos: " + root.ocModelsErr
             }
             Txt {
                 visible: root.prov === "gemini" && root.geminiModelsErr !== "" && root.key.stored
-                Layout.fillWidth: true; Layout.leftMargin: 130
+                Layout.fillWidth: true; Layout.leftMargin: 128
                 size: 11; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
                 text: "No pude leer la lista de modelos: " + root.geminiModelsErr
             }
@@ -302,8 +302,15 @@ ColumnLayout {
             SwRow { label: "Usar la pantalla"; sub: "señala con un cursor fantasma dónde hará clic o escribirá, y lo hace cuando lo apruebas"; key: "aiScreenControl"; def: true }
             SwRow { label: "Consultar el escritorio"; sub: "ventanas abiertas, avisos, archivos y estado, solo cuando lo necesite"; key: "aiReadDesktop"; def: true }
             SwRow { label: "Confirmar antes de aplicar cambios"; sub: "y siempre se pueden deshacer"; key: "aiConfirm"; def: true }
-            SwRow { label: "Responder desde Spotlight"; sub: "escribe ? y tu pregunta"; key: "aiSpotlight"; def: true }
+            SwRow { separator: false; label: "Solo en este equipo"; sub: "usa Ollama y apaga todo lo que sale a la nube (voces de Gemini incluidas)"; key: "aiLocalOnly"; def: false }
+            SwRow { label: "Responder desde Spotlight"; sub: "permite abrir el asistente escribiendo ? en Spotlight"; key: "aiSpotlight"; def: true }
             LinkRow { label: "Privacidad, historial y registro de acciones"; section: "iaprivacidad"; sectionLabel: "Privacidad"; target: "Ocultar datos sensibles" }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                Txt { Layout.fillWidth: true; text: "Presentación del asistente (qué puede hacer y ejemplos)"; muted: true; size: 11.5 }
+                Button { text: "Volver a verla"; kind: "link"; enabled: Settings.get("aiOnboarded", false) === true; onClicked: Settings.set("aiOnboarded", false) }
+            }
         }
     }
 
@@ -315,7 +322,7 @@ ColumnLayout {
         Txt {
             visible: !root.clis.length
             Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-            text: "No encuentro ninguna: Claude Code (claude), OpenCode, Ollama o llm. Si instalas una, sale aquí. Otras (Codex, Gemini CLI…) no se ofrecen: leen tus archivos o salen a la web por su cuenta."
+            text: "Instala Claude Code, OpenCode, Ollama o llm. Otras CLIs no se ofrecen por privacidad."
         }
         Repeater {
             model: root.clis
@@ -335,29 +342,23 @@ ColumnLayout {
         }
     }
 
-    // Modelos (hf-ai provider_for / fallback_for): modelo por tarea, respaldo si el proveedor falla y modo local
+    // Modelos (hf-ai provider_for / fallback_for): modelo por tarea y respaldo si el proveedor falla
     Section {
         Layout.fillWidth: true
         visible: root.prov !== "off"
-        title: "Modelos"
-        SwRow {
-            separator: false
-            label: "Solo en este equipo"
-            sub: "usa Ollama y apaga lo que sale a la nube (voces de Gemini incluidas); el modelo, el del respaldo si es Ollama"
-            key: "aiLocalOnly"; def: false
-        }
+        title: "Modelos y respaldo"
         LabeledRow {
-            label: "Respuestas rápidas"; labelWidth: 140
+            label: "Rápido"; labelWidth: 120
             hint: "Spotlight y voz"
             Field { icon: ""; text: Settings.get("aiModelQuick", ""); placeholder: "El mismo que el general (p. ej. haiku)"; onAccepted: Settings.set("aiModelQuick", text.trim()) }
         }
         LabeledRow {
-            label: "Con imágenes"; labelWidth: 140
+            label: "Con imágenes"; labelWidth: 120
             hint: "capturas"
             Field { icon: ""; text: Settings.get("aiModelVision", ""); placeholder: "El mismo que el general"; onAccepted: Settings.set("aiModelVision", text.trim()) }
         }
         LabeledRow {
-            label: "Si no responde"; labelWidth: 140
+            label: "Respaldo"; labelWidth: 120
             Seg {
                 model: [["", "Nada"], ["ollama", "Ollama"], ["claude-code", "Claude"], ["gemini", "Gemini"]].concat(root.hasOpencode ? [["opencode", "OpenCode"]] : [])
                     .concat(root.termClis.length ? [["cli", root.cliLabel]] : []).filter(x => x[0] !== root.prov)
@@ -368,7 +369,7 @@ ColumnLayout {
         }
         LabeledRow {
             visible: Settings.get("aiFallbackProvider", "") !== ""
-            label: "Modelo del respaldo"; labelWidth: 140
+            label: "Modelo respaldo"; labelWidth: 120
             Field {
                 icon: ""
                 text: Settings.get("aiFallbackModel", "")
@@ -379,7 +380,7 @@ ColumnLayout {
         // hf-ai WAIT: lo que se espera al principal antes de preguntar al respaldo (voz; al escribir, el triple)
         LabeledRow {
             visible: Settings.get("aiFallbackProvider", "") !== ""
-            label: "Saltar al respaldo"; labelWidth: 140
+            label: "Saltar"; labelWidth: 120
             hint: "si no contesta en"
             Seg {
                 model: [[5, "5 s"], [8, "8 s"], [12, "12 s"], [20, "20 s"]]
@@ -389,7 +390,7 @@ ColumnLayout {
         }
         Txt {
             visible: Settings.get("aiFallbackProvider", "") !== ""
-            Layout.fillWidth: true; Layout.leftMargin: 150
+            Layout.fillWidth: true; Layout.leftMargin: 128
             size: 11; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
             text: "Se espera el triple: el respaldo contesta si el principal no lo ha hecho a los " + 3 * Number(Settings.get("aiFallbackWait", 8)) + " s."
         }
@@ -526,12 +527,6 @@ ColumnLayout {
                 Txt { text: parent.modelData; muted: true; size: 11; font.family: Theme.mono }
                 Button { text: "Revocar"; h: 26; onClicked: Settings.set("aiAlwaysApprove", root.always.filter(k => k !== parent.modelData)) }
             }
-        }
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8
-            Txt { Layout.fillWidth: true; text: "Presentación del asistente (qué puede hacer y ejemplos)"; muted: true; size: 11.5 }
-            Button { text: "Volver a verla"; kind: "link"; enabled: Settings.get("aiOnboarded", false) === true; onClicked: Settings.set("aiOnboarded", false) }
         }
     }
 }

@@ -16,6 +16,8 @@ RowLayout {
     property var sys: ({})
     property bool renaming: false
     property string syncMsg: ""
+    property var kernels: []
+    property string runningKernel: ""
     Process {
         id: probe
         running: true
@@ -105,6 +107,17 @@ RowLayout {
         Kv { k: "Almacenamiento"; v: root.sys.disk ?? "…" }
         Kv { k: "Actualizado"; v: root.fmtDate(root.sys.updated) }
         Timer { id: refresh; interval: 1500; onTriggered: { probe.running = false; probe.running = true; } }
+        Process {
+            running: true
+            command: ["sh", "-c", "uname -r; pacman -Qq 2>/dev/null | grep -E '^linux(-[a-z0-9]+)*$' | grep -vE 'headers|firmware|api|docs|tools'"]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    const l = text.split("\n").filter(Boolean);
+                    root.runningKernel = l[0] ?? "";
+                    root.kernels = l.slice(1);
+                }
+            }
+        }
         RowLayout {
             Layout.topMargin: 8
             spacing: 8
@@ -191,6 +204,19 @@ RowLayout {
             label: "Detalles técnicos"
             sub: "muestra en cada sección los comandos, servicios y claves de configuración que hay detrás (para depurar o tocar los archivos a mano)"
             key: "settingsTech"; def: false
+        }
+    }
+    Section {
+        Layout.fillWidth: true
+        title: "Kernel"
+        headerRight: Mono { tech: true; text: "uname -r → " + root.runningKernel }
+        Txt { visible: root.kernels.length > 0; text: "Instalados: " + root.kernels.join(" · "); muted: true; size: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+        SwRow {
+            visible: Pkg.family === "arch"
+            label: "Mantener un kernel LTS de respaldo"; sub: "aparece como opción en el arranque"
+            checked: root.kernels.some(k => /lts/.test(k))
+            enabled: !root.kernels.some(k => /lts/.test(k))
+            onToggled: v => { if (v) Pkg.runInTerminal("sudo pacman -S --needed " + (root.kernels.some(k => /cachyos/.test(k)) ? "linux-cachyos-lts linux-cachyos-lts-headers" : "linux-lts linux-lts-headers"), "Kernel LTS"); }
         }
     }
     }

@@ -238,8 +238,9 @@ ChipPopup {
                 Layout.fillWidth: true
                 spacing: 8
                 WBtn {
-                    readonly property var mon: DesktopEntries.heuristicLookup("btop") ?? DesktopEntries.heuristicLookup("htop")
-                                             ?? DesktopEntries.heuristicLookup("gnome-system-monitor") ?? DesktopEntries.heuristicLookup("missioncenter")
+                    readonly property var mon: DesktopEntries.heuristicLookup("missioncenter") ?? DesktopEntries.heuristicLookup("resources")
+                                             ?? DesktopEntries.heuristicLookup("gnome-system-monitor") ?? DesktopEntries.heuristicLookup("btop")
+                                             ?? DesktopEntries.heuristicLookup("htop")
                     text: mon ? "Abrir " + mon.name : "Abrir btop"
                     icon: "external"
                     onClicked: { if (mon) mon.execute(); else Quickshell.execDetached(["kitty", "-e", "btop"]); Shell.close(); }

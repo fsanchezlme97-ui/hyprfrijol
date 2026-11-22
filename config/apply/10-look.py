@@ -73,11 +73,16 @@ def hypr_lua(s, c):
         if q == "ahorro":
             deco.append("blur = { enabled = false }")
         else:
-            # Moderado a propósito: con un radio muy grande el fondo se vuelve un gris uniforme y el cristal no se
-            # nota; así se intuyen las formas y los colores de detrás
-            size, passes = (7, 3) if q == "alta" else (6, 2)
-            deco.append("blur = { size = %d, passes = %d, vibrancy = 0.35, vibrancy_darkness = 0.2, contrast = 0.95, brightness = %s, noise = 0.01 }"
-                        % (size, passes, "1.05" if c.get("light") else "0.9"))
+            # Valores manuales de Apariencia › Transparencia; blurQuality solo rellena si faltan (defaults)
+            size = int(s.get("blurSize", 7 if q == "alta" else 6))
+            passes = int(s.get("blurPasses", 3 if q == "alta" else 2))
+            noise = s.get("blurNoise", 0.01)
+            contrast = s.get("blurContrast", 0.95)
+            brightness = s.get("blurBrightnessLight" if c.get("light") else "blurBrightness", 1.05 if c.get("light") else 0.9)
+            vibrancy = s.get("blurVibrancy", 0.35)
+            vib_dark = s.get("blurVibrancyDarkness", 0.2)
+            deco.append("blur = { size = %d, passes = %d, vibrancy = %g, vibrancy_darkness = %g, contrast = %g, brightness = %g, noise = %g }"
+                        % (size, passes, vibrancy, vib_dark, contrast, brightness, noise))
     deco.append(_shadow(s, c, glass))
     filt = s.get("colorFilter", "ninguno")
     if filt and filt != "ninguno":

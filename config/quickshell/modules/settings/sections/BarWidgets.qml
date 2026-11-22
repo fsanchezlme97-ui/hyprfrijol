@@ -19,7 +19,7 @@ ColumnLayout {
     readonly property var info: ({
         clima: ["Clima", "cloud", "temperatura · clic: próximas horas y 3 días"],
         recursos: ["Sistema", "cpu", "CPU, GPU, RAM, disco, red y temperatura · clic: núcleos, procesos, discos y red"],
-        impresora: ["Impresora 3D", "printer", Printer.configured ? "estado y progreso · clic: cámara, temperaturas y pausa" : "configura la dirección en Ajustes › Escritorio"],
+        impresora: ["Impresora 3D", "printer", Printer.configured ? "estado y progreso · clic: cámara, temperaturas y pausa" : "configura la dirección debajo"],
         bongo: ["Gato bongo", "smile", "toca el tambor mientras escribes"],
         pomodoro: ["Pomodoro", "clock", "tiempo de foco y descansos · también en el centro de control"],
         cafeina: ["Cafeína", "coffee", "no apagar la pantalla · clic derecho: 1 hora"],
@@ -278,6 +278,14 @@ ColumnLayout {
                     Layout.leftMargin: 16
                 }
                 LabeledRow {
+                    visible: card.modelData === "clima"
+                    label: "Ciudad"; labelWidth: 140
+                    hint: Weather.cityErr || "vacío = por IP"
+                    Layout.leftMargin: 16
+                    opacity: card.on ? 1 : 0.45
+                    Field { Layout.preferredWidth: 220; h: 30; icon: ""; placeholder: "Lima"; text: Settings.get("weatherCity", ""); input.onEditingFinished: Weather.setCity(text) }
+                }
+                LabeledRow {
                     visible: card.modelData === "recursos"
                     label: "Estilo"; labelWidth: 140
                     Layout.leftMargin: 16
@@ -311,6 +319,14 @@ ColumnLayout {
                             }
                         }
                     }
+                }
+                LabeledRow {
+                    visible: card.modelData === "impresora"
+                    label: "Dirección"; labelWidth: 140
+                    hint: "Moonraker / OctoPrint"
+                    Layout.leftMargin: 16
+                    opacity: card.on ? 1 : 0.45
+                    Field { Layout.preferredWidth: 220; h: 30; icon: ""; placeholder: "http://impresora.local"; text: Settings.get("printerUrl", ""); input.onEditingFinished: Settings.set("printerUrl", text.trim()) }
                 }
             }
         }

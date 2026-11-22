@@ -122,6 +122,14 @@ ColumnLayout {
                     }
                 }
             }
+            LabeledRow {
+                label: "En la pantalla"; labelWidth: 110
+                Seg {
+                    model: [["activa", "En la pantalla activa"], ["secundaria", "En la otra pantalla"]]
+                    current: Settings.get("pipScreen", "activa")
+                    onPicked: k => Settings.set("pipScreen", k)
+                }
+            }
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 16

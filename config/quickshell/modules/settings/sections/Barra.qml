@@ -14,7 +14,7 @@ ColumnLayout {
     id: root
     spacing: 12
     readonly property string pos: Settings.get("barPos", "abajo")
-    readonly property string mode: Settings.get("barMode", "fija")
+    readonly property string mode: Settings.barMode
     readonly property string align: Settings.barAlign
     readonly property bool vertical: root.pos === "izquierda" || root.pos === "derecha"
 
@@ -56,8 +56,8 @@ ColumnLayout {
                             readonly property real inset: (parent.border.width) + parent.m
                             color: card.on ? Theme.p : Theme.o
                             radius: root.mode === "fija" ? 0 : 3
-                            // isla: lo que su contenido (aquí un 40 %) · media: dos tercios; alineadas como barAlign
-                            readonly property real part: root.mode === "isla" ? 0.4 : root.mode === "media" ? 0.66 : 1
+                            // isla: lo que su contenido (aquí un 40 %); alineada como barAlign
+                            readonly property real part: root.mode === "isla" ? 0.4 : 1
                             readonly property real span: (vert ? parent.height : parent.width) - inset * 2
                             readonly property real along: inset + (root.align === "inicio" ? 0 : root.align === "fin" ? 1 : 0.5) * span * (1 - part)
                             width: vert ? 9 : span * part
@@ -93,15 +93,15 @@ ColumnLayout {
                 Layout.preferredWidth: 1
                 label: "Forma"; labelWidth: 60
                 Seg {
-                    model: [["fija", "Fija al borde"], ["flotante", "Flotante"], ["media", "Media"], ["isla", "Isla"], ["archipielago", "Archipiélago"]]
+                    model: [["fija", "Fija al borde"], ["flotante", "Flotante"], ["isla", "Isla"], ["archipielago", "Archipiélago"]]
                     current: root.mode
                     onPicked: k => Confirm.change("Forma de la barra", { barMode: k })
                 }
             }
         }
-        // Media e isla: dónde se colocan a lo largo del borde
+        // Isla: dónde se coloca a lo largo del borde
         LabeledRow {
-            visible: root.mode === "media" || root.mode === "isla"
+            visible: root.mode === "isla"
             label: "Alineación"; labelWidth: 60
             Seg {
                 model: [["inicio", root.vertical ? "Arriba" : "Izquierda"], ["centro", "Centro"], ["fin", root.vertical ? "Abajo" : "Derecha"]]

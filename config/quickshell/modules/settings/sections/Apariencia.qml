@@ -1,6 +1,5 @@
-// Ajustes › Apariencia — fondo, estilo Math (con o sin transparencia), color (automático / paleta /
-// pastel / monocromo), movimiento (animPreset + animSpeed), ventanas (shadows, activeBorder),
-// modo claro/oscuro (a mano, a unas horas lightFrom/lightTo o según el sol: themeSchedule + services/Sun.qml),
+// Ajustes › Apariencia — fondo, estilo Math (con o sin transparencia), paleta de colores (cada paleta fija
+// su modo oscuro/claro y su acento), movimiento (animPreset + animSpeed), ventanas (shadows, activeBorder),
 // tipografía (fontFamily, fontScale), esquinas, espacio entre ventanas, escala y efectos.
 // Todo pasa por Settings → hf-apply.
 import QtQuick
@@ -54,30 +53,22 @@ ColumnLayout {
         onExited: code => root.qtReady = code === 0
     }
 
-    readonly property string colorMode: Settings.get("colorMode", "auto")
+    readonly property string colorMode: Settings.get("colorMode", "elegir")
     readonly property string themeMode: Settings.get("themeMode", "oscuro")
-    readonly property string paletteKey: Settings.get("palette", "grafito")
-    // Temas que se pueden elegir: pares oscuro y claro (la variante va con su pareja); «mono» va en Color y
-    // «atardecer» es la del login
-    readonly property var palKeys: Object.keys(pals).filter(k => !["mono", "monoclaro", "atardecer"].includes(k) && !pals[k].variant)
-    property string palGroup: "todas"
+    readonly property string paletteKey: Settings.get("palette", "oxocarbon")
+    // Temas que se pueden elegir: cada paleta fija su modo (oscuro o claro); las parejas se muestran por separado
+    readonly property var palKeys: Object.keys(pals).filter(k => k !== "atardecer")
+    property string palGroup: "oscuro"
     property string palQuery: ""
     function norm(s) { return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
     onPalShownChanged: palCar.reset()
     readonly property var palShown: palKeys.filter(k => {
         const p = pals[k];
-        const g = p.group ?? "";
-        if (g === "propio") return false;     // los propios van en «Mis temas» (ui/MyThemes.qml)
-        if (palGroup === "originales" && g !== "") return false;
-        if (palGroup === "pastel" && g !== "pastel") return false;
-        if (palGroup === "populares" && g !== "popular") return false;
-        if (palGroup === "omarchy" && g !== "omarchy") return false;
+        if (p.group === "propio") return false;     // los propios van en «Mis temas» (ui/MyThemes.qml)
+        if (palGroup === "oscuro" && p.light) return false;
+        if (palGroup === "claro" && !p.light) return false;
         return palQuery === "" || norm(p.name).includes(norm(palQuery)) || norm(k).includes(norm(palQuery));
     })
-    readonly property string schedule: Settings.get("themeSchedule", "horas")
-    // Sun solo se consulta si se usa (si no, ni se pregunta la ubicación)
-    readonly property bool useSun: themeMode === "auto" && schedule === "sol"
-    readonly property var hours: Array.from({ length: 24 }, (_, i) => [i, String(i).padStart(2, "0") + ":00"])
 
     // Familias instaladas que pueden escribir texto en español (fc-list :lang=es), sin repetir y en orden
     // alfabético. Así no salen las fuentes de iconos (FontAwesome, Material Symbols, emoji…), que como
@@ -95,6 +86,32 @@ ColumnLayout {
         }
     }
     readonly property string fontFamily: Settings.get("fontFamily", "Inter")
+
+    // Preajustes de transparencia/cristal: aplican todos los sliders de golpe
+    readonly property var glassPresets: ({
+        "default":   { label: "Por defecto",         glassOpacity: 0.40, glassOpacityLight: 0.56, glassMaxOpacity: 0.74, sheenOpacity: 1.0, rimOpacity: 1.0, winOpacity: 0.94, blurSize: 8,  blurPasses: 3, blurNoise: 0.015, blurContrast: 0.95, blurBrightness: 0.90, blurBrightnessLight: 1.05, blurVibrancy: 0.35, blurVibrancyDarkness: 0.20 },
+        "aurora":    { label: "Aurora",              glassOpacity: 0.30, glassOpacityLight: 0.48, glassMaxOpacity: 0.65, sheenOpacity: 0.9, rimOpacity: 1.1, winOpacity: 0.88, blurSize: 10, blurPasses: 3, blurNoise: 0.012, blurContrast: 0.93, blurBrightness: 0.92, blurBrightnessLight: 1.08, blurVibrancy: 0.55, blurVibrancyDarkness: 0.18 },
+        "glass":     { label: "Vidrio clásico",      glassOpacity: 0.32, glassOpacityLight: 0.46, glassMaxOpacity: 0.70, sheenOpacity: 0.8, rimOpacity: 0.9, winOpacity: 0.90, blurSize: 12, blurPasses: 3, blurNoise: 0.012, blurContrast: 0.94, blurBrightness: 0.88, blurBrightnessLight: 1.05, blurVibrancy: 0.35, blurVibrancyDarkness: 0.15 }
+    })
+    readonly property var glassPresetKeys: Object.keys(glassPresets)
+    function glassPresetMatch(key) {
+        const p = glassPresets[key];
+        if (!p) return false;
+        return ["glassOpacity","glassOpacityLight","glassMaxOpacity","sheenOpacity","rimOpacity","winOpacity","blurSize","blurPasses","blurNoise","blurContrast","blurBrightness","blurBrightnessLight","blurVibrancy","blurVibrancyDarkness"]
+            .every(k => Settings.get(k, p[k]) === p[k]);
+    }
+    readonly property string currentGlassPreset: {
+        for (const k of glassPresetKeys) if (glassPresetMatch(k)) return k;
+        return "";
+    }
+    function applyGlassPreset(key) {
+        const p = glassPresets[key];
+        if (!p) return;
+        const obj = { glassPreset: key };
+        for (const k of ["glassOpacity","glassOpacityLight","glassMaxOpacity","sheenOpacity","rimOpacity","winOpacity","blurSize","blurPasses","blurNoise","blurContrast","blurBrightness","blurBrightnessLight","blurVibrancy","blurVibrancyDarkness"])
+            obj[k] = p[k];
+        Confirm.change("Preset de transparencia: " + p.label, obj);
+    }
 
     RowLayout {
         Layout.fillWidth: true
@@ -154,146 +171,169 @@ ColumnLayout {
                 checked: Theme.glassy || Settings.get("transparencia", false)
                 onToggled: v => Confirm.change("Transparencia", { transparencia: v })
             }
-            SwRow {
-                visible: Theme.glassy && Settings.get("transparencia", false) === true
-                label: "Claro u oscuro según el fondo"
-                sub: "el cristal de la barra, los paneles y el dock se vuelve claro sobre fondos claros y oscuro sobre oscuros (lo decide el fondo de la pantalla principal junto a la barra; las apps siguen tu modo)"
-                key: "glassWallpaper"; def: true
-            }
-            // Filo del cristal: con luz, el borde de los paneles y popups brilla arriba (el canto del cristal);
-            // plano, un contorno uniforme en todo el borde, como el de abajo
-            LabeledRow {
-                visible: Theme.glassy
-                label: "Filo del cristal"; labelWidth: 70
-                Seg {
-                    model: [["luz", "Con luz"], ["plano", "Plano"]]
-                    current: Settings.get("glassRim", "luz")
-                    onPicked: k => Confirm.change("Filo del cristal", { glassRim: k })
-                }
-            }
-            Txt {
+
+            ColumnLayout {
                 visible: Theme.glassy
                 Layout.fillWidth: true
-                Layout.leftMargin: 80
-                muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-                text: Settings.get("glassRim", "luz") === "plano"
-                    ? "Sin luz: el borde de la barra, el dock, los paneles, las notificaciones y los popups es el mismo en todo el contorno."
-                    : "Con luz: el borde de la barra, el dock, los paneles, las notificaciones y los popups brilla arriba y se apaga hacia abajo."
-            }
-            LabeledRow {
-                label: "Color"; labelWidth: 70
-                Seg {
-                    model: [["auto", "Automático"], ["elegir", "Elegir"], ["mono", "Monocromo"]]
-                    current: root.colorMode
-                    onPicked: k => Settings.set("colorMode", k)
+                spacing: 4
+                LabeledRow {
+                    label: "Preajuste"; labelWidth: 70
+                    Dropdown {
+                        popupWidth: 220
+                        model: root.glassPresetKeys.map(k => [k, root.glassPresets[k].label]).concat([["", "Personalizado"]])
+                        current: root.currentGlassPreset || ""
+                        onPicked: k => { if (k) root.applyGlassPreset(k); }
+                    }
+                }
+                SwRow {
+                    label: "Claro u oscuro según el fondo"
+                    sub: "el cristal se vuelve claro sobre fondos claros y oscuro sobre oscuros; las apps siguen la paleta"
+                    key: "glassWallpaper"; def: true
+                }
+                LabeledRow {
+                    label: "Filo del cristal"; labelWidth: 70
+                    Seg {
+                        model: [["luz", "Con luz"], ["plano", "Plano"]]
+                        current: Settings.get("glassRim", "luz")
+                        onPicked: k => Confirm.change("Filo del cristal", { glassRim: k })
+                    }
+                }
+
+                Expander {
+                    title: "Opacidad"
+                    subtitle: "base y tope para que el texto se lea sobre fondos de cualquier tono"
+                    open: false
+                    LabeledRow { label: "Opacidad en oscuro"; labelWidth: 130
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 0; to: 1; value: Settings.get("glassOpacity", 0.40); onMoved: v => Settings.set("glassOpacity", Math.round(v * 100) / 100) }
+                            Txt { text: Math.round(Settings.get("glassOpacity", 0.40) * 100) + "%"; tabular: true; Layout.preferredWidth: 40 }
+                        }
+                    }
+                    LabeledRow { label: "Opacidad en claro"; labelWidth: 130
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 0; to: 1; value: Settings.get("glassOpacityLight", 0.56); onMoved: v => Settings.set("glassOpacityLight", Math.round(v * 100) / 100) }
+                            Txt { text: Math.round(Settings.get("glassOpacityLight", 0.56) * 100) + "%"; tabular: true; Layout.preferredWidth: 40 }
+                        }
+                    }
+                    LabeledRow { label: "Opacidad máxima"; labelWidth: 130
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 0; to: 1; value: Settings.get("glassMaxOpacity", 0.74); onMoved: v => Settings.set("glassMaxOpacity", Math.round(v * 100) / 100) }
+                            Txt { text: Math.round(Settings.get("glassMaxOpacity", 0.74) * 100) + "%"; tabular: true; Layout.preferredWidth: 40 }
+                        }
+                    }
+                    Txt {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 142
+                        muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                        text: "0 % es transparente y 100 % es opaco. El tope se usa cuando el fondo junto a la barra es del tono contrario al cristal, para que el texto se siga leyendo."
+                    }
+                }
+
+                Expander {
+                    title: "Desenfoque del fondo"
+                    subtitle: "tamaño, pasadas, brillo, ruido y vibrancy del blur de Hyprland"
+                    open: false
+                    LabeledRow { label: "Tamaño"; labelWidth: 100
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 0; to: 16; value: Settings.get("blurSize", 8); onMoved: v => Settings.set("blurSize", Math.round(v)) }
+                            Txt { text: Settings.get("blurSize", 8); tabular: true; Layout.preferredWidth: 28 }
+                        }
+                    }
+                    LabeledRow { label: "Pasadas"; labelWidth: 100
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 1; to: 5; value: Settings.get("blurPasses", 3); onMoved: v => Settings.set("blurPasses", Math.round(v)) }
+                            Txt { text: Settings.get("blurPasses", 3); tabular: true; Layout.preferredWidth: 28 }
+                        }
+                    }
+                    LabeledRow { label: "Brillo en oscuro"; labelWidth: 100
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 0.5; to: 1.5; value: Settings.get("blurBrightness", 0.90); onMoved: v => Settings.set("blurBrightness", Math.round(v * 100) / 100) }
+                            Txt { text: Math.round(Settings.get("blurBrightness", 0.90) * 100) + "%"; tabular: true; Layout.preferredWidth: 40 }
+                        }
+                    }
+                    LabeledRow { label: "Brillo en claro"; labelWidth: 100
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 0.5; to: 1.5; value: Settings.get("blurBrightnessLight", 1.05); onMoved: v => Settings.set("blurBrightnessLight", Math.round(v * 100) / 100) }
+                            Txt { text: Math.round(Settings.get("blurBrightnessLight", 1.05) * 100) + "%"; tabular: true; Layout.preferredWidth: 40 }
+                        }
+                    }
+                    LabeledRow { label: "Ruido"; labelWidth: 100
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 0; to: 0.1; value: Settings.get("blurNoise", 0.015); onMoved: v => Settings.set("blurNoise", Math.round(v * 1000) / 1000) }
+                            Txt { text: Settings.get("blurNoise", 0.015).toFixed(3); tabular: true; Layout.preferredWidth: 46 }
+                        }
+                    }
+                    LabeledRow { label: "Contraste"; labelWidth: 100
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 0.5; to: 1.5; value: Settings.get("blurContrast", 0.95); onMoved: v => Settings.set("blurContrast", Math.round(v * 100) / 100) }
+                            Txt { text: Math.round(Settings.get("blurContrast", 0.95) * 100) + "%"; tabular: true; Layout.preferredWidth: 40 }
+                        }
+                    }
+                    LabeledRow { label: "Vibrancy"; labelWidth: 100
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 0; to: 1; value: Settings.get("blurVibrancy", 0.35); onMoved: v => Settings.set("blurVibrancy", Math.round(v * 100) / 100) }
+                            Txt { text: Math.round(Settings.get("blurVibrancy", 0.35) * 100) + "%"; tabular: true; Layout.preferredWidth: 40 }
+                        }
+                    }
+                    LabeledRow { label: "Oscuridad vibrancy"; labelWidth: 100
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 0; to: 1; value: Settings.get("blurVibrancyDarkness", 0.20); onMoved: v => Settings.set("blurVibrancyDarkness", Math.round(v * 100) / 100) }
+                            Txt { text: Math.round(Settings.get("blurVibrancyDarkness", 0.20) * 100) + "%"; tabular: true; Layout.preferredWidth: 40 }
+                        }
+                    }
+                }
+
+                Expander {
+                    title: "Brillo del cristal"
+                    subtitle: "resplandor plano y filo de luz del borde"
+                    open: false
+                    LabeledRow { label: "Resplandor"; labelWidth: 100
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 0; to: 2; value: Settings.get("sheenOpacity", 1.0); onMoved: v => Settings.set("sheenOpacity", Math.round(v * 100) / 100) }
+                            Txt { text: Math.round(Settings.get("sheenOpacity", 1.0) * 100) + "%"; tabular: true; Layout.preferredWidth: 40 }
+                        }
+                    }
+                    LabeledRow { label: "Filo de luz"; labelWidth: 100
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 0; to: 2; value: Settings.get("rimOpacity", 1.0); onMoved: v => Settings.set("rimOpacity", Math.round(v * 100) / 100) }
+                            Txt { text: Math.round(Settings.get("rimOpacity", 1.0) * 100) + "%"; tabular: true; Layout.preferredWidth: 40 }
+                        }
+                    }
+                }
+
+                Expander {
+                    title: "Ventanas grandes"
+                    subtitle: "opacidad del fondo de Ajustes, Centro de aplicaciones y otras ventanas del shell"
+                    open: false
+                    LabeledRow { label: "Opacidad"; labelWidth: 100
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            SliderBar { Layout.fillWidth: true; from: 0.3; to: 1; value: Settings.get("winOpacity", 0.94); onMoved: v => Settings.set("winOpacity", Math.round(v * 100) / 100) }
+                            Txt { text: Math.round(Settings.get("winOpacity", 0.94) * 100) + "%"; tabular: true; Layout.preferredWidth: 40 }
+                        }
+                    }
                 }
             }
-            // Detalle del modo de color
-            RowLayout {
-                visible: root.colorMode === "auto"
-                Layout.leftMargin: 80
-                spacing: 8
-                Repeater {
-                    model: [Theme.p, Theme.pc, Theme.sc, Theme.ter, Theme.s4]
-                    Rectangle { required property color modelData; width: 22; height: 22; radius: 11; color: modelData; border.width: 1; border.color: Theme.ov }
-                }
-                Txt { Layout.leftMargin: 8; muted: true; size: 11.5; text: "Tomado del fondo «" + (wp.current ? wp.name(wp.current) : "—") + "»" }
-            }
+
             // Paleta elegida (la lista completa, con búsqueda y grupos, va en «Paleta de colores», debajo)
             RowLayout {
-                visible: root.colorMode === "elegir"
-                Layout.leftMargin: 80
+                Layout.fillWidth: true
                 spacing: 8
                 Repeater {
                     model: [Theme.p, Theme.pc, Theme.sc, Theme.ter, Theme.s4]
                     Rectangle { required property color modelData; width: 22; height: 22; radius: 11; color: modelData; border.width: 1; border.color: Theme.ov }
                 }
-                Txt { Layout.leftMargin: 8; muted: true; size: 11.5; text: (root.pals[root.paletteKey]?.name ?? Theme.paletteName).replace(" · claro", "") + " · " + root.palKeys.length + " paletas abajo" }
+                Txt { Layout.leftMargin: 8; muted: true; size: 11.5; text: (root.pals[root.paletteKey]?.name ?? Theme.paletteName).replace(" · claro", "") + " · el modo lo fija la paleta" }
             }
-            // Acento: el de la paleta o uno propio (sustituye al color principal en todo el tema)
+            // Acento: automático según la paleta, colores del tema, blanco o personalizado
             LabeledRow {
                 label: "Acento"; labelWidth: 70
                 AccentPicker { }
             }
-            RowLayout {
-                visible: root.colorMode === "mono"
-                Layout.fillWidth: true
-                Layout.leftMargin: 80
-                spacing: 12
-                Seg {
-                    model: [["oscuro", "Oscuro"], ["claro", "Claro"]]
-                    current: root.themeMode === "claro" ? "claro" : "oscuro"
-                    fill: false
-                    onPicked: k => Settings.set("themeMode", k)
-                }
-                Item { Layout.fillWidth: true }
-                Txt { text: "Fondo en blanco y negro"; weight: Font.Medium }
-                Sw { checked: Settings.get("monoFondo", true); onToggled: v => Settings.set("monoFondo", v) }
-            }
-            Txt {
-                visible: root.colorMode === "mono"
-                Layout.fillWidth: true
-                Layout.leftMargin: 80
-                muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-                text: "Grises neutros con un acento azul, como el modo oscuro (o claro) de Chrome."
-            }
-            LabeledRow {
-                visible: root.colorMode !== "mono"
-                label: "Modo"; labelWidth: 70
-                Seg {
-                    model: [["oscuro", "Oscuro"], ["claro", "Claro"], ["auto", "Automático"]]
-                    current: root.themeMode
-                    onPicked: k => Settings.set("themeMode", k)
-                }
-            }
-            // Automático: a unas horas o con el sol (la misma fuente que la luz nocturna de Pantallas)
-            LabeledRow {
-                visible: root.colorMode !== "mono" && root.themeMode === "auto"
-                label: "Cuándo"; labelWidth: 70
-                Seg {
-                    model: [["horas", "A unas horas"], ["sol", "Según la salida y puesta del sol"]]
-                    current: root.schedule
-                    onPicked: k => Settings.set("themeSchedule", k)
-                }
-            }
-            RowLayout {
-                visible: root.colorMode !== "mono" && root.themeMode === "auto" && root.schedule === "horas"
-                Layout.leftMargin: 80
-                spacing: 8
-                Txt { text: "Claro de"; muted: true }
-                Dropdown { Layout.preferredWidth: 86; model: root.hours; current: Settings.get("lightFrom", 7); onPicked: k => Settings.set("lightFrom", k) }
-                Txt { text: "a"; muted: true }
-                Dropdown { Layout.preferredWidth: 86; model: root.hours; current: Settings.get("lightTo", 19); onPicked: k => Settings.set("lightTo", k) }
-                Txt { text: "· oscuro el resto"; muted: true; size: 11.5 }
-            }
-            ColumnLayout {
-                visible: root.colorMode !== "mono" && root.useSun
-                Layout.leftMargin: 80
-                Layout.fillWidth: true
-                spacing: 2
-                Txt {
-                    Layout.fillWidth: true; weight: Font.Medium
-                    text: !root.useSun ? "" : Sun.polar === "dia" ? "Hoy el sol no se pone: claro todo el día"
-                        : Sun.polar === "noche" ? "Hoy no sale el sol: oscuro todo el día"
-                        : "Claro de " + Sun.sunrise + " (amanecer) a " + Sun.sunset + " (atardecer)"
-                }
-                Txt {
-                    Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-                    text: !root.useSun ? "" : Sun.computed ? "Calculado para " + Sun.where + " · el mismo horario que la luz nocturna"
-                        : !Sun.auto ? "Horas a mano de Pantallas › Luz nocturna"
-                        : "Aún sin ubicación: se usan las horas de Pantallas › Luz nocturna. Pon tu ciudad o permite la ubicación por IP en Privacidad."
-                }
-            }
-            SwRow {
-                visible: root.colorMode !== "mono" && root.themeMode === "auto"
-                label: "Cambiar también el fondo"; sub: "al pasar a claro u oscuro"; key: "themeWallpaper"
-            }
         }
     }
 
-    // ---------- Paleta de colores (modo «Elegir») ----------
+    // ---------- Paleta de colores ----------
     Section {
-        visible: root.colorMode === "elegir"
         Layout.fillWidth: true
         title: "Paleta de colores"
         headerRight: Mono { tech: true; text: "palette = " + root.paletteKey }
@@ -309,18 +349,14 @@ ColumnLayout {
                 Layout.fillWidth: true
                 fill: false
                 h: 28
-                model: [["todas", "Todas"], ["originales", "Originales"], ["populares", "Populares"], ["pastel", "Pastel"]].concat(Object.keys(root.userPals).length ? [["omarchy", "Importadas"]] : [])
+                model: [["oscuro", "Oscuro"], ["claro", "Claro"]]
                 current: root.palGroup
                 onPicked: k => root.palGroup = k
             }
             Item { Layout.fillWidth: true }
-            // n de HyprFrijol frente a n del usuario (importados de Omarchy + Mis temas)
             Txt {
-                readonly property int hf: root.palKeys.filter(k => k in root.basePals).length
-                readonly property int mine: root.palKeys.length - hf
                 muted: true; size: 11.5
-                text: (root.palShown.length < root.palKeys.length - (root.palKeys.filter(k => root.pals[k].group === "propio").length) ? root.palShown.length + " a la vista · " : "")
-                    + hf + " de HyprFrijol" + (mine ? " · " + mine + (mine === 1 ? " tuyo" : " tuyos") : "")
+                text: root.palShown.length + " a la vista"
             }
         }
         // Sin tope de temas: dos filas que se desplazan en horizontal (ui/HCarousel.qml) si no caben
@@ -328,7 +364,7 @@ ColumnLayout {
             id: palCar
             Layout.fillWidth: true
             Grid {
-                rows: Math.min(2, Math.max(1, root.palShown.length))
+                rows: Math.min(3, Math.max(1, root.palShown.length))
                 flow: Grid.TopToBottom
                 spacing: 8
                 Repeater {
@@ -344,7 +380,7 @@ ColumnLayout {
                         pals: root.pals
                         current: root.paletteKey
                         themeMode: root.themeMode
-                        onPicked: (k, mode) => Settings.setMany(mode === "" ? { colorMode: "elegir", palette: k } : { colorMode: "elegir", palette: k, themeMode: mode })
+                        onPicked: (k, mode) => Settings.setMany({ colorMode: "elegir", palette: k, themeMode: mode })
                     }
                 }
             }
@@ -357,7 +393,7 @@ ColumnLayout {
         Txt {
             Layout.fillWidth: true
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-            text: "Las que tienen pareja (Catppuccin, Nord, Gruvbox, Rosé Pine…) cambian a su versión clara u oscura con el modo; las demás (☀/☾) lo fijan. Con «Aplicar el tema a las apps», el terminal usa sus 16 colores."
+            text: "Cada paleta fija su modo: las que tienen pareja (Catppuccin, Nord, Gruvbox, Rosé Pine…) aparecen como dos tarjetas, una en Oscuro y otra en Claro. Con «Aplicar el tema a las apps», el terminal usa sus 16 colores."
         }
     }
 
@@ -555,8 +591,10 @@ ColumnLayout {
         }
     }
 
+    // ---------- Espacio y escala ----------
     Section {
         Layout.fillWidth: true
+        title: "Espacio y escala"
         RowLayout {
             Layout.fillWidth: true
             spacing: 24
@@ -575,13 +613,13 @@ ColumnLayout {
                 Pills { Layout.fillWidth: true; model: [[1, "1×"], [1.25, "1.25×"], [1.5, "1.5×"], [2, "2×"]]; current: Settings.get("uiScale", 1); onPicked: v => Confirm.change("Escala de la interfaz", { uiScale: v }) }
             }
         }
-        Item { implicitHeight: 2 }
-        LinkRow { label: "Quitar efectos en juegos"; value: Settings.get("gameNoFx", true) ? "Activado" : "Desactivado"; section: "animaciones"; sectionLabel: "Animaciones y efectos" }
     }
-    // Movimiento, ventanas y rendimiento de los efectos: Ajustes › Animaciones y efectos
+
+    // ---------- Movimiento, ventanas y rendimiento de los efectos ----------
     Section {
         Layout.fillWidth: true
         title: "Animaciones y efectos"
         LinkRow { label: "Movimiento, sombras, resaltado y desenfoque"; section: "animaciones"; sectionLabel: "Animaciones y efectos"; target: "Animaciones" }
+        LinkRow { label: "Quitar efectos en juegos"; value: Settings.get("gameNoFx", true) ? "Activado" : "Desactivado"; section: "animaciones"; sectionLabel: "Animaciones y efectos"; target: "Desenfoque y rendimiento" }
     }
 }

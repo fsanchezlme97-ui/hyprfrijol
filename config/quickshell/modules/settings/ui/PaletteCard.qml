@@ -14,8 +14,8 @@ Rectangle {
     property string current: ""
     property string themeMode: "oscuro"
     readonly property var base: pals[key] ?? ({})
-    readonly property var pal: base.pair && pals[base.pair] && !!pals[base.pair].light === Theme.sysLight ? pals[base.pair] : base
-    readonly property bool on: current === key || (base.pair !== undefined && current === base.pair)
+    readonly property var pal: base
+    readonly property bool on: current === key
     readonly property var ansi: pal.ansi ?? [pal.s4, "#E06C75", "#98C379", "#E5C07B", pal.p, pal.ter, "#56B6C2"]
     signal picked(string key, string mode)
 
@@ -99,6 +99,6 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: card.picked(card.key, card.themeMode === "auto" || !!card.base.pair ? "" : card.base.light ? "claro" : "oscuro")
+        onClicked: card.picked(card.key, card.base.light ? "claro" : "oscuro")
     }
 }

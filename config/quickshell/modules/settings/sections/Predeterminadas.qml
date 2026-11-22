@@ -114,7 +114,7 @@ RowLayout {
                 }
                 Txt {
                     Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-                    text: "Apps de GNOME (Archivos, Loupe, Papers, Showtime…) si están instaladas. El navegador no se toca."
+                    text: "Apps de KDE/Qt (Dolphin, Gwenview, Okular, Haruna…) si están instaladas. El navegador no se toca."
                 }
             }
             RowLayout {   // las de serie de install/apps.json (también Chrome como navegador): scripts/hf-apps defaults
@@ -128,7 +128,7 @@ RowLayout {
                 Process { id: serieDefaults; command: [Paths.script("hf-apps"), "defaults"]; onExited: root.reload() }
                 Txt {
                     Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
-                    text: "Las de serie de HyprFrijol que tengas: Chrome para la web, Loupe, Papers, Showtime, Decibels, Editor de texto, File Roller…"
+                    text: "Las de serie de HyprFrijol que tengas: Chrome para la web, Gwenview, Okular, Haruna, Elisa, Kate, Ark…"
                 }
             }
         }

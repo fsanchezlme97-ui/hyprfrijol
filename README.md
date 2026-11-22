@@ -35,20 +35,20 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 | Sesión aparte y modo de prueba en ventana (`hf-session --nested`) | `scripts/hf-session` |
 | Colores del fondo (matugen) o 54 temas, 42 de ellos en pares oscuro y claro (y los tuyos, sin límite), estilo Math (Material 3) con o sin transparencia, claro / oscuro / auto, redondeo ajustable | `scripts/hf-apply`, `config/themes/` |
 | Barra abajo / arriba / izquierda, fija o flotante | `quickshell/bar/` |
-| Spotlight (apps, archivos con vista previa y acciones rápidas, calculadora, comandos, ventanas) | `modules/spotlight`, `scripts/hf-fileact` |
-| Ajustes rápidos, notificaciones con respuesta, OSD | `modules/quicksettings`, `notifications`, `osd` |
-| Panel lateral con el asistente de IA (¼ de pantalla), PiP mínimo | `modules/sidepanel`, `pip` — ver `docs/IA.md` |
-| Vista general, Alt+Tab, Snap, dock y escritorio ordenado, widgets | `modules/overview`, `alttab`, `snap`, `desktop`, `widgets` |
-| Selector de fondos (por monitor, por hora, mono), captura sobre la pantalla congelada (lupa, ventanas, fijar, OCR con cajas, anotación, IA) / grabación, selector de color (HEX · RGB · HSL · OKLCH, historial) | `modules/wallpapers`, `capture`, `colorpicker` |
-| Portapapeles y emojis en Spotlight, agenda (con `.ics`), centro de actualizaciones con punto de restauración | `modules/spotlight`, `agenda`, `updates` |
-| Memorias USB y tarjetas SD (aviso con Abrir/Expulsar, icono en la barra, Ajustes › Almacenamiento), cola de descargas de vídeo, audio, imágenes y archivos (yt-dlp, gallery-dl, aria2c; «descargar <url>» en Spotlight), fondos de Wallhaven, y una IA que enseña qué cambia y pide tu aprobación paso a paso | `scripts/hf-devices`, `hf-download`, `hf-wallhaven` · `modules/devices`, `downloads` |
-| Bloqueo, menú de energía, modo sin distracciones, agente de polkit | `modules/lock`, `power`, `focus`, `polkit` |
-| Aplicación de ajustes, bienvenida, herramientas | `modules/settings`, `welcome`, `tools` |
-| Apps por nivel (de serie, productividad, destacadas, creativa, experimental) con instalación por distro, apps predeterminadas y menú «HyprFrijol» en Nautilus (IA, firmar PDF, OCR, convertir, poner de fondo) | `install/apps.json`, `scripts/hf-apps`, `hf-fileact`, `config/nautilus/` |
+| Spotlight (apps, archivos con vista previa y acciones rápidas, calculadora, comandos, ventanas) | `config/quickshell/modules/spotlight`, `scripts/hf-fileact` |
+| Ajustes rápidos, notificaciones con respuesta, OSD | `config/quickshell/modules/quicksettings`, `notifications`, `osd` |
+| Panel lateral con el asistente de IA (¼ de pantalla), PiP mínimo | `config/quickshell/modules/sidepanel`, `pip` — ver `docs/IA.md` |
+| Vista general, Alt+Tab, Snap, dock y escritorio ordenado, widgets | `config/quickshell/modules/overview`, `alttab`, `snap`, `desktop`, `widgets` |
+| Selector de fondos (por monitor, por hora, mono), captura sobre la pantalla congelada (lupa, ventanas, fijar, OCR con cajas, anotación, IA) / grabación, selector de color (HEX · RGB · HSL · OKLCH, historial) | `config/quickshell/modules/wallpapers`, `capture`, `colorpicker` |
+| Portapapeles y emojis en Spotlight, agenda (con `.ics`), centro de actualizaciones con punto de restauración | `config/quickshell/modules/spotlight`, `agenda`, `updates` |
+| Memorias USB y tarjetas SD (aviso con Abrir/Expulsar, icono en la barra, Ajustes › Almacenamiento), cola de descargas de vídeo, audio, imágenes y archivos (yt-dlp, gallery-dl, aria2c; «descargar <url>» en Spotlight), fondos de Wallhaven, y una IA que enseña qué cambia y pide tu aprobación paso a paso | `scripts/hf-devices`, `hf-download`, `hf-wallhaven` · `config/quickshell/modules/devices`, `downloads` |
+| Bloqueo, menú de energía, modo sin distracciones, agente de polkit | `config/quickshell/modules/lock`, `power`, `focus`, `polkit` |
+| Aplicación de ajustes, bienvenida, herramientas | `config/quickshell/modules/settings`, `welcome`, `tools` |
+| Apps por nivel (de serie, productividad, destacadas, creativa, experimental) con instalación por distro, apps predeterminadas (KDE/Qt primero) y menú «HyprFrijol» en Nautilus cuando se usa (IA, firmar PDF, OCR, convertir, poner de fondo) | `install/apps.json`, `scripts/hf-apps`, `hf-fileact`, `config/nautilus/` |
 | Login con greetd (Quickshell) | `greeter/` |
 | «Que no se rompa»: modo seguro en el login, copias «buenas» de tus ajustes, diagnóstico copiable y actualización por versiones con vuelta atrás | `scripts/hf-safe`, `hf-doctor`, `hf-update`, `config/hypr/safe.lua` |
-| Carga diferida: Spotlight, centro de control, vista general, capturas y demás paneles solo ocupan memoria mientras se usan (`lazyModules`, Ajustes › Energía y rendimiento) | `components/LazyView.qml`, `modules/Modules.qml` |
-| Plugins de Omarchy (widget de barra, panel, overlay, menú y servicio; se piden permiso al activarlos) y temas `colors.toml` de Omarchy como paletas | `scripts/hf-plugin`, `modules/omarchy`, `quickshell/Commons`, `Ui` |
+| Carga diferida: Spotlight, centro de control, vista general, capturas y demás paneles solo ocupan memoria mientras se usan (`lazyModules`, Ajustes › Energía y rendimiento) | `components/LazyView.qml`, `config/quickshell/modules/Modules.qml` |
+| Plugins de Omarchy (widget de barra, panel, overlay, menú y servicio; se piden permiso al activarlos) y temas `colors.toml` de Omarchy como paletas | `scripts/hf-plugin`, `config/quickshell/modules/omarchy`, `quickshell/Commons`, `Ui` |
 
 ## Capturas
 
