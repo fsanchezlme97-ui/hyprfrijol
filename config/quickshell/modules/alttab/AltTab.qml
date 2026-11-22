@@ -19,6 +19,7 @@ Overlay {
     view: "alttab"
     place: "screen"            // centrado en la pantalla entera, sea cual sea la barra
     closeOnOutside: true
+    dim: true                  // fondo oscurecido y desenfocado, como la vista general (Super + Tab)
     panelWidth: card.implicitWidth
     panelHeight: card.implicitHeight
 
