@@ -26,6 +26,9 @@ Item {
     readonly property var extraItems: all.filter(i => !shownItems.includes(i))
     readonly property bool any: all.length > 0
     visible: any
+    // Zona de los iconos (sin el «›»): la barra adaptable los deja con sus colores
+    readonly property rect iconsRect: Qt.rect(grid.x, grid.y,
+        more.visible && !vertical ? more.x : grid.width, more.visible && vertical ? more.y : grid.height)
     implicitWidth: vertical ? 26 : grid.implicitWidth
     implicitHeight: vertical ? grid.implicitHeight : 22
 

@@ -3,6 +3,17 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.13] — 2026-11-22
+
+### Mejoras
+- **Barra adaptable, mejor**: los iconos de la bandeja conservan sus colores; el blanco o el negro se elige mirando el
+  fondo de pantalla justo debajo de cada punto de la barra (un fondo claro a un lado y oscuro al otro ya no deja medio
+  ilegible), con una sombra más marcada donde el fondo está entre los dos. El efecto va en una sola pasada (más
+  ligero) y ya no hace falta ImageMagick.
+- **Transiciones**: al activarla o quitarla la barra pasa poco a poco de sus colores a la tinta; al cambiar de fondo
+  la tinta cambia a la vez que el fundido del fondo; y con la barra que se esconde, si la tapan ventanas vuelve su
+  fondo normal (y se va al quedar el escritorio a la vista).
+
 ## [0.11.12] — 2026-11-22
 
 ### Novedades

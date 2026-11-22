@@ -17,6 +17,7 @@ Item {
     // Pantalla secundaria: solo sus espacios (sin aplicaciones, chips, bandeja ni estado)
     readonly property bool secondary: Shell.barModeFor(barWindow.screen) === "sencilla"
     readonly property var pills: [pillT, pillB, pillS]
+    readonly property Item trayItem: vTray         // la barra adaptable deja sus iconos con sus colores
     readonly property real naturalLength: colMain.implicitHeight + 24
     BarPill { id: pillT; bar: root.barWindow; visible: root.islands; y: 0; width: parent.width; height: colMain.y + topEnd.y + topEnd.height + 6 }
     // Chips (si hay alguno entre el hueco y el estado) y grupo de estado

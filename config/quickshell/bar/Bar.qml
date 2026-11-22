@@ -10,17 +10,16 @@
 //   barScreens           por pantalla: completa · sencilla (espacios y consumo por programa) · oculta (Shell.barModeFor)
 //   barAllScreens        false → las pantallas sin elegir en barScreens, sin barra
 //   barTransparentEmpty  sin fondo cuando el espacio activo de esa pantalla no tiene ventanas
-//   barAdaptive          sin fondo nunca, y textos e iconos de un solo color, blanco o negro según lo claro que sea
-//                        el fondo de pantalla en la franja de la barra (como elementary OS o CutefishOS), con una
-//                        sombra suave para que se lean. El brillo lo mide ImageMagick (wallpaper.json: el fondo
-//                        propio de la pantalla o el general; de un vídeo, su primer cuadro); sin magick, blanco.
+//   barAdaptive          sin fondo y con textos e iconos de un solo color, blanco o negro según lo claro que sea el
+//                        fondo de pantalla debajo de cada punto (como elementary OS o CutefishOS), con una sombra
+//                        suave; los iconos de la bandeja conservan sus colores (shaders/ink.frag). Transiciones: al
+//                        activarla, al cambiar de fondo y al taparla ventanas (barra que se esconde: vuelve el fondo).
 //   visualBell           parpadea al llegar un aviso (alerta visual en vez de sonido)
 // Isla central: la barra flota y mide lo que su contenido, centrada; el resto de la franja deja pasar el ratón.
 // Archipiélago: cada grupo de módulos en su propia píldora flotante (BarPill), con el escritorio visible entre
 // ellas; solo las píldoras reciben el ratón (máscara con content.item.pills).
 // Super + J (Shell.barHidden) la deja escondida: vuelve al llevar el cursor al borde.
 import QtQuick
-import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -88,23 +87,60 @@ PanelWindow {
         return !!m && HyprClients.onWorkspace(m.activeWorkspace?.id).length === 0;
     }
 
-    // Barra adaptable (barAdaptive): brillo medio (0-1) del fondo bajo la barra; -1 = sin medir
+    // Barra adaptable (barAdaptive): sin fondo y con la tinta de shaders/ink.frag, que mira el fondo de pantalla de esta
+    // pantalla bajo cada punto de la barra. Con la barra que se esconde (automática / inteligente) y ventanas debajo
+    // vuelve el fondo normal: lo que hay debajo no es el fondo de pantalla.
     readonly property bool adaptive: Settings.get("barAdaptive", false) === true
-    property real wallLuma: -1
-    readonly property bool inkDark: wallLuma > 0.58
-    onAdaptiveChanged: measure()
-    onPosChanged: measure()
-    function measure(): void {
-        if (!adaptive) return;
-        let wp = {};
-        try { wp = JSON.parse(wpFile.text() || "{}"); } catch (e) { return; }
-        const img = (wp.monitors ?? {})[screen?.name ?? ""] || wp.image || "";
-        if (!img) return;
-        const g = ({ arriba: "North", abajo: "South", izquierda: "West", derecha: "East" })[pos] ?? "North";
-        lumaProc.command = ["magick", img + "[0]", "-resize", "160x90!", "-gravity", g,
-            "-crop", vertical ? "8%x100%+0+0" : "100%x8%+0+0", "+repage", "-colorspace", "Gray", "-format", "%[fx:mean]", "info:"];
-        lumaProc.running = false;
-        lumaProc.running = true;
+    readonly property bool overWindows: {
+        if (!edgeMode) return false;
+        const m = HyprClients.monitorByName(screen?.name ?? "");
+        return !!m && HyprClients.onWorkspace(m.activeWorkspace?.id).length > 0;
+    }
+    readonly property bool inkOn: adaptive && !overWindows
+    // 0 → 1 al activarla (y al revés): de los colores de siempre a la tinta, sin salto
+    property real inkAmount: inkOn ? 1 : 0
+    Behavior on inkAmount { NumberAnimation { duration: Theme.durLong; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+    // Fondo de esta pantalla (wallpaper.json: el propio o el general; de un vídeo, su primer cuadro), pequeño: el
+    // escalado ya lo difumina. Al cambiar, el shader funde el viejo con el nuevo al ritmo del fundido del fondo.
+    property var wp: ({})
+    readonly property string wallSrc: {
+        const p = (wp.monitors ?? {})[screen?.name ?? ""] || wp.image || "";
+        return p ? "file://" + p : "";
+    }
+    property real wallMix: 0
+    property bool wallPending: false
+    onWallSrcChanged: {
+        if (!wallSrc) return;
+        if (String(wallA.source) === "" || inkAmount === 0) { wallA.source = wallSrc; wallMixAnim.stop(); wallMix = 0; return; }
+        const toB = wallMix < 0.5;
+        (toB ? wallB : wallA).source = wallSrc;
+        wallMixAnim.to = toB ? 1 : 0;
+        wallMixAnim.duration = Number(wp.fadeMs ?? 1200) || 1200;
+        wallPending = true;
+        startMix();
+    }
+    function startMix(): void {
+        const img = wallMixAnim.to === 1 ? wallB : wallA;
+        if (wallPending && img.status !== Image.Loading) { wallPending = false; wallMixAnim.restart(); }
+    }
+    NumberAnimation { id: wallMixAnim; target: bar; property: "wallMix"; easing.type: Easing.InOutQuad }
+    component WallTex: Image {
+        asynchronous: true
+        sourceSize.width: 48             // ~40 px de pantalla por punto: la tinta no cambia a mitad de palabra
+        fillMode: Image.Stretch
+        onStatusChanged: bar.startMix()
+    }
+    WallTex { id: wallA }
+    WallTex { id: wallB }
+    // Un Image oculto no da textura al shader: se pasa por ShaderEffectSource (hideSource lo quita de la vista)
+    ShaderEffectSource { id: wallTexA; sourceItem: wallA; hideSource: true; visible: false }
+    ShaderEffectSource { id: wallTexB; sourceItem: wallB; hideSource: true; visible: false }
+    // Recorte del fondo como en la pantalla (PreserveAspectCrop, centrado)
+    readonly property var wallCrop: {
+        const img = wallMix > 0.5 ? wallB : wallA;
+        const ia = img.implicitWidth / Math.max(1, img.implicitHeight);
+        const sa = (screen?.width ?? 1) / Math.max(1, screen?.height ?? 1);
+        return ia > sa ? Qt.vector4d(sa / ia, 1, 0, 0) : Qt.vector4d(1, ia / Math.max(0.01, sa), 0, 0);
     }
     FileView {
         id: wpFile
@@ -112,13 +148,7 @@ PanelWindow {
         watchChanges: bar.adaptive
         printErrors: false
         onFileChanged: reload()
-        onLoaded: bar.measure()
-    }
-    Process {
-        id: lumaProc
-        stdout: StdioCollector {
-            onStreamFinished: { const v = parseFloat(text); bar.wallLuma = isFinite(v) ? v : -1; }
-        }
+        onLoaded: { try { bar.wp = JSON.parse(text() || "{}"); } catch (e) {} }
     }
 
     WlrLayershell.namespace: "hf-bar"
@@ -209,7 +239,7 @@ PanelWindow {
                 effects: bar.floating
                 // Archipiélago: el fondo lo ponen las píldoras de cada grupo (BarPill)
                 visible: !bar.archi
-                opacity: bar.emptyWs || bar.adaptive ? 0 : 1
+                opacity: bar.emptyWs || bar.inkOn ? 0 : 1
                 Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                 // Fija: solo la línea del lado de las ventanas
                 Rectangle {
@@ -223,30 +253,39 @@ PanelWindow {
                 }
             }
 
-            // Adaptable: todo el contenido de un color, con la tinta según lo claro de cada píxel (shaders/ink.frag)
-            // y una sombra suave del contrario. En el body, sin escalar: nítido con barScale.
-            layer.enabled: bar.adaptive
-            layer.effect: Item {
-                id: inkFx
-                property var source
-                ShaderEffect {
-                    id: inked
-                    anchors.fill: parent
-                    visible: false
-                    property var source: inkFx.source
-                    property color ink: bar.inkDark ? "black" : "white"
-                    property real invert: Theme.light ? 1 : 0
-                    fragmentShader: Qt.resolvedUrl("shaders/ink.frag.qsb")
-                }
-                MultiEffect {
-                    anchors.fill: parent
-                    source: inked
-                    shadowEnabled: true
-                    shadowColor: bar.inkDark ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(0, 0, 0, 0.55)
-                    shadowBlur: 0.35
-                    shadowVerticalOffset: 1
-                    shadowHorizontalOffset: 0
-                }
+            // Adaptable: el contenido con la tinta de shaders/ink.frag (color según el fondo de pantalla debajo, cantidad
+            // según lo claro de cada píxel, sombra suave), salvo los iconos de la bandeja, que conservan sus colores.
+            // En el body, sin escalar: nítido con barScale. Se apaga cuando la transición de salida termina.
+            // La barra en la pantalla (0-1), para mirar el fondo justo debajo
+            readonly property var screenArea: {
+                const sw = Math.max(1, bar.screen?.width ?? 1), sh = Math.max(1, bar.screen?.height ?? 1);
+                const wx = bar.pos === "derecha" ? sw - bar.width : 0, wy = bar.pos === "abajo" ? sh - bar.height : 0;
+                return Qt.vector4d((wx + x) / sw, (wy + y) / sh, width / sw, height / sh);
+            }
+            // Iconos de la bandeja (0-1 de la barra) que no llevan tinta
+            readonly property var keepRect: {
+                const t = content.item?.trayItem ?? null;
+                width; height; bar.k; content.item?.width;
+                const r = t?.iconsRect;
+                t?.x; t?.y; t?.parent?.x; t?.parent?.y; t?.parent?.width;
+                if (!t || !t.visible || !r || r.width <= 0 || width <= 0 || height <= 0) return Qt.vector4d(-1, -1, -1, -1);
+                const p = t.mapToItem(body, r.x, r.y, r.width, r.height);
+                return Qt.vector4d(p.x / width, p.y / height, (p.x + p.width) / width, (p.y + p.height) / height);
+            }
+            layer.enabled: bar.inkAmount > 0.001
+            layer.effect: ShaderEffect {
+                property var wallA: wallTexA
+                property var wallB: wallTexB
+                property var area: body.screenArea
+                property var crop: bar.wallCrop
+                property var keep: body.keepRect
+                readonly property real dpr: bar.screen?.devicePixelRatio ?? 1
+                property var texel: Qt.vector4d(1 / Math.max(1, body.width * dpr), 1 / Math.max(1, body.height * dpr), 0, 0)
+                property real amount: bar.inkAmount
+                property real invert: Theme.light ? 1 : 0
+                property real wallMix: bar.wallMix
+                property real threshold: 0.55
+                fragmentShader: Qt.resolvedUrl("shaders/ink.frag.qsb")
             }
 
             // Alerta visual (visualBell): dos destellos del color primario
