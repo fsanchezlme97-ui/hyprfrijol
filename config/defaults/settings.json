@@ -212,6 +212,7 @@
   "barTrayMax": 3,
   "barTrayHidden": [],
   "barTransparentEmpty": false,
+  "barAdaptive": false,
   "barLive": true,
   "hotCorners": {
     "tl": "vista",

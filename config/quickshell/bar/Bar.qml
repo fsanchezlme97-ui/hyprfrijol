@@ -10,13 +10,19 @@
 //   barScreens           por pantalla: completa · sencilla (espacios y consumo por programa) · oculta (Shell.barModeFor)
 //   barAllScreens        false → las pantallas sin elegir en barScreens, sin barra
 //   barTransparentEmpty  sin fondo cuando el espacio activo de esa pantalla no tiene ventanas
+//   barAdaptive          sin fondo nunca, y textos e iconos de un solo color, blanco o negro según lo claro que sea
+//                        el fondo de pantalla en la franja de la barra (como elementary OS o CutefishOS), con una
+//                        sombra suave para que se lean. El brillo lo mide ImageMagick (wallpaper.json: el fondo
+//                        propio de la pantalla o el general; de un vídeo, su primer cuadro); sin magick, blanco.
 //   visualBell           parpadea al llegar un aviso (alerta visual en vez de sonido)
 // Isla central: la barra flota y mide lo que su contenido, centrada; el resto de la franja deja pasar el ratón.
 // Archipiélago: cada grupo de módulos en su propia píldora flotante (BarPill), con el escritorio visible entre
 // ellas; solo las píldoras reciben el ratón (máscara con content.item.pills).
 // Super + J (Shell.barHidden) la deja escondida: vuelve al llevar el cursor al borde.
 import QtQuick
+import QtQuick.Effects
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import ".."
@@ -80,6 +86,39 @@ PanelWindow {
         if (!Settings.get("barTransparentEmpty", false)) return false;
         const m = HyprClients.monitorByName(screen?.name ?? "");
         return !!m && HyprClients.onWorkspace(m.activeWorkspace?.id).length === 0;
+    }
+
+    // Barra adaptable (barAdaptive): brillo medio (0-1) del fondo bajo la barra; -1 = sin medir
+    readonly property bool adaptive: Settings.get("barAdaptive", false) === true
+    property real wallLuma: -1
+    readonly property bool inkDark: wallLuma > 0.58
+    onAdaptiveChanged: measure()
+    onPosChanged: measure()
+    function measure(): void {
+        if (!adaptive) return;
+        let wp = {};
+        try { wp = JSON.parse(wpFile.text() || "{}"); } catch (e) { return; }
+        const img = (wp.monitors ?? {})[screen?.name ?? ""] || wp.image || "";
+        if (!img) return;
+        const g = ({ arriba: "North", abajo: "South", izquierda: "West", derecha: "East" })[pos] ?? "North";
+        lumaProc.command = ["magick", img + "[0]", "-resize", "160x90!", "-gravity", g,
+            "-crop", vertical ? "8%x100%+0+0" : "100%x8%+0+0", "+repage", "-colorspace", "Gray", "-format", "%[fx:mean]", "info:"];
+        lumaProc.running = false;
+        lumaProc.running = true;
+    }
+    FileView {
+        id: wpFile
+        path: Paths.state + "/wallpaper.json"
+        watchChanges: bar.adaptive
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: bar.measure()
+    }
+    Process {
+        id: lumaProc
+        stdout: StdioCollector {
+            onStreamFinished: { const v = parseFloat(text); bar.wallLuma = isFinite(v) ? v : -1; }
+        }
     }
 
     WlrLayershell.namespace: "hf-bar"
@@ -170,7 +209,7 @@ PanelWindow {
                 effects: bar.floating
                 // Archipiélago: el fondo lo ponen las píldoras de cada grupo (BarPill)
                 visible: !bar.archi
-                opacity: bar.emptyWs ? 0 : 1
+                opacity: bar.emptyWs || bar.adaptive ? 0 : 1
                 Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                 // Fija: solo la línea del lado de las ventanas
                 Rectangle {
@@ -181,6 +220,32 @@ PanelWindow {
                     height: bar.vertical ? parent.height : 1
                     x: bar.pos === "izquierda" ? parent.width - 1 : 0
                     y: bar.pos === "arriba" ? parent.height - 1 : 0
+                }
+            }
+
+            // Adaptable: todo el contenido de un color, con la tinta según lo claro de cada píxel (shaders/ink.frag)
+            // y una sombra suave del contrario. En el body, sin escalar: nítido con barScale.
+            layer.enabled: bar.adaptive
+            layer.effect: Item {
+                id: inkFx
+                property var source
+                ShaderEffect {
+                    id: inked
+                    anchors.fill: parent
+                    visible: false
+                    property var source: inkFx.source
+                    property color ink: bar.inkDark ? "black" : "white"
+                    property real invert: Theme.light ? 1 : 0
+                    fragmentShader: Qt.resolvedUrl("shaders/ink.frag.qsb")
+                }
+                MultiEffect {
+                    anchors.fill: parent
+                    source: inked
+                    shadowEnabled: true
+                    shadowColor: bar.inkDark ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(0, 0, 0, 0.55)
+                    shadowBlur: 0.35
+                    shadowVerticalOffset: 1
+                    shadowHorizontalOffset: 0
                 }
             }
 

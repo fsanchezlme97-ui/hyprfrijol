@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.12] — 2026-11-22
+
+### Novedades
+- **Barra adaptable** (Ajustes › Barra › «Barra adaptable», apagada por defecto): la barra se queda sin fondo y sus
+  textos e iconos salen en blanco o en negro según lo claro que sea el fondo de pantalla bajo ella, como en
+  elementary OS o CutefishOS. Cada pantalla mira su propio fondo y cambia sola al cambiarlo. Los iconos de color
+  quedan como un grabado del mismo tono y una sombra suave ayuda a leerla sobre cualquier imagen.
+
 ## [0.11.11] — 2026-11-22
 
 ### Cambios
