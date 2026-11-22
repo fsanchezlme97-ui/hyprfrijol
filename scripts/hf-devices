@@ -244,11 +244,11 @@ def do_open(dev):
 
 
 def open_disks():
-    for b in ("gnome-disks", "kdepartitionmanager", "gparted"):
+    for b in ("partitionmanager", "gparted", "gnome-disks"):
         if shutil.which(b):
             subprocess.Popen([b], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
             return {"ok": True, "app": b}
-    return {"ok": False, "error": "Instala GNOME Discos (gnome-disk-utility)"}
+    return {"ok": False, "error": "Instala Partition Manager (partitionmanager)"}
 
 
 # ---------------------------------------------------------------- vigilar

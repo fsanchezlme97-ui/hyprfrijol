@@ -60,7 +60,7 @@ Red, Sonido, Energía, Sistema y recuperación, Accesibilidad y Acerca del siste
 | 40-monitors.py | `monitors` {salida: {mode, position, scale, vrr, disabled, mirror}} |
 | 50-rules.py | ventanas Ajustes/Herramientas flotantes; sin efectos a pantalla completa (`gameNoFx`) |
 | 60-binds.py | `keybinds` {descripción: {from, to}} (acciones en `keybind-actions.json`), `overAmplify`, lupa (`magnifier`: sustituye la lupa básica de binds.lua) |
-| 15-apps.py | `fileManager` (solo si está instalado; si no, env.lua usa el primero instalado: Nautilus, Dolphin…), `terminal` |
+| 15-apps.py | `fileManager` (solo si está instalado; si no, env.lua usa el primero instalado: Dolphin…), `terminal` |
 | 16-gtk.py | con `themeApps`: `gtk-adw.css` (colores de libadwaita: barra lateral, popovers, diálogos) importado en gtk-4.0/gtk.css y `gsettings` `color-scheme` (prefer-dark/default), `accent-color` (el de GNOME 47+ más cercano al color principal) y `gtk-theme` adw-gtk3[-dark] |
 | 70-plugins.py | `plugins` {id: {on, …opciones}} → `hl.config({ plugin = { … } })`, atajo/gesto de HyprExpo y Hyprspace; solo para los activados y dentro de una guarda (`hl.get_loaded_plugins()`) |
 | 85-idle.py | `idleDim`, `idleLock`, `idleScreenOff`, `idleSuspend`, `lockOnSuspend` → `~/.local/state/hyprfrijol/hypridle.conf` (reinicia hypridle si cambia; la suspensión por inactividad es solo de hypridle) |
@@ -146,13 +146,13 @@ portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si o
 | Clave | Valores | Qué hace |
 |---|---|---|
 | `windowMode` | `mosaico` (por defecto) · `desplazamiento` · `flotante` | `mosaico`: las ventanas se reparten la pantalla con el diseño `layout` (sin dock salvo `dockInTiling`). `desplazamiento`: columnas en una cinta que se desplaza (diseño `scrolling` nativo de Hyprland 0.57). `flotante` (en la interfaz, «Clásico»): todas las ventanas flotan (regla `hf-float-all`), las normales se abren maximizadas y se superponen (Alt + Tab trae al frente, Super + H minimiza; diálogos, selector de archivos y `floatApps` conservan su tamaño) y hay dock en todos los espacios. El antiguo `mixto` se lee como `mosaico` y `layout = scrolling` con `mosaico` como `desplazamiento`; `floatWorkspace` ya no se usa |
-| `floatApps` | lista de clases de ventana (Nautilus, Loupe, mpv, Celluloid, Showtime, Decibels, Calculadora, File Roller…) | «Apps en ventana flotante» (`ui/FloatApps.qml`): estas apps se abren flotando al centro en vez de en el mosaico (`float` + `center` + `size`; sin distinguir mayúsculas). Interruptores por grupo (Archivos, Imágenes, Audio, Vídeo, Calculadora, Comprimidos), × para quitar una y un buscador entre las ventanas abiertas y las apps instaladas (clase = `StartupWMClass` o id del .desktop). Calculadoras y reproductores de audio pequeños flotan con su propio tamaño (`hf-float-apps-compact`). WinMode no las devuelve al mosaico al salir del modo clásico |
+| `floatApps` | lista de clases de ventana (Dolphin, Gwenview, mpv, Haruna, Elisa, KCalc, Ark…) | «Apps en ventana flotante» (`ui/FloatApps.qml`): estas apps se abren flotando al centro en vez de en el mosaico (`float` + `center` + `size`; sin distinguir mayúsculas). Interruptores por grupo (Archivos, Imágenes, Audio, Vídeo, Calculadora, Comprimidos), × para quitar una y un buscador entre las ventanas abiertas y las apps instaladas (clase = `StartupWMClass` o id del .desktop). Calculadoras y reproductores de audio pequeños flotan con su propio tamaño (`hf-float-apps-compact`). WinMode no las devuelve al mosaico al salir del modo clásico |
 | `wineTweaks` | `true` (por defecto) · `false` | Ajustes › Aplicaciones › Juegos de Windows: al abrirse una ventana de Wine / Proton, `scripts/hf-wine fix` pone en su prefijo `ShowSystray = 0` (sin la bandeja flotante de Wine) y `Decorated = N` (Wine no reserva una barra de título que Hyprland no dibuja); una vez por prefijo (`~/.local/state/hyprfrijol/wine-fixed`), desde el siguiente arranque |
 | `protonWayland` | `false` (por defecto) · `true` | Wine en Wayland nativo para los juegos de Epic: `90-files.py` crea `~/.local/share/applications/epic-games-launcher.desktop` con `env PROTON_ENABLE_WAYLAND=1` (marca `X-HF-ProtonWayland`); se borra al desactivarlo. Hay que cerrar Epic del todo y los juegos abiertos (Proton espera a que termine el que ya corre en ese prefijo). Experimental: HoYoPlay (lanzador de Genshin, CEF) se queda en blanco con el driver Wayland de GE-Proton10-34 |
 | `floatAppsSize` | `0.65` (0.5 · 0.65 · 0.8) | ancho de esas ventanas respecto a la pantalla (el alto, +7 %) |
 | `floatOrder` | `encima` (por defecto) · `ocultas` · `espacio` | «Prioridad» de las ventanas flotantes (Ajustes › Escritorio y gestos › Ventanas flotantes): `encima`, las flotantes van sobre el mosaico como siempre; `ocultas`, se esconden al hacer clic fuera de ellas (como el panel del asistente: pasar el ratón por encima de otra ventana no las esconde, aunque el foco siga al cursor) o al cambiar de ventana con Alt + Tab: la que acabas de abrir o de enfocar con ese clic se queda; al esconderse van al espacio oculto (Super + S), apiladas en cascada desde el centro, y cuentan como minimizadas: Alt + Tab o el dock las traen al espacio activo (al sitio que tenían, si es la misma pantalla) y vuelven todas al quedarse el escritorio a la vista; las que pongas tú en Super + S no se tocan; `espacio`, las flotantes se van al espacio oculto (Super + S) y se ven allí, encima del mosaico, que queda siempre limpio. No hay modo «detrás»: Hyprland dibuja las flotantes por encima de las del mosaico (solo una ventana maximizada las tapa), así que la única forma de que el mosaico mande es esconderlas |
 | `titleBars` | `true` | barra de título del shell en el modo Clásico (`modules/desktop/TitleBar.qml`): tres islas dentro de la ventana activa, arriba (icono y título · asa para moverla, doble clic maximiza · minimizar, maximizar y cerrar). Salen al acercar el puntero al borde de arriba de la ventana y se van al alejarse; clic derecho en una isla abre el menú de ventana. No salen en las apps con barra propia (`barsOwnFrame` y las GTK, Chromium / Electron y Firefox, que se reconocen solas) |
-| `barsOwnFrame` | navegadores, apps de GNOME, editores, Discord, Spotify, Ghostty | clases que ya dibujan su barra con botones: no llevan los del shell («Apps con su propia barra», `ui/FloatApps.qml`) |
+| `barsOwnFrame` | navegadores, apps de KDE/Qt, editores, Discord, Spotify, Ghostty | clases que ya dibujan su barra con botones: no llevan los del shell («Apps con su propia barra», `ui/FloatApps.qml`) |
 | `layout` | `dwindle` (por defecto) · `master` | diseño del modo mosaico (el antiguo `scrolling` es ahora el modo desplazamiento; al elegir otro modo vuelve a `dwindle`) |
 | `scrollColumnWidth` | `1.0` (0.333 · 0.5 · 0.667 · 1.0) | ancho de una columna nueva (`scrolling:column_width`): por defecto, toda la pantalla |
 | `scrollFocusFit` | `ajustar` (por defecto) · `centrar` | al enfocar una columna se trae justo a la vista o se centra (`scrolling:focus_fit_method` 1 / 0) |
@@ -282,10 +282,10 @@ Sistema y recuperación ya no tiene apps predeterminadas: enlaza a esta sección
 - Roles: navegador (también `xdg-settings set default-web-browser`), correo, calendario, música, vídeo, fotos,
   PDF, texto, archivos (también `fileManager` → Super + E), comprimidos; cada uno asigna todos sus tipos MIME
   con `xdg-mime default`. Las opciones son las apps instaladas cuyo `MimeType` lo admite; «· recomendada» marca
-  la de GNOME. Terminal → ajuste `terminal`.
-- «Usar las recomendadas» = `hf-defaults recommended --force`: Nautilus, Loupe, Papers, Showtime, Decibels,
-  Editor de texto, File Roller… solo si están instaladas; el navegador no se toca. La Bienvenida lo ejecuta
-  después de instalar el paquete «Esenciales» (ahora las apps básicas de GNOME).
+  la de KDE/Qt. Terminal → ajuste `terminal`.
+- «Usar las recomendadas» = `hf-defaults recommended --force`: Dolphin, Gwenview, Okular, Haruna, Elisa,
+  Kate, Ark, KCalc, Partition Manager… solo si están instaladas; el navegador no se toca. La Bienvenida lo ejecuta
+  después de instalar el paquete «Esenciales» (ahora las apps básicas de KDE/Qt).
 - Inicio: `~/.config/autostart` + `/etc/xdg/autostart` (se ocultan las que el shell ya hace: polkit, llavero,
   bandejas de Plasma, notificadores…). Desactivar una del sistema crea una copia con `Hidden=true`
   (`X-HF-Override`); activarla la borra. «Añadir una app» copia su `.desktop`; «Quitar» solo en las tuyas.
@@ -297,18 +297,17 @@ scripts/hf-defaults list | autostart | recommended [--force] | set <rol> <app.de
 scripts/hf-defaults autostart-add|autostart-remove <id> · autostart-set <id> true|false · autostart-run
 ```
 
-## Apps de GNOME por defecto
+## Apps de KDE/Qt por defecto
 
-GNOME/libadwaita encaja mejor con el tema (16-gtk.py): Nautilus es el gestor por defecto (`fileManager`,
-`HF.files`), `HF.textEditor` prefiere gnome-text-editor, `HF.taskManager` gnome-system-monitor/Resources, el
-dock por defecto empieza por Nautilus, Editor de texto y Calculadora, y el catálogo tiene la categoría
-«Apps básicas» (Editor de texto, Calculadora, Loupe, Papers, Showtime, Decibels, Amberol, File Roller, Baobab,
-Monitor del sistema, Boxes, Conexiones) con las de KDE como alternativa («alt. a …»: Kate, KCalc, Gwenview,
-Haruna, Ark, Filelight; Dolphin y Okular siguen en sus categorías).
-Nada depende de KDE: el tema de Qt es qt6ct (`QT_QPA_PLATFORMTHEME=qt6ct` en env.lua; el de Plasma solo si no hay
-qt6ct), los selectores de archivos son el portal de GTK o zenity (`scripts/hf-pickfile`), y el móvil va con Valent
-(`scripts/hf-phone`: D-Bus `ca.andyholmes.Valent`, dispositivos, batería, enviar archivos, hacerlo sonar; kdeconnect-cli
-solo si no hay Valent). Las apps de KDE siguen como alternativas en los selectores.
+KDE/Qt encajan con el tema a través de qt6ct (`QT_QPA_PLATFORMTHEME=qt6ct` en env.lua; el de Plasma solo si no hay
+qt6ct): Dolphin es el gestor por defecto (`fileManager`, `HF.files`), `HF.textEditor` prefiere Kate, `HF.taskManager`
+Plasma System Monitor, el dock por defecto empieza por Dolphin, Falkon y Kate, y el catálogo tiene la categoría
+«Apps de KDE» (Dolphin, Kate, Gwenview, Okular, Haruna, Elisa, Ark, KCalc, Filelight, Partition Manager,
+Plasma System Monitor, KBackup, Discover, KDE Connect, KGet, KMail) con las de GNOME como alternativas
+(Chrome, Nautilus, Loupe, Papers, Showtime, Decibels, File Roller, Pika Backup, Bazaar, Valent, Parabolic,
+Thunderbird…).
+Los selectores de archivos usan el portal de GTK o zenity (`scripts/hf-pickfile`), y el móvil va con KDE Connect
+(`scripts/hf-phone`: D-Bus `org.kde.kdeconnect`, dispositivos, batería, enviar archivos, hacerlo sonar).
 
 ## VPN, escritorio remoto y máquinas virtuales (`scripts/hf-vpn`, `hf-remote`, `hf-vm`)
 

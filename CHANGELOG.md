@@ -3,6 +3,22 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.24] — 2026-11-22
+
+### Novedades
+- **Apps KDE/Qt por defecto**: HyprFrijol pasa de las apps de serie de GNOME/GTK a las de KDE/Qt. De serie ahora
+  van Dolphin, Falkon, Kate, Gwenview, Okular, Haruna, Elisa, Ark, KCalc, Partition Manager, Plasma System Monitor,
+  KBackup y Discover; en productividad, KMail y KGet. Las apps GNOME/GTK (Chrome, Nautilus, Loupe, Papers, Showtime,
+  Decibels, File Roller, Pika Backup, Bazaar, Valent, Parabolic…) pasan a ser alternativas.
+
+### Cambios
+- Nuevas entradas en `install/apps.json` y `config/tools/catalog.json` para Falkon, Plasma System Monitor, KBackup,
+  Discover, KDE Connect, KGet y KMail.
+- `scripts/hf-defaults` recomienda primero las apps KDE/Qt y `config/hypr/frijol/env.lua` las busca primero.
+- Los ajustes por defecto (`config/defaults/settings.json`), el dock, las apps flotantes y las que dibujan su propia
+  barra usan clases de KDE/Qt.
+- El Centro de aplicaciones tiene la categoría «Apps de KDE» y el perfil «Esenciales» trae apps KDE/Qt.
+
 ## [0.11.23] — 2026-11-22
 
 ### Correcciones

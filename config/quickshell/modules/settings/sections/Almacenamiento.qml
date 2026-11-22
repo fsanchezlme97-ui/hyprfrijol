@@ -40,7 +40,7 @@ RowLayout {
     Process {
         id: tl
         running: true
-        command: ["sh", "-c", Paths.script("hf-download") + " tools; command -v gnome-disks >/dev/null && echo disks"]
+        command: ["sh", "-c", Paths.script("hf-download") + " tools; { command -v partitionmanager || command -v gparted || command -v gnome-disks; } >/dev/null && echo disks"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const l = text.split("\n");
@@ -142,9 +142,9 @@ RowLayout {
             Layout.fillWidth: true
             title: "Discos internos"
             headerRight: Button {
-                text: root.hasDisks ? "Abrir GNOME Discos" : "Instalar GNOME Discos"
+                text: root.hasDisks ? "Abrir Partition Manager" : "Instalar Partition Manager"
                 h: 26
-                onClicked: root.hasDisks ? Devices.openDisks() : root.install(["gnome-disk-utility"], "GNOME Discos")
+                onClicked: root.hasDisks ? Devices.openDisks() : root.install(["partitionmanager"], "Partition Manager")
             }
             Repeater {
                 model: root.internal

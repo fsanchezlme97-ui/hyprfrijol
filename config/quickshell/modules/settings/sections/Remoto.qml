@@ -254,8 +254,8 @@ ColumnLayout {
                     label: "Conexiones"; glyph: "G"; lit: root.cl.connections
                     badge: "La más sencilla; sin puerta de enlace"
                     sub: root.cl.connections ? "Instalado · RDP y VNC básicos, la interfaz más limpia" : "El cliente de GNOME: RDP y VNC básicos, sin RD Gateway"
-                    Button { visible: root.cl.connections; kind: "outline"; h: 26; text: "Abrir"; anchors.verticalCenter: parent.verticalCenter; onClicked: Quickshell.execDetached(["gnome-connections"]) }
-                    Button { visible: !root.cl.connections; text: "Instalar"; onClicked: root.install({ arch: "gnome-connections", debian: "gnome-connections", fedora: "gnome-connections", suse: "gnome-connections", flatpak: "org.gnome.Connections" }, "Conexiones") }
+                    Button { visible: root.cl.connections; kind: "outline"; h: 26; text: "Abrir"; anchors.verticalCenter: parent.verticalCenter; onClicked: Quickshell.execDetached(["sh", "-c", "command -v krdc >/dev/null && exec krdc || exec gnome-connections"]) }
+                    Button { visible: !root.cl.connections; text: "Instalar"; onClicked: root.install({ arch: "krdc", debian: "krdc", fedora: "krdc", suse: "krdc", flatpak: "org.gnome.Connections" }, "Conexiones") }
                 }
                 InfoRow {
                     label: "FreeRDP 3"; glyph: "RDP"; lit: root.cl.freerdp !== ""

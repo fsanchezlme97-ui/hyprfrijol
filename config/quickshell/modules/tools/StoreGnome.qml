@@ -1,5 +1,5 @@
-// «Apps de GNOME recomendadas» (Centro de aplicaciones, categoría "gnome"): las apps principales de GNOME
-// (flag "g" del catálogo) con un botón que marca todas las que faltan, y debajo las alternativas de KDE (flag "k").
+// «Apps de KDE recomendadas» (Centro de aplicaciones, categoría "kde"): las apps principales de KDE/Qt
+// (flag "k" del catálogo) con un botón que marca todas las que faltan, y debajo las alternativas de GNOME (flag "g").
 // Mismas apps que el paquete «Esenciales» de la Bienvenida y Ajustes › Aplicaciones.
 import QtQuick
 import QtQuick.Layouts
@@ -13,13 +13,13 @@ Flickable {
     id: gv
     property var store: null
     // Primero las de uso diario (categoría «Apps básicas»), luego navegador, terminal y monitor
-    readonly property var gnome: Pkg.tools.filter(t => t.gnome && (store?.pass(t) ?? true)).map((t, i) => [t, i])
+    readonly property var kde: Pkg.tools.filter(t => t.kde && (store?.pass(t) ?? true)).map((t, i) => [t, i])
         .sort((a, b) => (a[0].cat === "base" ? 0 : 1) - (b[0].cat === "base" ? 0 : 1) || a[1] - b[1]).map(x => x[0])
-    readonly property var kde: Pkg.tools.filter(t => t.kde && (store?.pass(t) ?? true))
+    readonly property var gnome: Pkg.tools.filter(t => t.gnome && (store?.pass(t) ?? true))
     // Recuento y «Instalar todas» con todas (no solo las que deja ver el filtro)
-    readonly property var gMissing: Pkg.tools.filter(t => t.gnome && !Pkg.isToolInstalled(t))
     readonly property var kMissing: Pkg.tools.filter(t => t.kde && !Pkg.isToolInstalled(t))
-    readonly property int gTotal: Pkg.tools.filter(t => t.gnome).length
+    readonly property var gMissing: Pkg.tools.filter(t => t.gnome && !Pkg.isToolInstalled(t))
+    readonly property int kTotal: Pkg.tools.filter(t => t.kde).length
     readonly property int cols: width >= 1080 ? 3 : 2
     readonly property real cw: Math.floor((width - 16) / cols)
     contentWidth: width
@@ -60,14 +60,14 @@ Flickable {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 8
-                    Txt { text: "Apps de GNOME recomendadas"; size: 18; weight: Font.DemiBold }
+                    Txt { text: "Apps de KDE recomendadas"; size: 18; weight: Font.DemiBold }
                     Txt {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap; elide: Text.ElideNone; muted: true
-                        text: "Archivos, imágenes, documentos, vídeos, música, calendario… Las apps oficiales de GNOME son ligeras, nativas de Wayland "
-                            + "y encajan con el estilo del escritorio. Son las que HyprFrijol usa como predeterminadas."
+                        text: "Archivos, imágenes, documentos, vídeos, música, calendario… Las apps de KDE/Qt siguen el tema del escritorio con qt6ct "
+                            + "y son las que HyprFrijol usa como predeterminadas."
                     }
-                    Txt { text: (gv.gTotal - gv.gMissing.length) + " de " + gv.gTotal + " instaladas" + (gv.gnome.length < gv.gTotal ? " · el filtro oculta " + (gv.gTotal - gv.gnome.length) : ""); size: 12; weight: Font.DemiBold; color: Theme.p }
+                    Txt { text: (gv.kTotal - gv.kMissing.length) + " de " + gv.kTotal + " instaladas" + (gv.kde.length < gv.kTotal ? " · el filtro oculta " + (gv.kTotal - gv.kde.length) : ""); size: 12; weight: Font.DemiBold; color: Theme.p }
                 }
                 ColumnLayout {
                     Layout.alignment: Qt.AlignVCenter
@@ -75,24 +75,24 @@ Flickable {
                     Button {
                         Layout.fillWidth: true
                         h: 36; kind: "primary"
-                        enabled: gv.gMissing.length > 0
-                        text: gv.gMissing.length ? "Instalar todas las recomendadas (" + gv.gMissing.length + ")" : "Ya tienes todas"
-                        onClicked: gv.selectAll(gv.gMissing)
+                        enabled: gv.kMissing.length > 0
+                        text: gv.kMissing.length ? "Instalar todas las recomendadas (" + gv.kMissing.length + ")" : "Ya tienes todas"
+                        onClicked: gv.selectAll(gv.kMissing)
                     }
-                    Txt { Layout.alignment: Qt.AlignHCenter; visible: gv.gMissing.length > 0; text: "Las marca abajo para que las revises"; muted: true; size: 11 }
+                    Txt { Layout.alignment: Qt.AlignHCenter; visible: gv.kMissing.length > 0; text: "Las marca abajo para que las revises"; muted: true; size: 11 }
                 }
             }
         }
-        // ---------- GNOME ----------
+        // ---------- KDE ----------
         Flow {
             Layout.fillWidth: true
             spacing: 0
             Repeater {
-                model: gv.gnome
+                model: gv.kde
                 StoreCard { required property var modelData; tool: modelData; store: gv.store; width: gv.cw; height: 104 }
             }
         }
-        // ---------- KDE ----------
+        // ---------- GNOME ----------
         RowLayout {
             Layout.fillWidth: true
             Layout.topMargin: 12
@@ -101,16 +101,16 @@ Flickable {
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 4
-                Txt { text: "Alternativas de KDE"; size: 16; weight: Font.DemiBold }
-                Txt { Layout.fillWidth: true; text: "Si prefieres apps Qt/KDE (más opciones, otro estilo), estas hacen lo mismo. Instala unas u otras, no hace falta tener las dos."; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone }
+                Txt { text: "Alternativas de GNOME"; size: 16; weight: Font.DemiBold }
+                Txt { Layout.fillWidth: true; text: "Si prefieres apps GTK/libadwaita, estas hacen lo mismo. Instala unas u otras, no hace falta tener las dos."; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone }
             }
-            Button { h: 32; enabled: gv.kMissing.length > 0; text: gv.kMissing.length ? "Marcar las de KDE (" + gv.kMissing.length + ")" : "Ya tienes todas"; onClicked: gv.selectAll(gv.kMissing) }
+            Button { h: 32; enabled: gv.gMissing.length > 0; text: gv.gMissing.length ? "Marcar las de GNOME (" + gv.gMissing.length + ")" : "Ya tienes todas"; onClicked: gv.selectAll(gv.gMissing) }
         }
         Flow {
             Layout.fillWidth: true
             spacing: 0
             Repeater {
-                model: gv.kde
+                model: gv.gnome
                 StoreCard { required property var modelData; tool: modelData; store: gv.store; width: gv.cw; height: 104 }
             }
         }

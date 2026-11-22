@@ -18,8 +18,8 @@ hl.on("hyprland.start", function()
         -- Sin systemd (Void, Artix…) nadie arranca PipeWire por usuario: se lanza aquí. wireplumber y pipewire-pulse
         -- los arranca el propio pipewire si están en /etc/pipewire/pipewire.conf.d (./install.sh lo prepara en Void).
         hl.exec_cmd("sh -c '[ -d /run/systemd/system ] || ! command -v pipewire >/dev/null || pgrep -u \"$(id -u)\" -x pipewire >/dev/null || exec pipewire'")
-        -- Llavero (contraseñas de Chrome, Wi-Fi, etc.), como en illogical-impulse
-        hl.exec_cmd("gnome-keyring-daemon --start --components=secrets")
+        -- Llavero (contraseñas del navegador, Wi-Fi, etc.): KDE primero, GNOME como alternativa
+        hl.exec_cmd("sh -c 'command -v kwalletd5 >/dev/null && exec kwalletd5 --pam-login 2>/dev/null || exec gnome-keyring-daemon --start --components=secrets'")
         -- Inactividad: la genera hf-apply (Ajustes › Energía); si aún no existe, la del repo
         hl.exec_cmd("sh -c 'f=" .. HF.state .. "/hypridle.conf; [ -f \"$f\" ] || f=" .. cfg .. "/hypridle.conf; exec hypridle -c \"$f\"'")
         -- Historial del portapapeles (texto e imágenes). Se conserva entre sesiones salvo que actives

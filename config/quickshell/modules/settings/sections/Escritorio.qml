@@ -196,12 +196,12 @@ ColumnLayout {
         FloatApps {
             Layout.fillWidth: true
             settingKey: "barsOwnFrame"
-            intro: "Estas apps ya dibujan su barra con sus botones (pestañas del navegador, apps de GNOME, editores…), así que no "
+            intro: "Estas apps ya dibujan su barra con sus botones (pestañas del navegador, apps de KDE/Qt, editores…), así que no "
                 + "se les añade otra. Las GTK, Chromium / Electron y Firefox se reconocen solas. Si ves una ventana con dos barras, añádela."
             // Mismas clases que los valores por defecto de config/defaults/settings.json (barsOwnFrame)
             groups: [
-                { key: "nav", label: "Navegadores", sub: "Chrome, Chromium, Brave, Edge, Vivaldi, Firefox, Zen", classes: ["google-chrome", "chromium", "brave-browser", "microsoft-edge", "vivaldi-stable", "firefox", "zen", "librewolf"] },
-                { key: "gnome", label: "Apps de GNOME", sub: "Nautilus, Loupe, Calculadora, Editor de texto, Consola…", classes: ["org.gnome.Nautilus", "org.gnome.Loupe", "org.gnome.Calculator", "org.gnome.TextEditor", "org.gnome.FileRoller", "org.gnome.Settings", "org.gnome.Software", "org.gnome.SystemMonitor", "org.gnome.Papers", "org.gnome.Showtime", "org.gnome.Decibels", "org.gnome.Calendar", "org.gnome.Weather", "org.gnome.clocks", "org.gnome.Characters", "org.gnome.Console", "org.gnome.Ptyxis", "org.gnome.Snapshot", "org.gnome.baobab", "org.gnome.DiskUtility"] },
+                { key: "nav", label: "Navegadores", sub: "Falkon, Chrome, Chromium, Brave, Edge, Vivaldi, Firefox, Zen", classes: ["org.kde.falkon", "google-chrome", "chromium", "brave-browser", "microsoft-edge", "vivaldi-stable", "firefox", "zen", "librewolf"] },
+                { key: "kdeqt", label: "Apps de KDE/Qt", sub: "Dolphin, Gwenview, Kate, Okular, KCalc, Ark, Haruna, Elisa…", classes: ["org.kde.dolphin", "org.kde.gwenview", "org.kde.kate", "org.kde.okular", "org.kde.kcalc", "org.kde.ark", "org.kde.haruna", "org.kde.elisa", "org.kde.kmail2", "org.kde.korganizer", "org.kde.systemsettings5", "org.kde.discover", "org.kde.filelight", "org.kde.konsole", "org.kde.yakuake", "org.kde.plasma-systemmonitor"] },
                 { key: "editores", label: "Editores", sub: "VS Code, Cursor, Zed, Obsidian", classes: ["code", "code-oss", "Code", "cursor", "dev.zed.Zed", "obsidian"] },
                 { key: "chat", label: "Chat y música", sub: "Discord, Vesktop, Slack, Spotify", classes: ["discord", "vesktop", "Slack", "spotify"] },
                 { key: "term", label: "Terminales con barra", sub: "Ghostty", classes: ["com.mitchellh.ghostty"] }

@@ -137,6 +137,7 @@ remote	optional	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	wayvnc,openssl	wayv
 remote-rustdesk	optional	aur:rustdesk-bin	-	-	-	-	entrar a esta sesión con RustDesk, también desde el móvil (necesita además el portal: hf-remote rustdesk portal; luego sudo systemctl enable --now rustdesk)	remoto	rustdesk
 remote-rdp	optional	aur:hypr-rdp	-	-	-	-	compartir esta sesión por RDP (entrar desde Windows con mstsc; hypr-rdp)	remoto	hypr-rdp
 remote-client	optional	remmina,freerdp,libvncserver	remmina,remmina-plugins-rdp,remmina-plugins-vnc	remmina,remmina-plugin-rdp,remmina-plugin-vnc	remmina,remmina-plugin-rdp,remmina-plugin-vnc	remmina,freerdp	conectarse a Windows por RDP y a otros por VNC (Remmina: el más compatible; sin él, FreeRDP o Conexiones)	remoto	remmina
+remote-krdc	optional	krdc	krdc	krdc	krdc	-	conectarse a escritorios remotos con KRDC (Ajustes › Escritorio remoto)	remoto	krdc
 # — Ajustes › Sonido
 audio	recommended	pipewire,wireplumber,pipewire-pulse,libpulse	pipewire,wireplumber,pipewire-pulseaudio,pulseaudio-utils	pipewire,wireplumber,pipewire-pulseaudio,pulseaudio-utils	pipewire,wireplumber,pipewire-pulse,pulseaudio-utils	pipewire,wireplumber,pulseaudio-utils	sonido (PipeWire) y pactl	sonido	pactl,wpctl,pipewire
 cava	recommended	cava	cava	cava	cava	cava	onda de audio de la barra	sonido	cava
@@ -149,6 +150,8 @@ scanner	optional	sane,simple-scan	sane-backends,simple-scan	sane-backends,simple
 udisks	recommended	udisks2	udisks2	udisks2	udisks2	udisks2	memorias USB y tarjetas SD: montar, expulsar y avisos (hf-devices)	almacenamiento	udisksctl
 fs-drivers	recommended	ntfs-3g,exfatprogs	ntfs-3g,exfatprogs	ntfs-3g,exfatprogs	ntfs-3g,exfatprogs	ntfs-3g,exfatprogs	discos de Windows (NTFS) y memorias exFAT, aunque el kernel no traiga o no cargue su driver	almacenamiento	ntfs-3g,mkfs.exfat
 disks	optional	gnome-disk-utility	gnome-disk-utility	gnome-disk-utility	gnome-disk-utility	gnome-disk-utility	GNOME Discos: formatear y particionar (Ajustes › Almacenamiento)	almacenamiento	gnome-disks
+disks-kde	optional	partitionmanager	partitionmanager	partitionmanager	partitionmanager	-	KDE Partition Manager: formatear y particionar (Ajustes › Almacenamiento)	almacenamiento	partitionmanager
+disks-gparted	optional	gparted	gparted	gparted	gparted	-	GParted: formatear y particionar (Ajustes › Almacenamiento)	almacenamiento	gparted
 # — Ajustes › Energía y rendimiento
 power	recommended	power-profiles-daemon,upower	power-profiles-daemon,upower	power-profiles-daemon,upower	power-profiles-daemon,upower	power-profiles-daemon,upower	batería y modos de energía	energia	powerprofilesctl,upower
 hybrid-gpu	manual	aur:envycontrol	-	supergfxctl	-	-	cambiar de GPU en portátiles híbridos (envycontrol o supergfxctl; solo con dos GPU)	energia	envycontrol,supergfxctl
@@ -215,3 +218,25 @@ gamescope	optional	gamescope	gamescope	gamescope	gamescope	gamescope	Modo juego 
 greetd	greeter	greetd	greetd	greetd	greetd	greetd	login visual (--greeter)	login	greetd
 pamkeyring	greeter	gnome-keyring	gnome-keyring-pam	gnome-keyring-pam	libpam-gnome-keyring	gnome-keyring	el login desbloquea el llavero (Chrome no pide contraseña al abrirse)	login	
 qtmultimedia	recommended	qt6-multimedia,qt6-multimedia-ffmpeg	qt6-qtmultimedia	qt6-multimedia	qml6-module-qtmultimedia	qt6-multimedia	fondo en movimiento (vídeo) en el bloqueo, el selector de fondos y el login visual	fondos	
+# — Apps KDE/Qt (por defecto en hyprfrijol)
+falkon	optional	falkon	falkon	falkon	falkon	falkon	navegador KDE/Qt con QtWebEngine	aplicaciones	falkon
+qutebrowser	optional	qutebrowser	qutebrowser	qutebrowser	qutebrowser	qutebrowser	navegador Qt (alternativa)	aplicaciones	qutebrowser
+dolphin	optional	dolphin	dolphin	dolphin	dolphin	dolphin	gestor de archivos de KDE	aplicaciones	dolphin
+konqueror	optional	konqueror	konqueror	konqueror	konqueror	konqueror	gestor de archivos/alternativa KDE	aplicaciones	konqueror
+kate	optional	kate	kate	kate	kate	kate	editor de texto avanzado de KDE	aplicaciones	kate
+gwenview	optional	gwenview	gwenview	gwenview	gwenview	gwenview	visor de imágenes de KDE	aplicaciones	gwenview
+okular	optional	okular	okular	okular	okular	okular	visor de documentos de KDE	aplicaciones	okular
+haruna	optional	haruna	haruna	haruna	haruna	haruna	reproductor de vídeo de KDE	media	haruna
+elisa	optional	elisa	elisa	elisa	elisa	elisa	reproductor de música de KDE	media	elisa
+ark	optional	ark	ark	ark	ark	ark	gestor de archivos comprimidos de KDE	aplicaciones	ark
+kcalc	optional	kcalc	kcalc	kcalc	kcalc	kcalc	calculadora científica de KDE	aplicaciones	kcalc
+plasma-systemmonitor	optional	plasma-systemmonitor	plasma-systemmonitor	plasma-systemmonitor	plasma-systemmonitor	plasma-systemmonitor	monitor de recursos y procesos de KDE Plasma	sistema	plasma-systemmonitor
+kbackup	optional	kbackup	kbackup	kbackup	kbackup	kbackup	copias de seguridad para KDE	sistema	kbackup
+discover	optional	discover	plasma-discover	discover	plasma-discover	plasma-discover	tienda de apps y actualizaciones de KDE Plasma	aplicaciones	plasma-discover
+kget	optional	kget	kget	kget	kget	kget	gestor de descargas de KDE	descargas	kget
+kmail	optional	kmail	kmail	kmail	kmail	kmail	cliente de correo de KDE	aplicaciones	kmail
+kdeconnect	optional	kdeconnect	kdeconnect	kdeconnect	kdeconnect	kdeconnect	conectar el móvil Android con el escritorio	centro	kdeconnect-app,kdeconnect-cli
+partitionmanager	optional	partitionmanager	partitionmanager	partitionmanager	partitionmanager	partitionmanager	gestor de particiones de KDE	almacenamiento	partitionmanager
+gparted	optional	gparted	gparted	gparted	gparted	gparted	gestor de particiones (alternativa GTK)	almacenamiento	gparted
+krdc	optional	krdc	krdc	krdc	krdc	krdc	cliente de escritorio remoto de KDE	remoto	krdc
+kwalletd5	optional	kwallet5	kf5-kwallet	kwallet5	libkf5wallet-bin	kwallet	llavero de KDE (alternativa a GNOME Keyring)	sesion	kwalletd5

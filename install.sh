@@ -918,8 +918,8 @@ apps_install() {
     tiers=serie
     if [ "$YES" = 0 ] && [ "$DRY" = 0 ]; then
       say "Apps de hyprfrijol por nivel (lista: scripts/hf-apps list):"
-      note "serie          Nautilus, kitty, Chrome, Editor de texto, Loupe, Papers, Showtime/Decibels, File Roller, Calculadora, Discos, Resources, Pika Backup, Bazaar" \
-           "productividad  ONLYOFFICE, Thunderbird, KeePassXC, LocalSend, Parabolic, VS Code" \
+      note "serie          Dolphin, kitty, Falkon, Kate, Gwenview, Okular, Haruna, Elisa, Ark, KCalc, Partition Manager, Plasma System Monitor, KBackup, Discover" \
+           "productividad  ONLYOFFICE, KMail, KeePassXC, LocalSend, KGet, VS Code" \
            "destacada      Morrow (notas), Sung (música, se compila), Orchard (Apple Music, beta), Heronite (juegos)" \
            "creativa       darktable, GIMP, Inkscape, Kdenlive" \
            "experimental   WordCraft, GridCraft, DeckCraft (ArtCraft, en desarrollo)"

@@ -4,8 +4,8 @@ Lo usan Ajustes › Apps predeterminadas e inicio, la Bienvenida y autostart.lua
 
   hf-defaults list                      roles → {"navegador": {"label","current","name","options":[[id,nombre]…]}, …}
   hf-defaults set <rol> <app.desktop>   la hace predeterminada para todos los tipos del rol
-  hf-defaults recommended [--force]     apps de GNOME recomendadas para los roles sin app (o todos con --force),
-                                        solo si están instaladas (las de KDE quedan como alternativa)
+  hf-defaults recommended [--force]     apps recomendadas (KDE/Qt primero, luego GNOME) para los roles sin app
+                                        (o todos con --force), solo si están instaladas
   hf-defaults autostart                 [{"id","name","icon","exec","user","system","enabled"}…]
   hf-defaults autostart-add <app.desktop>
   hf-defaults autostart-set <id> true|false   (las del sistema se desactivan con una copia Hidden=true en ~/.config/autostart)
@@ -25,32 +25,32 @@ APP_DIRS = [XDG_DATA / "applications"] + [pathlib.Path(d) / "applications" for d
             (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":") if d] + \
            [HOME / ".local/share/flatpak/exports/share/applications", pathlib.Path("/var/lib/flatpak/exports/share/applications")]
 
-# rol → (etiqueta, tipo para consultar, tipos que se asignan, preferidas en orden: GNOME primero)
+# rol → (etiqueta, tipo para consultar, tipos que se asignan, preferidas en orden: KDE/Qt primero, luego GNOME y otras)
 ROLES = {
     "navegador": ("Navegador web", "x-scheme-handler/https", ["x-scheme-handler/http", "x-scheme-handler/https", "text/html", "application/xhtml+xml"],
-                  ["firefox.desktop", "google-chrome.desktop", "chromium.desktop", "org.gnome.Epiphany.desktop"]),
+                  ["org.kde.falkon.desktop", "qutebrowser.desktop", "firefox.desktop", "chromium.desktop", "google-chrome.desktop"]),
     "correo": ("Correo", "x-scheme-handler/mailto", ["x-scheme-handler/mailto", "message/rfc822"],
-               ["org.gnome.Geary.desktop", "org.mozilla.Thunderbird.desktop", "thunderbird.desktop", "org.gnome.Evolution.desktop"]),
+               ["org.kde.kmail2.desktop", "org.mozilla.Thunderbird.desktop", "thunderbird.desktop"]),
     "calendario": ("Calendario", "text/calendar", ["text/calendar", "x-scheme-handler/webcal"],
-                   ["org.gnome.Calendar.desktop", "org.gnome.Evolution.desktop", "org.mozilla.Thunderbird.desktop"]),
+                   ["org.kde.korganizer.desktop", "org.kde.merkuro.desktop", "org.mozilla.Thunderbird.desktop", "thunderbird.desktop"]),
     "musica": ("Música", "audio/mpeg", ["audio/mpeg", "audio/flac", "audio/x-flac", "audio/ogg", "audio/x-vorbis+ogg", "audio/opus",
                                          "audio/x-wav", "audio/wav", "audio/mp4", "audio/aac", "audio/x-m4a"],
-               ["org.gnome.Decibels.desktop", "io.bassi.Amberol.desktop", "org.gnome.Showtime.desktop", "io.github.celluloid_player.Celluloid.desktop"]),
+               ["org.kde.elisa.desktop", "vlc.desktop"]),
     "video": ("Vídeo", "video/mp4", ["video/mp4", "video/x-matroska", "video/webm", "video/quicktime", "video/x-msvideo", "video/mpeg", "video/ogg"],
-              ["org.gnome.Showtime.desktop", "io.github.celluloid_player.Celluloid.desktop", "org.gnome.Totem.desktop", "mpv.desktop", "vlc.desktop"]),
+              ["org.kde.haruna.desktop", "vlc.desktop", "mpv.desktop"]),
     "fotos": ("Fotos e imágenes", "image/png", ["image/png", "image/jpeg", "image/webp", "image/gif", "image/bmp", "image/tiff", "image/svg+xml",
                                                 "image/heic", "image/avif", "image/jxl"],
-              ["org.gnome.Loupe.desktop", "org.gnome.eog.desktop", "org.kde.gwenview.desktop"]),
+              ["org.kde.gwenview.desktop"]),
     "pdf": ("Documentos PDF", "application/pdf", ["application/pdf"],
-            ["org.gnome.Papers.desktop", "org.gnome.Evince.desktop", "org.kde.okular.desktop"]),
+            ["org.kde.okular.desktop"]),
     "texto": ("Texto", "text/plain", ["text/plain", "text/markdown", "application/x-shellscript", "text/x-log"],
-              ["org.gnome.TextEditor.desktop", "org.kde.kate.desktop", "mousepad.desktop"]),
+              ["org.kde.kate.desktop", "mousepad.desktop"]),
     "archivos": ("Archivos", "inode/directory", ["inode/directory"],
-                 ["org.gnome.Nautilus.desktop", "org.kde.dolphin.desktop", "nemo.desktop", "thunar.desktop"]),
+                 ["org.kde.dolphin.desktop", "pcmanfm-qt.desktop"]),
     "comprimidos": ("Archivos comprimidos", "application/zip", ["application/zip", "application/x-7z-compressed", "application/x-tar",
                                                                "application/x-compressed-tar", "application/x-xz-compressed-tar", "application/vnd.rar",
                                                                "application/x-zstd-compressed-tar"],
-                    ["org.gnome.FileRoller.desktop", "org.kde.ark.desktop"]),
+                    ["org.kde.ark.desktop"]),
 }
 
 # Entradas de inicio que el shell ya hace (o que chocan con él): no se lanzan ni se listan como «apps»
@@ -103,12 +103,9 @@ def query(mime):
     return run(["xdg-mime", "query", "default", mime])
 
 
-GNOME = re.compile(r"^(org\.gnome\.|io\.bassi\.Amberol|io\.github\.celluloid_player|firefox\.desktop)")
-
-
 def recommended(pref, a):
-    """La primera instalada de las preferidas de GNOME (las de KDE y otras son alternativas, no se recomiendan)."""
-    return next((p for p in pref if p in a and GNOME.match(p)), "")
+    """La primera instalada de las preferidas, en orden (KDE/Qt primero, luego GNOME y otras)."""
+    return next((p for p in pref if p in a), "")
 
 
 def cmd_list():

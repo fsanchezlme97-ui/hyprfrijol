@@ -8,7 +8,7 @@
 # (services/WinMode.qml).
 #
 # Apps que flotan al centro (Ajustes › Escritorio y gestos › Apps en ventana flotante):
-#   floatApps     = ["org.gnome.Nautilus", "org.gnome.Loupe", …]  clases de ventana (sin distinguir mayúsculas)
+#   floatApps     = ["org.kde.dolphin", "org.kde.gwenview", …]  clases de ventana (sin distinguir mayúsculas)
 #   floatAppsSize = 0.65  ancho respecto a la pantalla (el alto, un poco más: ver _size)
 # Dos reglas: hf-float-apps (flotar + centrar + tamaño) y hf-float-apps-compact para las utilidades pequeñas
 # (calculadoras, reproductores de audio mínimos), que flotan centradas con su propio tamaño. No tocan el PiP (va
@@ -16,8 +16,7 @@
 # del modo flotante.
 import re
 
-COMPACT = {"org.gnome.calculator", "gnome-calculator", "qalculate-gtk", "galculator", "org.gnome.decibels",
-           "io.bassi.amberol", "org.gnome.zenity"}
+COMPACT = {"org.kde.kcalc", "org.kde.kcharselect", "galculator"}
 
 
 def _num(v, d):

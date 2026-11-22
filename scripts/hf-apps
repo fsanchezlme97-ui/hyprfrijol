@@ -10,8 +10,8 @@ Ajustes › Aplicaciones, la IA (hf-ai/hf-mcp) y la terminal.
   hf-apps remove <app…>                  desinstala por donde esté instalada
   hf-apps installed [--json]             todas las apps con lanzador: paquete (o Flatpak) que las trae, si están
                                          protegidas (lo que hyprfrijol necesita) y la orden para desinstalarlas
-  hf-apps defaults                       hace predeterminadas las de serie instaladas (navegador → Chrome, fotos →
-                                         Loupe, PDF → Papers…; con scripts/hf-defaults)
+  hf-apps defaults                       hace predeterminadas las de serie instaladas (navegador → Falkon, fotos →
+                                         Gwenview, PDF → Okular…; con scripts/hf-defaults)
   hf-apps extension [--remove]           enlaza la extensión de Nautilus (menú «HyprFrijol») en
                                          ~/.local/share/nautilus-python/extensions/
 

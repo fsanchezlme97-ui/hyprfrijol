@@ -23,12 +23,12 @@ ColumnLayout {
 
     // Mismas clases que los valores por defecto de config/defaults/settings.json (floatApps)
     property var groups: [
-        { key: "archivos", label: "Archivos", sub: "Nautilus, Thunar, Nemo, PCManFM", classes: ["org.gnome.Nautilus", "thunar", "nemo", "pcmanfm"] },
-        { key: "imagenes", label: "Imágenes", sub: "Loupe, Ojo de GNOME, imv, swayimg, Ristretto", classes: ["org.gnome.Loupe", "org.gnome.eog", "eog", "imv", "swayimg", "org.xfce.ristretto"] },
-        { key: "audio", label: "Audio", sub: "Decibels, Amberol, Gapless", classes: ["org.gnome.Decibels", "io.bassi.Amberol", "com.github.neithern.g4music"] },
-        { key: "video", label: "Vídeo", sub: "mpv, Celluloid, Showtime, Totem, VLC", classes: ["mpv", "io.github.celluloid_player.Celluloid", "org.gnome.Showtime", "org.gnome.Totem", "vlc"] },
-        { key: "calc", label: "Calculadora", sub: "Calculadora de GNOME, Qalculate", classes: ["org.gnome.Calculator", "qalculate-gtk"] },
-        { key: "comprimidos", label: "Archivos comprimidos", sub: "File Roller, Xarchiver", classes: ["org.gnome.FileRoller", "xarchiver"] }
+        { key: "archivos", label: "Archivos", sub: "Dolphin, PCManFM-Qt", classes: ["org.kde.dolphin", "pcmanfm-qt"] },
+        { key: "imagenes", label: "Imágenes", sub: "Gwenview, imv, swayimg", classes: ["org.kde.gwenview", "imv", "swayimg"] },
+        { key: "audio", label: "Audio", sub: "Elisa, VLC", classes: ["org.kde.elisa", "vlc"] },
+        { key: "video", label: "Vídeo", sub: "Haruna, mpv, VLC", classes: ["org.kde.haruna", "mpv", "vlc"] },
+        { key: "calc", label: "Calculadora", sub: "KCalc", classes: ["org.kde.kcalc"] },
+        { key: "comprimidos", label: "Archivos comprimidos", sub: "Ark", classes: ["org.kde.ark"] }
     ]
     readonly property var preset: groups.reduce((a, g) => a.concat(g.classes), [])
 

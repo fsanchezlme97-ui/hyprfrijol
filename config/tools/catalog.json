@@ -7,8 +7,8 @@
    "glyph": "★"
   },
   {
-   "key": "gnome",
-   "label": "Apps de GNOME",
+   "key": "kde",
+   "label": "Apps de KDE",
    "glyph": "◉"
   },
   {
@@ -96,8 +96,8 @@
    "ids": [
     "libre",
     "obsidian",
-    "thunder",
-    "papers",
+    "kmail",
+    "okular",
     "localsend",
     "keepass",
     "zen"
@@ -156,27 +156,26 @@
   {
    "label": "Esenciales",
    "ids": [
-    "nautilus",
-    "gtexteditor",
-    "gcalc",
-    "loupe",
-    "papers",
-    "showtime",
-    "decibels",
-    "fileroller",
-    "baobab",
-    "gsysmon",
-    "gdisks",
-    "gcalendar",
-    "gclocks",
-    "gweather",
-    "gchars",
-    "bazaar",
+    "dolphin",
+    "kate",
+    "kcalc",
+    "gwenview",
+    "okular",
+    "haruna",
+    "elisa",
+    "ark",
+    "filelight",
+    "mission",
+    "partitionmgr",
+    "merkuro",
+    "kclock",
+    "kweather",
+    "kcharselect",
+    "discover",
     "btrfsa",
-    "pika",
+    "kbackup",
     "localsend",
-    "gearlever",
-    "flatseal"
+    "kdeconnect"
    ]
   }
  ],
@@ -3764,6 +3763,114 @@
     "aur": "stremio",
     "flatpak": "com.stremio.Stremio"
    }
+  },
+  {
+   "id": "falkon",
+   "name": "Falkon",
+   "cat": "com",
+   "desc": "Navegador ligero de KDE con QtWebEngine",
+   "alt": "Chrome",
+   "flags": "k",
+   "icon": ["org.kde.falkon"],
+   "pkgs": {
+    "pacman": "falkon",
+    "dnf": "falkon",
+    "apt": "falkon",
+    "zypper": "falkon",
+    "flatpak": "org.kde.falkon"
+   }
+  },
+  {
+   "id": "plasma-systemmonitor",
+   "name": "Monitor del sistema de Plasma",
+   "cat": "sys",
+   "desc": "Monitor de recursos, sensores y procesos de KDE Plasma",
+   "alt": "Resources",
+   "flags": "k",
+   "icon": ["org.kde.plasma-systemmonitor"],
+   "pkgs": {
+    "pacman": "plasma-systemmonitor",
+    "dnf": "plasma-systemmonitor",
+    "apt": "plasma-systemmonitor",
+    "zypper": "plasma-systemmonitor"
+   }
+  },
+  {
+   "id": "kbackup",
+   "name": "KBackup",
+   "cat": "sys",
+   "desc": "Copias de seguridad de carpetas y archivos para KDE",
+   "alt": "Pika Backup",
+   "flags": "k",
+   "icon": ["org.kde.kbackup"],
+   "pkgs": {
+    "pacman": "kbackup",
+    "dnf": "kbackup",
+    "apt": "kbackup",
+    "zypper": "kbackup"
+   }
+  },
+  {
+   "id": "discover",
+   "name": "Discover",
+   "cat": "sys",
+   "desc": "Tienda de apps y actualizaciones de KDE Plasma",
+   "alt": "Bazaar",
+   "flags": "k",
+   "icon": ["org.kde.discover"],
+   "pkgs": {
+    "pacman": "discover",
+    "dnf": "plasma-discover",
+    "apt": "plasma-discover",
+    "zypper": "discover"
+   }
+  },
+  {
+   "id": "kdeconnect",
+   "name": "KDE Connect",
+   "cat": "sys",
+   "desc": "Conecta el móvil Android con el escritorio",
+   "alt": "Valent",
+   "flags": "k",
+   "icon": ["org.kde.kdeconnect"],
+   "pkgs": {
+    "pacman": "kdeconnect",
+    "dnf": "kdeconnect",
+    "apt": "kdeconnect",
+    "zypper": "kdeconnect",
+    "flatpak": "org.kde.kdeconnect"
+   }
+  },
+  {
+   "id": "kget",
+   "name": "KGet",
+   "cat": "media",
+   "desc": "Gestor de descargas de KDE",
+   "alt": "Parabolic",
+   "flags": "k",
+   "icon": ["org.kde.kget"],
+   "pkgs": {
+    "pacman": "kget",
+    "dnf": "kget",
+    "apt": "kget",
+    "zypper": "kget"
+   }
+  },
+  {
+   "id": "kmail",
+   "name": "KMail",
+   "cat": "ofi",
+   "desc": "Cliente de correo de KDE integrado con la agenda",
+   "alt": "Thunderbird",
+   "flags": "k",
+   "icon": ["org.kde.kmail2"],
+   "pkgs": {
+    "pacman": "kmail",
+    "dnf": "kmail",
+    "apt": "kmail",
+    "zypper": "kmail"
+   }
   }
+
  ]
 }

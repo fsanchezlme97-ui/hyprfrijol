@@ -6,7 +6,7 @@
 // «Instalar» abre una terminal con los comandos de la distro — nunca instala sin que el usuario lo vea.
 // Pulsar una tarjeta abre su ficha (StoreDetail: capturas, descripción, versión, fuentes…); la casilla la marca.
 // La insignia dice de dónde se instala («Repos oficiales», «AUR», «Flatpak», «AppImage»…) y los chips «Fuente» filtran.
-// La categoría «Apps de GNOME» (StoreGnome) junta las apps principales de GNOME y sus alternativas de KDE.
+// La categoría «Apps de KDE» (StoreGnome) junta las apps principales de KDE y sus alternativas de GNOME.
 // «Instaladas» (cat:instaladas) es todo lo que tiene lanzador en este equipo, con «Desinstalar» (settings/ui/InstalledApps,
 // hf-apps installed): antes estaba en Ajustes › Aplicaciones; se carga solo al abrirla.
 // Vista "herramientas": Shell.open("herramientas", "<id de app>") la deja preseleccionada; "cat:<clave>" abre
@@ -80,7 +80,7 @@ Scope {
         if (f === "all") return true;
         return Pkg.sources(t).some(s => f === "other" ? !["repo", "aur", "flatpak"].includes(s.key) : s.key === f);
     }
-    function inCat(t, k) { return k === "top" ? t.star : k === "nuevo" ? t.isNew : k === "sel" ? !!sel[t.id] : k === "gnome" ? t.gnome || t.kde : t.cat === k; }
+    function inCat(t, k) { return k === "top" ? t.star : k === "nuevo" ? t.isNew : k === "sel" ? !!sel[t.id] : k === "kde" ? t.kde || t.gnome : t.cat === k; }
     function openDetail(t): void { if (t) detail = t; }
     function installed(t) { return Pkg.isToolInstalled(t); }
     function toggle(id) { const s = Object.assign({}, sel); if (s[id]) delete s[id]; else s[id] = true; sel = s; }
@@ -317,9 +317,9 @@ Scope {
                         store: root
                         onBack: root.detail = null
                     }
-                    // ---------- Apps de GNOME recomendadas ----------
+                    // ---------- Apps de KDE recomendadas ----------
                     StoreGnome {
-                        visible: !root.detail && root.mode === "cat" && root.cat === "gnome" && !root.query.trim()
+                        visible: !root.detail && root.mode === "cat" && root.cat === "kde" && !root.query.trim()
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         Layout.leftMargin: 16
@@ -348,7 +348,7 @@ Scope {
                     }
                     Item {
                         id: gridBox
-                        visible: !root.detail && root.mode === "cat" && !root.instView && (root.cat !== "gnome" || !!root.query.trim())
+                        visible: !root.detail && root.mode === "cat" && !root.instView && (root.cat !== "kde" || !!root.query.trim())
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         Layout.leftMargin: 16

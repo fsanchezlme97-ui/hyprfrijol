@@ -1,7 +1,7 @@
 # Apps por defecto elegidas en Bienvenida / Ajustes: gestor de archivos (Super + E) y terminal (Super + Enter).
 # Si la app elegida no está instalada no se fija nada y env.lua usa la primera instalada (Nautilus primero).
 import json, shutil
-FM = {"dolphin": "dolphin", "nautilus": "nautilus", "thunar": "thunar", "nemo": "nemo", "yazi": "kitty -e yazi", "pcmanfm": "pcmanfm-qt"}
+FM = {"dolphin": "dolphin", "pcmanfm": "pcmanfm-qt", "yazi": "kitty -e yazi"}
 
 def _installed(cmd):
     words = cmd.split()

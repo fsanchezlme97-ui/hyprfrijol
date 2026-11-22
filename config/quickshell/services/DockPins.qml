@@ -8,10 +8,10 @@ import ".."
 
 Singleton {
     id: root
-    // Una app por tarea: la primera instalada de cada grupo. GNOME primero (siguen el tema); las demás (también las
-    // de KDE) solo si no hay de GNOME
-    readonly property var defaultGroups: [["org.gnome.Nautilus", "thunar", "nemo", "org.kde.dolphin"], ["firefox"], ["chromium", "google-chrome"],
-        ["kitty"], ["org.gnome.TextEditor", "org.kde.kate"], ["org.gnome.Calculator", "org.kde.kcalc"], ["code"]]
+    // Una app por tarea: la primera instalada de cada grupo. KDE/Qt primero (siguen el tema activo con qt6ct);
+    // las de GNOME solo si no hay de KDE.
+    readonly property var defaultGroups: [["org.kde.dolphin", "pcmanfm-qt"], ["org.kde.falkon", "firefox", "chromium", "google-chrome"],
+        ["kitty"], ["org.kde.kate"], ["org.kde.kcalc"], ["code"]]
     readonly property var defaultDock: { DesktopEntries.applications.values.length; return defaultGroups.map(g => g.find(id => DesktopEntries.byId(id))).filter(Boolean); }
     readonly property var pinned: {
         DesktopEntries.applications.values.length;   // se recalcula cuando se cargan las apps

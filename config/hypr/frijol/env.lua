@@ -73,17 +73,17 @@ hl.env("PATH", pathlist(HF.scriptsDir, os.getenv("PATH")))
 
 -- Programas (cámbialos en ~/.config/hyprfrijol/local.lua)
 -- La primera instalada de cada lista (hf-launch), como en illogical-impulse.
--- Primero las de GNOME/libadwaita (siguen el tema: Ajustes › Apariencia › «Aplicar a las apps»); las demás (Qt/KDE…), de alternativa.
+-- KDE/Qt primero (siguen el tema con qt6ct); GNOME/libadwaita como alternativa.
 local function first(...)
     local q = {}
     for _, c in ipairs({ ... }) do q[#q + 1] = "'" .. c .. "'" end
     return HF.scripts .. "/hf-launch " .. table.concat(q, " ")
 end
 HF.terminal    = HF.terminal    or "kitty"
-HF.files       = HF.files       or first("nautilus", "dolphin", "nemo", "thunar", "kitty -1 yazi")
-HF.browser     = HF.browser     or first("google-chrome-stable", "zen-browser", "firefox", "brave", "chromium", "microsoft-edge-stable", "librewolf")
-HF.codeEditor  = HF.codeEditor  or first("windsurf", "antigravity", "code", "codium", "cursor", "zed", "zeditor", "gnome-text-editor", "kate")
-HF.textEditor  = HF.textEditor  or first("gnome-text-editor", "kate", "mousepad")
+HF.files       = HF.files       or first("dolphin", "konqueror", "pcmanfm-qt", "kitty -1 yazi")
+HF.browser     = HF.browser     or first("falkon", "qutebrowser", "google-chrome-stable", "zen-browser", "firefox", "brave", "chromium", "microsoft-edge-stable", "librewolf")
+HF.codeEditor  = HF.codeEditor  or first("windsurf", "antigravity", "code", "codium", "cursor", "zed", "zeditor", "kate")
+HF.textEditor  = HF.textEditor  or first("kate", "mousepad")
 HF.office      = HF.office      or first("wps", "onlyoffice-desktopeditors", "libreoffice")
 HF.volumeMixer = HF.volumeMixer or first("pavucontrol-qt", "pavucontrol", HF.qs .. " ipc call settings open sonido")
-HF.taskManager = HF.taskManager or first("gnome-system-monitor", "resources", "plasma-systemmonitor --page-name Processes", "kitty -1 btop")
+HF.taskManager = HF.taskManager or first("plasma-systemmonitor --page-name Processes", "resources", "kitty -1 btop")
