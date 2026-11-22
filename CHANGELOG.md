@@ -3,6 +3,24 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.21] — 2026-11-22
+
+### Novedades
+- **Las flotantes «Ocultas» se esconden al hacer clic fuera**: como el panel del asistente. Antes se escondían en
+  cuanto una ventana del mosaico tenía el foco, y con el foco siguiendo al cursor eso pasaba solo al pasar el ratón
+  por encima de otra ventana. Ahora solo se van al espacio oculto (Super + S) cuando haces clic fuera de ellas (o al
+  cambiar de ventana con Alt + Tab); la que acabas de abrir o de enfocar con ese clic se queda.
+
+### Mejoras
+- **El cristal es plano**: el esmerilado de la barra, el dock, los paneles, las notificaciones, los menús y el OSD ya
+  no es un degradado (más claro arriba, plano abajo): ahora es igual de claro en toda la superficie. Las ventanas de
+  las apps, con el mismo cristal, también.
+- **Un poco más de transparencia**: el vidrio esmerilado baja de 0,46 a 0,40 de opacidad (0,56 en claro) y, cuando el
+  fondo de una pantalla junto a la barra es del tono contrario, de 0,82 a 0,74: se ve más fondo sin perder legibilidad.
+- **Minimizar sin volar al dock**: la ventana ya no vuela y se encoge hasta su icono (se veía raro); ahora se desvanece
+  en su sitio y solo después se va al espacio oculto o al de minimizadas (Ajustes › Animaciones › «Desvanecer al
+  minimizar» lo apaga).
+
 ## [0.11.20] — 2026-11-22
 
 ### Correcciones

@@ -552,8 +552,8 @@ def style_tokens(c, s):
     none = argb(W, 0)
     if mat == "cristal":
         # Cristal: la estructura y el orden de Material. Muy transparente sobre un desenfoque muy
-        # amplio (10-look.py), con un esmerilado más claro arriba (sheen), un resplandor suave entre el acento y
-        # el terciario que se desliza despacio (tint), y un borde de dos trazos: filo exterior oscuro casi
+        # amplio (10-look.py), con un esmerilado plano (sheen, igual de claro arriba que abajo), un resplandor suave entre
+        # el acento y el terciario que se desliza despacio (tint), y un borde de dos trazos: filo exterior oscuro casi
         # invisible (edge) + filo interior de luz brillante arriba (rimTop → border → rimBottom). Los rellenos
         # (bg2) son capas de cristal más claras; lo elegido en los segmentos, una cápsula sólida en contraste.
         # cristal cálido (referencias de glassmorphism): la base lleva algo del acento y del terciario, no gris neutro
@@ -567,10 +567,11 @@ def style_tokens(c, s):
             bgPopup=argb(base, .70 if LT else .44), bg2=argb(W, .52 if LT else .09),
             border=argb(W, .26 if LT else .08), borderWidth=1,
             highlight=none, glow=none,
-            # filo de luz más vivo arriba y un esmerilado algo más claro: el canto brillante del cristal de las referencias
+            # filo de luz más vivo arriba y un esmerilado plano: el canto brillante del cristal de las referencias
             rimTop=argb(W, .70 if LT else .16), rimBottom=argb(W, 0),
             edge=none,   # sin filo oscuro: sobre fondos claros o de colores se leía como un contorno
-            sheen=argb(W, .38 if LT else .08), tint=argb(mix(c["p"], c["ter"], .4), .18 if LT else .13),
+            # el esmerilado es plano (igual en toda la superficie): en claro, menos blanco (si fuera degradado, 0,38 solo arriba)
+            sheen=argb(W, .22 if LT else .08), tint=argb(mix(c["p"], c["ter"], .4), .18 if LT else .13),
             tint2=none, tint3=none, rimInner=none,
             # sombras muy tenues: el cristal es translúcido y la sombra se transparentaba como una franja oscura
             # en el borde (y por encima de 0,2 Hyprland la desenfocaba con él)
@@ -794,8 +795,8 @@ def gtk_css(c, S=None, s=None):
             a8 = (a8 or "#00000000").lstrip("#")
             return _css("#" + a8[2:], int(a8[:2], 16) / 255)
         # El mismo cristal que los paneles del shell (Glass.qml): poca opacidad sobre el desenfoque de Hyprland,
-        # esmerilado más claro arriba (sheen) y un resplandor del acento en una esquina (tint). Antes las apps
-        # eran solo un color translúcido y, con el contenido encima (view), el fondo apenas se veía desenfocado.
+        # esmerilado plano (sheen, igual en toda la superficie) y un resplandor del acento en una esquina (tint).
+        # Antes las apps eran solo un color translúcido y, con el contenido encima (view), el fondo apenas se veía desenfocado.
         sheen, tint = qcss(S.get("sheen")), qcss(S.get("tint"))
         out += [
             "/* Math con transparencia: cristal */",
@@ -819,10 +820,10 @@ def gtk_css(c, S=None, s=None):
             f"@define-color shade_color {_css('#000000', .05 if LT else .18)};",
             "window.background, window.background.csd { background-color: @window_bg_color; "
             f"background-image: radial-gradient(circle at 92% 0%, {tint}, transparent 55%), "
-            f"linear-gradient(to bottom, {sheen}, transparent 30%); }}",
+            f"linear-gradient({sheen}, {sheen}); }}",
             # popovers y diálogos: el mismo cristal, algo más opaco para leer bien
             "popover > contents, dialog-host > dialog.background, window.dialog.background { "
-            f"background-image: linear-gradient(to bottom, {sheen}, transparent 40%); }}",
+            f"background-image: linear-gradient({sheen}, {sheen}); }}",
             "headerbar, .top-bar, .bottom-bar, toolbarview > .top-bar headerbar { box-shadow: none; }",
             "separator { background-color: @borders; }",
             "",

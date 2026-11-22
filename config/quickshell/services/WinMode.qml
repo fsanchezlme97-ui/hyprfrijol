@@ -67,9 +67,10 @@ Singleton {
 
     // ---------- prioridad de las flotantes (floatOrder) ----------
     // "encima" (por defecto): las flotantes van sobre el mosaico, como siempre.
-    // "ocultas": no se ven mientras una ventana del mosaico tiene el foco: se van al espacio oculto (Super + S),
-    //            apiladas en cascada, y cuentan como minimizadas: Alt + Tab o el dock las traen al espacio normal (a
-    //            su sitio) y vuelven todas al quedarse el escritorio a la vista.
+    // "ocultas": se esconden al hacer clic fuera de ellas (como el panel del asistente; pasar el ratón por otra ventana
+    //            no basta, aunque el foco siga al cursor) o al cambiar de ventana con Alt + Tab: se van al espacio oculto
+    //            (Super + S), apiladas en cascada, y cuentan como minimizadas: Alt + Tab o el dock las traen al espacio
+    //            normal (a su sitio) y vuelven todas al quedarse el escritorio a la vista.
     // "espacio": se van al espacio oculto (Super + S) y se ven allí, encima del mosaico: el mosaico queda limpio.
     // «Detrás» no es posible: Hyprland dibuja las flotantes por encima de las del mosaico (solo una ventana
     // maximizada las tapa); la única forma de que el mosaico mande es esconderlas.
@@ -92,13 +93,47 @@ Singleton {
         for (const h of root._hidden) if (!root._hiddenTagged.includes(h)) tag(h, "+");
         root._hiddenTagged = root._hidden.slice();
     }
-    property bool _hiding: false
-    property string _hideKey: ""
-    // Esconder espera un poco: una ventana flotante que acaba de abrirse (el chat de RustDesk, una calculadora…)
-    // puede estar cogiendo el foco; si ya lo tiene, no se esconde
-    Timer { id: hideTimer; interval: 260; onTriggered: { root._hiding = true; root.applyFloatOrder(); root._hiding = false; } }
+    // ---------- esconder al hacer clic fuera («Ocultas») ----------
+    // Hyprland avisa de cada clic (bind de mouse:272/273 sin consumir → hf:clic, config/hypr/frijol/binds.lua). Se
+    // apunta dónde cayó y, 90 ms después (con el foco ya asentado), se esconden las flotantes que no estén bajo el
+    // cursor: la que abriste o enfocaste con ese clic se queda. Pasar el ratón por encima de otra ventana no esconde
+    // nada (el foco sigue al cursor en este escritorio).
+    property point _clickAt: Qt.point(0, 0)
+    property string _clickPrev: ""     // ventana activa al hacer clic: la que ese clic abre no estaba enfocada antes
+    property bool _clicked: false      // hay un clic esperando a aplicarse (lo consume applyFloatOrder)
+    function armHide(byKeyboard): void {
+        if (floatOrder !== "ocultas") return;
+        const activeWs = HyprClients.monitors.map(m => m.activeWorkspace?.id ?? 0);
+        if (!HyprClients.clients.some(c => c.floating && !keep(c) && !isDialog(c) && activeWs.includes(c.workspace?.id ?? 0)))
+            return;                    // no hay flotantes a la vista: nada que esconder (ni que consultar)
+        root._clickPrev = HyprClients.activeAddress;
+        if (byKeyboard) {             // Alt + Tab: no hay clic; se esconden todas menos la enfocada
+            root._clickAt = Qt.point(-100000, -100000);
+            clickSettle.restart();
+            return;
+        }
+        clickPos.running = true;
+    }
+    Process {
+        id: clickPos
+        command: ["hyprctl", "cursorpos", "-j"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { const p = JSON.parse(text); root._clickAt = Qt.point(p.x, p.y); } catch (e) {}
+                clickSettle.restart();
+            }
+        }
+    }
+    Timer { id: clickSettle; interval: 90; onTriggered: { root._clicked = true; root.applyFloatOrder(); } }
+    GlobalShortcut {
+        appid: "hf"; name: "clic"; description: "HyprFrijol: clic (esconder las flotantes al hacer clic fuera)"
+        onPressed: root.armHide(false)
+    }
     // Se llama con cada cambio de ventanas. La clave evita repetir los cambios en cada refresco.
     function applyFloatOrder(): void {
+        root.syncStashOpacity();
+        const clicked = root._clicked;
+        root._clicked = false;
         if (!root._tagsRead && HyprClients.clients.length) {
             root._tagsRead = true;
             const e = [];   // sin flatMap: el motor de QML no lo tiene
@@ -116,26 +151,25 @@ Singleton {
             const fl = HyprClients.clients.filter(c => c.floating && !keep(c) && !isDialog(c)
                 && activeWs.includes(c.workspace?.id ?? 0));
             const tiled = HyprClients.clients.filter(c => !c.floating && !keep(c) && activeWs.includes(c.workspace?.id ?? 0));
-            // Con el escritorio a la vista (sin foco y sin mosaico) vuelven todas; si no, se esconden las flotantes
-            // que no tengan el foco (si la que lo tiene es del mosaico, todas)
-            const desktop = !focused && tiled.length === 0;
-            const hide = desktop ? [] : focused && !act.floating ? fl : fl.filter(c => c.address !== act?.address);
-            const key = "ocultas|" + hide.map(c => c.address).join(",") + "|" + (desktop ? "" : root._hidden.join(","));
-            // Nada que cambiar: se anula un esconder pendiente (si no, su clave vieja impedía volver a lanzarlo)
-            if (key === root._floatOrderKey) { hideTimer.stop(); root._hideKey = ""; return; }
-            // Esperar solo cuando cambia lo que hay que esconder: así un refresco detrás de otro no aplaza el esconder
-            if (hide.length && !root._hiding) {
-                if (root._hideKey !== key) { root._hideKey = key; hideTimer.restart(); }
-                return;
-            }
-            root._hideKey = "";
-            root._floatOrderKey = key;
-            if (desktop) {
+            // Con el escritorio a la vista (sin foco y sin mosaico) vuelven todas, sin esperar a ningún clic
+            if (!focused && tiled.length === 0) {
+                if (!root._hidden.length) return;
                 const hs = root._hidden;
                 root._hidden = [];
                 for (const h of hs) root.unhide(h);
                 return;
             }
+            if (!clicked) return;      // pasar el ratón no esconde: solo un clic fuera (o Alt + Tab)
+            // La flotante con el foco se queda si el clic fue dentro de ella o si ese mismo clic se la dio (acabas de
+            // abrirla o de hacer clic en ella); un clic en el escritorio también la esconde. Las demás, todas fuera.
+            const p = root._clickAt;
+            const inside = c => {
+                const x = c.at?.[0] ?? 0, y = c.at?.[1] ?? 0;
+                return p.x >= x && p.x < x + (c.size?.[0] ?? 0) && p.y >= y && p.y < y + (c.size?.[1] ?? 0);
+            };
+            const stay = focused && act.floating && (inside(act) || root._clickPrev !== act.address);
+            const hide = fl.filter(c => !(stay && c.address === act.address));
+            if (!hide.length) return;
             // Cascada: cada una en el primer paso en diagonal libre del espacio oculto
             const taken = HyprClients.clients.filter(c => (c.workspace?.name ?? "") === stashWs)
                 .map(c => ({ x: c.at?.[0] ?? 0, y: c.at?.[1] ?? 0 }));
@@ -205,7 +239,6 @@ Singleton {
         Settings.setMany(o);
     }
     signal announced(string m)          // el OSD lo enseña (modules/osd)
-    signal minimizing(var c)            // justo antes de minimizar: el dock hace volar la ventana hasta su icono
     function cycle(): void {
         const next = modes[(modes.indexOf(mode) + 1) % modes.length];
         setMode(next);
@@ -256,21 +289,70 @@ Singleton {
     function minimize(address): void {
         const c = HyprClients.client(address);
         if (!c || isMin(c)) return;
-        minimizing(c);
         if ((c.fullscreen ?? 0) === 2) Shell.dispatch('hl.dsp.window.fullscreen({ mode = "fullscreen", action = "unset", ' + win(c.address) + ' })');
-        Shell.dispatch('hl.dsp.window.move({ workspace = "' + minWs + '", follow = false, ' + win(c.address) + ' })');
-        minOrder = minOrder.filter(a => a !== c.address).concat([c.address]);
+        const a = HyprClients.norm(c.address);
+        root.fadeTo(a, 0, () => Shell.dispatch('hl.dsp.window.move({ workspace = "' + minWs + '", follow = false, ' + win(a) + ' })'));
+        minOrder = minOrder.filter(x => x !== a).concat([a]);
         HyprClients.refresh();
     }
+    // ---------- desvanecido ----------
+    // Hyprland no anima la opacidad de una ventana: se dan unos pasos con set_prop (cada ~24 ms) para que se desvanezca
+    // en su sitio. Al esconderla, el cambio al espacio oculto ya no se ve (va a opacidad 0). Se apaga con «Desvanecer
+    // al minimizar» (animMinimize) o sin animaciones: entonces el cambio es inmediato.
+    // La propiedad es «opacity» (la general de la ventana): «opacity_inactive» es solo la del estado inactivo y
+    // «opacity_override» no existe en Hyprland 0.57 (set_prop la acepta pero no hace nada). «opacity» no admite
+    // «unset»: al terminar el desvanecido se deja en 1, que es el valor normal de una ventana.
+    readonly property bool animMin: Settings.get("animMinimize", true) !== false && !Theme.still
+    function setOpacity(a, v): void {
+        Shell.dispatch('hl.dsp.window.set_prop({ prop = "opacity", value = ' + v + ', ' + win(a) + ' })');
+    }
+    function clearOpacity(a): void {
+        Shell.dispatch('hl.dsp.window.set_prop({ prop = "opacity", value = 1, ' + win(a) + ' })');
+    }
+    property var _fades: []           // { a, to, i, done }
+    readonly property int fadeSteps: 6
+    function fadeTo(address, to, done): void {
+        const a = HyprClients.norm(address);
+        if (!root.animMin) { if (done) done(); return; }
+        root._fades = root._fades.filter(f => f.a !== a).concat([{ a: a, to: to, i: 0, done: done }]);
+    }
+    Timer {
+        id: fadeTick
+        interval: Math.max(12, Math.round(Theme.ms(220) / root.fadeSteps))
+        repeat: true
+        running: root._fades.length > 0
+        onTriggered: {
+            const keep = [];
+            for (const f of root._fades) {
+                f.i++;
+                const t = f.i / root.fadeSteps;
+                root.setOpacity(f.a, (f.to === 0 ? Math.max(0, 1 - t) : Math.min(1, t)).toFixed(2));
+                if (f.i < root.fadeSteps) keep.push(f);
+                else if (f.done) f.done();
+            }
+            root._fades = keep;
+        }
+    }
+    // Con el espacio oculto (Super + S) a la vista, las escondidas se ven: se les quita el desvanecido
+    property bool _stashShown: false
+    function syncStashOpacity(): void {
+        const shown = HyprClients.monitors.some(m => (m.specialWorkspace?.name ?? "") === root.stashWs);
+        if (shown === root._stashShown) return;
+        root._stashShown = shown;
+        if (shown) for (const h of root._hidden) root.clearOpacity(h.split("|")[0]);
+    }
+
     // La trae al espacio activo del monitor con el foco y la enfoca
     function restore(address): void {
         const a = HyprClients.norm(address);
         const ws = Hyprland.focusedMonitor?.activeWorkspace?.id ?? 1;
+        const h = root._hidden.find(h => h.split("|")[0] === a);
+        if (h && root.animMin) root.setOpacity(a, 0);       // vuelve desvaneciéndose desde 0
         Shell.dispatch('hl.dsp.window.move({ workspace = ' + ws + ', follow = false, ' + win(a) + ' })');
         minOrder = minOrder.filter(x => x !== a);
-        const h = root._hidden.find(h => h.split("|")[0] === a);
         if (h) { root._hidden = root._hidden.filter(x => x !== h); backToSpot(a, h); }   // ya no la esconde «ocultas»
         HyprClients.focusWindow(a);
+        if (h) root.fadeTo(a, 1, () => root.clearOpacity(a));
         HyprClients.refresh();
     }
     // Devuelve una ventana escondida («dirección|espacio|x|y») a su espacio y a su sitio, sin darle el foco («Ocultas»)
@@ -278,26 +360,32 @@ Singleton {
         const [address, ws] = entry.split("|");
         const a = HyprClients.norm(address), id = parseInt(ws);
         const dest = id > 0 ? id : (Hyprland.focusedMonitor?.activeWorkspace?.id ?? 1);
+        if (root.animMin) root.setOpacity(a, 0);
         Shell.dispatch('hl.dsp.window.move({ workspace = ' + dest + ', follow = false, ' + win(a) + ' })');
         backToSpot(a, entry);
         minOrder = minOrder.filter(x => x !== a);
+        root.fadeTo(a, 1, () => root.clearOpacity(a));
         HyprClients.refresh();
     }
     // Al espacio oculto (Super + S), en el primer paso de cascada libre (taken: sitios ocupados, se le añade el suyo)
-    // desde el centro del área útil
+    // desde el centro del área útil. Primero se desvanece en su sitio: el cambio de espacio no se ve.
     function stash(c, taken): void {
         const mon = HyprClients.monitorById(c.monitor) ?? HyprClients.focusedMonitor;
-        Shell.dispatch('hl.dsp.window.move({ workspace = "' + stashWs + '", follow = false, ' + win(c.address) + ' })');
-        if (!mon) return;
-        const U = HyprClients.usableRect(mon), w = c.size?.[0] ?? 0, h = c.size?.[1] ?? 0;
+        const a = HyprClients.norm(c.address);
         let x = 0, y = 0;
-        for (let k = 0; k < 10; k++) {
-            x = Math.max(U.x, Math.min(Math.round(U.x + (U.w - w) / 2) + 32 * k, U.x + U.w - w));
-            y = Math.max(U.y, Math.min(Math.round(U.y + (U.h - h) / 2) + 32 * k, U.y + U.h - h));
-            if (!taken.some(o => Math.abs(o.x - x) < 16 && Math.abs(o.y - y) < 16)) break;
+        if (mon) {
+            const U = HyprClients.usableRect(mon), w = c.size?.[0] ?? 0, h = c.size?.[1] ?? 0;
+            for (let k = 0; k < 10; k++) {
+                x = Math.max(U.x, Math.min(Math.round(U.x + (U.w - w) / 2) + 32 * k, U.x + U.w - w));
+                y = Math.max(U.y, Math.min(Math.round(U.y + (U.h - h) / 2) + 32 * k, U.y + U.h - h));
+                if (!taken.some(o => Math.abs(o.x - x) < 16 && Math.abs(o.y - y) < 16)) break;
+            }
+            taken.push({ x: x, y: y });
         }
-        taken.push({ x: x, y: y });
-        Shell.dispatch('hl.dsp.window.move({ x = ' + x + ', y = ' + y + ', exact = true, ' + win(c.address) + ' })');
+        root.fadeTo(a, 0, () => {
+            Shell.dispatch('hl.dsp.window.move({ workspace = "' + stashWs + '", follow = false, ' + win(a) + ' })');
+            if (mon) Shell.dispatch('hl.dsp.window.move({ x = ' + x + ', y = ' + y + ', exact = true, ' + win(a) + ' })');
+        });
     }
     // El sitio que tenía antes de esconderla, si vuelve a la misma pantalla
     function backToSpot(a, entry): void {

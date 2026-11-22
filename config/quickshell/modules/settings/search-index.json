@@ -46,7 +46,7 @@
   {"f": "Animaciones", "l": "Animaciones", "t": "row", "g": "Movimiento"},
   {"f": "Animaciones", "l": "Velocidad", "t": "row", "g": "Movimiento"},
   {"f": "Animaciones", "l": "Espacios", "t": "row", "g": "Movimiento"},
-  {"f": "Animaciones", "l": "Minimizar al dock", "t": "row", "s": "la ventana vuela y se encoge hasta su icono del dock", "g": "Movimiento"},
+  {"f": "Animaciones", "l": "Desvanecer al minimizar", "t": "row", "s": "la ventana se desvanece en su sitio antes de irse al espacio oculto (también al esconder una flotante con «Ocultas»)", "g": "Movimiento"},
   {"f": "Animaciones", "l": "Onda al pulsar", "t": "row", "s": "botones y mosaicos dibujan una onda desde el punto pulsado", "g": "Movimiento"},
   {"f": "Animaciones", "l": "Deslizadores con brillo", "t": "row", "s": "volumen, brillo y demás deslizadores con un halo del color del tema", "g": "Movimiento"},
   {"f": "Animaciones", "l": "Ventanas", "t": "card"},

@@ -3,8 +3,8 @@
 //   sólido   Material 3: superficie tonal sólida, sin borde; elevación con sombra en dos capas (una cercana y nítida,
 //            otra amplia y difusa) y un filo de luz de 1 px arriba en los paneles y popups
 //   cristal  (transparencia) vidrio esmerilado como el de macOS, el mismo en la barra, el dock y los paneles
-//            (Theme.frost): translúcido y muy desenfocado, con un esmerilado más claro arriba y un filo de luz muy
-//            tenue, más visible arriba y que se desvanece hacia abajo, sin contorno oscuro
+//            (Theme.frost): translúcido y muy desenfocado, con el esmerilado plano (igual de claro arriba que abajo)
+//            y un filo de luz muy tenue, más visible arriba y que se desvanece hacia abajo, sin contorno oscuro
 //   tonal    (transparencia con «Reducir transparencia») superficie tonal sólida con borde fino
 //   Glass { kind: "panel" }   kinds: "bar" (S.bg), "panel" (S.bgPanel), "popup" (S.bgPopup), "fill" (S.bg2)
 import QtQuick
@@ -66,14 +66,10 @@ Item {
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
 
-        // Esmerilado: el cristal algo más claro arriba, que se apaga hacia la mitad
+        // Esmerilado: plano, sin degradado (la superficie es igual de clara arriba que abajo)
         ShapePath {
             strokeWidth: -1
-            fillGradient: LinearGradient {
-                x1: 0; y1: 0; x2: 0; y2: fx.height * 0.65
-                GradientStop { position: 0.0; color: Theme.sheen }
-                GradientStop { position: 1.0; color: Qt.alpha(Theme.sheen, 0) }
-            }
+            fillColor: Theme.sheen
             PathRectangle { x: 0; y: 0; width: fx.width; height: fx.height; radius: root.rr }
         }
         // Filo exterior: un trazo oscuro casi invisible que recorta el cristal sobre fondos claros

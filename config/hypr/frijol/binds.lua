@@ -115,6 +115,9 @@ b(mod .. " + CTRL + F",    HF.scroll("fit visible"),          { description = "E
 b("CTRL + " .. mod .. " + BACKSLASH", hl.dsp.window.resize({ x = 640, y = 480, "exact" }))
 -- Super + arrastrar mueve / redimensiona cualquier ventana, también las que capturan el teclado (RustDesk, máquinas
 -- virtuales, juegos): con ellas el arrastre normal va a lo de dentro y Super no llegaría a Hyprland (dont_inhibit)
+-- Cada clic, sin quitárselo a la app (non_consuming): el modo «Ocultas» esconde las flotantes al hacer clic fuera
+b("mouse:272", hl.dsp.global("hf:clic"), { non_consuming = true })
+b("mouse:273", hl.dsp.global("hf:clic"), { non_consuming = true })
 b(mod .. " + mouse:272",   hl.dsp.window.drag(),   { mouse = true, dont_inhibit = true, description = "Mover la ventana (arrastrar)" })
 b(mod .. " + mouse:273",   hl.dsp.window.resize(), { mouse = true, dont_inhibit = true, description = "Cambiar el tamaño de la ventana (arrastrar)" })
 

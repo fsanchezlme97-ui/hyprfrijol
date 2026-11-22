@@ -29,15 +29,15 @@ Singleton {
     // menús y el OSD usan el mismo (glass, glassPanel, glassPopup): la superficie del tema (lleva su tinte) translúcida,
     // para que Hyprland la desenfoque (su alfa pasa el ignore_alpha 0,2 de la capa). Una sola opacidad para todo y en
     // todas las pantallas: si el fondo de alguna, junto a la barra, es del tono contrario al cristal (cristal oscuro
-    // sobre fondo claro o al revés), todo se vuelve más opaco poco a poco, hasta 0,82, y el texto se sigue leyendo.
+    // sobre fondo claro o al revés), todo se vuelve más opaco poco a poco, hasta 0,74, y el texto se sigue leyendo.
     readonly property real frostAlpha: {
         let m = 0;
         for (const k in wallLumas) {
             const L = wallLumas[k];
             m = Math.max(m, Math.min(1, light ? (0.6 - L) / 0.2 : (L - 0.4) / 0.2));
         }
-        const base = light ? 0.62 : 0.46;
-        return base + Math.max(0, m) * (0.82 - base);
+        const base = light ? 0.56 : 0.40;
+        return base + Math.max(0, m) * (0.74 - base);
     }
     readonly property color frost: Qt.alpha(s1, frostAlpha)
     readonly property bool sysLight: data.light ?? false

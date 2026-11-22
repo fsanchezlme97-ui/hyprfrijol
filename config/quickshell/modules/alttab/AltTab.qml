@@ -59,6 +59,7 @@ Overlay {
         if (!c) return;
         if (WinMode.isMin(c)) WinMode.restore(c.address);
         else HyprClients.focusWindow(c.address);
+        WinMode.armHide(true);   // «Ocultas»: cambiar de ventana con el teclado esconde la flotante que deja el foco
     }
     function closeSelected(): void {
         const c = items[sel];
