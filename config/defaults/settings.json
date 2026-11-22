@@ -17,6 +17,7 @@
   "ripple": true,
   "barPos": "arriba",
   "barMode": "archipielago",
+  "barAlign": "centro",
   "barRoundExtra": 4,
   "gapsIn": 1,
   "gapsOut": 1,
@@ -211,8 +212,8 @@
   "barTray": true,
   "barTrayMax": 3,
   "barTrayHidden": [],
-  "barTransparentEmpty": false,
   "barAdaptive": false,
+  "barAdaptiveStyle": "vidrio",
   "barLive": true,
   "hotCorners": {
     "tl": "vista",

@@ -3,6 +3,22 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.11.14] — 2026-11-22
+
+### Novedades
+- **Formas nuevas de la barra** (Ajustes › Barra › Forma): «Media», flotante y de dos tercios del borde, y
+  «Alineación» para la media y la isla: a la izquierda, al centro o a la derecha (arriba o abajo con la barra
+  lateral). La vista previa de cada posición lo enseña.
+
+### Mejoras
+- **Barra adaptable con vidrio esmerilado**, como la de macOS: debajo de la tinta va un velo del color contrario
+  (oscuro bajo los textos blancos, claro bajo los negros) que el compositor desenfoca, con la forma de la barra o de
+  cada píldora del archipiélago y un filo de luz si flota; la sombra se aligera porque ya no hace falta. Se puede
+  volver a la barra sin fondo en Ajustes › Barra › Fondo.
+
+### Cambios
+- Se quita «Transparente en espacios vacíos» de Ajustes › Barra.
+
 ## [0.11.13] — 2026-11-22
 
 ### Mejoras

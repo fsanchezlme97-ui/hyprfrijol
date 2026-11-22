@@ -1,4 +1,5 @@
-// Barra del diseño. Posición: abajo / arriba / izquierda / derecha · forma: fija / flotante / isla central
+// Barra del diseño. Posición: abajo / arriba / izquierda / derecha · forma: fija / flotante / media / isla / archipiélago
+// (media e isla, alineadas al inicio, al centro o al final del borde: barAlign)
 // (Ajustes › Barra). Medidas en Settings: barThickness (grosor), barOffset (margen si flota) y barScale
 // (el contenido se diseña a 32 px y se escala en proporción al tamaño elegido).
 // Ajustes que lee aquí:
@@ -9,13 +10,14 @@
 //                        flotantes no reserva nada; vuelve con el cursor en el borde — WinMode.covered)
 //   barScreens           por pantalla: completa · sencilla (espacios y consumo por programa) · oculta (Shell.barModeFor)
 //   barAllScreens        false → las pantallas sin elegir en barScreens, sin barra
-//   barTransparentEmpty  sin fondo cuando el espacio activo de esa pantalla no tiene ventanas
-//   barAdaptive          sin fondo y con textos e iconos de un solo color, blanco o negro según lo claro que sea el
+//   barAdaptive          textos e iconos de un solo color, blanco o negro según lo claro que sea el
 //                        fondo de pantalla debajo de cada punto (como elementary OS o CutefishOS), con una sombra
 //                        suave; los iconos de la bandeja conservan sus colores (shaders/ink.frag). Transiciones: al
 //                        activarla, al cambiar de fondo y al taparla ventanas (barra que se esconde: vuelve el fondo).
+//   barAdaptiveStyle     "vidrio" (velo esmerilado del color contrario a la tinta, como macOS) · "transparente"
 //   visualBell           parpadea al llegar un aviso (alerta visual en vez de sonido)
-// Isla central: la barra flota y mide lo que su contenido, centrada; el resto de la franja deja pasar el ratón.
+// Isla: la barra flota y mide lo que su contenido; media: dos tercios del borde (o lo que pida el contenido). El resto
+// de la franja deja pasar el ratón.
 // Archipiélago: cada grupo de módulos en su propia píldora flotante (BarPill), con el escritorio visible entre
 // ellas; solo las píldoras reciben el ratón (máscara con content.item.pills).
 // Super + J (Shell.barHidden) la deja escondida: vuelve al llevar el cursor al borde.
@@ -78,13 +80,6 @@ PanelWindow {
         const p = content.item?.pills?.[i];
         if (!archi || !revealed || !p || !p.visible) return { x: 0, y: 0, w: 0, h: 0 };
         return { x: Math.floor(body.x + p.x * k), y: Math.floor(body.y + p.y * k), w: Math.ceil(p.width * k) + 1, h: Math.ceil(p.height * k) + 1 };
-    }
-
-    // Espacio activo vacío (solo se consulta si el ajuste está activo)
-    readonly property bool emptyWs: {
-        if (!Settings.get("barTransparentEmpty", false)) return false;
-        const m = HyprClients.monitorByName(screen?.name ?? "");
-        return !!m && HyprClients.onWorkspace(m.activeWorkspace?.id).length === 0;
     }
 
     // Barra adaptable (barAdaptive): sin fondo y con la tinta de shaders/ink.frag, que mira el fondo de pantalla de esta
@@ -212,14 +207,19 @@ PanelWindow {
             id: body
             // Largo natural del contenido (isla) ya escalado
             readonly property real natural: (content.item?.naturalLength ?? 400) * bar.k
-            readonly property real length: bar.island ? Math.min(natural, bar.vertical ? parent.height : parent.width)
-                                                      : (bar.vertical ? parent.height : parent.width)
-            x: bar.vertical ? (bar.pos === "izquierda" ? bar.inner : 0) : (parent.width - width) / 2
-            y: bar.vertical ? (parent.height - height) / 2 : (bar.pos === "arriba" ? bar.inner : 0)
+            readonly property real full: bar.vertical ? parent.height : parent.width
+            readonly property real length: bar.island ? Math.min(natural, full)
+                                         : Settings.barMedium ? Math.min(full, Math.max(natural, Math.round(full * 0.66))) : full
+            // Hueco libre a lo largo del borde, repartido según la alineación (media e isla)
+            // (con el largo animado: el borde alineado se queda quieto mientras crece o encoge)
+            readonly property real shown: bar.vertical ? height : width
+            readonly property real along: Settings.barAlign === "inicio" ? 0 : Settings.barAlign === "fin" ? full - shown : (full - shown) / 2
+            x: bar.vertical ? (bar.pos === "izquierda" ? bar.inner : 0) : along
+            y: bar.vertical ? along : (bar.pos === "arriba" ? bar.inner : 0)
             width: bar.vertical ? bar.thickness : length
             height: bar.vertical ? length : bar.thickness
-            Behavior on width { enabled: bar.island && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
-            Behavior on height { enabled: bar.island && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+            Behavior on width { enabled: (bar.island || Settings.barMedium) && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+            Behavior on height { enabled: (bar.island || Settings.barMedium) && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
             // Escondida: se desliza hacia el borde
             readonly property real hiddenShift: bar.thickness + bar.off + 2
             transform: Translate {
@@ -233,13 +233,13 @@ PanelWindow {
                 id: bg
                 anchors.fill: parent
                 kind: "bar"
-                radius: bar.floating ? (Theme.pill || bar.island ? Math.min(Theme.barRadius * 2, bar.thickness / 2) : Theme.barRadius) : 0
+                radius: bar.floating ? (Theme.pill || bar.island || Settings.barMedium ? Math.min(Theme.barRadius * 2, bar.thickness / 2) : Theme.barRadius) : 0
                 shadow: bar.floating
                 showBorder: bar.floating
                 effects: bar.floating
                 // Archipiélago: el fondo lo ponen las píldoras de cada grupo (BarPill)
                 visible: !bar.archi
-                opacity: bar.emptyWs || bar.inkOn ? 0 : 1
+                opacity: bar.inkOn ? 0 : 1
                 Behavior on opacity { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
                 // Fija: solo la línea del lado de las ventanas
                 Rectangle {
@@ -272,6 +272,13 @@ PanelWindow {
                 const p = t.mapToItem(body, r.x, r.y, r.width, r.height);
                 return Qt.vector4d(p.x / width, p.y / height, (p.x + p.width) / width, (p.y + p.height) / height);
             }
+            // Formas del velo de vidrio (0-1 de la barra): la barra entera, o cada píldora del archipiélago
+            function veilShape(i: int): var {
+                if (!bar.archi) return i === 0 ? Qt.vector4d(0, 0, 1, 1) : Qt.vector4d(0, 0, 0, 0);
+                const r = bar.pillRect(i);
+                if (r.w <= 0 || width <= 0 || height <= 0) return Qt.vector4d(0, 0, 0, 0);
+                return Qt.vector4d((r.x - x) / width, (r.y - y) / height, (r.x - x + r.w - 1) / width, (r.y - y + r.h - 1) / height);
+            }
             layer.enabled: bar.inkAmount > 0.001
             layer.effect: ShaderEffect {
                 property var wallA: wallTexA
@@ -285,6 +292,13 @@ PanelWindow {
                 property real invert: Theme.light ? 1 : 0
                 property real wallMix: bar.wallMix
                 property real threshold: 0.55
+                property var shape0: body.veilShape(0)
+                property var shape1: body.veilShape(1)
+                property var shape2: body.veilShape(2)
+                property var shape3: body.veilShape(3)
+                property real radius: (bar.archi ? bar.pillRadius * bar.k : bg.radius) * dpr
+                property real glass: Settings.get("barAdaptiveStyle", "vidrio") === "transparente" ? 0 : 1
+                property real rim: bar.floating ? 1 : 0
                 fragmentShader: Qt.resolvedUrl("shaders/ink.frag.qsb")
             }
 

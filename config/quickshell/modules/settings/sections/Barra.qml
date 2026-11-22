@@ -15,6 +15,8 @@ ColumnLayout {
     spacing: 12
     readonly property string pos: Settings.get("barPos", "abajo")
     readonly property string mode: Settings.get("barMode", "fija")
+    readonly property string align: Settings.barAlign
+    readonly property bool vertical: root.pos === "izquierda" || root.pos === "derecha"
 
     BarTabs { current: "barra" }   // Barra | Widgets (una sola entrada en la lista)
 
@@ -54,10 +56,14 @@ ColumnLayout {
                             readonly property real inset: (parent.border.width) + parent.m
                             color: card.on ? Theme.p : Theme.o
                             radius: root.mode === "fija" ? 0 : 3
-                            width: vert ? 9 : (root.mode === "isla" ? parent.width * 0.5 : parent.width - inset * 2)
-                            height: vert ? (root.mode === "isla" ? parent.height * 0.5 : parent.height - inset * 2) : 9
-                            x: card.k === "izquierda" ? inset : card.k === "derecha" ? parent.width - width - inset : (parent.width - width) / 2
-                            y: card.k === "arriba" ? inset : card.k === "abajo" ? parent.height - height - inset : (parent.height - height) / 2
+                            // isla: lo que su contenido (aquí un 40 %) · media: dos tercios; alineadas como barAlign
+                            readonly property real part: root.mode === "isla" ? 0.4 : root.mode === "media" ? 0.66 : 1
+                            readonly property real span: (vert ? parent.height : parent.width) - inset * 2
+                            readonly property real along: inset + (root.align === "inicio" ? 0 : root.align === "fin" ? 1 : 0.5) * span * (1 - part)
+                            width: vert ? 9 : span * part
+                            height: vert ? span * part : 9
+                            x: card.k === "izquierda" ? inset : card.k === "derecha" ? parent.width - width - inset : along
+                            y: card.k === "arriba" ? inset : card.k === "abajo" ? parent.height - height - inset : along
                         }
                         Repeater {   // archipiélago: una píldora por grupo, con hueco entre ellas
                             model: root.mode === "archipielago" ? (card.k === "izquierda" || card.k === "derecha" ? [[0, 0.3], [0.62, 0.38]] : [[0, 0.3], [0.38, 0.24], [0.7, 0.3]]) : []
@@ -87,10 +93,20 @@ ColumnLayout {
                 Layout.preferredWidth: 1
                 label: "Forma"; labelWidth: 60
                 Seg {
-                    model: [["fija", "Fija al borde"], ["flotante", "Flotante"], ["isla", "Isla central"], ["archipielago", "Archipiélago"]]
+                    model: [["fija", "Fija al borde"], ["flotante", "Flotante"], ["media", "Media"], ["isla", "Isla"], ["archipielago", "Archipiélago"]]
                     current: root.mode
                     onPicked: k => Confirm.change("Forma de la barra", { barMode: k })
                 }
+            }
+        }
+        // Media e isla: dónde se colocan a lo largo del borde
+        LabeledRow {
+            visible: root.mode === "media" || root.mode === "isla"
+            label: "Alineación"; labelWidth: 60
+            Seg {
+                model: [["inicio", root.vertical ? "Arriba" : "Izquierda"], ["centro", "Centro"], ["fin", root.vertical ? "Abajo" : "Derecha"]]
+                current: root.align
+                onPicked: k => Settings.set("barAlign", k)
             }
         }
         // Píldoras (isla / archipiélago): esquinas a partir de las de las ventanas, como mucho +4 px (no rompe el estilo)
@@ -187,8 +203,16 @@ ColumnLayout {
         }
         SwRow { visible: Quickshell.screens.length > 1; label: "Reloj en la barra sencilla"; sub: "la hora también en las otras pantallas"; key: "barSecondaryClock"; def: true }
         SwRow { label: "Barra en las pantallas nuevas"; sub: "sencilla al conectar otra pantalla; si no, sin barra hasta que la elijas"; key: "barAllScreens"; def: true }
-        SwRow { label: "Transparente en espacios vacíos"; sub: "la barra se funde con el fondo si no hay ventanas"; key: "barTransparentEmpty" }
-        SwRow { label: "Barra adaptable"; sub: "sin fondo, con textos e iconos en blanco o negro según lo claro que sea el fondo de pantalla bajo la barra (como elementary OS)"; key: "barAdaptive" }
+        SwRow { label: "Barra adaptable"; sub: "textos e iconos en blanco o negro según lo claro que sea el fondo de pantalla bajo la barra (como macOS o elementary OS)"; key: "barAdaptive" }
+        LabeledRow {
+            visible: Settings.get("barAdaptive", false) === true
+            label: "Fondo"; labelWidth: 60
+            Seg {
+                model: [["vidrio", "Vidrio esmerilado"], ["transparente", "Sin fondo"]]
+                current: Settings.get("barAdaptiveStyle", "vidrio")
+                onPicked: k => Settings.set("barAdaptiveStyle", k)
+            }
+        }
         SwRow { label: "Barra viva"; sub: "el icono del clima se mueve con el tiempo que hace y el anillo del pomodoro late al final; quietos en pantalla completa y en modo juego"; key: "barLive"; def: true }
     }
     // Bandeja del sistema (bar/Tray.qml): barTray · barTrayMax · barTrayHidden (ids que van al «›»)

@@ -120,11 +120,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.11.12",
+ "hyprfrijol": "v0.11.13",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-22 00:31",
+ "saved": "2026-11-22 00:44",
  "services": [
   "ufw",
   "cups.socket",
@@ -149,6 +149,7 @@
   "animado": true,
   "appFontPx": 12,
   "appsInstallMode": "terminal",
+  "barAdaptive": false,
   "barAutoHide": false,
   "barHeight": 34,
   "barMode": "archipielago",
@@ -160,10 +161,10 @@
    "red",
    "notificaciones",
    "reloj",
-   "musica",
    "titulo",
    "bongo",
-   "voz"
+   "voz",
+   "musica"
   ],
   "barOrder": {
    "derecha": [
@@ -258,7 +259,7 @@
   "palette": "vesper",
   "pip": true,
   "pipAuto": false,
-  "pipCorner": "sup-der",
+  "pipCorner": "inf-der",
   "pipFree": [
    0.7813,
    0.2317
