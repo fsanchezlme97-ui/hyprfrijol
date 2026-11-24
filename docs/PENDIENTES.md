@@ -26,17 +26,18 @@ está en el CHANGELOG y en `docs/planes/`.
       y Noctalia, con `dev/perf.sh`. Lo medido de HyprFrijol (0.9.75): ~360 MB recién arrancado con dos pantallas,
       estable en reposo, ~0,5 % de un núcleo.
 
-### Pulido y documentación (en curso)
+### Pulido y documentación (hecho)
 
-- [ ] Revisar y documentar todos los comentarios `shortcut:`.
-- [ ] Crear índice de scripts (`docs/SCRIPTS.md`).
-- [ ] Crear referencia de atajos (`docs/BINDS.md`).
-- [ ] Ampliar `README.en.md` con arquitectura, desarrollo y troubleshooting.
-- [ ] Crear `docs/TROUBLESHOOTING.md` con problemas comunes.
-- [ ] Crear `docs/TEMAS.md`: cómo crear y añadir un tema propio.
-- [ ] Crear `docs/PLUGINS-OMARCHY.md`: plugins de Omarchy compatibles y cómo añadirlos.
-- [ ] Crear `docs/MIGRACION.md`: migrar desde hypr-liquid u otros rices.
-- [ ] Asegurar que todo ajuste nuevo tenga descripción actualizada en `docs/AJUSTES.md`.
+- [x] Revisar y documentar todos los comentarios `shortcut:`.
+- [x] Crear índice de scripts (`docs/SCRIPTS.md`).
+- [x] Crear referencia de atajos (`docs/BINDS.md`).
+- [x] Ampliar `README.en.md` con arquitectura, desarrollo y troubleshooting.
+- [x] Crear `docs/TROUBLESHOOTING.md` con problemas comunes.
+- [x] Crear `docs/TEMAS.md`: cómo crear y añadir un tema propio.
+- [x] Crear `docs/PLUGINS-OMARCHY.md`: plugins de Omarchy compatibles y cómo añadirlos.
+- [x] Crear `docs/MIGRACION.md`: migrar desde hypr-liquid u otros rices.
+- [x] Añadir `--help` a todos los scripts bash.
+- [x] Revisar ajustes huérfanos (MQTT).
 
 ## Descartado (2026-11-13)
 
