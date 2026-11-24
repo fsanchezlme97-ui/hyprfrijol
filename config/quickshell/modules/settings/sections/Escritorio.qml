@@ -142,7 +142,7 @@ ColumnLayout {
             labelWidth: 150
             Pills {
                 fill: false
-                model: [["encima", "Encima"], ["ocultas", "Ocultas"], ["espacio", "Espacio oculto"]]
+                model: [["encima", "Encima"], ["ocultas", "Ocultas"], ["minimizar", "Minimizar"], ["espacio", "Espacio oculto"]]
                 current: Settings.get("floatOrder", "encima")
                 onPicked: k => Settings.set("floatOrder", k)
             }
@@ -152,6 +152,7 @@ ColumnLayout {
             Layout.leftMargin: 150
             text: ({ "encima": "Las flotantes van sobre el mosaico, como siempre.",
                       "ocultas": "Al hacer clic fuera de una ventana flotante (o cambiar de ventana con Alt + Tab) se va al espacio oculto (Super + S), apilada en cascada desde el centro; pasar el ratón por encima de otra no la esconde. Alt + Tab o el dock las traen a tu espacio, a su sitio; con el escritorio a la vista vuelven todas.",
+                      "minimizar": "Al hacer clic fuera de la ventana flotante activa (o cambiar de ventana con Alt + Tab) esa ventana se minimiza; vuelve con Super + Mayús + H, Alt + Tab o el dock.",
                       "espacio": "Las flotantes se van al espacio oculto (Super + S) y se ven allí, encima del mosaico: el mosaico queda siempre limpio." })[Settings.get("floatOrder", "encima")] ?? ""
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }
@@ -226,7 +227,7 @@ ColumnLayout {
             enabled: !Settings.get("dockOnTop", false)
             opacity: enabled ? 1 : 0.5
             Seg {
-                model: [["fijo", "Siempre visible"], ["auto", "Ocultar automáticamente"], ["inteligente", "Ocultación inteligente"]]
+                model: [["fijo", "Siempre visible"], ["auto", "Ocultar automáticamente"], ["inteligente", "Ocultación inteligente"], ["esquivar", "Esquivar ventanas"]]
                 current: Settings.get("dockBehavior", "inteligente")
                 onPicked: k => Settings.set("dockBehavior", k)
             }
@@ -237,7 +238,8 @@ ColumnLayout {
             visible: !Settings.get("dockOnTop", false)
             text: ({ fijo: "Siempre a la vista y las ventanas maximizadas se quedan a su lado.",
                      auto: "Se esconde y aparece al llevar el cursor a su borde.",
-                     inteligente: "Esquiva las ventanas: se aparta cuando una ventana pasa por encima de él y vuelve cuando queda sitio libre (o al llevar el cursor al borde)." })[Settings.get("dockBehavior", "inteligente")] ?? ""
+                     inteligente: "Esquiva las ventanas: se aparta cuando una ventana pasa por encima de él y vuelve cuando queda sitio libre (o al llevar el cursor al borde).",
+                     esquivar: "Esquiva ventanas de verdad: se oculta en cuanto cualquier ventana ocupa su zona y vuelve al quedar libre o al acercar el cursor." })[Settings.get("dockBehavior", "inteligente")] ?? ""
         }
         LabeledRow {
             label: "Posición"

@@ -16,9 +16,10 @@ Singleton {
         "clipboard": '<rect x="8" y="3" width="8" height="4" rx="1"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>',
         // Cafeína (no apagar la pantalla): taza con vapor
         "coffee": '<path d="M4 10h13v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 11.5h1.5a2.5 2.5 0 0 1 0 5H16.5"/><path d="M8 3.5c-.8 1 .8 2 0 3.5M12 3.5c-.8 1 .8 2 0 3.5"/>',
-        // IA (barra, Spotlight, panel lateral, Ajustes): el monóculo de Harper, con «>!» en la lente y el cordón ondulado
-        // (fino y curvo a propósito: con un trazo recto se confundía con la lupa de "search")
-        "ai": '<circle cx="10.4" cy="10.6" r="8.4"/><circle cx="18.9" cy="12.6" r=".9" fill="currentColor" stroke="none"/><path d="M19.2 13.6c1.9 1.6 2 3.6.5 5.2s-1.2 3.3.9 3.9" stroke-width="1.2"/><path d="M6.5 7.9l3.1 2.7-3.1 2.7"/><path d="M13.7 7.2v4"/><circle cx="13.7" cy="14.2" r="1.05" fill="currentColor" stroke="none"/>',
+        // IA (barra, Spotlight, panel lateral, Ajustes): brújula de Harper.
+        // Dentro del círculo va el símbolo >!; fuera, arriba a la derecha, la bolita de estado.
+        "ai": '<circle cx="12" cy="12" r="9"/><path d="M9 8.5l3 3-3 3M14 8.5v5.5"/><circle cx="14" cy="15.5" r=".9" fill="currentColor" stroke="none"/><circle cx="19.5" cy="4.5" r="2.8" fill="currentColor" stroke="none"/>',
+        "ai_body": '<circle cx="12" cy="12" r="9"/><path d="M9 8.5l3 3-3 3M14 8.5v5.5"/><circle cx="14" cy="15.5" r=".9" fill="currentColor" stroke="none"/>',
         "sparkle": '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
         "wifi": '<path d="M2.5 9.2a14 14 0 0 1 19 0"/><path d="M5.6 12.6a9.5 9.5 0 0 1 12.8 0"/><path d="M8.8 16a5 5 0 0 1 6.4 0"/><circle cx="12" cy="19.4" r="1.3" fill="currentColor" stroke="none"/>',
         "volume": '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>',
@@ -140,6 +141,8 @@ Singleton {
         "smile": '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>',
         "shuffle": '<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>',
         // Conversación por voz (botones de voz de la barra): líneas de audio de distinta altura
-        "repeat": '<path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>'
+        "repeat": '<path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+        // Tailscale: marca de la VPN en malla (9 círculos), con margen para no quedar grande
+        "tailscale": '<g fill="currentColor" stroke="none" transform="translate(2 2) scale(0.8333)"><path d="M24 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm-9 9a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm0-9a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm6-6a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0-.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM3 24a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0-.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm18 .5a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0-.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM6 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm9-9a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm-3 2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM6 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM3 5.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></g>'
     })
 }

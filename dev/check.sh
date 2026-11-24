@@ -51,7 +51,7 @@ if ! grep -qx fin "$TMP/views.log" 2>/dev/null; then
 fi
 
 # Avisos conocidos e inofensivos: de la sesión anidada (polkit/portal ya registrados por tu sesión, sin bluez) y de Qt
-KNOWN='qt\.qpa\.wayland\.textinput|PolicyKit1|PolkitAgent|polkit|register with host portal|org\.bluez|Could not load icon'
+KNOWN='qt\.qpa\.wayland\.textinput|PolicyKit1|PolkitAgent|polkit|register with host portal|org\.bluez|Could not load icon|setAlphaF.*invalid value nan|Layershell screen does not correspond to a real screen'
 [ "$VERBOSE" = 1 ] && { echo "── todos los avisos ──"; grep -v '^fin$' "$TMP/views.log"; echo; }
 BAD="$(grep -v '^fin$' "$TMP/views.log" | grep -vE "$KNOWN")"
 if [ -n "$BAD" ]; then

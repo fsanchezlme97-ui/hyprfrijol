@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# hf-remove-gtk — quita las apps GTK/GNOME que hyprfrijol instala por defecto en «De serie».
+# Deja intactas las librerías GTK que puedan necesitar otras apps. Pide confirmación.
+set -euo pipefail
+
+# Apps GTK/GNOME de la tier "serie" de install/apps.json y sus alternativas KDE/Qt.
+# «sushi» no es de hyprfrijol, pero es dependencia de papers (vista previa de GNOME): hay que quitarlo primero.
+gtk_apps=(
+  sushi
+  nautilus nautilus-python
+  gnome-text-editor
+  loupe
+  papers
+  showtime
+  decibels
+  file-roller
+  gnome-calculator
+  gnome-disk-utility
+  resources
+  pika-backup
+  bazaar
+)
+
+kde_apps=(
+  dolphin
+  kate
+  gwenview
+  okular
+  haruna
+  elisa
+  ark
+  kcalc
+  partitionmanager
+  plasma-systemmonitor
+  kbackup
+  discover
+)
+
+echo "Apps GTK/GNOME de hyprfrijol que se quitarán:"
+for p in "${gtk_apps[@]}"; do pacman -Q "$p" &>/dev/null && echo "  · $p"; done
+
+echo
+echo "Alternativas KDE/Qt que deberían estar instaladas:"
+missing=()
+for p in "${kde_apps[@]}"; do
+  if pacman -Q "$p" &>/dev/null; then
+    echo "  ✓ $p"
+  else
+    echo "  ✗ $p (no instalado)"
+    missing+=("$p")
+  fi
+done
+
+if [ ${#missing[@]} -gt 0 ]; then
+  echo
+  read -rp "¿Instalar las alternativas KDE/Qt que faltan? [s/N] " ans
+  if [[ "$ans" =~ ^[Ss]$ ]]; then
+    sudo pacman -S --noconfirm --needed "${missing[@]}"
+  else
+    read -rp "¿Continuar sin instalarlas? Esas funciones dejarán de tener app. [s/N] " ans
+    [[ "$ans" =~ ^[Ss]$ ]] || exit 1
+  fi
+fi
+
+installed=()
+for p in "${gtk_apps[@]}"; do
+  pacman -Q "$p" &>/dev/null && installed+=("$p")
+done
+
+if [ ${#installed[@]} -eq 0 ]; then
+  echo "No hay nada que quitar."
+  exit 0
+fi
+
+read -rp "¿Quitar las apps GTK/GNOME listadas? [s/N] " ans
+[[ "$ans" =~ ^[Ss]$ ]] || exit 0
+
+if sudo pacman -Rns --noconfirm "${installed[@]}"; then
+  echo "Hecho."
+else
+  echo "Error al quitar algunos paquetes. Puede deberse a una dependencia de otro paquete que no está en la lista."
+  echo "Revisa el mensaje de arriba; si quieres forzar la desinstalación, ejecuta:"
+  echo "  sudo pacman -Rdd ${installed[*]}"
+  exit 1
+fi

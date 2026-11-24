@@ -222,6 +222,7 @@ qtmultimedia	recommended	qt6-multimedia,qt6-multimedia-ffmpeg	qt6-qtmultimedia	q
 falkon	optional	falkon	falkon	falkon	falkon	falkon	navegador KDE/Qt con QtWebEngine	aplicaciones	falkon
 qutebrowser	optional	qutebrowser	qutebrowser	qutebrowser	qutebrowser	qutebrowser	navegador Qt (alternativa)	aplicaciones	qutebrowser
 dolphin	optional	dolphin	dolphin	dolphin	dolphin	dolphin	gestor de archivos de KDE	aplicaciones	dolphin
+plasma-integration	recommended	plasma-integration	plasma-integration	plasma-integration	plasma-integration	plasma-integration	tema de Plasma para apps Qt (Dolphin, Kate…)	apariencia	
 konqueror	optional	konqueror	konqueror	konqueror	konqueror	konqueror	gestor de archivos/alternativa KDE	aplicaciones	konqueror
 kate	optional	kate	kate	kate	kate	kate	editor de texto avanzado de KDE	aplicaciones	kate
 gwenview	optional	gwenview	gwenview	gwenview	gwenview	gwenview	visor de imágenes de KDE	aplicaciones	gwenview

@@ -36,7 +36,7 @@ PanelWindow {
     readonly property real tileRadius: Theme.inner(radius, 9)
     readonly property int step: 46      // cada icono mide 42 + 4 de separación
 
-    readonly property string behavior: { const b = Settings.get("dockBehavior", "inteligente"); return ["fijo", "auto", "inteligente"].includes(b) ? b : "inteligente"; }
+    readonly property string behavior: { const b = Settings.get("dockBehavior", "inteligente"); return ["fijo", "auto", "inteligente", "esquivar"].includes(b) ? b : "inteligente"; }
     readonly property bool onTop: Settings.get("dockOnTop", false) === true
     readonly property string monName: screen?.name ?? ""
     // Zona del dock en coordenadas globales (para saber si una ventana la tapa), con 8 px de margen
@@ -56,9 +56,9 @@ PanelWindow {
         return side === "izquierda" ? { x: L.x + (own ? 0 : r[0]), y: top + (hh - dock.height) / 2 - 8, w: w, h: dock.height + 16 }
                                     : { x: L.x + L.w - (own ? 0 : r[2]) - w, y: top + (hh - dock.height) / 2 - 8, w: w, h: dock.height + 16 };
     }
-    readonly property bool covered: !onTop && behavior === "inteligente" && shown && WinMode.covered(monName, zone)
+    readonly property bool covered: !onTop && shown && (behavior === "inteligente" && WinMode.covered(monName, zone) || behavior === "esquivar" && WinMode.coveredAll(monName, zone))
     readonly property bool reserve: { WinMode.overrides; WinMode.mode;
-        return shown && !onTop && (behavior === "fijo" || (behavior === "inteligente" && !WinMode.isFloat(wsId) && !WinMode.hasFullscreen(monName))); }
+        return shown && !onTop && behavior === "fijo"; }
     property bool menuOpen: false
     property var menuItem: null
     property int menuIndex: -1

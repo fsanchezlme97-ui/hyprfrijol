@@ -90,6 +90,7 @@ pkgbase = hyprfrijol-git
 	optdepends = yt-dlp: descargas de vídeo y audio (hf-download)
 	optdepends = qt6-multimedia: fondo en movimiento (vídeo) en el bloqueo, el selector de fondos y el login visual
 	optdepends = qt6-multimedia-ffmpeg: fondo en movimiento (vídeo) en el bloqueo, el selector de fondos y el login visual
+	optdepends = plasma-integration: tema de Plasma para apps Qt (Dolphin, Kate…)
 	provides = hyprfrijol
 	conflicts = hyprfrijol
 	source = hyprfrijol::git+https://github.com/fsanchezlme97-ui/hyprfrijol.git

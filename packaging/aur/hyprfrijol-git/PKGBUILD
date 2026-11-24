@@ -89,7 +89,8 @@ optdepends=('xdg-desktop-portal-gtk: portal: diálogos de abrir/guardar'
          'poppler: OCR y conversión de PDF desde Nautilus (pdftoppm, hf-fileact)'
          'yt-dlp: descargas de vídeo y audio (hf-download)'
          'qt6-multimedia: fondo en movimiento (vídeo) en el bloqueo, el selector de fondos y el login visual'
-         'qt6-multimedia-ffmpeg: fondo en movimiento (vídeo) en el bloqueo, el selector de fondos y el login visual')
+         'qt6-multimedia-ffmpeg: fondo en movimiento (vídeo) en el bloqueo, el selector de fondos y el login visual'
+         'plasma-integration: tema de Plasma para apps Qt (Dolphin, Kate…)')
 makedepends=('git')
 provides=('hyprfrijol')
 conflicts=('hyprfrijol')

@@ -303,6 +303,7 @@ def apply_kde(c, on):
             _ini_set(secs, "WM", k, _kde(v))
         _ini_set(secs, "General", "ColorScheme", SCHEME)
         _ini_set(secs, "General", "ColorSchemeHash", None)
+        _ini_set(secs, "KDE", "widgetStyle", "Breeze")
     else:
         if _ini_get(secs, "General", "ColorScheme") not in (SCHEME, OLD_SCHEME):
             return False
@@ -373,6 +374,39 @@ def btop_theme(c):
     }
     return "# GENERADO por hyprfrijol (config/apply/17-theme-apps.py)\n" + \
         "".join('theme[%s]="%s"\n' % (k, v) for k, v in t.items())
+
+
+DOLPHIN_DESKTOP = """# HyprFrijol
+[Desktop Entry]
+Name=Dolphin
+Exec=env QT_QPA_PLATFORMTHEME=kde /usr/bin/dolphin %u
+Icon=org.kde.dolphin
+Type=Application
+Categories=Qt;KDE;System;FileTools;FileManager;
+MimeType=inode/directory;
+Keywords=files;file management;file browsing;samba;network shares;Explorer;Finder;
+"""
+
+
+def apply_dolphin_desktop(on):
+    """Sobrescribe el .desktop de Dolphin para forzar el tema de Plasma cuando env.lua aún no lo ha fijado."""
+    path = HOME / ".local/share/applications/org.kde.dolphin.desktop"
+    if not on:
+        try:
+            if path.exists() and "HyprFrijol" in path.read_text():
+                path.unlink()
+                return True
+        except Exception:
+            pass
+        return False
+    try:
+        text = path.read_text() if path.exists() else ""
+    except Exception:
+        text = ""
+    if text == DOLPHIN_DESKTOP:
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return _write(path, DOLPHIN_DESKTOP)
 
 
 def apply_btop(c, on):
@@ -608,6 +642,7 @@ def hypr_lua(s, c):
     # devuelven a kdeglobals los colores de antes, si los habíamos cambiado.
     kde = _kde_qt()
     kde_changed = apply_kde(c, qt and kde)
+    apply_dolphin_desktop(qt and kde)
     icon = ""
     try:
         icon = apply_icons(s, c)

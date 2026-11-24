@@ -17,7 +17,7 @@ PanelWindow {
     required property string view
     property real panelWidth: 360
     property real panelHeight: 300
-    property real margin: 6
+    property real margin: Settings.winGap
     property bool ready: false              // ver components/Overlay (carga diferida)
     Component.onCompleted: Qt.callLater(() => win.ready = true)
     readonly property bool shown: ready && Shell.view === view
@@ -48,7 +48,7 @@ PanelWindow {
 
     readonly property string pos: Settings.barPos
     readonly property bool vertical: pos === "izquierda" || pos === "derecha"
-    readonly property real edge: Math.max(margin, Settings.barEdge + 2)
+    readonly property real edge: Math.max(margin, Settings.barEdge)
     // Centro del chip a lo largo de la barra (o el centro de la pantalla si no hay chip)
     readonly property real c: a && isFinite(a.c) ? a.c : (vertical ? height / 2 : width / 2)
 

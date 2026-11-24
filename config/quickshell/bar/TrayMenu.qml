@@ -56,14 +56,11 @@ PopupWindow {
     Timer { id: grabLater; interval: 60; onTriggered: menu.grabbing = menu.visible }
     HyprlandFocusGrab { active: menu.grabbing; windows: [menu]; onCleared: menu.close() }
 
-    Rectangle {
+    Glass {
         id: body
         width: parent.width
+        kind: "popup"
         implicitHeight: col.implicitHeight + 10
-        radius: Theme.r(10)
-        color: Theme.glassPopup
-        border.width: 1
-        border.color: Theme.border
         focus: true
         Keys.onEscapePressed: menu.stack.length ? menu.stack = menu.stack.slice(0, -1) : menu.close()
 

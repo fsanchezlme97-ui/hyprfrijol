@@ -31,9 +31,11 @@ Item {
     function mapName(name: string, id: string, title: string): string {
         const n = name.toLowerCase(), i = id.toLowerCase(), t = title.toLowerCase();
         if (n.includes("telegram") || i.includes("telegram") || t.includes("telegram")) return "org.telegram.desktop";
-        if (n.includes("tailscale") || i.includes("tailscale") || t.includes("tailscale")) return "network-vpn";
+        if (n.includes("tailscale") || i.includes("tailscale") || t.includes("tailscale")) return "tailscale";
         return name;
     }
+    readonly property string mappedName: mapName(parts?.name ?? "", item?.id ?? "", item?.title ?? "")
+    readonly property bool hasInlineIcon: !!Icons.paths[mappedName]
     // Nombres de estado largos («cachy-update_updates-available-blue»): se acortan por el final, con y sin el último
     // trozo («cachy-update-blue», «cachy-update»…), por si el tema solo trae el de la app
     // Icono del tema para un título de app («EpicGamesLauncher» → epic-games-launcher, epic-games…); "" si no hay
@@ -89,14 +91,23 @@ Item {
         opacity: ma.containsMouse ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: Theme.durShort; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
     }
-    IconImage {
-        id: img
+    Loader {
         anchors.centerIn: parent
-        implicitSize: root.size
-        source: root.found === "-" ? Quickshell.iconPath("application-x-executable") : root.source
-        asynchronous: true
-        mipmap: true
-        opacity: root.item?.status === Status.Passive ? 0.6 : 1
+        sourceComponent: root.hasInlineIcon ? inlineIconComp : imageIconComp
+        Component {
+            id: inlineIconComp
+            Icon { name: root.mappedName; size: root.size; color: root.item?.status === Status.Passive ? Qt.alpha(Theme.t, 0.6) : Theme.t }
+        }
+        Component {
+            id: imageIconComp
+            IconImage {
+                implicitSize: root.size
+                source: root.found === "-" ? Quickshell.iconPath("application-x-executable") : root.source
+                asynchronous: true
+                mipmap: true
+                opacity: root.item?.status === Status.Passive ? 0.6 : 1
+            }
+        }
     }
     // pide atención (NeedsAttention): un punto
     Rectangle {

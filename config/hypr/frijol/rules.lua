@@ -20,12 +20,10 @@ HF.rules.pip = hl.window_rule({
     move  = { "(monitor_w-window_w-12)", "12" },
 })
 
--- La ventana de RustDesk flota: es la del escritorio remoto con el chat encima (RustDesk no abre el chat aparte:
--- lo dibuja dentro de su ventana). En mosaico se comía media pantalla y el chat quedaba encogido encima de la
--- sesión. Flota con el tamaño que le pone la app y sale centrada; con ella, el chat va con espacio.
+-- La ventana principal de RustDesk flota (title exacto "RustDesk"); la de conexión remota se deja en mosaico.
 hl.window_rule({
-    name  = "rustdesk-float",
-    match = { class = "^rustdesk$" },
+    name  = "rustdesk-main-float",
+    match = { class = "^rustdesk$", title = "^RustDesk$" },
     float = true,
     center = true,
 })

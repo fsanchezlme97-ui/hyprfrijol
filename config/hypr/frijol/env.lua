@@ -9,8 +9,8 @@ hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
 
--- Tema de Qt: qt6ct (config/apply/17-theme-apps.py le escribe la paleta y los iconos del tema). Si no está y sí el
--- tema de Plasma (alternativa: alguien con apps de KDE), ese, con el menú «Abrir con» de Dolphin.
+-- Tema de Qt: si está el de Plasma (mejor para apps KDE como Dolphin), se usa ese; si no, qt6ct.
+-- config/apply/17-theme-apps.py escribe la paleta en qt6ct o en kdeglobals según cuál esté activo.
 local function exists(p) local f = io.open(p, "r"); if f then f:close(); return true end; return false end
 local function qtTheme(name)
     for _, d in ipairs({ "/usr/lib/qt6/plugins", "/usr/lib64/qt6/plugins", "/usr/lib/x86_64-linux-gnu/qt6/plugins", "/usr/lib/aarch64-linux-gnu/qt6/plugins" }) do
@@ -18,11 +18,11 @@ local function qtTheme(name)
     end
     return false
 end
-if qtTheme("libqt6ct.so") then
-    hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
-elseif qtTheme("KDEPlasmaPlatformTheme6.so") then
+if qtTheme("KDEPlasmaPlatformTheme6.so") then
     hl.env("QT_QPA_PLATFORMTHEME", "kde")
     hl.env("XDG_MENU_PREFIX", "plasma-")
+elseif qtTheme("libqt6ct.so") then
+    hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
 end
 -- Vídeo de Qt (fondo del bloqueo y del selector) sin decodificar por hardware si hay una gráfica con nouveau: VA-API
 -- abre la primera (renderD128, aquí la GT 710), sin firmware de vídeo, y Quickshell muere con SIGBUS (y con él el
@@ -80,7 +80,8 @@ local function first(...)
     return HF.scripts .. "/hf-launch " .. table.concat(q, " ")
 end
 HF.terminal    = HF.terminal    or "kitty"
-HF.files       = HF.files       or first("dolphin", "konqueror", "pcmanfm-qt", "kitty -1 yazi")
+-- Dolphin se ve mejor con el tema de Plasma; si está instalado, forzamos la variable hasta el próximo login.
+HF.files       = HF.files       or (qtTheme("KDEPlasmaPlatformTheme6.so") and "env QT_QPA_PLATFORMTHEME=kde dolphin") or first("dolphin", "konqueror", "pcmanfm-qt", "kitty -1 yazi")
 HF.browser     = HF.browser     or first("falkon", "qutebrowser", "google-chrome-stable", "zen-browser", "firefox", "brave", "chromium", "microsoft-edge-stable", "librewolf")
 HF.codeEditor  = HF.codeEditor  or first("windsurf", "antigravity", "code", "codium", "cursor", "zed", "zeditor", "kate")
 HF.textEditor  = HF.textEditor  or first("kate", "mousepad")

@@ -27,7 +27,34 @@ Loader {
     Component { id: cClip; IconBtn { implicitHeight: root.vertical ? 26 : 22; icon: "clipboard"; tooltip: root.vertical ? "" : "Portapapeles"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") } }
     Component { id: cDict; MicBtn { implicitHeight: root.vertical ? 26 : 22 } }
     Component { id: cVoz; VoiceBtns { vertical: root.vertical } }
-    Component { id: cIa; IconBtn { implicitHeight: root.vertical ? 26 : 22; icon: "ai"; preload: "ia"; active: Shell.view === "ia" || Shell.sideShown; onClicked: Shell.toggle("ia") } }
+    Component {
+        id: cIa
+        Rectangle {
+            id: iaBtn
+            implicitWidth: 26
+            implicitHeight: root.vertical ? 26 : 22
+            radius: Theme.pill ? Math.min(width, height) / 2 + 2 : Theme.r(7)
+            color: active ? Theme.p : "transparent"
+            border.width: 0
+            property bool active: Shell.view === "ia" || Shell.sideShown
+            opacity: enabled ? 1 : Theme.stDisabled
+            activeFocusOnTab: true
+            Keys.onPressed: e => { if (enabled && (e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space)) { Shell.toggle("ia"); e.accepted = true; } }
+            Behavior on scale { NumberAnimation { duration: Theme.durShort; easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
+            StateLayer { radius: iaBtn.radius; hovered: ma.containsMouse; pressed: ma.pressed; focused: iaBtn.activeFocus }
+            Ripple { id: rip; anchors.fill: parent; radius: iaBtn.radius; color: active ? Theme.pcText : Theme.t }
+            HarperIcon { anchors.centerIn: parent; size: 16; baseColor: active ? Theme.pcText : Theme.t }
+            MouseArea {
+                id: ma
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onEntered: Shell.preload("ia")
+                onPressed: rip.burst(iaBtn.width / 2, iaBtn.height / 2)
+                onClicked: Shell.toggle("ia")
+            }
+        }
+    }
     Component { id: cGear; IconBtn { implicitHeight: root.vertical ? 26 : 22; icon: "gear"; onClicked: Shell.open("ajustesapp") } }
     // Separador puesto a mano: una raya fina con aire a los lados
     Component { id: cSep; Item { implicitWidth: root.vertical ? 26 : 9; implicitHeight: root.vertical ? 9 : 22

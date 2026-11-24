@@ -76,7 +76,7 @@ Singleton {
     // maximizada las tapa); la única forma de que el mosaico mande es esconderlas.
     readonly property string floatOrder: {
         const v = String(Settings.get("floatOrder", "encima") ?? "encima");
-        return ["encima", "ocultas", "espacio"].includes(v) ? v : "encima";
+        return ["encima", "ocultas", "minimizar", "espacio"].includes(v) ? v : "encima";
     }
     property string _floatOrderKey: ""
     property var _hidden: []           // «dirección|espacio|x|y» de las que escondió «ocultas» (no las de Super + S a mano)
@@ -106,11 +106,11 @@ Singleton {
     property bool _clicked: false      // hay un clic esperando a aplicarse (lo consume applyFloatOrder)
     property bool _clickArmed: false   // el clic espera a que el foco se asiente
     function armHide(byKeyboard): void {
-        if (floatOrder !== "ocultas") return;
+        if (!["ocultas", "minimizar"].includes(floatOrder)) return;
+        root._clickPrev = HyprClients.activeAddress;
         const activeWs = HyprClients.monitors.map(m => m.activeWorkspace?.id ?? 0);
         if (!HyprClients.clients.some(c => c.floating && !keep(c) && !isDialog(c) && activeWs.includes(c.workspace?.id ?? 0)))
-            return;                    // no hay flotantes a la vista: nada que esconder (ni que consultar)
-        root._clickPrev = HyprClients.activeAddress;
+            return;                    // no hay flotantes a la vista: nada que esconder
         if (byKeyboard) {             // Alt + Tab: no hay clic; se esconden todas menos la enfocada
             root._clickAt = Qt.point(-100000, -100000);
             clickSettle.restart();
@@ -174,6 +174,20 @@ Singleton {
         }
         const act = HyprClients.client(HyprClients.activeAddress);
         const focused = !!act && !isMin(act);
+        if (floatOrder === "minimizar") {
+            // Clic (o Alt + Tab) fuera de la flotante activa: se minimiza esa ventana, no las demás.
+            if (!clicked) return;
+            const activeWs = HyprClients.monitors.map(m => m.activeWorkspace?.id ?? 0).filter(i => i > 0);
+            const target = HyprClients.client(root._clickPrev);
+            if (target && target.floating && !keep(target) && !isDialog(target)
+                && activeWs.includes(target.workspace?.id ?? 0)) {
+                const p = root._clickAt;
+                const x = target.at?.[0] ?? 0, y = target.at?.[1] ?? 0, w = target.size?.[0] ?? 0, h = target.size?.[1] ?? 0;
+                const inside = p.x >= x && p.x < x + w && p.y >= y && p.y < y + h;
+                if (!inside) root.minimize(target.address);
+            }
+            return;
+        }
         if (floatOrder === "ocultas") {
             const activeWs = HyprClients.monitors.map(m => m.activeWorkspace?.id ?? 0).filter(i => i > 0);
             const fl = HyprClients.clients.filter(c => c.floating && !keep(c) && !isDialog(c)
@@ -606,6 +620,20 @@ Singleton {
         }
         return false;
     }
+    // Variante más agresiva para el dock en modo «esquivar»: cualquier ventana visible del espacio actual tapa la zona.
+    function coveredAll(monName: string, r): bool {
+        HyprClients.refreshes;
+        const m = HyprClients.monitorByName(monName);
+        if (!m || !r) return false;
+        const ids = [m.activeWorkspace?.id ?? 0, m.specialWorkspace?.id ?? 0].filter(i => i !== 0);
+        for (const c of HyprClients.clients) {
+            const ws = c.workspace?.id ?? 0;
+            if (!ids.includes(ws) || isMin(c)) continue;
+            const x = c.at?.[0] ?? 0, y = c.at?.[1] ?? 0, w = c.size?.[0] ?? 0, h = c.size?.[1] ?? 0;
+            if (x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y) return true;
+        }
+        return false;
+    }
     // ¿Hay una ventana maximizada / a pantalla completa en el espacio visible del monitor?
     function hasFullscreen(monName: string): bool {
         HyprClients.refreshes;
@@ -615,7 +643,7 @@ Singleton {
     }
     // Arrastrar o redimensionar una ventana no avisa por IPC: mientras alguien use la ocultación inteligente
     // y haya ventanas flotantes a la vista, se mira la geometría cada poco
-    readonly property bool smartOn: Settings.barSmartHide || (Settings.get("dockBehavior", "inteligente") === "inteligente"
+    readonly property bool smartOn: Settings.barSmartHide || (["inteligente", "esquivar"].includes(Settings.get("dockBehavior", "inteligente"))
         && (mode === "flotante" || dockInTiling || Object.values(overrides).includes("flotante")))
     readonly property bool floatingVisible: {
         HyprClients.refreshes;

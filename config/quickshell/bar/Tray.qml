@@ -94,20 +94,18 @@ Item {
         onVisibleChanged: { grabbing = false; if (visible) overGrab.restart(); }
         Timer { id: overGrab; interval: 60; onTriggered: over.grabbing = over.visible }
         HyprlandFocusGrab { active: over.grabbing; windows: [over]; onCleared: over.shown = false }
-        Rectangle {
+        Glass {
             id: box
-            width: Math.max(120, og.implicitWidth + 16)
-            height: og.implicitHeight + 34
-            radius: Theme.r(10)
-            color: Theme.glassPopup
-            border.width: 1
-            border.color: Theme.border
-            Txt { x: 10; y: 6; text: root.collapsed ? "En segundo plano · " + root.all.length : "Bandeja"; size: 11; muted: true; weight: Font.DemiBold }
+            kind: "popup"
+            implicitWidth: Math.max(140, og.implicitWidth + 20)
+            implicitHeight: og.implicitHeight + 42
+            Txt { anchors.horizontalCenter: parent.horizontalCenter; y: 8; text: root.collapsed ? "En segundo plano · " + root.all.length : "Bandeja"; size: 11; muted: true; weight: Font.DemiBold }
             Grid {
                 id: og
-                x: 8; y: 26
-                columns: Math.min(6, Math.max(1, root.extraItems.length))
-                spacing: 2
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: 28
+                columns: Math.min(5, Math.max(1, root.extraItems.length))
+                spacing: 8
                 Repeater {
                     model: over.visible ? root.extraItems : []
                     TrayItem {
