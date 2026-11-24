@@ -329,7 +329,7 @@
   "syncMethod": "git",
   "syncApps": true,
   "syncWallpapers": false,
-  "fileManager": "nautilus",
+  "fileManager": "dolphin",
   "clipboardClearOnLogin": false,
   "spotlightClipRecent": true,
   "idleDim": 2,
