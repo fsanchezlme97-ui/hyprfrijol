@@ -155,8 +155,20 @@ Muchos scripts no responden a `--help` o no listan ejemplos. Acciones:
 4. Se hace commit con prefijo `docs:` o `polish:`.
 5. Se tacha aquí y, si es relevante, se actualiza `PENDIENTES.md`.
 
+## Estado
+
+- [x] Revisar y documentar los `shortcut:`.
+- [x] `docs/SCRIPTS.md`
+- [x] `docs/BINDS.md`
+- [x] `README.en.md` ampliado
+- [x] `docs/TROUBLESHOOTING.md`
+- [x] `docs/TEMAS.md`
+- [x] `docs/PLUGINS-OMARCHY.md`
+- [x] `docs/MIGRACION.md`
+- [ ] Añadir `--help` a todos los scripts y regenerar `docs/SCRIPTS.md` automáticamente.
+- [ ] Asegurar que todo ajuste nuevo tenga descripción actualizada en `docs/AJUSTES.md`.
+
 ## Próximos candidatos a pulir (después de la documentación)
 
 - Mejorar la vista `cheatsheet` para que use `docs/BINDS.md` o viceversa.
 - Hacer que `hf-doctor` enlace a `docs/TROUBLESHOOTING.md`.
-- Añadir `--help` a todos los scripts y regenerar `docs/SCRIPTS.md` automáticamente.

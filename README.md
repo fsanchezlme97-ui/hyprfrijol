@@ -228,6 +228,7 @@ design/            prototipo y capturas de cada pantalla
 - [`docs/TEMAS.md`](docs/TEMAS.md): cómo crear, guardar e importar temas.
 - [`docs/PLUGINS-OMARCHY.md`](docs/PLUGINS-OMARCHY.md): plugins de Omarchy compatibles.
 - [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md): problemas comunes y soluciones.
+- [`docs/MIGRACION.md`](docs/MIGRACION.md): migrar desde hypr-liquid, Omarchy u otros escritorios.
 - [`docs/PULIDOS.md`](docs/PULIDOS.md): plan de pulidos y deuda técnica documentada.
 - [`docs/PENDIENTES.md`](docs/PENDIENTES.md): siguiente trabajo estratégico.
 - [README.en.md](README.en.md): resumen en inglés.
