@@ -143,6 +143,7 @@ box() {
 }
 
 case "${1:-}" in
+  -h|--help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   status) status;;
   list) list;;
   start) virsh -c "${3:-qemu:///system}" start "${2:?nombre}";;

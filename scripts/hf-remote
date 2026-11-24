@@ -52,6 +52,9 @@ VNCDIR="$HOME/.config/wayvnc"
 PROFILES="${XDG_DATA_HOME:-$HOME/.local/share}/hyprfrijol/remmina"
 DRY="${HF_REMOTE_DRY_RUN:-0}"
 
+help() { sed -n '2,46p' "$0" | sed 's/^# \{0,1\}//'; }
+case "${1:-}" in -h|--help) help; exit 0 ;; esac
+
 setting() {   # setting <clave> → JSON (el del usuario manda sobre el de config/defaults)
   local f
   for f in "$SETTINGS" "$DEFAULTS"; do

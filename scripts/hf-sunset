@@ -17,6 +17,7 @@ mine() {   # PIDs de hyprsunset que pertenecen a esta instancia de Hyprland
 }
 
 case "${1:-}" in
+  -h|--help) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   set)
     t="${2:-}"; [[ "$t" =~ ^[0-9]+$ ]] || { echo "uso: hf-sunset set <kelvin>" >&2; exit 1; }
     pids="$(mine)"

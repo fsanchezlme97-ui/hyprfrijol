@@ -69,6 +69,7 @@ mine() {
 }
 
 case "${1:-}" in
+  -h|--help) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   restart)
     pids="$(mine)"; [ -n "$pids" ] && kill $pids
     for _ in $(seq 30); do [ -z "$(mine)" ] && ! running && break; sleep 0.1; done

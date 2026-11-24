@@ -2,5 +2,7 @@
 # hf-firmar [archivo] — abre «Firmar documentos» (con un PDF o una imagen, si se da). Lo usa hf-firmar.desktop.
 for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
-f="${1:-}"; [ -n "$f" ] && f="$(readlink -f -- "$f")"
+f="${1:-}"
+case "$f" in -h|--help) sed -n '2,2p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
+[ -n "$f" ] && f="$(readlink -f -- "$f")"
 exec qs -p "$ROOT/config/quickshell" ipc call firmar open "$f"

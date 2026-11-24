@@ -3,6 +3,7 @@
 #   hf-launch 'google-chrome-stable' 'firefox' 'kitty -1 btop'
 # Cada argumento es un comando completo; se usa el primero cuyo programa existe.
 for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
+case "${1:-}" in -h|--help) sed -n '2,4p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
 for cmd in "$@"; do
   [ -n "$cmd" ] || continue
   command -v "${cmd%% *}" >/dev/null 2>&1 || continue

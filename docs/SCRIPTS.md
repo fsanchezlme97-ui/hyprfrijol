@@ -77,7 +77,7 @@ Cada función de HyprFrijol tiene un script o comando que funciona solo. Quicksh
 
 ---
 
-Para la ayuda completa de un script, la mayoría acepta `--help`. Ejemplo:
+Para la ayuda completa de un script, todos aceptan `--help` (o `-h`). Ejemplo:
 
 ```bash
 hf-ai --help

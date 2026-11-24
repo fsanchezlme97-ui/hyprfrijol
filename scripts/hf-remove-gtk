@@ -3,6 +3,8 @@
 # Deja intactas las librerías GTK que puedan necesitar otras apps. Pide confirmación.
 set -euo pipefail
 
+case "${1:-}" in -h|--help) sed -n '2,3p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
+
 # Apps GTK/GNOME de la tier "serie" de install/apps.json y sus alternativas KDE/Qt.
 # «sushi» no es de hyprfrijol, pero es dependencia de papers (vista previa de GNOME): hay que quitarlo primero.
 gtk_apps=(

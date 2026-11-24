@@ -8,6 +8,7 @@
 #   hf-audio ports                  puertos de cada salida (JSON de pactl, resumido)
 set -uo pipefail
 case "${1:-}" in
+  -h|--help) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   port)
     sink=${2:?sink}; port=${3:?puerto}
     pactl set-sink-port "$sink" "$port" || exit 1
