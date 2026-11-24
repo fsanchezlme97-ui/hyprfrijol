@@ -76,7 +76,7 @@ Singleton {
     // maximizada las tapa); la única forma de que el mosaico mande es esconderlas.
     readonly property string floatOrder: {
         const v = String(Settings.get("floatOrder", "encima") ?? "encima");
-        return ["encima", "ocultas", "minimizar", "espacio"].includes(v) ? v : "encima";
+        return ["encima", "ocultas", "espacio"].includes(v) ? v : "encima";
     }
     property string _floatOrderKey: ""
     property var _hidden: []           // «dirección|espacio|x|y» de las que escondió «ocultas» (no las de Super + S a mano)
@@ -106,7 +106,7 @@ Singleton {
     property bool _clicked: false      // hay un clic esperando a aplicarse (lo consume applyFloatOrder)
     property bool _clickArmed: false   // el clic espera a que el foco se asiente
     function armHide(byKeyboard): void {
-        if (!["ocultas", "minimizar"].includes(floatOrder)) return;
+        if (floatOrder !== "ocultas") return;
         root._clickPrev = HyprClients.activeAddress;
         const activeWs = HyprClients.monitors.map(m => m.activeWorkspace?.id ?? 0);
         if (!HyprClients.clients.some(c => c.floating && !keep(c) && !isDialog(c) && activeWs.includes(c.workspace?.id ?? 0)))
@@ -174,20 +174,6 @@ Singleton {
         }
         const act = HyprClients.client(HyprClients.activeAddress);
         const focused = !!act && !isMin(act);
-        if (floatOrder === "minimizar") {
-            // Clic (o Alt + Tab) fuera de la flotante activa: se minimiza esa ventana, no las demás.
-            if (!clicked) return;
-            const activeWs = HyprClients.monitors.map(m => m.activeWorkspace?.id ?? 0).filter(i => i > 0);
-            const target = HyprClients.client(root._clickPrev);
-            if (target && target.floating && !keep(target) && !isDialog(target)
-                && activeWs.includes(target.workspace?.id ?? 0)) {
-                const p = root._clickAt;
-                const x = target.at?.[0] ?? 0, y = target.at?.[1] ?? 0, w = target.size?.[0] ?? 0, h = target.size?.[1] ?? 0;
-                const inside = p.x >= x && p.x < x + w && p.y >= y && p.y < y + h;
-                if (!inside) root.minimize(target.address);
-            }
-            return;
-        }
         if (floatOrder === "ocultas") {
             const activeWs = HyprClients.monitors.map(m => m.activeWorkspace?.id ?? 0).filter(i => i > 0);
             const fl = HyprClients.clients.filter(c => c.floating && !keep(c) && !isDialog(c)
