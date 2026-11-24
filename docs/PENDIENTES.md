@@ -5,13 +5,38 @@ está en el CHANGELOG y en `docs/planes/`.
 
 ## Pendiente
 
+### Estratégicos (del análisis comparativo con GNOME, KDE y Omarchy)
+
 - [ ] **Idiomas**: textos de la interfaz traducibles; inglés primero (Omarchy tiene 50 y los cambia en vivo).
+- [ ] **Experiencia de instalación "producto terminado"**: evaluar ISO live o installer gráfico (Omarchy instala en ~7 s).
+- [ ] **Ecosistema de plugins propio**: API documentada, registry/marketplace o al menos templates para plugins de barra/panel/servicio.
+- [ ] **Skills de agente estandarizadas**: skill/documentación para Claude Code, Codex y OpenCode que explique cómo modificar HyprFrijol (Omarchy shippea esto).
+- [ ] **Apps propias nativas**: evaluar pequeñas apps QML propias para casos de uso frecuentes (firmar PDF, world clock, presentaciones Markdown, etc.).
+- [ ] **Cliente de email/calendario integrado**: agenda `.ics` existe, pero falta integración de email y calendario completa.
+- [ ] **Accesibilidad**: lector de pantalla (Orca), focus rings, mejor integración con assistive technology.
+- [ ] **Sincronización entre máquinas**: copiar ajustes, cuentas de agente y temas entre equipos.
+- [ ] **Remote desktop integrado**: UI propia sobre las capacidades de Hyprland.
+
+### Técnicos
+
 - [ ] **Sistema en otras distros**: Kernel LTS, snap-pac y OpenTabletDriver siguen siendo solo de Arch (fuera de
       Arch se ocultan); falta su equivalente. Las órdenes de `hf-updates` para dnf, apt, zypper y xbps están sin
       probar en esas distros.
 - [ ] **Rendimiento comparado con otros shells**: memoria y CPU en reposo y con paneles abiertos frente a Caelestia
       y Noctalia, con `dev/perf.sh`. Lo medido de HyprFrijol (0.9.75): ~360 MB recién arrancado con dos pantallas,
       estable en reposo, ~0,5 % de un núcleo.
+
+### Pulido y documentación (en curso)
+
+- [ ] Revisar y documentar todos los comentarios `shortcut:`.
+- [ ] Crear índice de scripts (`docs/SCRIPTS.md`).
+- [ ] Crear referencia de atajos (`docs/BINDS.md`).
+- [ ] Ampliar `README.en.md` con arquitectura, desarrollo y troubleshooting.
+- [ ] Crear `docs/TROUBLESHOOTING.md` con problemas comunes.
+- [ ] Crear `docs/TEMAS.md`: cómo crear y añadir un tema propio.
+- [ ] Crear `docs/PLUGINS-OMARCHY.md`: plugins de Omarchy compatibles y cómo añadirlos.
+- [ ] Crear `docs/MIGRACION.md`: migrar desde hypr-liquid u otros rices.
+- [ ] Asegurar que todo ajuste nuevo tenga descripción actualizada en `docs/AJUSTES.md`.
 
 ## Descartado (2026-11-13)
 

@@ -13,7 +13,7 @@ It runs as a **separate session** from the repo folder and never touches `~/.con
 
 ## Screenshots
 
-Real 1920×1080 captures of HyprFrijol 0.8.6 with the default settings (Oxocarbon palette, Material style) and a [Wallhaven](https://wallhaven.cc/w/3q23od) wallpaper (not bundled). More in the [Spanish README](README.md#capturas).
+Real 1920×1080 captures of HyprFrijol with the default settings (Oxocarbon palette, Material style) and a [Wallhaven](https://wallhaven.cc/w/3q23od) wallpaper (not bundled). More in the [Spanish README](README.md#capturas).
 
 | | |
 |---|---|
@@ -48,6 +48,38 @@ Options: `--yes` (non-interactive), `--full` (optional extras too), `--no-deps`,
 RHEL-likes, openSUSE Leap, Debian 13 and Ubuntu 26.10 get everything except Hyprland, with instructions. Third-party repos (COPR, OBS, PPA) are community-maintained, and the installer asks before adding them. Dependency list per distro: [`install/packages.tsv`](install/packages.tsv).
 
 Without a display manager, log in on a TTY and run `hf-session`. To try it inside your current session: `hf-session --nested`.
+
+## Architecture
+
+```
+Hyprland (compositor)  ← Lua config in config/hypr/frijol
+    │  IPC (hyprctl / socket; dispatches are Lua: hl.dsp.…)
+Quickshell (shell QML) ← bar, panels, Spotlight, PiP, OSD, notifications, settings, login
+    │  qs ipc call …   (shell API used by shortcuts, scripts and AI)
+Scripts (bash/python)  ← hf-session, hf-shell, hf-wallpaper, hf-capture…
+    │  ~/.local/state/hyprfrijol/  (colors, wallpaper, state)
+    │
+System services        ← PipeWire, NetworkManager, BlueZ, UPower, greetd…
+```
+
+Every feature has a standalone script or command (`hf-wallpaper`, `hf-capture`…). Quickshell is only the visual face. This way the AI, keyboard shortcuts and the terminal all use the same logic.
+
+- Spanish docs and full feature list: [`README.md`](README.md)
+- Architecture (Spanish): [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md)
+- AI assistant docs (Spanish): [`docs/IA.md`](docs/IA.md)
+- Script index: [`docs/SCRIPTS.md`](docs/SCRIPTS.md)
+- Key bindings: [`docs/BINDS.md`](docs/BINDS.md)
+- Troubleshooting: [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
+
+## Development
+
+```bash
+./dev/try.sh <view>            # open a view in a nested session and take a screenshot
+./dev/lint.sh && ./dev/check.sh # validate bash/python/lua/json and open every view
+./dev/perf.sh                  # memory/CPU benchmark
+```
+
+See [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) and `dev/DESARROLLO.md` for details.
 
 ## Uninstall
 
