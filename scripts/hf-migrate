@@ -197,6 +197,22 @@ with open(tmp, "w") as f:
 os.replace(tmp, p)
 PY
   fi
+  # MQTT / Home Assistant (retirado en 0.11.x): las claves ya no se usan.
+  if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); k=("mqttBroker","mqttUser","mqttPasswd","mqttEnabled","mqttHaTopic","mqttServers","mqttImageDir","mqttNewsUrl","mqttNotesFile"); sys.exit(0 if isinstance(d,dict) and any(x in d for x in k) else 1)' "$cfg" 2>/dev/null; then
+    say "MQTT retirado: quito sus claves de $cfg (copia: $cfg.antes-sin-mqtt)"
+    run cp -n "$cfg" "$cfg.antes-sin-mqtt"
+    [ "$DRY" = 1 ] || python3 -I - "$cfg" <<'PY'
+import json, os, sys
+p = os.path.realpath(sys.argv[1])
+d = json.load(open(p))
+for k in ("mqttBroker", "mqttUser", "mqttPasswd", "mqttEnabled", "mqttHaTopic", "mqttServers", "mqttImageDir", "mqttNewsUrl", "mqttNotesFile"):
+    d.pop(k, None)
+tmp = p + ".tmp"
+with open(tmp, "w") as f:
+    f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
+os.replace(tmp, p)
+PY
+  fi
   # Estilo único Math (0.9.0): SkySoul (y sus nombres de antes) → transparencia; Material y Chroma → sin ella.
   # Se repite sin miedo: solo actúa si «estilo» aún no es «math».
   if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(d,dict) and d.get("estilo","math")!="math" else 1)' "$cfg" 2>/dev/null; then

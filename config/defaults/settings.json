@@ -448,14 +448,5 @@
   "timerMin": 10,
   "welcomeDone": false,
   "workspaceAnim": "auto",
-  "settingsTech": false,
-  "mqttBroker": "localhost:1883",
-  "mqttUser": "",
-  "mqttPasswd": "",
-  "mqttEnabled": true,
-  "mqttHaTopic": "homeassistant/#",
-  "mqttServers": [],
-  "mqttImageDir": "",
-  "mqttNewsUrl": "https://news.google.com/rss?hl=es-419&gl=ES&ceid=ES:es",
-  "mqttNotesFile": ""
+  "settingsTech": false
 }

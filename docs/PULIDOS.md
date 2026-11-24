@@ -165,8 +165,8 @@ Muchos scripts no responden a `--help` o no listan ejemplos. Acciones:
 - [x] `docs/TEMAS.md`
 - [x] `docs/PLUGINS-OMARCHY.md`
 - [x] `docs/MIGRACION.md`
-- [ ] Añadir `--help` a todos los scripts y regenerar `docs/SCRIPTS.md` automáticamente.
-- [ ] Asegurar que todo ajuste nuevo tenga descripción actualizada en `docs/AJUSTES.md`.
+- [x] Añadir `--help` a todos los scripts bash y actualizar `docs/SCRIPTS.md`.
+- [x] Revisar ajustes huérfanos: quitar claves MQTT de `config/defaults/settings.json` y limpiarlas con `hf-migrate --retired-only`.
 
 ## Próximos candidatos a pulir (después de la documentación)
 
