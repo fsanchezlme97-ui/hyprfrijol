@@ -225,6 +225,8 @@ design/            prototipo y capturas de cada pantalla
 - [`docs/AJUSTES.md`](docs/AJUSTES.md): tabla completa de ajustes.
 - [`docs/SCRIPTS.md`](docs/SCRIPTS.md): índice de scripts `hf-*`.
 - [`docs/BINDS.md`](docs/BINDS.md): referencia completa de atajos de teclado.
+- [`docs/TEMAS.md`](docs/TEMAS.md): cómo crear, guardar e importar temas.
+- [`docs/PLUGINS-OMARCHY.md`](docs/PLUGINS-OMARCHY.md): plugins de Omarchy compatibles.
 - [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md): problemas comunes y soluciones.
 - [`docs/PULIDOS.md`](docs/PULIDOS.md): plan de pulidos y deuda técnica documentada.
 - [`docs/PENDIENTES.md`](docs/PENDIENTES.md): siguiente trabajo estratégico.
