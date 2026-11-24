@@ -213,9 +213,22 @@ scripts/           hf-session, hf-apply, hf-wallpaper, hf-lock, hf-capture, hf-u
 assets/wallpapers/ fondos incluidos
 greeter/           login con greetd
 dev/               try.sh (sesión anidada + captura) y DESARROLLO.md
-docs/              ARQUITECTURA.md, IA.md, AJUSTES.md y capturas/ (las del README)
+docs/              ARQUITECTURA.md, IA.md, AJUSTES.md, SCRIPTS.md, BINDS.md,
+                   TROUBLESHOOTING.md, PULIDOS.md, PENDIENTES.md y capturas/
 design/            prototipo y capturas de cada pantalla
 ```
+
+## Documentación
+
+- [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md): cómo está construido y cómo se comunican las piezas.
+- [`docs/IA.md`](docs/IA.md): asistente Harper, proveedores, MCP, dictado y órdenes de voz.
+- [`docs/AJUSTES.md`](docs/AJUSTES.md): tabla completa de ajustes.
+- [`docs/SCRIPTS.md`](docs/SCRIPTS.md): índice de scripts `hf-*`.
+- [`docs/BINDS.md`](docs/BINDS.md): referencia completa de atajos de teclado.
+- [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md): problemas comunes y soluciones.
+- [`docs/PULIDOS.md`](docs/PULIDOS.md): plan de pulidos y deuda técnica documentada.
+- [`docs/PENDIENTES.md`](docs/PENDIENTES.md): siguiente trabajo estratégico.
+- [README.en.md](README.en.md): resumen en inglés.
 
 ## Atajos principales
 

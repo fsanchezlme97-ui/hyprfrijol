@@ -27,7 +27,9 @@ end
 -- Vídeo de Qt (fondo del bloqueo y del selector) sin decodificar por hardware si hay una gráfica con nouveau: VA-API
 -- abre la primera (renderD128, aquí la GT 710), sin firmware de vídeo, y Quickshell muere con SIGBUS (y con él el
 -- bloqueo: Hyprland enseña su pantalla de «Oops» por el bloqueo caído).
--- shortcut: apaga el hardware aunque nouveau no sea la primera gráfica; afinar si el vídeo por CPU pesa.
+-- shortcut: apaga el hardware siempre que nouveau esté cargado, aunque no sea la gráfica principal. Mejoraría
+-- detectar si la pantalla conectada usa nouveau, pero el workaround actual evita bloqueos en hardware real
+-- probado (GT 710 secundaria). Ver docs/TROUBLESHOOTING.md § Nouveau.
 if exists("/sys/module/nouveau/initstate") then hl.env("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "none") end
 -- Apps (Mesa: GL, EGL y Vulkan) en la otra gráfica si una va con nouveau: sin esto eligen la primera (renderD128, aquí
 -- la GT 710) y RustDesk se caía varias veces al día (SIGABRT/SIGILL; el kernel: «nouveau … gr: TRAP … rustdesk»).

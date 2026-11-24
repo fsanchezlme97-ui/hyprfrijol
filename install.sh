@@ -943,7 +943,9 @@ apps_install() {
 # whisper turbo; sin ella, todo en la CPU con Parakeet (0,7 s por frase) y gemma4:e4b (2–4,5 s por orden; la
 # primera ~1 min) o, con menos de 16 GB de RAM, gemma4:e2b (1,6–2,4 s; la primera ~17 s; algo menos preciso).
 vram_gib() {   # la mayor VRAM dedicada en GiB redondeados (una de 6 GB da 5,98): AMD (amdgpu) y NVIDIA (nvidia-smi); las integradas dan 0–2
-  # shortcut: Intel Arc no expone la VRAM aquí y cuenta como «cpu»; elige --equipo=gpu a mano
+  # Límite: Intel Arc no expone mem_info_vram_total en sysfs y este detector la contará como integrada,
+  # por lo que el instalador elegirá el perfil «cpu». Si tu equipo tiene Arc discreta, pasa --equipo=gpu.
+  # Ver docs/TROUBLESHOOTING.md § Perfil de equipo (Intel Arc).
   local m=0 v f
   for f in /sys/class/drm/card*/device/mem_info_vram_total; do
     [ -r "$f" ] || continue; v=$(( ($(cat "$f") + 536870912) / 1073741824 )); [ "$v" -gt "$m" ] && m=$v

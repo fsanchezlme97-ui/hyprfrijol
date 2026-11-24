@@ -449,7 +449,9 @@ Item {
         runProc.command = ["bash", "-c", "exec 2>&1 </dev/null\n" + messages[i].code];
         runProc.running = true;
     }
-    // shortcut: Detener mata bash; un proceso hijo en segundo plano seguiría. Si molesta, setsid y matar el grupo.
+    // Detener mata el proceso bash principal; si el comando lanzó algo en segundo plano (p. ej. `firefox &`),
+    // ese hijo puede quedar huérfano. Resolverlo bien requiere setsid + matar el grupo de sesión, pero QML Process
+    // no expone el SID/PGID de forma directa. Lo documentamos como límite en docs/IA.md § Ejecutar comandos.
     function stopRun() { if (runProc.running) { runStopped = true; runProc.running = false; } }
     Process {
         id: runProc

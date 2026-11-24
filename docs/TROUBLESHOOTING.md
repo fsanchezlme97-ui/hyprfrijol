@@ -90,6 +90,22 @@ Estos avisos no tienen arreglo desde HyprFrijol:
 
 No afectan al funcionamiento general. Si molestan mucho, usa el driver propietario de NVIDIA.
 
+## Perfil de equipo: Intel Arc cuenta como «cpu»
+
+El instalador detecta VRAM dedicada leyendo `/sys/class/drm/card*/device/mem_info_vram_total` y `nvidia-smi`. Las GPUs Intel Arc no exponen VRAM por sysfs, así que el detector las clasifica como integradas y elige el perfil `cpu` (IA y dictado en CPU).
+
+Si tu equipo tiene Intel Arc discreta, pasa el perfil a mano:
+
+```bash
+./install.sh --equipo=gpu
+```
+
+## El asistente no mata procesos en segundo plano
+
+Cuando la IA ejecuta un comando con «Ejecutar aquí» y tú pulsas **Detener**, se mata el proceso bash principal. Si ese comando lanzó algo en segundo plano (`firefox &`, un servidor…), el hijo puede quedar huérfano y seguir corriendo.
+
+Workaround: si el comando lanza algo que quieras poder detener, arrástralo a una terminal con «En la terminal» en lugar de «Ejecutar aquí". Así la terminal mantiene el control del job.
+
 ## Ajustes no se aplican
 
 1. Ejecuta `hf-apply` manualmente:

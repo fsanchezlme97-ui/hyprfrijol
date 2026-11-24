@@ -236,6 +236,15 @@ Claves de `set`: `estilo`, `colorMode`, `palette`, `themeMode`, `barPos`, `barMo
 - **Deshacer** → `hf-ai undo <id>`: restaura los ajustes tocados, el fondo, «no molestar» y el espacio.
 - Los comandos `run` nunca se ejecutan solos: hay que confirmar y se abren en la terminal (`kitty`).
 
+### Ejecutar comandos desde el panel
+
+El panel puede mostrar un bloque de código con dos botones: **Ejecutar aquí** y **En la terminal**.
+
+- **En la terminal** abre `kitty` con el comando. Es la opción recomendada si el comando lanza algo en segundo plano, pide una contraseña o necesitas interacción.
+- **Ejecutar aquí** corre el comando dentro del panel y muestra la salida debajo. Pulsando **Detener** se mata el proceso bash principal.
+
+**Límite conocido:** si el comando lanza un proceso en segundo plano (`firefox &`, un servidor local…), **Detener** no mata ese hijo; puede quedar huérfano y seguir corriendo. Esto se debe a que QML Process no expone el SID/PGID necesario para matar todo el grupo de sesión. La solución inmediata es usar **En la terminal**, que mantiene el control del job.
+
 ### Voz: órdenes, sin conversación
 
 No se conversa por voz con Harper (desde 0.11.0): la conversación por voz y los modelos grandes viven en otro

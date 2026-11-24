@@ -466,8 +466,8 @@ Singleton {
     function small(c): bool { return isDialog(c) || (c.size?.[0] ?? 0) < 560 && (c.size?.[1] ?? 0) < 420; }
     // Modo clásico: las ventanas normales se abren maximizadas; los diálogos (small), el selector de archivos (portal),
     // los de rules.lua y las apps de floatApps flotan con su tamaño.
-    // shortcut: un diálogo grande de una app GTK 3 (no se declara modal) también se maximiza. Si molesta, mirar el
-    // padre (xdg_toplevel parent) cuando hyprctl lo exponga.
+    // Límite: un diálogo grande de una app GTK 3 que no se declara modal también se maximiza. Hyprland 0.57+ aún
+    // no expone el xdg_toplevel parent por hyprctl; cuando lo haga, se puede distinguir ventanas secundarias aquí.
     function opensMax(c): bool {
         return !small(c) && !isFloatApp(c.class)
             && !/^(xdg-desktop-portal-.*|org\.pulseaudio\.pavucontrol|pavucontrol|nm-connection-editor|blueman-manager|polkit.*)$/i.test(c.class ?? "");
