@@ -142,7 +142,7 @@ ColumnLayout {
             labelWidth: 150
             Pills {
                 fill: false
-                model: [["encima", "Encima"], ["ocultas", "Ocultas"], ["espacio", "Espacio oculto"]]
+                model: [["encima", "Encima"], ["espacio", "Espacio oculto"]]
                 current: Settings.get("floatOrder", "encima")
                 onPicked: k => Settings.set("floatOrder", k)
             }
@@ -151,7 +151,6 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.leftMargin: 150
             text: ({ "encima": "Las flotantes van sobre el mosaico, como siempre.",
-                      "ocultas": "Al hacer clic fuera de una ventana flotante (o cambiar de ventana con Alt + Tab) se va al espacio oculto (Super + S), apilada en cascada desde el centro; pasar el ratón por encima de otra no la esconde. Alt + Tab o el dock las traen a tu espacio, a su sitio; con el escritorio a la vista vuelven todas.",
                       "espacio": "Las flotantes se van al espacio oculto (Super + S) y se ven allí, encima del mosaico: el mosaico queda siempre limpio." })[Settings.get("floatOrder", "encima")] ?? ""
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
         }
