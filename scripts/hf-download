@@ -534,6 +534,8 @@ def run_item(it, procs):
         return
     procs[iid] = p
     update(iid, status="running", pid=p.pid, started=it.get("started") or time.time(), error="")
+    if not it.get("started") and settings().get("downloadsNotify", True) is not False:   # al reanudar no se repite
+        notify("Descarga iniciada", it.get("title") or it.get("name") or it["url"])
 
     def reader():
         state = {"files": list(it.get("files") or []), "count": it.get("count") or 0, "parts": list(it.get("parts") or [])}

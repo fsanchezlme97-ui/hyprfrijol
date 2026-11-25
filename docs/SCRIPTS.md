@@ -23,7 +23,7 @@ Cada función de HyprFrijol tiene un script o comando que funciona solo. Quicksh
 - **hf-capture** — capturas y grabaciones de pantalla (zona, pantalla, OCR, traducción, IA).
 - **hf-clip** — guarda lo copiado en el historial (cliphist).
 - **hf-download** — cola de descargas de vídeo, audio, imágenes y archivos (yt-dlp, gallery-dl, aria2c).
-- **hf-jobs** — procesos en curso del centro de notificaciones (copias de las apps de KDE, descargas del navegador, actualizaciones e instalaciones); avisa al terminar.
+- **hf-jobs** — procesos en curso del centro de notificaciones (copias de las apps de KDE, descargas del navegador, actualizaciones e instalaciones); avisa al empezar y al terminar.
 - **hf-fileact** — acciones sobre archivos: IA, firmar, convertir, etc.
 - **hf-firmar** — abre «Firmar documentos» con un PDF o imagen.
 - **hf-pickfile** — selector de archivos para scripts.

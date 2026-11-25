@@ -11,7 +11,7 @@
   hf-jobs done <id> [código]    lo da por terminado y avisa (código distinto de 0: falló)
   hf-jobs --help
 
-Al terminar cada uno llega un aviso (las copias de menos de 5 s, no).
+Llega un aviso al empezar cada uno y otro al terminar, fallar o cancelarse (las copias de menos de 2 s, ninguno).
 """
 import json
 import os
@@ -40,6 +40,7 @@ def start(title, pid):
     DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
     jid = f"{int(pid)}-{time.time_ns()}"
     (DIR / f"{jid}.json").write_text(json.dumps({"title": title, "pid": int(pid)}))
+    notify(title, "Iniciado")
     return jid
 
 
@@ -59,7 +60,7 @@ def done(jid, code=0):
 
 
 def wrapped():
-    """Los apuntados con «start» cuyo proceso sigue vivo (los de una terminal cerrada a medias se borran)."""
+    """Los apuntados con «start» cuyo proceso sigue vivo (los de una terminal cerrada a medias avisan y se borran)."""
     out = []
     for f in sorted(DIR.glob("*.json")):
         try:
@@ -67,6 +68,7 @@ def wrapped():
             os.kill(j["pid"], 0)
         except ProcessLookupError:
             f.unlink(missing_ok=True)
+            notify(j["title"], "Interrumpido: se cerró la terminal", True)
             continue
         except (OSError, ValueError, KeyError):
             continue
@@ -124,16 +126,24 @@ class Partials:
                 final = new[0] if new else ""
             if final:
                 say("Descarga terminada", final)
+            else:
+                say("Descarga cancelada", shown(old["name"]))
         out = []
         for path, (name, size, mtime) in found.items():
             prev = self.seen.get(path)
+            if not prev:
+                say("Descarga iniciada", shown(name))
             self.seen[path] = {"name": name, "size": size,
                                "before": prev["before"] if prev else set(names)}
             if now - mtime < 60:
-                shown = "Descarga del navegador" if name.startswith("Unconfirmed ") else name.rsplit(".", 1)[0]
-                out.append({"id": "dl:" + name, "title": shown, "detail": f"Descargando · {human(size)}",
+                out.append({"id": "dl:" + name, "title": shown(name), "detail": f"Descargando · {human(size)}",
                             "icon": "download", "progress": -1})
         return out
+
+
+def shown(partial):
+    """Nombre que se enseña de un archivo parcial (Chrome aún no sabe cómo se llamará: «Unconfirmed 123»)."""
+    return "Descarga del navegador" if partial.startswith("Unconfirmed ") else partial.rsplit(".", 1)[0]
 
 
 def human(n):
@@ -191,7 +201,7 @@ class Daemon:
             watch = self.Gio.bus_watch_name_on_connection(self.bus, sender, self.Gio.BusNameWatcherFlags.NONE, None,
                                                           lambda *_: self.drop(view))   # la app se cerró sin avisar
             self.kde[view] = {"app": app.rsplit(".", 1)[-1].capitalize(), "owner": sender, "reg": reg, "watch": watch,
-                              "t": time.time(), "v": {}}
+                              "t": time.time(), "v": {}, "said": False}
             inv.return_value(self.GLib.Variant("(o)", (view,)))
         elif path in self.kde and method == "update":
             self.kde[path]["v"].update(params[0])
@@ -200,10 +210,10 @@ class Daemon:
             code, msg = params[0], params[1]
             j = self.kde[path]
             title = self.title(j)
-            if code and code != 1:                          # 1 = cancelado por ti
+            if code and code != 1:
                 notify(title, msg or "No se pudo terminar", True)
-            elif not code and time.time() - j["t"] >= 5:
-                notify(title, "Terminado")
+            elif j["said"]:                                 # 1 = cancelado por ti
+                notify(title, "Cancelado" if code else "Terminado")
             inv.return_value(None)
             self.drop(path)
         else:
@@ -242,7 +252,15 @@ class Daemon:
             self.last = line
             print(line, flush=True)
 
+    def announce(self):
+        """«Iniciado» de las copias que duran: a los 2 s (las instantáneas no avisan) y ya con su título."""
+        for view, j in self.kde.items():
+            if not j["said"] and time.time() - j["t"] >= 2:
+                j["said"] = True
+                notify(self.title(j), " · ".join(x for x in ("Iniciado", self.kde_job(view, j)["detail"]) if x))
+
     def tick(self):
+        self.announce()
         self.dl = self.partials.poll()
         self.emit()
         return True
@@ -291,12 +309,12 @@ def selftest():
         (d / "a.iso.crdownload").write_bytes(b"1234")
         assert [j["title"] for j in p.poll(say)] == ["a.iso"]
         (d / "a.iso.crdownload").rename(d / "a.iso")
-        assert p.poll(say) == [] and said == [("Descarga terminada", "a.iso")]
+        assert p.poll(say) == [] and said == [("Descarga iniciada", "a.iso"), ("Descarga terminada", "a.iso")]
         (d / "b.part").write_bytes(b"1234")
         p.poll(say)
-        (d / "b.part").unlink()                              # cancelada: sin aviso
+        (d / "b.part").unlink()                              # sin archivo final: cancelada
         p.poll(say)
-        assert len(said) == 1
+        assert said[2:] == [("Descarga iniciada", "b"), ("Descarga cancelada", "b")]
     assert human(1536) == "2 KB" and human(5 * 1024 ** 2) == "5,0 MB"
     print("ok")
 
