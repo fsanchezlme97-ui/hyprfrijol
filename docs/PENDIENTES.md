@@ -10,7 +10,7 @@ está en el CHANGELOG y en `docs/planes/`.
 - [ ] **Idiomas**: textos de la interfaz traducibles; inglés primero (Omarchy tiene 50 y los cambia en vivo).
 - [ ] **Experiencia de instalación "producto terminado"**: evaluar ISO live o installer gráfico (Omarchy instala en ~7 s).
 - [ ] **Ecosistema de plugins propio**: API documentada, registry/marketplace o al menos templates para plugins de barra/panel/servicio.
-- [ ] **Skills de agente estandarizadas**: skill/documentación para Claude Code, Codex y OpenCode que explique cómo modificar HyprFrijol (Omarchy shippea esto).
+- [x] **Skills de agente estandarizadas**: guía en `AGENTS.md` (canónica) que Claude Code importa desde `.claude/CLAUDE.md` y que Codex/OpenCode leen directamente.
 - [ ] **Apps propias nativas**: evaluar pequeñas apps QML propias para casos de uso frecuentes (firmar PDF, world clock, presentaciones Markdown, etc.).
 - [ ] **Cliente de email/calendario integrado**: agenda `.ics` existe, pero falta integración de email y calendario completa.
 - [ ] **Accesibilidad**: lector de pantalla (Orca), focus rings, mejor integración con assistive technology.
