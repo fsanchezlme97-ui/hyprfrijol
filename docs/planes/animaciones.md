@@ -2,7 +2,7 @@
 
 > **Apartado:** Ajustes › Apariencia › Animaciones y efectos
 > **Alcance:** movimiento (Hyprland y shell), efectos visuales (transparencia, desenfoque, sombras, resaltado, atenuado), sistema de movimiento del estilo Math y rendimiento de los efectos.
-> **Estado:** plan para revisión. Documento de traspaso para continuar en otra sesión de trabajo.
+> **Estado:** implementado (0.9.1); se conserva como registro de las decisiones (§ 7).
 > **Repositorio:** `fsanchezlme97-ui/hyprfrijol` · archivos base: `scripts/hf-apply` (`MOTION`, `motion_preset`, `motion_shell`, `motion_lua`, `SHADOWS`, `style_tokens`, bloque `decoration`), `config/quickshell/Theme.qml` (`dur`, `durIn`, `durOut`, `ease*`), `modules/settings/sections/{Apariencia,Energia,Accesibilidad}.qml`, `components/{Ripple,Glass}.qml`
 > **Relacionado:** *Apariencia › Temas* (estilo Math e interruptor de transparencia).
 
