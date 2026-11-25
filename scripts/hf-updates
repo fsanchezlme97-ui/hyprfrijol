@@ -80,7 +80,9 @@ run() {
   local snap=0 off=0 a
   for a in "$@"; do case $a in --snapshot) snap=1;; --poweroff) off=1;; esac; done
   # set -e corta en el primer fallo; el aviso va en un trap de salida (un «cmd || aviso» no lo veía nunca: set -e sale antes)
-  local cmd="trap 'c=\$?; [ \$c = 0 ] || { echo; echo \"Algo falló (código \$c). Pulsa Intro para cerrar.\"; read -r _; }' EXIT; set -e; echo; echo '  hyprfrijol · actualización del sistema'; echo;"
+  # «En curso» del centro de notificaciones, con aviso al terminar (hf-jobs)
+  local jobs="$ROOT/scripts/hf-jobs"
+  local cmd="J=\$('$jobs' start 'Actualizando el sistema' \$\$); trap 'c=\$?; [ \$c = 0 ] || { \"$jobs\" done \"\$J\" \$c; echo; echo \"Algo falló (código \$c). Pulsa Intro para cerrar.\"; read -r _; }' EXIT; set -e; echo; echo '  hyprfrijol · actualización del sistema'; echo;"
   if [ "$snap" = 1 ] && have snapper; then
     cmd+=" echo '→ Creando punto de restauración (snapper)…';"
     cmd+=" N=\$(sudo snapper -c root create -c number -p -d 'hyprfrijol: antes de actualizar');"
@@ -98,7 +100,7 @@ run() {
   if [ "$off" = 0 ] && [ "$USE_FW" = true ] && have fwupdmgr && [ "$(jq -r '.firmware | length' "$OUT" 2>/dev/null || echo 0)" != 0 ]; then
     cmd+=" echo; echo '→ Firmware (fwupd)…'; fwupdmgr update || true;"
   fi
-  cmd+=" rm -f '$OUT';"
+  cmd+=" rm -f '$OUT'; '$jobs' done \"\$J\";"
   if [ "$off" = 1 ]; then
     cmd+=" echo; echo 'Listo. Apagando en 10 s (Ctrl+C para cancelar)…'; sleep 10; systemctl poweroff"
   else

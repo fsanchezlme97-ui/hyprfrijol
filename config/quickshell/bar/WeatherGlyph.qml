@@ -1,114 +1,43 @@
-// Icono del clima que se mueve según el tiempo (Barra viva, barLive): el sol gira despacio, con cielo parcial asoma
-// tras una nube que va y viene, con cielo cubierto dos nubes se cruzan, cae lluvia o nieve, el rayo destella y la
-// luna tiene una estrella que titila. Lo mueve un Timer a ~12 fotogramas por segundo (4 sin lluvia, nieve ni tormenta)
-// (no animaciones a 60 fps: la barra entera se repinta en cada fotograma); quieto si live es false (pantalla
-// completa, modo juego, barra oculta) o sin animaciones (Theme.still).
-//   WeatherGlyph { code: Weather.code; day: Weather.isDay; live: chip.visible }
+// Icono del clima, fijo: un dibujo por cada estado del cielo (códigos WMO de Open-Meteo, services/Weather.qml).
+//   WeatherGlyph { code: Weather.code; day: Weather.isDay }
 import QtQuick
 import ".."
 import "../components"
 
-Item {
+Icon {
     id: g
     property int code: -1
     property bool day: true
-    property bool live: true
-    property color color: Theme.t
-    property real size: 14
-    implicitWidth: size
-    implicitHeight: size
+    size: 15
+    color: Theme.t
 
-    // Códigos WMO de Open-Meteo (services/Weather.qml: describe)
-    readonly property string kind: code < 0 ? "nube"
+    readonly property string kind: code < 0 ? "nublado"
         : code === 0 ? (day ? "sol" : "luna")
-        : code <= 2 ? "parcial"
-        : code === 3 ? "nube"
+        : code <= 2 ? (day ? "parcialDia" : "parcialNoche")
+        : code === 3 ? "nublado"
         : code <= 48 ? "niebla"
-        : code <= 67 || (code >= 80 && code <= 82) ? "lluvia"
-        : code <= 77 || (code >= 85 && code <= 86) ? "nieve"
+        : code <= 57 ? "llovizna"
+        : code <= 67 ? "lluvia"
+        : code <= 77 ? "nieve"
+        : code <= 82 ? "chubascos"
+        : code <= 86 ? "nieve"
         : "tormenta"
-    readonly property bool falling: kind === "lluvia" || kind === "nieve" || kind === "tormenta"
-    readonly property bool animating: live && !Theme.still && visible
-    property int t: 0
-    // lo que cae necesita ~12 fps; el sol, las nubes y la estrella se mueven despacio: 4 fps con pasos de 3 (misma velocidad)
-    Timer { interval: g.falling ? 83 : 250; repeat: true; running: g.animating; onTriggered: g.t = (g.t + (g.falling ? 1 : 3)) % 100000 }
 
-    // sol: los rayos dan una vuelta cada 30 s
-    Icon {
-        visible: g.kind === "sol" || (g.kind === "parcial" && g.day)
-        name: "sun"; color: g.color
-        size: g.kind === "parcial" ? g.size * 0.72 : g.size
-        x: g.kind === "parcial" ? -g.size * 0.06 : 0
-        y: g.kind === "parcial" ? -g.size * 0.08 : 0
-        rotation: (g.t * 1) % 360
-    }
-    // luna (sola o tras la nube) y una estrella que titila
-    Icon {
-        visible: g.kind === "luna" || (g.kind === "parcial" && !g.day)
-        name: "moon"; color: g.color
-        size: g.kind === "parcial" ? g.size * 0.68 : g.size
-        x: g.kind === "parcial" ? -g.size * 0.04 : 0
-        y: g.kind === "parcial" ? -g.size * 0.06 : 0
-    }
-    Rectangle {
-        visible: g.kind === "luna"
-        x: g.size * 0.78; y: g.size * 0.08
-        width: Math.max(1.5, g.size * 0.13); height: width; radius: width / 2
-        color: g.color
-        opacity: 0.25 + 0.75 * Math.abs(Math.sin(g.t / 9))
-    }
-    // cubierto: una nube pequeña detrás que va al revés que la de delante
-    Icon {
-        visible: g.kind === "nube"
-        name: "cloud"; color: g.color; opacity: 0.55
-        size: g.size * 0.62
-        x: g.size * 0.42 - 1.8 * Math.sin(g.t / 13)
-        y: -g.size * 0.12
-    }
-    // nube: delante del sol o la luna (parcial), la de delante (cubierto) o arriba con lo que cae debajo
-    Icon {
-        visible: g.kind !== "sol" && g.kind !== "luna"
-        name: "cloud"; color: g.color
-        size: g.kind === "parcial" ? g.size * 0.78 : g.kind === "nube" ? g.size * 0.86 : g.size * 0.86
-        x: g.kind === "parcial" ? g.size * 0.26 + 1.6 * Math.sin(g.t / 12)
-            : g.kind === "nube" ? g.size * 0.02 + 1.8 * Math.sin(g.t / 13)
-            : (g.size - size) / 2
-        y: g.kind === "parcial" || g.kind === "nube" ? g.size * 0.2 : -g.size * 0.14
-    }
-    // niebla: dos rayas que se desplazan
-    Repeater {
-        model: g.kind === "niebla" ? 2 : 0
-        Rectangle {
-            required property int index
-            x: g.size * (index ? 0.18 : 0.30) + 1.2 * Math.sin((g.t + index * 14) / 10)
-            y: g.size * (0.70 + index * 0.16)
-            width: g.size * 0.52; height: Math.max(1.2, g.size * 0.1); radius: height / 2
-            color: g.color; opacity: 0.8
-        }
-    }
-    // lluvia, nieve o tormenta: tres gotas (o copos) que caen y se desvanecen al llegar abajo
-    Repeater {
-        model: g.falling ? 3 : 0
-        Rectangle {
-            required property int index
-            readonly property bool snow: g.kind === "nieve"
-            readonly property real span: g.size * 0.36
-            readonly property real p: ((g.t * (snow ? 0.045 : 0.11) + index * 0.37) % 1)
-            x: g.size * (0.28 + index * 0.22) - width / 2 - (snow ? 0 : p * 1.2)
-            y: g.size * 0.6 + p * span
-            width: snow ? Math.max(1.8, g.size * 0.14) : Math.max(1.3, g.size * 0.1)
-            height: snow ? width : Math.max(2.6, g.size * 0.22)
-            radius: width / 2
-            color: g.color
-            opacity: 1 - p * 0.8
-        }
-    }
-    // tormenta: un rayo que destella cada ~4 s
-    Icon {
-        visible: g.kind === "tormenta" && (g.t % 48 === 0 || g.t % 48 === 2 || !g.animating)
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: g.size * 0.42
-        svg: '<path d="M13 2L6 13h5l-1 9 7-11h-5z" fill="currentColor"/>'
-        size: g.size * 0.62; color: Theme.ter
-    }
+    // nube arriba, dejando sitio a lo que cae
+    readonly property string cloudUp: '<path d="M7 15h10a4 4 0 0 0 .6-7.96A5.5 5.5 0 0 0 7.1 8.2 3.5 3.5 0 0 0 7 15z"/>'
+    // nube pequeña abajo a la derecha (cielo parcial)
+    readonly property string cloudLow: '<path d="M10 20h8a3.2 3.2 0 0 0 .4-6.38 4.4 4.4 0 0 0-8.3.9A2.8 2.8 0 0 0 10 20z"/>'
+    svg: ({
+        sol: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+        luna: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>',
+        parcialDia: '<path d="M8 2v1.6M2 8h1.6M3.8 3.8l1.1 1.1M12.2 3.8l-1.1 1.1M5.6 10.8A3.4 3.4 0 1 1 11 6.8"/>' + cloudLow,
+        parcialNoche: '<path d="M10.6 9.6A5 5 0 0 1 5 3a5 5 0 1 0 2.4 9.3"/>' + cloudLow,
+        nublado: '<path d="M5.5 18h10a4 4 0 0 0 .6-7.96A5.5 5.5 0 0 0 5.6 11.2 3.5 3.5 0 0 0 5.5 18z"/><path d="M9 6.2A4.6 4.6 0 0 1 17.4 7a3.6 3.6 0 0 1 3.8 5.6"/>',
+        niebla: '<path d="M7 12h10a4 4 0 0 0 .6-7.96A5.5 5.5 0 0 0 7.1 5.2 3.5 3.5 0 0 0 7 12z"/><path d="M4 16h14M7 20h13"/>',
+        llovizna: cloudUp + '<path d="M8 18.5v.5M12 20.5v.5M16 18.5v.5"/>',
+        lluvia: cloudUp + '<path d="M8 18l-1 3.5M12.5 18l-1 3.5M17 18l-1 3.5"/>',
+        chubascos: cloudUp + '<path d="M7 18l-.6 2M10.5 20l-.6 2M14 18l-.6 2M17.5 20l-.6 2"/>',
+        nieve: cloudUp + '<path d="M8 18.5h.01M12 18.5h.01M16 18.5h.01M10 21.5h.01M14 21.5h.01" stroke-width="2.6"/>',
+        tormenta: cloudUp + '<path d="M12.5 14l-3 4.5h4l-2.5 4"/>'
+    })[kind]
 }

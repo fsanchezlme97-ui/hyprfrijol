@@ -10,7 +10,7 @@
 // IPC:  qs -p <repo>/config/quickshell ipc call dictado toggle|start|stop|cancel|state|command|hush
 //       … dictado file <clip.wav> [dictado|comando]  (pruebas: el audio sale del archivo, a tiempo real)
 // Ajustes › Dictado (sections/Dictado.qml).
-// Botones de la barra: bar/MicBtn.qml (dictado) y bar/VoiceBtns.qml (dictado y orden), por Shell.voiceDo.
+// Botones: el panel de Harper (sidepanel/AiChat.qml: dictar y orden de voz) y el >_ de la barra mientras escucha.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -120,7 +120,7 @@ Scope {
     Binding { target: Shell; property: "dictPhase"; value: root.phase }
     Binding { target: Shell; property: "dictKind"; value: root.kind }
     Binding { target: Shell; property: "micLevels"; value: root.levels }
-    // Botones de voz de la barra (bar/VoiceBtns.qml, bar/MicBtn.qml): «dictado» o «comando». Con Harper leyendo, el
+    // Botones de voz (panel de Harper y barra): «dictado» o «comando». Con Harper leyendo, el
     // clic la corta; micrófono silenciado, el clic solo lo vuelve a activar. Si escucha lo otro, lo termina y empieza esto.
     function voiceDo(what): void {
         const k = what === "comando" ? "comando" : "dictado";
@@ -181,7 +181,7 @@ Scope {
         function toggle(): void { root.toggle("dictado"); }
         function hush(): void { root.hush(); }                // que Harper deje de leer
         function command(): void { root.toggle("comando"); }
-        function micro(): void { root.voiceDo("dictado"); }   // como el botón del micrófono de la barra
+        function micro(): void { root.voiceDo("dictado"); }   // como el botón «Dictar» del panel de Harper
         function start(): void { root.start("dictado", null); }
         function stop(): void { root.stop(); }
         function cancel(): void { root.cancel(); }

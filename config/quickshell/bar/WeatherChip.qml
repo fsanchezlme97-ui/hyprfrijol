@@ -3,7 +3,6 @@
 // horas y de 3 días). En la barra vertical, icono y grados apilados.
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 import ".."
 import "../components"
 import "../services"
@@ -19,18 +18,13 @@ BarChip {
     clip: true
     // Sin datos la barra lo esconde (want): pedirlos igualmente, si no nunca llegarían a enseñarse
     UseCounter { target: Weather; active: chip.visible || !chip.want }
-    // Barra viva: el icono se mueve con el tiempo que hace, salvo en pantalla completa, en modo juego, sin datos,
-    // con la sesión bloqueada o con la barra escondida (seguía 12 veces por segundo bajo el bloqueo toda la noche)
-    readonly property bool live: chip.visible && Weather.ready && Settings.get("barLive", true) !== false && !Shell.gameMode
-                                 && !Shell.locked && !Shell.barHidden
-                                 && !WinMode.hasFullscreen(chip.QsWindow.window?.screen?.name ?? "")
     RowLayout {
         id: r
         visible: !chip.vertical
         anchors.verticalCenter: parent.verticalCenter
         x: 7
         spacing: 4
-        WeatherGlyph { code: Weather.ready ? Weather.code : -1; day: Weather.isDay; live: chip.live; opacity: Weather.ready ? 1 : 0.5 }
+        WeatherGlyph { code: Weather.ready ? Weather.code : -1; day: Weather.isDay; opacity: Weather.ready ? 1 : 0.5 }
         Txt { text: Weather.ready ? Math.round(Weather.temp) + "°" : "—"; weight: Font.DemiBold; tabular: true }
         Txt {
             id: desc
@@ -47,7 +41,7 @@ BarChip {
         visible: chip.vertical
         anchors.centerIn: parent
         spacing: 1
-        WeatherGlyph { Layout.alignment: Qt.AlignHCenter; code: Weather.ready ? Weather.code : -1; day: Weather.isDay; live: chip.live }
+        WeatherGlyph { Layout.alignment: Qt.AlignHCenter; code: Weather.ready ? Weather.code : -1; day: Weather.isDay }
         Txt { Layout.alignment: Qt.AlignHCenter; text: Weather.ready ? Math.round(Weather.temp) + "°" : "—"; size: 11; weight: Font.DemiBold; tabular: true }
     }
 }

@@ -36,7 +36,7 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 | Colores del fondo (matugen) o 54 temas, 42 de ellos en pares oscuro y claro (y los tuyos, sin límite), estilo Math (Material 3) con o sin transparencia, claro / oscuro / auto, redondeo ajustable | `scripts/hf-apply`, `config/themes/` |
 | Barra abajo / arriba / izquierda, fija o flotante | `quickshell/bar/` |
 | Spotlight (apps, archivos con vista previa y acciones rápidas, calculadora, comandos, ventanas) | `config/quickshell/modules/spotlight`, `scripts/hf-fileact` |
-| Ajustes rápidos, notificaciones con respuesta, OSD | `config/quickshell/modules/quicksettings`, `notifications`, `osd` |
+| Ajustes rápidos y herramientas (pomodoro, notas, tareas, captura…), procesos en curso, notificaciones con respuesta, OSD | `config/quickshell/modules/quicksettings`, `notifications`, `osd` |
 | Panel lateral con el asistente de IA (¼ de pantalla), PiP mínimo | `config/quickshell/modules/sidepanel`, `pip` — ver `docs/IA.md` |
 | Vista general, Alt+Tab, Snap, dock y escritorio ordenado, widgets | `config/quickshell/modules/overview`, `alttab`, `snap`, `desktop`, `widgets` |
 | Selector de fondos (por monitor, por hora, mono), captura sobre la pantalla congelada (lupa, ventanas, fijar, OCR con cajas, anotación, IA) / grabación, selector de color (HEX · RGB · HSL · OKLCH, historial) | `config/quickshell/modules/wallpapers`, `capture`, `colorpicker` |
@@ -273,7 +273,7 @@ Son los mismos que en illogical-impulse (misma tecla, misma función), más los 
 | Ctrl + Super + Shift + D | Claro / oscuro |
 | Super + - / Super + = (o ¡) | Lupa |
 | Super + Shift + B · N · P · M | Pista anterior · siguiente · reproducir/pausar · silenciar |
-| Super + Alt + M · Super + Alt + V | Dictado (como el botón del micrófono de la barra) · orden de voz («abre Firefox», «lee el archivo notas.md»); si Harper está leyendo en voz alta, lo corta |
+| Super + Alt + M · Super + Alt + V | Dictado (como «Dictar» en el panel de Harper, que se abre con el botón `>_` de la barra) · orden de voz («abre Firefox», «lee el archivo notas.md»); si Harper está leyendo en voz alta, lo corta |
 | Super + Z | Modo sin distracciones |
 | Super + L · Super + Shift + L | Bloquear · suspender |
 | Super + Esc · Ctrl + Alt + Supr | Menú de energía |

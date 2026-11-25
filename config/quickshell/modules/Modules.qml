@@ -53,6 +53,8 @@ import "downloads"
 Scope {
     // Alarmas: tienen que sonar aunque nunca se abra su ventana (el singleton se crea al nombrarlo)
     readonly property int alarmsAlive: Alarms.count
+    // Procesos en curso: hf-jobs tiene que estar desde el arranque (recibe las copias de las apps y avisa al terminar)
+    readonly property int jobsAlive: Jobs.items.length
     // ── Siempre cargados ──
     Lock {}
     Focus {}

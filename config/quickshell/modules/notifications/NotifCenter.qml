@@ -1,10 +1,7 @@
 // Notificaciones del centro de control (QuickSettings.qml; campana de la barra = Shell.open("notificaciones")).
-//  Recientes: agrupadas por aplicación (cabecera con icono, cuántas, desplegar/agrupar y descartar el grupo);
-//             un grupo de 3 o más se ve apilado («+N») hasta que lo despliegas. «No molestar», borrar todo,
-//             respuesta en línea, acciones e imágenes; arrastrar a un lado descarta.
-//  Resumen: con 3 avisos o más, una tarjeta arriba resume en una o dos frases lo que pasó (hf-ai digest). Con el
-//             modelo local (Ollama de proveedor o de respaldo) se hace sola al abrir el centro si llegó algo nuevo
-//             (notifDigestAuto); si no, con «Resumir», porque los avisos irían a la nube.
+//  En curso: descargas, copias de archivos, actualizaciones e instalaciones (services/Jobs.qml), con su progreso.
+//  Recientes: lista, de la más nueva a la más antigua, con filtro por app y las acciones al final de cada aviso
+//             (NotifCard «list»). «No molestar», borrar todo y respuesta en línea; arrastrar a un lado descarta.
 //  Historial: lo que ha llegado (Notifs.history, también lo ya descartado), con búsqueda y filtro por app.
 // Shell.open("notificaciones", "historial") abre el historial; con { app: "whatsapp" } ya filtrado.
 import QtQuick
@@ -13,6 +10,7 @@ import Quickshell
 import Quickshell.Io
 import "../.."
 import "../../components"
+import "../../services"
 
 Glass {
     id: win
@@ -21,7 +19,6 @@ Glass {
     implicitHeight: Math.max(150, body.implicitHeight + 20)
     property bool dndMenu: false            // atajos de «no molestar» desplegados (DndPresets.qml)
     property string tab: "recientes"        // recientes | historial
-    property var open: ({})                 // grupo (clave) → desplegado / agrupado a mano
     property string query: ""
     property string appFilter: ""           // clave de app del historial ("" = todas)
     property string recentFilter: ""        // clave del grupo (app) en Recientes ("" = todas)
@@ -33,44 +30,13 @@ Glass {
         win.query = "";
         search.text = "";
         win.recentFilter = "";
-        if (digestAuto && digestStale && Notifs.count >= 3) digestRun(true);
     }
-
-    // ---------- resumen de los avisos (hf-ai digest)
-    readonly property var digestItems: Notifs.list.values.slice().reverse().slice(0, 30)
-        .map(n => ({ app: Notifs.appOf(n), summary: Notifs.plain(n.summary), body: Notifs.plain(n.body) }))
-    readonly property string digestKey: digestItems.map(n => n.app + n.summary + n.body).join("\n")
-    property string digestFor: ""            // la lista de avisos que se resumió
-    property var digest: null                // { text, local, error }
-    readonly property bool digestStale: digestKey !== digestFor
-    readonly property bool localAi: Settings.get("aiProvider", "") === "ollama" || Settings.get("aiFallbackProvider", "") === "ollama"
-    readonly property bool digestAuto: localAi && Settings.get("notifDigestAuto", true) !== false && Settings.get("aiProvider", "") !== "off"
-    // auto (al abrir el centro): solo el modelo local; con «Resumir» puede ir a la nube si el local falla.
-    // Los avisos van por la entrada estándar (en la línea de órdenes, cualquier proceso los leería en /proc)
-    function digestRun(auto: bool): void {
-        if (digestProc.running) return;
-        digestFor = digestKey;
-        digestProc.payload = JSON.stringify(digestItems);
-        digestProc.command = [Paths.script("hf-ai"), "digest"].concat(auto ? ["--local"] : []);
-        digestProc.running = true;
-    }
-    Process {
-        id: digestProc
-        property string payload: ""
-        stdinEnabled: true
-        onStarted: { write(payload); payload = ""; stdinEnabled = false; }
-        onExited: stdinEnabled = true
-        stdout: StdioCollector {
-            onStreamFinished: { try { win.digest = JSON.parse(text); } catch (e) { win.digest = { text: "", error: "No se pudo resumir" }; } }
-        }
-    }
-    function isOpen(g): bool { return win.open[g.key] !== undefined ? win.open[g.key] : g.items.length < 3; }
-    function toggle(g) { const o = Object.assign({}, open); o[g.key] = !isOpen(g); open = o; }
 
     readonly property var groups: Notifs.groupsOf(Notifs.list.values.slice().reverse())
     // Recientes filtrados por app (si la app filtrada ya no tiene avisos, se ven todas)
     readonly property var recentApps: groups.map(g => ({ key: g.key, app: g.app, n: g.items.length }))
     readonly property var shownGroups: recentFilter && groups.some(g => g.key === recentFilter) ? groups.filter(g => g.key === recentFilter) : groups
+    readonly property var shownRecent: shownGroups === groups ? Notifs.list.values.slice().reverse() : shownGroups[0].items
 
     // Historial filtrado + apps que aparecen en él (para los filtros)
     readonly property var histApps: {
@@ -143,6 +109,52 @@ Glass {
             onPicked: win.dndMenu = false
         }
 
+        // =============================================================== En curso (services/Jobs.qml)
+        ColumnLayout {
+            visible: Jobs.items.length > 0
+            Layout.fillWidth: true
+            spacing: 4
+            Txt { Layout.leftMargin: 4; size: 11; muted: true; weight: Font.DemiBold; text: "En curso" }
+            Repeater {
+                model: Jobs.items.slice(0, 4)
+                Rectangle {
+                    id: job
+                    required property var modelData
+                    Layout.fillWidth: true
+                    implicitHeight: jrow.implicitHeight + 16
+                    radius: Theme.r(6)
+                    color: Theme.fill2
+                    RowLayout {
+                        id: jrow
+                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
+                        spacing: 8
+                        Icon { Layout.alignment: Qt.AlignTop; Layout.topMargin: 2; name: job.modelData.icon; size: 15; color: Theme.p }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 8
+                                Txt { Layout.fillWidth: true; text: job.modelData.title; textFormat: Text.PlainText; size: 12; weight: Font.Medium }
+                                Txt { visible: job.modelData.progress >= 0; text: Math.round(job.modelData.progress * 100) + " %"; size: 11; muted: true; tabular: true }
+                            }
+                            Progress { Layout.fillWidth: true; value: job.modelData.progress; period: 1500 }
+                            Txt { Layout.fillWidth: true; visible: text !== ""; text: job.modelData.detail; textFormat: Text.PlainText; size: 11; muted: true }
+                        }
+                        IconBtn {
+                            visible: job.modelData.cancel === true
+                            Layout.alignment: Qt.AlignTop
+                            implicitWidth: 20; implicitHeight: 20; radius: Theme.r(5)
+                            icon: "x"; iconSize: 10; fg: Theme.tv
+                            tooltip: "Cancelar"
+                            onClicked: Jobs.cancel(job.modelData.id)
+                        }
+                    }
+                }
+            }
+            Txt { visible: Jobs.items.length > 4; Layout.leftMargin: 4; size: 11; muted: true; text: "y " + (Jobs.items.length - 4) + " más" }
+        }
+
         // =============================================================== Recientes
         ColumnLayout {
             visible: win.tab === "recientes"
@@ -170,59 +182,6 @@ Glass {
                 }
             }
 
-            // Resumen: una o dos frases con lo que pasó (y lo que pide atención primero)
-            Rectangle {
-                visible: Notifs.count >= 3 && Settings.get("aiProvider", "") !== "off"
-                Layout.fillWidth: true
-                implicitHeight: dcol.implicitHeight + 18
-                radius: Theme.inner(Theme.panelRadius, 12)
-                color: Qt.alpha(Theme.p, 0.08)
-                border.width: 1; border.color: Qt.alpha(Theme.p, 0.22)
-                ColumnLayout {
-                    id: dcol
-                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8; leftMargin: 12 }
-                    spacing: 4
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 8
-                        Icon { name: "sparkle"; size: 13; color: Theme.p
-                            SequentialAnimation on opacity { running: digestProc.running && !Theme.still; loops: Animation.Infinite
-                                onRunningChanged: if (!running) parent.opacity = 1
-                                NumberAnimation { to: 0.3; duration: 500 } NumberAnimation { to: 1; duration: 500 } } }
-                        Txt { text: "Resumen"; weight: Font.DemiBold; size: 12.5 }
-                        Txt { text: "· " + Notifs.count + " avisos"; muted: true; size: 11.5; tabular: true }
-                        Item { Layout.fillWidth: true }
-                        Rectangle {
-                            visible: !digestProc.running && (win.digest === null || win.digestStale || !!win.digest.error)
-                            implicitHeight: 22; implicitWidth: dT.implicitWidth + 16; radius: Theme.r(6)
-                            color: dMa.containsMouse ? Theme.fill2 : "transparent"
-                            border.width: 1; border.color: Theme.ov
-                            Txt { id: dT; anchors.centerIn: parent; size: 11; color: Theme.p
-                                text: win.digest === null ? "Resumir" : win.digest.error ? "Reintentar" : "Actualizar" }
-                            MouseArea { id: dMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.digestRun(false) }
-                        }
-                    }
-                    Txt {
-                        visible: digestProc.running || !!(win.digest?.text || win.digest?.error)
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        size: 12
-                        muted: digestProc.running || !!win.digest?.error
-                        text: digestProc.running ? "Leyendo los avisos…" : win.digest?.error ? win.digest.error : (win.digest?.text ?? "")
-                    }
-                    Txt {
-                        visible: win.digest === null && !digestProc.running
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap; size: 11; muted: true
-                        text: win.localAi ? "Lo resume el modelo local: nada sale del equipo" : "Los avisos se envían a tu asistente de IA para resumirlos"
-                    }
-                    Txt {
-                        visible: !digestProc.running && !!win.digest?.text
-                        size: 10.5; muted: true
-                        text: (win.digest?.local ? "Modelo local" : "Asistente de IA") + (win.digestStale ? " · han llegado avisos nuevos" : "")
-                    }
-                }
-            }
             AppChips {
                 visible: win.groups.length > 1
                 Layout.fillWidth: true
@@ -243,56 +202,14 @@ Glass {
                 ColumnLayout {
                     id: list
                     width: flick.width
-                    spacing: 12
+                    spacing: 4
                     Repeater {
-                        model: win.shownGroups
-                        ColumnLayout {
-                            id: grp
+                        model: win.shownRecent
+                        NotifCard {
                             required property var modelData
-                            readonly property bool many: modelData.items.length > 1
-                            readonly property bool expanded: win.isOpen(modelData)
+                            n: modelData
+                            mode: "list"
                             Layout.fillWidth: true
-                            spacing: 4
-                            // cabecera: icono · APP · n · hora · desplegar · descartar
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Layout.leftMargin: 2
-                                spacing: 8
-                                Txt { size: 11; muted: true; weight: Font.DemiBold; text: grp.modelData.app.toUpperCase() }
-                                Txt { visible: grp.many; size: 11; muted: true; tabular: true; text: "· " + grp.modelData.items.length }
-                                Item { Layout.fillWidth: true }
-                                Rectangle {
-                                    visible: grp.many
-                                    implicitHeight: 20; implicitWidth: exT.implicitWidth + 16; radius: Theme.r(5)
-                                    color: exMa.containsMouse ? Theme.fill2 : "transparent"
-                                    Row {
-                                        id: exT
-                                        anchors.centerIn: parent
-                                        spacing: 4
-                                        Txt { text: grp.expanded ? "Agrupar" : "Ver " + grp.modelData.items.length; size: 11; color: Theme.p }
-                                        Icon { anchors.verticalCenter: parent.verticalCenter; name: grp.expanded ? "chevron_up" : "chevron_down"; size: 10; color: Theme.p }
-                                    }
-                                    MouseArea { id: exMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.toggle(grp.modelData) }
-                                }
-                                IconBtn {
-                                    implicitWidth: 20; implicitHeight: 20; radius: Theme.r(5)
-                                    icon: "x"; iconSize: 10; fg: Theme.tv
-                                    tooltip: grp.many ? "Descartar las " + grp.modelData.items.length : "Descartar"
-                                    onClicked: Notifs.dismissAll(grp.modelData.items)
-                                }
-                            }
-                            Repeater {
-                                model: grp.expanded ? grp.modelData.items : grp.modelData.items.slice(0, 1)
-                                NotifCard {
-                                    required property var modelData
-                                    n: modelData
-                                    mode: "list"
-                                    showApp: false
-                                    stack: grp.expanded ? 0 : grp.modelData.items.length - 1
-                                    onStackToggled: win.toggle(grp.modelData)
-                                    Layout.fillWidth: true
-                                }
-                            }
                         }
                     }
                 }

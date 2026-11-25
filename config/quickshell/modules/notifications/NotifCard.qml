@@ -1,6 +1,7 @@
 // Tarjeta de notificación.
 //  toast: aviso emergente (Glass, baldosa 28, ×, respuesta y botones de acción) — design «Notificaciones»
-//  list:  elemento del centro / ajustes rápidos (fondo fill2, baldosa 26, hora a la derecha)
+//  list:  fila del centro, como las del historial (sin fondo hasta pasar el cursor, baldosa 22, hora a la derecha)
+//         y las acciones al final
 // stack > 0: hay más avisos de la misma app debajo → se pintan 1–2 capas detrás y la pastilla «+N»
 //            (clic → stackToggled(), para desplegar el grupo).
 // Arrastrar a un lado descarta el aviso (swipe). Urgente: borde y etiqueta «Urgente»; no se cierra solo.
@@ -24,7 +25,7 @@ Item {
     readonly property bool hovered: hover.hovered || drag.active
     readonly property string preview: Notifs.previewOf(n)
     readonly property real ghost: stack <= 0 ? 0 : stack === 1 ? 6 : 11
-    implicitHeight: col.implicitHeight + 20 + ghost
+    implicitHeight: col.implicitHeight + (toast ? 20 : 14) + ghost
 
     HoverHandler { id: hover }
 
@@ -76,7 +77,7 @@ Item {
             anchors.fill: parent
             visible: !root.toast
             radius: Theme.r(6)
-            color: Theme.fill2
+            color: hover.hovered ? Theme.fill2 : "transparent"
         }
         Rectangle {   // urgente: borde de aviso
             anchors.fill: parent
@@ -95,10 +96,10 @@ Item {
         ColumnLayout {
             id: col
             anchors { left: parent.left; right: parent.right; top: parent.top }
-            anchors.leftMargin: root.toast ? 12 : 10
-            anchors.rightMargin: 12
-            anchors.topMargin: 12
-            spacing: 8
+            anchors.leftMargin: root.toast ? 12 : 8
+            anchors.rightMargin: root.toast ? 12 : 8
+            anchors.topMargin: root.toast ? 12 : 8
+            spacing: root.toast ? 8 : 4
 
             RowLayout {
                 Layout.fillWidth: true
@@ -106,8 +107,8 @@ Item {
                 NotifTile {
                     Layout.alignment: Qt.AlignTop
                     n: root.n
-                    size: root.toast ? 28 : 26
-                    radius: root.toast ? 7 : 8
+                    size: root.toast ? 28 : 22
+                    radius: root.toast ? 7 : 6
                     avatar: root.preview === ""
                 }
                 ColumnLayout {
@@ -124,7 +125,8 @@ Item {
                                 return a && s && a !== s ? a + " · " + s : (s || a || "Notificación");
                             }
                             textFormat: Text.PlainText   // lo pone la app que avisa
-                            weight: Font.DemiBold
+                            weight: root.toast ? Font.DemiBold : Font.Medium
+                            size: root.toast ? 12.5 : 12
                         }
                         Rectangle {   // «Urgente»
                             visible: root.critical
@@ -156,7 +158,8 @@ Item {
                         textFormat: Text.StyledText
                         muted: true
                         wrapMode: Text.Wrap
-                        maximumLineCount: root.toast ? 4 : 3
+                        maximumLineCount: root.toast ? 4 : 2
+                        size: root.toast ? 12.5 : 11.5
                         lineHeight: 1.15
                         onLinkActivated: l => { if (/^(https?|mailto):/i.test(l)) Qt.openUrlExternally(l); }
                     }
@@ -178,7 +181,7 @@ Item {
             Rectangle {
                 visible: root.preview !== "" && pv.status === Image.Ready
                 Layout.fillWidth: true
-                Layout.leftMargin: root.toast ? 38 : 36
+                Layout.leftMargin: root.toast ? 38 : 30
                 Layout.preferredHeight: visible ? Math.min(120, Math.max(60, width * pv.implicitHeight / Math.max(1, pv.implicitWidth))) : 0
                 radius: Theme.r(7)
                 color: Theme.s1
@@ -205,18 +208,23 @@ Item {
                 Layout.fillWidth: true
                 visible: root.extraActions.length > 0
                 spacing: 8
+                Item { visible: !root.toast; Layout.fillWidth: true }
                 Repeater {
                     model: root.extraActions.slice(0, 3)
                     Rectangle {
                         required property var modelData
                         required property int index
-                        Layout.fillWidth: true
-                        implicitHeight: root.toast ? 28 : 26
+                        Layout.fillWidth: root.toast
+                        implicitWidth: root.toast ? 0 : actT.implicitWidth + 20
+                        Layout.maximumWidth: root.toast ? -1 : col.width / 2
+                        implicitHeight: root.toast ? 28 : 22
                         radius: Theme.r(6)
                         color: index === 0 ? Theme.p : root.toast ? Theme.fill2 : Qt.alpha(Theme.t, 0.08)
                         Rectangle { anchors.fill: parent; radius: parent.radius; color: Theme.light ? "#000" : "#FFF"; opacity: actMa.containsMouse ? 0.08 : 0 }
                         Txt {
+                            id: actT
                             anchors.centerIn: parent
+                            size: root.toast ? 12.5 : 11.5
                             width: Math.min(implicitWidth, parent.width - 12)
                             text: parent.modelData.text
                             color: parent.index === 0 ? Theme.pText : Theme.t

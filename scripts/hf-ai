@@ -38,8 +38,6 @@
                              → {"provider", "model", "in": [...], "out": [...], "label": "ve imágenes"}}
   hf-ai test                 prueba la conexión con el proveedor → {"ok": bool, "text": "…"}
   hf-ai transform "instrucción" < texto   aplica la instrucción al texto y lo imprime en plano (hf-dictate)
-  hf-ai digest [--local] < '[{"app","summary","body"}…]'     resume avisos en una o dos frases (local si Ollama está configurado;
-                                                             --local: solo Ollama, nunca la nube; sin las apps privadas)
   hf-ai dictfix '{"vocab","before"}' < texto   corrige nombres mal oídos de un dictado (hf-dictate, dictationAiFix)
   hf-ai recipes | recipe <id> | recipe-save '<json>' | recipe-remove <id>   recetas (Resumir, Traducir, Corregir…):
                              la lista, ejecutar una, guardar o borrar una propia (~/.local/share/hyprfrijol/ai-recetas.json)
@@ -5041,55 +5039,6 @@ def transform_text(instr, text):
         WAIT = None
         return (PROVIDERS[fb](instr, [{"role": "user", "text": text}], "", sfb) or "").strip()
 
-DIGEST_PROMPT = ("Estos son avisos (notificaciones) del escritorio que llegaron mientras el usuario no miraba. Resúmelos "
-                 "en español en una o dos frases cortas: primero lo que pide atención (alguien espera respuesta, una cita, "
-                 "un error, un pago) y luego el resto, agrupado por app si se repite. Sin listas, sin saludos, sin comentarios, "
-                 "sin recuentos («hay 2 correos») y sin inventar nada que no esté en los avisos: cada cosa que nombres tiene "
-                 "que salir de un aviso.")
-
-def digest(items, local_only=False):
-    """Avisos [{app, summary, body}] → {"text", "local", "error"} (centro de avisos, «Resumen»). Si Ollama es tu
-    proveedor o tu respaldo, resume el modelo local y nada sale del equipo (la nube solo si el local falla y lo has
-    pedido tú con «Resumir»: con local_only, el automático, nunca); si no, el modelo rápido. Sin los avisos de las
-    apps privadas y con el texto pasado por el filtro de secretos."""
-    s0 = settings()
-    lines = []
-    for n in (items or [])[:30]:
-        if not isinstance(n, dict) or is_private(n.get("app"), s0):
-            continue
-        t = " — ".join(x for x in (str(n.get("summary") or "").strip()[:200], str(n.get("body") or "").strip()[:240]) if x)
-        if t:
-            lines.append(f"[{str(n.get('app') or 'Sistema').strip()[:40]}] {t}")
-    if not lines:
-        return {"text": "", "local": False, "error": "No hay avisos que resumir"}
-    text, _ = redact("\n".join(lines), s0)
-    p0 = s0.get("aiProvider") or "claude-code"
-    if p0 == "off":
-        return {"text": "", "local": False, "error": "El asistente está desactivado"}
-    if local_only and "ollama" not in (p0, s0.get("aiFallbackProvider")):
-        return {"text": "", "local": False, "error": "Sin modelo local"}
-    if p0 != "ollama" and s0.get("aiFallbackProvider") == "ollama":
-        s0 = dict(s0, aiProvider="ollama", aiModel=s0.get("aiFallbackModel") or "", aiModelQuick="", aiEndpoint="",
-                  aiFallbackProvider=p0, aiFallbackModel=s0.get("aiModelQuick") or s0.get("aiModel") or "")
-    prov, s = provider_for(s0, "quick")
-    s["_temp"] = 0.2
-    msgs = [{"role": "user", "text": text}]
-    global WAIT
-    WAIT = fallback_wait(s0) if fallback_for(s0, prov)[0] else None   # con respaldo, no los 120 s de serie
-    try:
-        out, used = (PROVIDERS[prov](DIGEST_PROMPT, msgs, "", s) or "").strip(), prov
-    except (AIError, KeyError) as e:
-        fb, sfb = fallback_for(s0, prov)
-        if not fb or (local_only and fb != "ollama"):
-            return {"text": "", "local": False, "error": str(e)[:200]}
-        WAIT = None
-        try:
-            out, used = (PROVIDERS[fb](DIGEST_PROMPT, msgs, "", sfb) or "").strip(), fb
-        except AIError as e2:
-            return {"text": "", "local": False, "error": str(e2)[:200]}
-    out = re.sub(r"\s+", " ", out.replace("*", "")).strip()
-    return {"text": out[:400], "local": used == "ollama", "error": "" if out else "Sin respuesta"}
-
 # ---------------------------------------------------------------- recetas (Ajustes › Asistente de IA › Recetas)
 # Una instrucción + de dónde sale el texto + qué se hace con el resultado. Las incluidas no se borran; las propias van
 # en ~/.local/share/hyprfrijol/ai-recetas.json. Salen en Spotlight (por su nombre) y en Ajustes.
@@ -5621,13 +5570,6 @@ def main(argv):
         except AIError as e:
             print(text.strip()); print(str(e), file=sys.stderr); sys.exit(1)
         return
-    elif cmd == "digest":
-        # hf-ai digest [--local] < [{"app","summary","body"}…]  → {"text", "local", "error"} (centro de avisos; por la
-        # entrada estándar: en la línea de órdenes cualquier proceso los leería en /proc). --local: solo Ollama
-        try:
-            out = digest(json.loads(arg if arg.strip().startswith("[") else (sys.stdin.read() or "[]")), arg.strip() == "--local")
-        except ValueError:
-            out = {"text": "", "local": False, "error": "JSON no válido"}
     elif cmd == "dictfix":
         # hf-ai dictfix '{"vocab": "…", "before": "…"}' < texto  → texto corregido en plano (lo usa hf-dictate)
         text = sys.stdin.read()

@@ -92,9 +92,9 @@ Singleton {
         "hdmi": '<path d="M3 8h18v5l-3 3H6l-3-3z"/><path d="M7 11h10"/>',
         "mic": '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',
         "mic-off": '<path d="M15 9.5V5a3 3 0 0 0-5.6-1.5M9 9v2a3 3 0 0 0 4.9 2.3"/><path d="M5 11a7 7 0 0 0 11.4 5.4M18.6 13.6A7 7 0 0 0 19 11M12 18v4"/><path d="M3.5 3.5l17 17"/>',
-        // Micrófono de la barra (bar/MicBtn.qml): dictado (con líneas de texto); grabando, relleno (mic_rec)
+        // Micrófono (panel de Harper y barra): dictado (con líneas de texto); grabando, relleno (mic_rec)
         "mic_dictado": '<rect x="3.5" y="2.5" width="6" height="11" rx="3"/><path d="M1.5 10.5a5 5 0 0 0 10 0M6.5 15.5v5"/><path d="M14.5 6.5h7M14.5 11h7M14.5 15.5h4.5"/>',
-        // Orden de voz (barra, bar/VoiceBtns.qml): micrófono con «>» a la izquierda, el símbolo de las órdenes en Spotlight
+        // Orden de voz (panel de Harper): micrófono con «>» a la izquierda, el símbolo de las órdenes en Spotlight
         "mic_orden": '<rect x="13.5" y="2.5" width="6" height="11" rx="3"/><path d="M11.5 10.5a5 5 0 0 0 10 0M16.5 15.5v5"/><path d="M2.5 7l4.5 4-4.5 4"/>',
         "mic_orden_rec": '<rect x="13.5" y="2.5" width="6" height="11" rx="3" fill="currentColor"/><path d="M11.5 10.5a5 5 0 0 0 10 0M16.5 15.5v5"/><path d="M2.5 7l4.5 4-4.5 4"/>',
         "mic_rec": '<rect x="9" y="2" width="6" height="12" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',

@@ -41,6 +41,8 @@ def _profiles_left():
         return True
     if any(f'"{k}"' in t for k in ("webapps", "webappEngine", "webappPreload")):   # web apps (retiradas en 0.8.28)
         return True
+    if '"barLive"' in t or '"notifDigestAuto"' in t or re.search(r'"barModules":\s*\[[^\]]*"(voz|dictado)"', t):   # 0.12.0
+        return True
     if any(f'"{k}"' in t for k in ("micMode", "aiTalkMode", "aiConvSilence", "aiConvInterrupt", "aiCompanion",
                                    "aiCompanionFreq", "aiCompanionLook", "aiMuted", "aiVoiceLocal", "aiScreenAsk")) \
             or re.search(r'"dictationAiFix":\s*"asistente"', t):   # voz sin conversación (0.11.0)

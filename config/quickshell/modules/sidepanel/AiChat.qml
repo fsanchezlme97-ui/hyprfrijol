@@ -14,7 +14,7 @@
 // aiAlwaysApprove (Ajustes › IA lo revoca) y los planes con todo aprobado siempre se aplican solos (hf-ai: auto),
 // nunca los pasos sin vuelta atrás. La primera vez sale una tarjeta con lo que puede hacer y ejemplos (aiOnboarded).
 // setWindow({address, class, title}): abierto con Super+Ctrl+A (hf-ai summon) → la conversación va sobre esa ventana.
-// Dictado: no tiene micrófono propio; el dictado global (Super + Alt + D o el botón de la barra) escribe en la entrada.
+// Dictado: no tiene micrófono propio; el dictado global (Super + Alt + D o el botón «Dictar») escribe en la entrada.
 // Imágenes (si aiContextCapture): arrastrar archivos / imágenes de la web, Ctrl+V con una imagen en el portapapeles o el
 // clip (selector de archivos). Salen en miniatura sobre la entrada (× para quitarlas) y en la burbuja del mensaje;
 // van en messages[i].images y hf-ai las manda al modelo (o su OCR si no ve imágenes). `hf-ai attach` consigue las que
@@ -1512,6 +1512,25 @@ print(json.dumps(out[:300]))
             }
         }
 
+        // ---------------------------------------------------- voz: la barra tiene un solo botón (>_) y las órdenes están aquí
+        RowLayout {
+            visible: !onboard.visible && !root.showHistory && !root.showLog
+            Layout.fillWidth: true
+            Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.topMargin: 4
+            spacing: 8
+            Btn {
+                Layout.fillWidth: true; h: 28; padX: 8; icon: "mic"; text: "Dictar  ·  Super + Alt + D"
+                active: Shell.dictPhase === "rec" && Shell.dictKind === "dictado"
+                // dictar escribe donde esté el cursor: en la entrada de este panel
+                onClicked: { input.forceActiveFocus(); Shell.voiceDo("dictado"); }
+            }
+            Btn {
+                Layout.fillWidth: true; h: 28; padX: 8; icon: "mic_orden"; text: "Orden de voz  ·  Super + Alt + V"
+                active: Shell.dictPhase === "rec" && Shell.dictKind === "comando"
+                onClicked: Shell.voiceDo("comando")
+            }
+        }
+
         // ---------------------------------------------------- sugerencias
         // Una sola fila que se desliza (rueda o arrastre): antes, en dos o tres filas, se comían la conversación
         Flickable {
@@ -1782,7 +1801,7 @@ print(json.dumps(out[:300]))
             // Varias líneas: Intro envía, Mayús + Intro salta de línea; crece hasta ~6 líneas y luego se desliza
             Flickable {
                 id: inFlick
-                anchors { left: clipBtn.visible ? clipBtn.right : parent.left; right: micBtn.left; top: parent.top; bottom: parent.bottom
+                anchors { left: clipBtn.visible ? clipBtn.right : parent.left; right: sendBtn.left; top: parent.top; bottom: parent.bottom
                           leftMargin: clipBtn.visible ? 4 : 14; rightMargin: 8; topMargin: 12; bottomMargin: 12 }
                 contentWidth: width
                 contentHeight: input.contentHeight
@@ -1818,16 +1837,6 @@ print(json.dumps(out[:300]))
                         muted: true
                     }
                 }
-            }
-            // Dictar: el dictado global escribe en la entrada (siempre dictado, sea cual sea el modo del micrófono de la barra)
-            Rectangle {
-                id: micBtn
-                anchors { right: sendBtn.left; rightMargin: 2; bottom: parent.bottom; bottomMargin: 8 }
-                width: 30; height: 30; radius: Theme.r(9)
-                readonly property bool rec: Shell.dictPhase === "rec"
-                color: rec ? Theme.ter : micMa.containsMouse ? Qt.alpha(Theme.t, 0.08) : "transparent"
-                Icon { anchors.centerIn: parent; name: "mic"; size: 15; color: micBtn.rec ? Theme.bg : Theme.tv }
-                MouseArea { id: micMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { input.forceActiveFocus(); Quickshell.execDetached(["qs", "-p", Paths.root + "/config/quickshell", "ipc", "call", "dictado", "toggle"]); } }
             }
             Rectangle {
                 id: sendBtn

@@ -4,7 +4,8 @@
 //     volumen · mosaicos · modo de energía · teléfono (Valent, scripts/hf-phone · scrcpy)
 //   · notificaciones (recientes por app e historial: ../notifications/NotifCenter.qml; ocupan el sitio que sobre)
 //   · agenda (calendario, eventos del día, relojes del mundo: ../agenda/AgendaCard.qml)
-// Estilo y color viven en Ajustes › Apariencia; el pomodoro, en el último mosaico (2.ª página) y su desplegable. El grupo de estado de la barra
+// Las mini apps (pomodoro, notas, tareas, captura, portapapeles…) están en la 2.ª página, «Herramientas».
+// Estilo y color viven en Ajustes › Apariencia. El grupo de estado de la barra
 // (iconos, campana y hora) lo abre; Shell.section dice a qué parte se desplaza. Si no cabe, la columna se desplaza
 // (barra de desplazamiento fina con los colores del tema). Con la barra a la izquierda se abre a la izquierda.
 // Todo con datos reales; lo que no existe se oculta.
@@ -19,6 +20,7 @@ import "../../components"
 import "../../services"
 import "../notifications"
 import "../agenda"
+import "../widgets"
 
 Overlay {
     id: win
@@ -29,7 +31,7 @@ Overlay {
     panelWidth: 404
 
     // ── Estado local ───────────────────────────────────────────────
-    property string expanded: ""              // "" | "wifi" | "bt" | "audio" | "dnd" | "ventanas" | "cafe" | "phone" | "pomodoro"
+    property string expanded: ""              // "" | "wifi" | "bt" | "audio" | "dnd" | "ventanas" | "cafe" | "phone" | "pomodoro" | "notas"
     property string pwFor: ""                 // red Wi-Fi que pide contraseña
     property string userName: ""
     property bool hasFace: false
@@ -305,12 +307,20 @@ Overlay {
                         source: "AudioPanel.qml"
                     }
 
-                    // Mosaicos en páginas que se deslizan en horizontal (arrastrar, rueda o los puntos de abajo);
+                    Segmented {
+                        Layout.fillWidth: true
+                        h: 28
+                        model: [{ key: "0", label: "Ajustes" }, { key: "1", label: "Herramientas" }]
+                        current: String(pager.page)
+                        onPicked: k => pager.go(Number(k))
+                    }
+
+                    // Mosaicos en páginas que se deslizan en horizontal (arrastrar, rueda o las pestañas de arriba);
                     // los desplegables (Wi‑Fi, Bluetooth, ventanas, no molestar, cafeína, teléfono) se abren debajo
                     Item {
                         id: pager
                         Layout.fillWidth: true
-                        // cada página con su alto (la 2.ª tiene una fila más: el pomodoro)
+                        // cada página con su alto
                         implicitHeight: page === 0 ? pg1.implicitHeight : pg2.implicitHeight
                         Behavior on implicitHeight { NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
                         property int page: 0
@@ -428,6 +438,43 @@ Overlay {
                                     width: pflick.width
                                     columns: 2
                                     rowSpacing: 4; columnSpacing: 4
+                                    // Pomodoro (services/Pomodoro.qml): clic empieza o pausa; el desplegable reinicia, salta o abre su ventana
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.columnSpan: 2
+                                        icon: "clock"; label: "Pomodoro"
+                                        active: Pomodoro.running
+                                        sub: Pomodoro.active ? Pomodoro.label + " · " + Pomodoro.time + (Pomodoro.running ? "" : " · en pausa")
+                                             : "Foco de " + Pomodoro.focusMin + " min · clic para empezar"
+                                        expandable: true
+                                        expanded: win.expanded === "pomodoro"
+                                        onClicked: Pomodoro.toggle()
+                                        onExpand: win.expanded = win.expanded === "pomodoro" ? "" : "pomodoro"
+                                    }
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "file"; label: "Notas"
+                                        sub: "Apuntes rápidos"
+                                        active: win.expanded === "notas"
+                                        onClicked: win.expanded = win.expanded === "notas" ? "" : "notas"
+                                    }
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "check"; label: "Tareas"
+                                        sub: "Tu lista de pendientes"
+                                        onClicked: Shell.open("tareas")
+                                    }
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "camera"; label: "Captura"
+                                        sub: "Imagen, vídeo o texto"
+                                        onClicked: Shell.open("captura")
+                                    }
+                                    AjusteTile {
+                                        Layout.fillWidth: true; Layout.preferredWidth: 10
+                                        icon: "clipboard"; label: "Portapapeles"
+                                        sub: "Super + V"
+                                        onClicked: Shell.open("spotlight", "mode:clip")
+                                    }
                                     AjusteTile {
                                         Layout.fillWidth: true; Layout.preferredWidth: 10
                                         icon: "palette"; label: "Paleta"
@@ -490,34 +537,7 @@ Overlay {
                                             else adbCheck.running = true;
                                         }
                                     }
-                                    // Pomodoro (services/Pomodoro.qml): clic empieza o pausa; el desplegable reinicia, salta o abre su ventana
-                                    AjusteTile {
-                                        Layout.fillWidth: true; Layout.columnSpan: 2
-                                        icon: "clock"; label: "Pomodoro"
-                                        active: Pomodoro.running
-                                        sub: Pomodoro.active ? Pomodoro.label + " · " + Pomodoro.time + (Pomodoro.running ? "" : " · en pausa")
-                                             : "Foco de " + Pomodoro.focusMin + " min · clic para empezar"
-                                        expandable: true
-                                        expanded: win.expanded === "pomodoro"
-                                        onClicked: Pomodoro.toggle()
-                                        onExpand: win.expanded = win.expanded === "pomodoro" ? "" : "pomodoro"
-                                    }
                                 }
-                        }
-                    }
-                    // puntos de página
-                    Row {
-                        Layout.alignment: Qt.AlignHCenter
-                        spacing: 8
-                        Repeater {
-                            model: pager.pages
-                            Rectangle {
-                                required property int index
-                                width: pager.page === index ? 16 : 6; height: 6; radius: 3
-                                color: pager.page === index ? Theme.t : Qt.alpha(Theme.t, 0.3)
-                                Behavior on width { NumberAnimation { duration: Theme.dur; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
-                                MouseArea { anchors.fill: parent; anchors.margins: -5; cursorShape: Qt.PointingHandCursor; onClicked: pager.go(parent.index) }
-                            }
                         }
                     }
                     // Lista desplegable (ocupa las dos columnas, justo debajo de Wi-Fi/Bluetooth)
@@ -584,6 +604,12 @@ Overlay {
                                 }
                             }
                         }
+                    }
+                    Loader {
+                        Layout.fillWidth: true
+                        active: win.expanded === "notas"
+                        visible: active
+                        sourceComponent: NotesBox {}
                     }
                     Loader {
                         Layout.fillWidth: true

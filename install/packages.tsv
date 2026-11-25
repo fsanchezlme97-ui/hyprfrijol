@@ -205,7 +205,7 @@ bat	recommended	bat	bat	bat	bat	bat	lector de archivos de las órdenes de voz (�
 calculator	optional	libqalculate	qalculate	qalculate	qalc	libqalculate	calculadora avanzada de Spotlight (qalc)	spotlight	qalc
 # — Archivos y PDF (Nautilus, Firmar)
 pymupdf	recommended	python-pymupdf	python3-PyMuPDF	python313-PyMuPDF	python3-pymupdf	python3-PyMuPDF	Firmar documentos PDF (hf-sign); sin él usa Poppler y se pierden enlaces y formularios	archivos	
-pygobject	recommended	python-gobject	python3-gobject	python313-gobject	python3-gi	python3-gobject	selector de archivos, enviar al móvil y avisos del asistente (hf-pickfile, hf-phone, hf-ai)	archivos	
+pygobject	recommended	python-gobject	python3-gobject	python313-gobject	python3-gi	python3-gobject	selector de archivos, enviar al móvil y avisos del asistente y procesos en curso (hf-pickfile, hf-phone, hf-ai, hf-jobs)	archivos	
 pdftools	recommended	poppler	poppler-utils	poppler-tools	poppler-utils	poppler-utils	OCR y conversión de PDF desde Nautilus (pdftoppm, hf-fileact)	archivos	pdftoppm,pdfinfo,pdftotext
 rembg	optional	aur:python-rembg	-	-	-	-	quitar el fondo de firmas e imágenes (en otras distros: pipx install rembg)	archivos	rembg
 # — Descargas

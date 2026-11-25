@@ -36,13 +36,13 @@ Singleton {
     property bool settingsSeen: false
     // Sesión bloqueada (modules/lock): los lectores que solo sirven para la barra se paran (components/UseCounter.qml)
     property bool locked: false
-    // Dictado (modules/dictado): fase que pinta el botón de la barra (idle | rec | trans…) y la orden de empezar/terminar
+    // Dictado (modules/dictado): fase que pintan el >_ de la barra y el panel de Harper (idle | rec | trans…) y la orden de empezar/terminar
     property string dictPhase: "idle"
     property bool aiSpeaking: false        // hf-ai speak mientras suena la voz del asistente (onda en terciario en la barra)
     property bool aiBusy: false            // el asistente está pensando una respuesta (AiChat.qml: ola que va y viene en la barra)
-    property string dictKind: "dictado"    // lo que escucha: dictado | comando (Dictado.qml; botones de bar/VoiceBtns.qml)
+    property string dictKind: "dictado"    // lo que escucha: dictado | comando (Dictado.qml; botones del panel de Harper)
     property var micLevels: []             // niveles recientes del micrófono al dictar o escuchar (0..1, el último el más nuevo)
-    signal voiceDo(string what)            // botones de voz de la barra (bar/VoiceBtns.qml, bar/MicBtn.qml): dictado | comando
+    signal voiceDo(string what)            // botones de voz (panel de Harper y >_ de la barra): dictado | comando
     signal dictToggle()                    // botón del micrófono: dictar (modules/dictado)
     // Pantalla donde se abren los paneles: la del monitor con foco
     readonly property var screen: {

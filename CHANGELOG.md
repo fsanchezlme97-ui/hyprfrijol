@@ -3,6 +3,24 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.12.0] — 2026-11-25
+
+### Novedades
+- **«En curso» en el centro de notificaciones**: las descargas (las de HyprFrijol y las del navegador), las copias y
+  extracciones de las apps de KDE (Dolphin, Ark), las actualizaciones y las instalaciones se ven con su progreso, y
+  llega un aviso al terminar (script nuevo `hf-jobs`). Las apps de KDE ya no abren su propia ventana de progreso.
+- **Herramientas** en el centro de control (pestaña junto a «Ajustes»): pomodoro, notas, tareas, captura,
+  portapapeles, cafeína, selector de color, teléfono y duplicar móvil.
+
+### Cambios
+- **Un solo botón `>_` en la barra** para Harper: el dictado y las órdenes de voz están en su panel (y en sus
+  atajos). Mientras escucha, el botón enseña el micrófono y el clic termina.
+- **Avisos recientes en forma de lista**, como el historial, con las acciones al final de cada uno.
+- **Iconos del clima fijos**, uno distinto por cada estado del cielo. Se quita «Barra viva».
+- **Se quita el resumen automático de avisos**: pídeselo a Harper cuando lo quieras.
+- Desde la 0.11.28: las apps predeterminadas pasan a KDE / Qt y se retiran los modos «Ocultas» y «Minimizar» de las
+  ventanas flotantes.
+
 ## [0.11.28] — 2026-11-22
 
 ### Cambios

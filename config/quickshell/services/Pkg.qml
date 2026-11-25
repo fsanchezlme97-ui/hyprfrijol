@@ -213,7 +213,8 @@ Singleton {
     function runInTerminal(cmd: string, title: string): void {
         // El título va como argumento ($1), no dentro del texto de bash: un nombre de app con $(…) no se ejecuta
         const script = "printf '\\033[1m%s\\033[0m\\n\\n' \"$1\""
-            + "; set -x; " + cmd + "; set +x; echo; read -n1 -rsp 'Listo. Pulsa una tecla para cerrar…'";
+            // «En curso» del centro de notificaciones, con aviso al terminar (hf-jobs: $2; $3 = el título)
+            + "; J=$(\"$2\" start \"$3\" $$); set -x; " + cmd + "; c=$?; set +x; \"$2\" done \"$J\" $c; echo; read -n1 -rsp 'Listo. Pulsa una tecla para cerrar…'";
         const t = Settings.get("terminal", "") || root.terminal;   // la de Ajustes › Predeterminadas; si no, la que haya
         const args = t === "foot" ? ["foot", "-T", title || "HyprFrijol", "bash", "-c", script]
                    : t === "alacritty" ? ["alacritty", "-T", title || "HyprFrijol", "-e", "bash", "-c", script]
@@ -223,7 +224,7 @@ Singleton {
                    : t === "kgx" || t === "gnome-console" ? ["kgx", "-e", "bash", "-c", script]
                    : t === "ptyxis" ? ["ptyxis", "--", "bash", "-c", script]
                    : [t, "-T", title || "HyprFrijol", "bash", "-c", script];   // kitty
-        Quickshell.execDetached(args.concat(["hf", "HyprFrijol · " + (title || "Terminal")]));
+        Quickshell.execDetached(args.concat(["hf", "HyprFrijol · " + (title || "Terminal"), Paths.script("hf-jobs"), title || "Terminal"]));
     }
 
     function refresh(): void { probe.running = true; cachedUpd.running = true; }

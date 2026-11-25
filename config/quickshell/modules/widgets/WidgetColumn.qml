@@ -354,32 +354,7 @@ ColumnLayout {
         WCard {
             editing: col.editing
             Txt { text: "Notas"; weight: Font.DemiBold }
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Math.max(70, Math.min(180, notes.contentHeight + 16))
-                radius: Theme.r(6)
-                color: Theme.fill2
-                TextEdit {
-                    id: notes
-                    anchors.fill: parent
-                    anchors.margins: 8
-                    wrapMode: TextEdit.Wrap
-                    color: Theme.t
-                    selectionColor: Theme.pc
-                    selectedTextColor: Theme.pcText
-                    font.family: Theme.font
-                    font.pixelSize: Theme.px(12.5)
-                    onTextChanged: if (activeFocus) saveTimer.restart()
-                    Txt { visible: notes.text === ""; text: "Escribe algo…"; muted: true }
-                }
-                FileView {
-                    id: notesFile
-                    path: Paths.state + "/notas.txt"
-                    printErrors: false
-                    onLoaded: if (!notes.activeFocus) notes.text = text()
-                }
-                Timer { id: saveTimer; interval: 600; onTriggered: notesFile.setText(notes.text) }
-            }
+            NotesBox { Layout.fillWidth: true; Layout.preferredHeight: implicitHeight }
         }
     }
 

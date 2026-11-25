@@ -1,0 +1,305 @@
+#!/usr/bin/env python3
+"""hf-jobs — procesos en curso, para el centro de notificaciones (services/Jobs.qml).
+
+  hf-jobs daemon                lo arranca el shell: escribe una línea JSON {"jobs": […]} cada vez que algo cambia y
+                                lee «cancel <id>» por la entrada estándar. Sigue:
+                                  · copias, movimientos, extracciones… de las apps de KDE (Dolphin, Ark): es el servidor
+                                    org.kde.JobViewServer, el mismo que pone Plasma (si ya hay uno, no lo toca)
+                                  · descargas del navegador: archivos .crdownload / .part de tu carpeta de descargas
+                                  · lo apuntado con «hf-jobs start» (actualizaciones, instalar y desinstalar)
+  hf-jobs start "título" <pid>  apunta un proceso en curso (el de la terminal que lo hace) e imprime su id
+  hf-jobs done <id> [código]    lo da por terminado y avisa (código distinto de 0: falló)
+  hf-jobs --help
+
+Al terminar cada uno llega un aviso (las copias de menos de 5 s, no).
+"""
+import json
+import os
+import re
+import sys
+import time
+from pathlib import Path
+
+DIR = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/tmp/hf-{os.getuid()}") / "hf-jobs"
+STATE = Path.home() / ".local/state/hyprfrijol"
+PARTIAL = (".crdownload", ".part")
+
+
+def notify(title, body="", failed=False):
+    from gi.repository import Gio, GLib
+    try:
+        Gio.bus_get_sync(Gio.BusType.SESSION).call_sync(
+            "org.freedesktop.Notifications", "/org/freedesktop/Notifications", "org.freedesktop.Notifications", "Notify",
+            GLib.Variant("(susssasa{sv}i)", ("Procesos", 0, "dialog-error" if failed else "emblem-default", title, body,
+                                            [], {}, -1)), None, Gio.DBusCallFlags.NONE, 3000, None)
+    except GLib.Error as e:
+        print(f"hf-jobs: no se pudo avisar: {e.message}", file=sys.stderr)
+
+
+def start(title, pid):
+    DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
+    jid = f"{int(pid)}-{time.time_ns()}"
+    (DIR / f"{jid}.json").write_text(json.dumps({"title": title, "pid": int(pid)}))
+    return jid
+
+
+def done(jid, code=0):
+    if not re.fullmatch(r"\d+-\d+", jid):
+        return
+    f = DIR / f"{jid}.json"
+    try:
+        title = json.loads(f.read_text())["title"]
+        f.unlink()
+    except (OSError, ValueError, KeyError):
+        return
+    if int(code):
+        notify(title, f"Falló (código {int(code)})", True)
+    else:
+        notify(title, "Terminado")
+
+
+def wrapped():
+    """Los apuntados con «start» cuyo proceso sigue vivo (los de una terminal cerrada a medias se borran)."""
+    out = []
+    for f in sorted(DIR.glob("*.json")):
+        try:
+            j = json.loads(f.read_text())
+            os.kill(j["pid"], 0)
+        except ProcessLookupError:
+            f.unlink(missing_ok=True)
+            continue
+        except (OSError, ValueError, KeyError):
+            continue
+        out.append({"id": f.stem, "title": j["title"], "detail": "En la terminal", "icon": "refresh", "progress": -1})
+    return out
+
+
+def download_dir():
+    try:
+        m = re.search(r'^XDG_DOWNLOAD_DIR="(.*)"', (Path.home() / ".config/user-dirs.dirs").read_text(), re.M)
+        if m:
+            return Path(m.group(1).replace("$HOME", str(Path.home())))
+    except OSError:
+        pass
+    return Path.home() / "Downloads"
+
+
+class Partials:
+    """Descargas del navegador. Solo las que se están escribiendo (un .part abandonado no cuenta)."""
+
+    def __init__(self, folder):
+        self.folder, self.seen = folder, {}      # ruta parcial → {size, since, final_names_antes}
+
+    def busy_elsewhere(self):                    # las de hf-download ya salen por su cola
+        try:
+            q = json.loads((STATE / "downloads/queue.json").read_text())
+            return any(i.get("status") == "running" for i in q.get("items", []))
+        except (OSError, ValueError):
+            return False
+
+    def poll(self, say=notify):
+        now, found, names = time.time(), {}, {}
+        try:
+            for e in os.scandir(self.folder):
+                if e.is_file(follow_symlinks=False):
+                    st = e.stat()
+                    names[e.name] = st.st_size
+                    if e.name.endswith(PARTIAL) and (e.path in self.seen or now - st.st_mtime < 10):
+                        found[e.path] = (e.name, st.st_size, st.st_mtime)
+        except OSError:
+            pass
+        if self.busy_elsewhere():
+            self.seen = {}
+            return []
+        for path, old in list(self.seen.items()):
+            if path in found:
+                continue
+            del self.seen[path]
+            # terminada si apareció el archivo final (el del mismo nombre o uno nuevo al menos igual de grande);
+            # cancelada si el parcial se fue sin dejar nada
+            final = old["name"].rsplit(".", 1)[0]
+            if not names.get(final):
+                new = [n for n, s in names.items()
+                       if n not in old["before"] and not n.endswith(PARTIAL) and s >= old["size"]]
+                final = new[0] if new else ""
+            if final:
+                say("Descarga terminada", final)
+        out = []
+        for path, (name, size, mtime) in found.items():
+            prev = self.seen.get(path)
+            self.seen[path] = {"name": name, "size": size,
+                               "before": prev["before"] if prev else set(names)}
+            if now - mtime < 60:
+                shown = "Descarga del navegador" if name.startswith("Unconfirmed ") else name.rsplit(".", 1)[0]
+                out.append({"id": "dl:" + name, "title": shown, "detail": f"Descargando · {human(size)}",
+                            "icon": "download", "progress": -1})
+        return out
+
+
+def human(n):
+    n = float(n)
+    for u in ("B", "KB", "MB", "GB"):
+        if n < 1024:
+            return (f"{n:.0f} {u}" if u in ("B", "KB") else f"{n:.1f} {u}").replace(".", ",")
+        n /= 1024
+    return f"{n:.1f} TB".replace(".", ",")
+
+
+XML = """<node>
+ <interface name="org.kde.kuiserver">
+  <method name="requiresJobTracker"><arg type="b" direction="out"/></method>
+  <signal name="requiresJobTrackerChanged"><arg type="b"/></signal>
+ </interface>
+ <interface name="org.kde.JobViewServerV2">
+  <method name="requestView"><arg type="s" direction="in"/><arg type="i" direction="in"/><arg type="a{sv}" direction="in"/>
+   <arg type="o" direction="out"/></method>
+ </interface>
+ <interface name="org.kde.JobViewV3">
+  <method name="update"><arg type="a{sv}" direction="in"/></method>
+  <method name="terminate"><arg type="u" direction="in"/><arg type="s" direction="in"/><arg type="a{sv}" direction="in"/></method>
+  <signal name="suspendRequested"/><signal name="resumeRequested"/><signal name="cancelRequested"/>
+ </interface>
+</node>"""
+
+
+class Daemon:
+    def __init__(self):
+        from gi.repository import Gio, GLib
+        self.Gio, self.GLib = Gio, GLib
+        self.kde, self.n, self.last = {}, 0, None
+        self.partials = Partials(download_dir())
+        self.dl = []
+        self.node = Gio.DBusNodeInfo.new_for_xml(XML)
+        self.bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+        server = {i.name: i for i in self.node.interfaces}
+        self.view_iface = server["org.kde.JobViewV3"]
+        for name in ("org.kde.kuiserver", "org.kde.JobViewServerV2"):
+            self.bus.register_object("/JobViewServer", server[name], self.call, None, None)
+        # sin reemplazar a nadie: con Plasma (u otra sesión) llevando ya los trabajos, aquí no llegan
+        # «org.kde.kuiserver» es por donde las apps preguntan si hace falta su propia ventana de progreso: no
+        for name in ("org.kde.JobViewServer", "org.kde.kuiserver"):
+            Gio.bus_own_name_on_connection(self.bus, name, Gio.BusNameOwnerFlags.DO_NOT_QUEUE, None, None)
+
+    def call(self, _bus, sender, path, _iface, method, params, inv):
+        if method == "requiresJobTracker":
+            inv.return_value(self.GLib.Variant("(b)", (False,)))
+        elif method == "requestView":
+            app = params[0]
+            self.n += 1
+            view = f"/org/kde/jobview/{self.n}"
+            reg = self.bus.register_object(view, self.view_iface, self.call, None, None)
+            watch = self.Gio.bus_watch_name_on_connection(self.bus, sender, self.Gio.BusNameWatcherFlags.NONE, None,
+                                                          lambda *_: self.drop(view))   # la app se cerró sin avisar
+            self.kde[view] = {"app": app.rsplit(".", 1)[-1].capitalize(), "owner": sender, "reg": reg, "watch": watch,
+                              "t": time.time(), "v": {}}
+            inv.return_value(self.GLib.Variant("(o)", (view,)))
+        elif path in self.kde and method == "update":
+            self.kde[path]["v"].update(params[0])
+            inv.return_value(None)
+        elif path in self.kde and method == "terminate":
+            code, msg = params[0], params[1]
+            j = self.kde[path]
+            title = self.title(j)
+            if code and code != 1:                          # 1 = cancelado por ti
+                notify(title, msg or "No se pudo terminar", True)
+            elif not code and time.time() - j["t"] >= 5:
+                notify(title, "Terminado")
+            inv.return_value(None)
+            self.drop(path)
+        else:
+            inv.return_value(None)
+        self.emit()
+
+    def drop(self, view):
+        j = self.kde.pop(view, None)
+        if j:
+            self.bus.unregister_object(j["reg"])
+            self.Gio.bus_unwatch_name(j["watch"])
+            self.emit()
+
+    def title(self, j):
+        return str(j["v"].get("title") or j["app"])
+
+    def kde_job(self, view, j):
+        v = j["v"]
+        detail = [str(v.get("descriptionValue2") or v.get("destUrl") or v.get("infoMessage") or "")]
+        detail[0] = detail[0].rstrip("/").rsplit("/", 1)[-1]
+        total, got = v.get("totalBytes", 0), v.get("processedBytes", 0)
+        if total:
+            detail.append(f"{human(got)} de {human(total)}")
+        if v.get("speed"):
+            detail.append(human(v["speed"]) + "/s")
+        if v.get("suspended"):
+            detail.append("en pausa")
+        pct = v.get("percent")
+        return {"id": "kde:" + view, "title": self.title(j), "detail": " · ".join(x for x in detail if x), "icon": "file",
+                "progress": -1 if pct is None else min(100, pct) / 100, "cancel": True}
+
+    def emit(self):
+        jobs = [self.kde_job(v, j) for v, j in self.kde.items()] + wrapped() + self.dl
+        line = json.dumps({"jobs": jobs}, ensure_ascii=False)
+        if line != self.last:
+            self.last = line
+            print(line, flush=True)
+
+    def tick(self):
+        self.dl = self.partials.poll()
+        self.emit()
+        return True
+
+    def stdin(self, src, cond):
+        line = src.readline()
+        if not line:                                        # el shell se fue
+            self.loop.quit()
+            return False
+        cmd, _, jid = line.strip().partition(" ")
+        if cmd == "cancel" and jid.startswith("kde:") and jid[4:] in self.kde:
+            view = jid[4:]
+            self.bus.emit_signal(self.kde[view]["owner"], view, "org.kde.JobViewV3", "cancelRequested", None)
+        return True
+
+    def run(self):
+        self.loop = self.GLib.MainLoop()
+        self.GLib.io_add_watch(sys.stdin, self.GLib.IO_IN | self.GLib.IO_HUP, self.stdin)
+        self.GLib.timeout_add_seconds(2, self.tick)
+        self.tick()
+        self.loop.run()
+
+
+def main(argv):
+    if argv[:1] == ["daemon"]:
+        Daemon().run()
+    elif argv[:1] == ["start"] and len(argv) == 3:
+        print(start(argv[1], argv[2]))
+    elif argv[:1] == ["done"] and len(argv) >= 2:
+        done(argv[1], argv[2] if len(argv) > 2 else 0)
+    elif argv[:1] in (["-h"], ["--help"]):
+        print(__doc__.strip())
+    elif argv[:1] == ["selftest"]:
+        selftest()
+    else:
+        sys.exit("uso: hf-jobs daemon | start <título> <pid> | done <id> [código] | --help")
+
+
+def selftest():
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        d, said = Path(d), []
+        p = Partials(d)
+        p.busy_elsewhere = lambda: False
+        say = lambda *a: said.append(a)
+        (d / "a.iso.crdownload").write_bytes(b"1234")
+        assert [j["title"] for j in p.poll(say)] == ["a.iso"]
+        (d / "a.iso.crdownload").rename(d / "a.iso")
+        assert p.poll(say) == [] and said == [("Descarga terminada", "a.iso")]
+        (d / "b.part").write_bytes(b"1234")
+        p.poll(say)
+        (d / "b.part").unlink()                              # cancelada: sin aviso
+        p.poll(say)
+        assert len(said) == 1
+    assert human(1536) == "2 KB" and human(5 * 1024 ** 2) == "5,0 MB"
+    print("ok")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

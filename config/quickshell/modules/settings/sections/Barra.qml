@@ -203,7 +203,6 @@ ColumnLayout {
         }
         SwRow { visible: Quickshell.screens.length > 1; label: "Reloj en la barra sencilla"; sub: "la hora también en las otras pantallas"; key: "barSecondaryClock"; def: true }
         SwRow { label: "Barra en las pantallas nuevas"; sub: "sencilla al conectar otra pantalla; si no, sin barra hasta que la elijas"; key: "barAllScreens"; def: true }
-        SwRow { label: "Barra viva"; sub: "el icono del clima se mueve con el tiempo que hace y el anillo del pomodoro late al final; quietos en pantalla completa y en modo juego"; key: "barLive"; def: true }
     }
     // Bandeja del sistema (bar/Tray.qml): barTray · barTrayMax · barTrayHidden (ids que van al «›»)
     Section {

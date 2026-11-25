@@ -16,7 +16,7 @@ Loader {
     readonly property var custom: wid.startsWith("propio:") ? (Settings.barCustomList.find(c => "propio:" + c.id === wid) ?? null) : null
     Layout.alignment: vertical ? Qt.AlignHCenter : Qt.AlignVCenter
     sourceComponent: wid.startsWith("sep:") ? cSep : custom ? cPropio : ({ clima: cClima, recursos: cRecursos, impresora: cImpresora, bongo: cBongo, pomodoro: cPomo,
-                       cafeina: cCafe, portapapeles: cClip, dictado: cDict, voz: cVoz, ia: cIa, ajustes: cGear })[wid] ?? null
+                       cafeina: cCafe, portapapeles: cClip, ia: cIa, ajustes: cGear })[wid] ?? null
 
     Component { id: cClima; WeatherChip { vertical: root.vertical } }
     Component { id: cRecursos; StatsChip { vertical: root.vertical } }
@@ -25,8 +25,6 @@ Loader {
     Component { id: cPomo; PomodoroChip { vertical: root.vertical } }
     Component { id: cCafe; CaffeineChip { vertical: root.vertical } }
     Component { id: cClip; IconBtn { implicitHeight: root.vertical ? 26 : 22; icon: "clipboard"; tooltip: root.vertical ? "" : "Portapapeles"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") } }
-    Component { id: cDict; MicBtn { implicitHeight: root.vertical ? 26 : 22 } }
-    Component { id: cVoz; VoiceBtns { vertical: root.vertical } }
     Component {
         id: cIa
         Rectangle {
@@ -34,16 +32,24 @@ Loader {
             implicitWidth: 26
             implicitHeight: root.vertical ? 26 : 22
             radius: Theme.pill ? Math.min(width, height) / 2 + 2 : Theme.r(7)
-            color: active ? Theme.p : "transparent"
+            // Botón único de Harper: abre su panel (ahí están el dictado y las órdenes de voz). Mientras escucha enseña
+            // el micrófono, y el clic termina de escuchar.
+            readonly property bool rec: Shell.dictPhase === "rec"
+            color: rec ? Theme.ter : active ? Theme.p : "transparent"
             border.width: 0
             property bool active: Shell.view === "ia" || Shell.sideShown
+            function act(): void { if (rec) Shell.voiceDo(Shell.dictKind === "comando" ? "comando" : "dictado"); else Shell.toggle("ia"); }
             opacity: enabled ? 1 : Theme.stDisabled
             activeFocusOnTab: true
-            Keys.onPressed: e => { if (enabled && (e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space)) { Shell.toggle("ia"); e.accepted = true; } }
+            Keys.onPressed: e => { if (enabled && (e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space)) { iaBtn.act(); e.accepted = true; } }
             Behavior on scale { NumberAnimation { duration: Theme.durShort; easing.type: Easing.OutBack; easing.overshoot: 2.2 } }
             StateLayer { radius: iaBtn.radius; hovered: ma.containsMouse; pressed: ma.pressed; focused: iaBtn.activeFocus }
             Ripple { id: rip; anchors.fill: parent; radius: iaBtn.radius; color: active ? Theme.pcText : Theme.t }
-            HarperIcon { anchors.centerIn: parent; size: 16; baseColor: active ? Theme.pcText : Theme.t }
+            Icon {
+                anchors.centerIn: parent; size: 15; stroke: 2
+                name: iaBtn.rec ? "mic" : "terminal"
+                color: iaBtn.rec ? Theme.bg : iaBtn.active ? Theme.pText : Theme.t
+            }
             MouseArea {
                 id: ma
                 anchors.fill: parent
@@ -51,7 +57,7 @@ Loader {
                 cursorShape: Qt.PointingHandCursor
                 onEntered: Shell.preload("ia")
                 onPressed: rip.burst(iaBtn.width / 2, iaBtn.height / 2)
-                onClicked: Shell.toggle("ia")
+                onClicked: iaBtn.act()
             }
         }
     }
