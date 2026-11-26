@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.18.0] — 2026-11-26
+
+### Novedades
+- **Botón de atajos en la barra:** un icono de teclado que abre la chuleta de atajos (la misma de `Super + /`). Viene
+  apagado de fábrica: se enciende en Ajustes › Widgets de la barra › «Atajos de teclado», y se puede mover de isla
+  y de orden como los demás.
+
 ## [0.17.0] — 2026-11-26
 
 ### Cambios

@@ -24,6 +24,7 @@ ColumnLayout {
         pomodoro: ["Pomodoro", "clock", "tiempo de foco y descansos · también en el centro de control"],
         cafeina: ["Cafeína", "coffee", "no apagar la pantalla · clic derecho: 1 hora"],
         portapapeles: ["Portapapeles", "clipboard", "abre el historial en Spotlight"],
+        atajos: ["Atajos de teclado", "keyboard", "abre la chuleta de atajos · también con Super + /"],
         ia: ["Asistente de IA", "ai", "abre el panel del asistente"],
         ajustes: ["Ajustes", "gear", "la tuerca: abre esta ventana"]
     })

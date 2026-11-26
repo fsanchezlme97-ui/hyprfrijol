@@ -16,7 +16,7 @@ Loader {
     readonly property var custom: wid.startsWith("propio:") ? (Settings.barCustomList.find(c => "propio:" + c.id === wid) ?? null) : null
     Layout.alignment: vertical ? Qt.AlignHCenter : Qt.AlignVCenter
     sourceComponent: wid.startsWith("sep:") ? cSep : custom ? cPropio : ({ clima: cClima, recursos: cRecursos, impresora: cImpresora, bongo: cBongo, pomodoro: cPomo,
-                       cafeina: cCafe, portapapeles: cClip, ia: cIa, ajustes: cGear })[wid] ?? null
+                       cafeina: cCafe, portapapeles: cClip, atajos: cAtajos, ia: cIa, ajustes: cGear })[wid] ?? null
 
     Component { id: cClima; WeatherChip { vertical: root.vertical } }
     Component { id: cRecursos; StatsChip { vertical: root.vertical } }
@@ -25,6 +25,7 @@ Loader {
     Component { id: cPomo; PomodoroChip { vertical: root.vertical } }
     Component { id: cCafe; CaffeineChip { vertical: root.vertical } }
     Component { id: cClip; IconBtn { implicitHeight: root.vertical ? 26 : 22; icon: "clipboard"; tooltip: root.vertical ? "" : "Portapapeles"; preload: "spotlight"; onClicked: Shell.toggle("spotlight", "mode:clip") } }
+    Component { id: cAtajos; IconBtn { implicitHeight: root.vertical ? 26 : 22; icon: "keyboard"; tooltip: root.vertical ? "" : "Atajos de teclado"; preload: "atajos"; onClicked: Shell.toggle("atajos") } }
     Component {
         id: cIa
         Rectangle {
