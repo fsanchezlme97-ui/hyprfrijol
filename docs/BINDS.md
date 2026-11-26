@@ -79,6 +79,10 @@ La tecla `Super` es la clave modificadora principal (normalmente la tecla de Win
 | `Super + Shift + Espacio` | Cambiar modo de ventanas |
 | `Super + Ctrl + Espacio` | Modo de ventanas de este espacio |
 | `Super + P` | Fijar encima |
+| `Super + Alt + G` | Agrupar en pestañas / deshacer |
+| `Super + Alt + Tab` · `Super + Alt + Shift + Tab` | Pestaña de ventana siguiente · anterior |
+| `Super + Ctrl + Alt + flechas` | Meter la ventana en las pestañas de ese lado (las crea si hace falta) |
+| `Super + Alt + Shift + G` | Sacar la ventana de las pestañas |
 | `Super + Alt + J` | Cambiar división / columna propia |
 | `Super + ñ` / `'` | Proporción − / columna más estrecha |
 | `Super + ç` / `¡` | Proporción + / columna más ancha |

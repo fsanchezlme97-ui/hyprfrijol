@@ -1,6 +1,9 @@
 # Apariencia y accesibilidad visual: esquinas, alto contraste, calidad del desenfoque, sombras y filtros de color.
 import os, sys, pathlib, glob
 
+import json
+
+
 def _rgba(h, a=1.0):
     h = h.lstrip("#")[-6:]
     return "rgba(%s%02x)" % (h.lower(), round(a * 255))
@@ -50,8 +53,18 @@ def _shadow(s, c, glass):
     return ('shadow = { enabled = true, range = %d, render_power = %d, offset = "%s", color = "%s", color_inactive = "%s" }'
             % (rng, pw, off, tinted(a), tinted(a * 0.7)))
 
+def _groups(s, c):
+    """Pestañas de ventanas (grupos): barra rellena con el acento en la activa, como el resto del escritorio."""
+    p, on, off, text = (c.get(k, d) for k, d in (("p", "#78A9FF"), ("onP", "#1A2538"), ("s3", "#262626"), ("tv", "#C1C7CD")))
+    font = json.dumps(str(s.get("fontFamily") or "Inter"), ensure_ascii=False)
+    return ("hl.config({ group = { col = { border_active = \"%s\", border_inactive = \"%s\" }, groupbar = { height = 22, "
+            "font_family = %s, font_size = 11, gradients = true, gradient_rounding = 6, indicator_height = 0, gaps_in = 3, gaps_out = 3, "
+            "col = { active = \"%s\", inactive = \"%s\" }, text_color = \"%s\", text_color_inactive = \"%s\" } } })"
+            % (_rgba(p, 0.8), _rgba(off, 0.8), font, _rgba(p, 1.0), _rgba(off, 0.94), _rgba(on, 1.0), _rgba(text, 1.0)))
+
+
 def hypr_lua(s, c):
-    out = []
+    out = [_groups(s, c)]
     deco = []
     if s.get("rounding") is not None and not s.get("_focus"):
         deco.append(f"rounding = {int(s['rounding'])}")

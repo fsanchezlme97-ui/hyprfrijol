@@ -34,6 +34,12 @@ def test_hidden_from_capture():
     assert "hf-private" not in lua("35-windows", {"hiddenFromCapture": []}) + lua("35-windows", {"hiddenFromCapture": "texto"})
 
 
+def test_window_tabs_follow_the_theme():
+    out = "\n".join(load("10-look").hypr_lua({}, {"p": "#FFC799", "onP": "#2E1D10", "s3": "#212124", "tv": "#B3B8BF"}))
+    line = next(l for l in out.splitlines() if "groupbar" in l)
+    assert "ffc799" in line.lower() and line.count("{") == line.count("}"), line
+
+
 if __name__ == "__main__":
     failed = 0
     for name, test in list(globals().items()):
