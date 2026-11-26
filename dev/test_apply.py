@@ -48,6 +48,12 @@ def test_named_scratchpads():
     assert 'workspace = "special:hfpad-1 silent"' in out and "spotify|org" in out and 'mal"' not in out, out
     assert "Espacio oculto: Espacio 2" in out and '\\"x\\"' in out, out
     assert lua("55-scratchpads", {}) == "" == lua("55-scratchpads", {"scratchpads": "x"})
+    # el hueco es fijo: quitar el primero no mueve al segundo
+    slots = load("55-scratchpads").slotted
+    kept = slots([{"slot": 2, "name": "b"}, {"slot": 2, "name": "repetido"}, {"name": "sin"}, {"slot": True, "name": "raro"}])
+    assert [(n, p["name"]) for n, p in kept] == [(1, "repetido"), (2, "b"), (3, "sin"), (4, "raro")], kept
+    only = lua("55-scratchpads", {"scratchpads": [{"slot": 3, "name": "Chat"}]})
+    assert "SUPER + F3" in only and "hfpad-3" in only and "F1" not in only, only
 
 
 if __name__ == "__main__":

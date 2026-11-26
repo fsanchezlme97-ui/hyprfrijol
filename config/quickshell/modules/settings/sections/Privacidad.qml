@@ -151,7 +151,10 @@ RowLayout {
             headerRight: Mono { tech: true; text: "PipeWire · se actualiza solo" }
             UseRow { icon: "mic"; label: "Micrófono"; apps: root.use.mic ?? []; idle: "Ninguna app lo está usando" }
             UseRow { icon: "camera"; label: "Cámara"; apps: root.use.cam ?? []; idle: "Ninguna app la está usando" }
-            UseRow { icon: "monitor"; label: "Compartir pantalla"; apps: root.use.screen ?? []; idle: "No se está compartiendo ni grabando la pantalla" }
+            // una grabadora o un servidor VNC no pasan por PipeWire: lo sabe ScreenShare (el aviso de la barra)
+            UseRow { icon: "monitor"; label: "Compartir pantalla"
+                     apps: (root.use.screen ?? []).length ? root.use.screen : ScreenShare.active ? ["Una grabadora o programa de captura"] : []
+                     idle: "No se está compartiendo ni grabando la pantalla" }
             UseRow { visible: (root.use.sys ?? []).length > 0; icon: "volume"; label: "Sonido del equipo"; apps: root.use.sys ?? []; idle: "" }
             RowLayout {
                 spacing: 8

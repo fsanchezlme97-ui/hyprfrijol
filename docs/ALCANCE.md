@@ -1,5 +1,7 @@
 # Alcance
 
+> Borrador para revisar: resume decisiones ya tomadas y propone el resto. Cámbialo a tu gusto.
+
 Qué acepta HyprFrijol y qué no, para que una idea tenga una respuesta previsible. Complementa a
 [PENDIENTES.md](PENDIENTES.md) (lo que falta) y a `AGENTS.md` (cómo trabajar en el código).
 

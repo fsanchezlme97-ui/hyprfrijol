@@ -23,6 +23,6 @@ Rectangle {
     }
     Accessible.role: Accessible.Button
     Accessible.name: screen ? (mic ? "Se usan el micrófono y la pantalla" : "Se está viendo tu pantalla") : "Una app usa el micrófono"
-    // con la pantalla compartida lleva a Privacidad, donde se ve qué app es
+    // con la pantalla a la vista lleva a Privacidad («Ahora mismo»)
     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onPressed: screen ? Shell.open("ajustesapp", "privacidad") : Shell.toggle("ajustes") }
 }

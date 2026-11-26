@@ -3,13 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
-## [0.13.0] — 2026-11-25
+## [0.13.0] — 2026-11-26
 
 ### Novedades
 - **Tema Neocarbon** (Ajustes › Apariencia), oscuro y claro: el negro y el durazno de Vesper con los acentos fríos de
   Oxocarbon, también en la terminal.
 - **Aviso en la barra cuando se ve tu pantalla**: al grabar, compartir en una videollamada o entrar por escritorio
-  remoto aparece «Pantalla» junto al del micrófono; al pulsarlo se ve qué app es (Ajustes › Privacidad). Una captura
+  remoto aparece «Pantalla» junto al del micrófono; al pulsarlo se abre Ajustes › Privacidad (las videollamadas salen
+  con su nombre). Una captura
   suelta no lo enciende.
 - **Espacios ocultos con nombre** (Ajustes › Escritorio y gestos): hasta cuatro, cada uno con sus apps; Super + F1…F4
   lo muestra o esconde y Super + Mayús + F1…F4 le envía la ventana.
