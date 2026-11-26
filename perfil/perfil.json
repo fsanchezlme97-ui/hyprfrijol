@@ -139,11 +139,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.12.1-1-g6c04ab8",
+ "hyprfrijol": "v0.12.2-8-gca704d0",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-25 19:52",
+ "saved": "2026-11-26 00:07",
  "services": [
   "ufw",
   "cups.socket",
@@ -304,10 +304,10 @@
   "palette": "oxocarbon",
   "pip": true,
   "pipAuto": false,
-  "pipCorner": "sup-der",
+  "pipCorner": "libre",
   "pipFree": [
-   0.8328,
-   0.33
+   0.8375,
+   0.3133
   ],
   "pipHoverControls": true,
   "pipMargin": 4,
