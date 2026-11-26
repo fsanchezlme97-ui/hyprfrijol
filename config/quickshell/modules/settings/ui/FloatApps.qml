@@ -23,7 +23,7 @@ ColumnLayout {
 
     // Mismas clases que los valores por defecto de config/defaults/settings.json (floatApps)
     property var groups: [
-        { key: "archivos", label: "Archivos", sub: "Dolphin, PCManFM-Qt", classes: ["org.kde.dolphin", "pcmanfm-qt"] },
+        { key: "archivos", label: "Archivos", sub: "HyprFFiles, Dolphin, PCManFM-Qt", classes: ["io.github.hyprffiles", "org.kde.dolphin", "pcmanfm-qt"] },
         { key: "imagenes", label: "Imágenes", sub: "Gwenview, imv, swayimg", classes: ["org.kde.gwenview", "imv", "swayimg"] },
         { key: "audio", label: "Audio", sub: "Elisa, VLC", classes: ["org.kde.elisa", "vlc"] },
         { key: "video", label: "Vídeo", sub: "Haruna, mpv, VLC", classes: ["org.kde.haruna", "mpv", "vlc"] },

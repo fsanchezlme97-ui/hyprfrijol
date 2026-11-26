@@ -46,7 +46,7 @@ ROLES = {
     "texto": ("Texto", "text/plain", ["text/plain", "text/markdown", "application/x-shellscript", "text/x-log"],
               ["org.kde.kate.desktop", "mousepad.desktop"]),
     "archivos": ("Archivos", "inode/directory", ["inode/directory"],
-                 ["org.kde.dolphin.desktop", "pcmanfm-qt.desktop"]),
+                 ["io.github.hyprffiles.desktop", "org.kde.dolphin.desktop", "pcmanfm-qt.desktop"]),
     "comprimidos": ("Archivos comprimidos", "application/zip", ["application/zip", "application/x-7z-compressed", "application/x-tar",
                                                                "application/x-compressed-tar", "application/x-xz-compressed-tar", "application/vnd.rar",
                                                                "application/x-zstd-compressed-tar"],

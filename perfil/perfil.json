@@ -139,11 +139,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.12.0",
+ "hyprfrijol": "v0.12.1-1-g6c04ab8",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-25 11:00",
+ "saved": "2026-11-25 19:52",
  "services": [
   "ufw",
   "cups.socket",
@@ -236,7 +236,7 @@
   "dimInactive": true,
   "disableWhileTyping": true,
   "dockApps": [
-   "org.gnome.Nautilus",
+   "io.github.hyprffiles",
    "google-chrome",
    "kitty",
    "org.gnome.TextEditor",
@@ -248,7 +248,7 @@
   "dockOnTop": false,
   "dockPos": "izquierda",
   "estilo": "math",
-  "fileManager": "dolphin",
+  "fileManager": "hyprffiles",
   "floatOrder": "ocultas",
   "floatWorkspace": 6,
   "fontFamily": "Inter",

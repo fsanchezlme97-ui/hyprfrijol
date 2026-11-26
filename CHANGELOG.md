@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.12.2] — 2026-11-25
+
+### Mejoras
+- **HyprFFiles** (gestor de archivos aparte) se puede elegir como gestor por defecto en Ajustes › Apps
+  predeterminadas: lo usan Super + E, el doble clic en carpetas y «Abrir» de las unidades. Es el recomendado si está
+  instalado. Su ventana flota y se encuadra como la de Dolphin.
+
 ## [0.12.1] — 2026-11-25
 
 ### Mejoras

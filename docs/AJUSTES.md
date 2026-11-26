@@ -281,7 +281,7 @@ Sistema y recuperación ya no tiene apps predeterminadas: enlaza a esta sección
 - Roles: navegador (también `xdg-settings set default-web-browser`), correo, calendario, música, vídeo, fotos,
   PDF, texto, archivos (también `fileManager` → Super + E), comprimidos; cada uno asigna todos sus tipos MIME
   con `xdg-mime default`. Las opciones son las apps instaladas cuyo `MimeType` lo admite; «· recomendada» marca
-  la de KDE/Qt. Terminal → ajuste `terminal`.
+  la de KDE/Qt (en archivos, HyprFFiles si está instalado). Terminal → ajuste `terminal`.
 - «Usar las recomendadas» = `hf-defaults recommended --force`: Dolphin, Gwenview, Okular, Haruna, Elisa,
   Kate, Ark, KCalc, Partition Manager… solo si están instaladas; el navegador no se toca. La Bienvenida lo ejecuta
   después de instalar el paquete «Esenciales» (ahora las apps básicas de KDE/Qt).

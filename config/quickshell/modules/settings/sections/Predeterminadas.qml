@@ -22,7 +22,8 @@ RowLayout {
                                      fotos: "Fotos e imágenes", pdf: "Documentos PDF", texto: "Texto", archivos: "Archivos", comprimidos: "Archivos comprimidos" })
     // gestor de archivos elegido → ajuste fileManager (atajo Super + E, lo lee config/apply/15-apps.py)
     readonly property var fmKey: ({ "org.gnome.Nautilus.desktop": "nautilus", "org.kde.dolphin.desktop": "dolphin", "thunar.desktop": "thunar",
-                                    "nemo.desktop": "nemo", "yazi.desktop": "yazi", "pcmanfm-qt.desktop": "pcmanfm" })
+                                    "nemo.desktop": "nemo", "yazi.desktop": "yazi", "pcmanfm-qt.desktop": "pcmanfm",
+                                    "io.github.hyprffiles.desktop": "hyprffiles" })
 
     function hl(args) { return [Paths.script("hf-defaults")].concat(args); }
     function reload(): void { lister.running = false; lister.running = true; }
