@@ -53,9 +53,9 @@ LOCALE_RX = re.compile(r"(C|POSIX|[a-z]{2,3}(_[A-Z]{2})?)(\.[A-Za-z0-9-]+)?(@[a-
 WORD_RX = re.compile(r"[A-Za-z0-9_.,+-]{1,64}")                         # distribución de teclado, variante…
 SKIP_LEVELS = {"base", "required"}           # esos los pone siempre install.sh
 PUBLIC = ROOT / "perfil" / "perfil.json"     # el que viaja en el repo (público): sin datos personales
-# Ajustes que no salen al repo: tuyos (IA, ciudad), de este equipo (pantallas, escritorio) o del acceso remoto
+# Ajustes que no salen al repo (también los de funciones retiradas, que pueden seguir en tu archivo): tuyos (IA, ciudad), de este equipo (pantallas, escritorio) o del acceso remoto
 PRIVATE_KEYS = re.compile(r"^(ai(Name|Persona|Endpoint|KeyEnv|McpServers)|weather(City|Lat|Lon)|monitors|primaryMonitor"
-                          r"|deskOrder|greeterWallpaper|privateApps|hiddenFromCapture|barCustom|barActions|aiHandoffCmd|(rdp|vnc|remote|vpn|tailscale|unsplash|wallhaven)[A-Z].*"
+                          r"|deskOrder|greeterWallpaper|privateApps|hiddenFromCapture|scratchpads|barCustom|barActions|aiHandoffCmd|(rdp|vnc|remote|vpn|tailscale|unsplash|wallhaven)[A-Z].*"
                           r"|rdpServer)$|(Path|Dir|Folder|Url|User|Email)$"
                           r"|(ApiKey|Token|Secret|Password|Passwd)$")
 
