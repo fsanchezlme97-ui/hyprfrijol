@@ -34,28 +34,6 @@ def test_hidden_from_capture():
     assert "hf-private" not in lua("35-windows", {"hiddenFromCapture": []}) + lua("35-windows", {"hiddenFromCapture": "texto"})
 
 
-def test_window_tabs_follow_the_theme():
-    out = "\n".join(load("10-look").hypr_lua({}, {"p": "#FFC799", "onP": "#2E1D10", "s3": "#212124", "tv": "#B3B8BF"}))
-    line = next(l for l in out.splitlines() if "groupbar" in l)
-    assert "ffc799" in line.lower() and line.count("{") == line.count("}"), line
-
-
-def test_named_scratchpads():
-    pads = [{"name": 'Música "x"); os.exit(', "apps": ["spotify", 'mal")', "org.kde.elisa"]}, {"name": ""}, "roto"]
-    pads += [{"name": f"p{i}"} for i in range(5)]
-    out = lua("55-scratchpads", {"scratchpads": pads})
-    assert "F1" in out and "F4" in out and "F5" not in out, out
-    assert 'workspace = "special:hfpad-1 silent"' in out and "spotify|org" in out and 'mal"' not in out, out
-    assert "Espacio oculto: Espacio 2" in out and '\\"x\\"' in out, out
-    assert lua("55-scratchpads", {}) == "" == lua("55-scratchpads", {"scratchpads": "x"})
-    # el hueco es fijo: quitar el primero no mueve al segundo
-    slots = load("55-scratchpads").slotted
-    kept = slots([{"slot": 2, "name": "b"}, {"slot": 2, "name": "repetido"}, {"name": "sin"}, {"slot": True, "name": "raro"}])
-    assert [(n, p["name"]) for n, p in kept] == [(1, "repetido"), (2, "b"), (3, "sin"), (4, "raro")], kept
-    only = lua("55-scratchpads", {"scratchpads": [{"slot": 3, "name": "Chat"}]})
-    assert "SUPER + F3" in only and "hfpad-3" in only and "F1" not in only, only
-
-
 if __name__ == "__main__":
     failed = 0
     for name, test in list(globals().items()):

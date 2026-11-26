@@ -32,8 +32,7 @@ ColumnLayout {
     ]
     readonly property var preset: groups.reduce((a, g) => a.concat(g.classes), [])
 
-    // quien guarda la lista en otro sitio (cada espacio oculto la suya) la da aquí
-    property var list: { const v = Settings.get(settingKey, []); return Array.isArray(v) ? v : []; }
+    readonly property var list: { const v = Settings.get(settingKey, []); return Array.isArray(v) ? v : []; }
     readonly property var lower: list.map(c => String(c).toLowerCase())
     function has(cls): bool { return lower.includes(String(cls).toLowerCase()); }
     function groupOn(g): bool { return g.classes.some(c => has(c)); }

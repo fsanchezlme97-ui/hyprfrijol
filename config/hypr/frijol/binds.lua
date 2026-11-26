@@ -100,14 +100,6 @@ b(mod .. " + SHIFT + F",   hl.dsp.window.float({ action = "toggle" }))
 b(mod .. " + SHIFT + SPACE", hl.dsp.global("hf:modoventanas"), { description = "Cambiar modo de ventanas" })
 b(mod .. " + CTRL + SPACE",  hl.dsp.global("hf:modoespacio"),  { description = "Modo de ventanas de este espacio" })
 b(mod .. " + P",           hl.dsp.window.pin(),               { description = "Fijar encima" })
--- Pestañas de ventanas (grupos de Hyprland): varias comparten un hueco y se cambia entre ellas
-b(mod .. " + ALT + G",         hl.dsp.group.toggle(),             { description = "Agrupar en pestañas / deshacer" })
-b(mod .. " + ALT + TAB",       hl.dsp.group.next(),               { description = "Pestaña de ventana siguiente" })
-b(mod .. " + ALT + SHIFT + TAB", hl.dsp.group.prev(),             { description = "Pestaña de ventana anterior" })
-b(mod .. " + ALT + SHIFT + G", hl.dsp.window.move({ out_of_group = true }), { description = "Sacar la ventana de las pestañas" })
-for k, d in pairs({ left = "l", right = "r", up = "u", down = "d" }) do
-    b(mod .. " + CTRL + ALT + " .. k, hl.dsp.window.move({ into_or_create_group = d }))
-end
 -- En desplazamiento: Super + Alt + J saca la ventana a una columna propia; Super + ñ / ´ cambian el ancho de la
 -- columna entre ⅓, ½, ⅔ y toda la pantalla (scrolling:explicit_column_widths)
 b(mod .. " + ALT + J",     HF.scroll("promote", hl.dsp.layout("togglesplit")), { description = "Cambiar división / columna propia" })

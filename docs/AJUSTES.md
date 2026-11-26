@@ -58,7 +58,6 @@ Red, Sonido, Energía, Sistema y recuperación, Accesibilidad y Acerca del siste
 | 30-layout.py | `windowMode` + `layout` → `general:layout` (dwindle / master, o scrolling en desplazamiento), `scrollColumnWidth`, `scrollFocusFit`, `scrollOneFull`, `snapEdges` |
 | 35-windows.py | `hiddenFromCapture` (apps que no se ven al compartir pantalla: regla `hf-private`; Ajustes › Privacidad y menú de ventana), `windowMode` (regla `hf-float-all` del modo clásico, `flotante`; `hf-dialog`, etiqueta de los diálogos modales; `no-maximize`, salvo en el modo clásico: las ventanas en mosaico no se maximizan por su cuenta), `floatApps` + `floatAppsSize` (reglas `hf-float-apps` / `hf-float-apps-compact`) |
 | 40-monitors.py | `monitors` {salida: {mode, position, scale, vrr (0 apagada · 1 siempre · 2 pantalla completa · 3 juegos y vídeo), hdr, disabled, mirror}} |
-| 55-scratchpads.py | `scratchpads` [{slot, name, apps}] (hasta 4, Ajustes › Escritorio y gestos): Super + Fn muestra el del hueco n, Super + Mayús + F1…F4 le envía la ventana, y sus apps abren dentro (`hf-pad-n`) |
 | 50-rules.py | ventanas Ajustes/Herramientas flotantes; sin efectos a pantalla completa (`gameNoFx`) |
 | 60-binds.py | `keybinds` {descripción: {from, to}} (acciones en `keybind-actions.json`), `overAmplify`, lupa (`magnifier`: sustituye la lupa básica de binds.lua) |
 | 15-apps.py | `fileManager` (solo si está instalado; si no, env.lua usa el primero instalado: Dolphin…), `terminal` |

@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.14.0] — 2026-11-26
+
+### Cambios
+- Se quitan las **ventanas en pestañas** y los **espacios ocultos con nombre** de la 0.13.0, con sus atajos
+  (Super + Alt + G, Super + Alt + Tab, Super + Ctrl + Alt + flechas y Super + F1…F4). El espacio oculto de
+  Super + S sigue igual.
+
 ## [0.13.0] — 2026-11-26
 
 ### Novedades

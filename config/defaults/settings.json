@@ -124,7 +124,6 @@
   ],
   "windowMode": "mosaico",
   "hiddenFromCapture": [],
-  "scratchpads": [],
   "floatApps": ["io.github.hyprffiles", "org.kde.dolphin", "pcmanfm-qt", "org.kde.gwenview", "imv", "swayimg", "org.kde.elisa", "org.kde.haruna", "mpv", "vlc", "org.kde.kcalc", "org.kde.ark"],
   "floatAppsSize": 0.65,
   "titleBars": true,

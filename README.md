@@ -48,7 +48,7 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 | Login con greetd (Quickshell) | `greeter/` |
 | «Que no se rompa»: modo seguro en el login, copias «buenas» de tus ajustes, diagnóstico copiable y actualización por versiones con vuelta atrás | `scripts/hf-safe`, `hf-doctor`, `hf-update`, `config/hypr/safe.lua` |
 | Carga diferida: Spotlight, centro de control, vista general, capturas y demás paneles solo ocupan memoria mientras se usan (`lazyModules`, Ajustes › Energía y rendimiento) | `components/LazyView.qml`, `config/quickshell/modules/Modules.qml` |
-| Ventanas en pestañas, hasta cuatro espacios ocultos con nombre y apps propias, aviso en la barra cuando se ve tu pantalla y apps que no salen al compartirla | `config/hypr/frijol/binds.lua`, `config/apply/35-windows.py`, `55-scratchpads.py`, `quickshell/services/ScreenShare.qml` |
+| Aviso en la barra cuando se ve tu pantalla y apps que no salen al compartirla | `config/apply/35-windows.py`, `quickshell/services/ScreenShare.qml` |
 | Plugins de Omarchy (widget de barra, panel, overlay, menú y servicio; se piden permiso al activarlos) y temas `colors.toml` de Omarchy como paletas | `scripts/hf-plugin`, `config/quickshell/modules/omarchy`, `quickshell/Commons`, `Ui` |
 
 ## Capturas
@@ -267,9 +267,6 @@ Son los mismos que en illogical-impulse (misma tecla, misma función), más los 
 | Super + Shift + Espacio · Super + Ctrl + Espacio | Modo de ventanas de todos los espacios · solo de este |
 | Super + º | Consola desplegable |
 | Super + S · Super + Alt + S | Espacio oculto (scratchpad) · enviar ventana ahí |
-| Super + F1…F4 · Super + Shift + F1…F4 | Espacio oculto con nombre (si lo creas en Ajustes) · enviar ventana ahí |
-| Super + Alt + G · Super + Ctrl + Alt + flechas | Agrupar en pestañas · meter la ventana en las de ese lado |
-| Super + Alt + Tab · Super + Alt + Shift + G | Pestaña siguiente · sacar la ventana de las pestañas |
 | Impr Pant · Shift/Ctrl + Impr Pant | Captura · pantalla completa |
 | Super + Shift + S · X · T · A | Captura (como Impr Pant: región, ventana, pantalla, grabar o GIF) · copiar texto (OCR) · traducir · preguntar a la IA |
 | Super + Shift + C | Selector de color |
