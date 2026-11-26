@@ -33,7 +33,7 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 |---|---|
 | Hyprland en Lua, validado con `Hyprland --verify-config` | `config/hypr/frijol/` |
 | Sesión aparte y modo de prueba en ventana (`hf-session --nested`) | `scripts/hf-session` |
-| Colores del fondo (matugen) o 54 temas, 42 de ellos en pares oscuro y claro (y los tuyos, sin límite), estilo Math (Material 3) con o sin transparencia, claro / oscuro / auto, redondeo ajustable | `scripts/hf-apply`, `config/themes/` |
+| Colores del fondo (matugen) o 61 temas, 51 de ellos en pares oscuro y claro (entre ellos Neocarbon) (y los tuyos, sin límite), estilo Math (Material 3) con o sin transparencia, claro / oscuro / auto, redondeo ajustable | `scripts/hf-apply`, `config/themes/` |
 | Barra abajo / arriba / izquierda, fija o flotante | `quickshell/bar/` |
 | Spotlight (apps, archivos con vista previa y acciones rápidas, calculadora, comandos, ventanas) | `config/quickshell/modules/spotlight`, `scripts/hf-fileact` |
 | Ajustes rápidos y herramientas (pomodoro, notas, tareas, captura…), procesos en curso, notificaciones con respuesta, OSD | `config/quickshell/modules/quicksettings`, `notifications`, `osd` |
@@ -48,6 +48,7 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 | Login con greetd (Quickshell) | `greeter/` |
 | «Que no se rompa»: modo seguro en el login, copias «buenas» de tus ajustes, diagnóstico copiable y actualización por versiones con vuelta atrás | `scripts/hf-safe`, `hf-doctor`, `hf-update`, `config/hypr/safe.lua` |
 | Carga diferida: Spotlight, centro de control, vista general, capturas y demás paneles solo ocupan memoria mientras se usan (`lazyModules`, Ajustes › Energía y rendimiento) | `components/LazyView.qml`, `config/quickshell/modules/Modules.qml` |
+| Ventanas en pestañas, hasta cuatro espacios ocultos con nombre y apps propias, aviso en la barra cuando se ve tu pantalla y apps que no salen al compartirla | `config/hypr/frijol/binds.lua`, `config/apply/35-windows.py`, `55-scratchpads.py`, `quickshell/services/ScreenShare.qml` |
 | Plugins de Omarchy (widget de barra, panel, overlay, menú y servicio; se piden permiso al activarlos) y temas `colors.toml` de Omarchy como paletas | `scripts/hf-plugin`, `config/quickshell/modules/omarchy`, `quickshell/Commons`, `Ui` |
 
 ## Capturas
@@ -212,7 +213,7 @@ scripts/           hf-session, hf-apply, hf-wallpaper, hf-lock, hf-capture, hf-u
                    hf-devices, hf-download, hf-wallhaven
 assets/wallpapers/ fondos incluidos
 greeter/           login con greetd
-dev/               try.sh (sesión anidada + captura) y DESARROLLO.md
+dev/               try.sh (sesión anidada + captura), lint.sh, check.sh, test_apply.py y DESARROLLO.md
 docs/              ARQUITECTURA.md, IA.md, AJUSTES.md, SCRIPTS.md, BINDS.md,
                    TROUBLESHOOTING.md, PULIDOS.md, PENDIENTES.md y capturas/
 design/            prototipo y capturas de cada pantalla
@@ -231,6 +232,7 @@ design/            prototipo y capturas de cada pantalla
 - [`docs/MIGRACION.md`](docs/MIGRACION.md): migrar desde hypr-liquid, Omarchy u otros escritorios.
 - [`docs/PULIDOS.md`](docs/PULIDOS.md): plan de pulidos y deuda técnica documentada.
 - [`docs/PENDIENTES.md`](docs/PENDIENTES.md): siguiente trabajo estratégico.
+- [`docs/ALCANCE.md`](docs/ALCANCE.md): qué entra en el proyecto y qué no.
 - [README.en.md](README.en.md): resumen en inglés.
 
 ## Atajos principales
@@ -265,6 +267,9 @@ Son los mismos que en illogical-impulse (misma tecla, misma función), más los 
 | Super + Shift + Espacio · Super + Ctrl + Espacio | Modo de ventanas de todos los espacios · solo de este |
 | Super + º | Consola desplegable |
 | Super + S · Super + Alt + S | Espacio oculto (scratchpad) · enviar ventana ahí |
+| Super + F1…F4 · Super + Shift + F1…F4 | Espacio oculto con nombre (si lo creas en Ajustes) · enviar ventana ahí |
+| Super + Alt + G · Super + Ctrl + Alt + flechas | Agrupar en pestañas · meter la ventana en las de ese lado |
+| Super + Alt + Tab · Super + Alt + Shift + G | Pestaña siguiente · sacar la ventana de las pestañas |
 | Impr Pant · Shift/Ctrl + Impr Pant | Captura · pantalla completa |
 | Super + Shift + S · X · T · A | Captura (como Impr Pant: región, ventana, pantalla, grabar o GIF) · copiar texto (OCR) · traducir · preguntar a la IA |
 | Super + Shift + C | Selector de color |

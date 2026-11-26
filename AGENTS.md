@@ -6,6 +6,7 @@ Esta guía es para agentes de código (Claude Code, Codex, OpenCode, etc.) que m
 
 ## Identidad del proyecto
 
+- Qué entra y qué no: `docs/ALCANCE.md`.
 - HyprFrijol no es una distro: es un rice que corre como sesión aparte sin tocar la configuración normal de Hyprland del usuario.
 - Cada función tiene un script o comando que funciona solo (`hf-*`); Quickshell es solo la cara visual.
 - La fuente de verdad de los ajustes es `~/.config/hyprfrijol/settings.json` mezclado con `config/defaults/settings.json`.

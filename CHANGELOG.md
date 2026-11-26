@@ -21,6 +21,9 @@ antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X
 - **Frecuencia variable con cuatro opciones** (Ajustes › Pantallas): apagada, siempre, solo a pantalla completa o solo
   con juegos y vídeo.
 
+### Proyecto
+- `docs/ALCANCE.md` (qué entra y qué no) y primeras pruebas automáticas de la configuración (`dev/test_apply.py`).
+
 ## [0.12.2] — 2026-11-25
 
 ### Mejoras
