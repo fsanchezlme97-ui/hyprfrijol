@@ -8,6 +8,9 @@ antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X
 ### Novedades
 - **Tema Neocarbon** (Ajustes › Apariencia), oscuro y claro: el negro y el durazno de Vesper con los acentos fríos de
   Oxocarbon, también en la terminal.
+- **Aviso en la barra cuando se ve tu pantalla**: al grabar, compartir en una videollamada o entrar por escritorio
+  remoto aparece «Pantalla» junto al del micrófono; al pulsarlo se ve qué app es (Ajustes › Privacidad). Una captura
+  suelta no lo enciende.
 - **Frecuencia variable con cuatro opciones** (Ajustes › Pantallas): apagada, siempre, solo a pantalla completa o solo
   con juegos y vídeo.
 
