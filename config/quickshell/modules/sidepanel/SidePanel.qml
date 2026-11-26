@@ -495,6 +495,19 @@ PanelWindow {
                     size: 11
                     muted: true
                 }
+                Rectangle { Layout.fillWidth: true; height: 1; color: Theme.ov }
+                Txt {
+                    Layout.fillWidth: true
+                    text: "Conectar ChatGPT, Copilot, Grok o Poe…"
+                    size: 11.5
+                    color: Theme.p
+                    activeFocusOnTab: true
+                    Accessible.role: Accessible.Link
+                    Accessible.name: text
+                    function go() { win.modelMenu = false; Shell.open("ajustesapp", "iaproveedor#Cuentas"); }
+                    Keys.onReturnPressed: go()
+                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: parent.go() }
+                }
             }
         }
     }

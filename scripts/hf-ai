@@ -49,6 +49,10 @@
   hf-ai voice-warm             deja la voz cargada (se cierra sola tras 10 min sin hablar): responde sin ~1 s de espera;
                                y Ollama, si es el principal o el respaldo, cargado en la gráfica
   hf-ai key status|set|clear gemini   clave de Gemini: set la lee de stdin (o de HF_AI_KEY_IN), nunca de argv
+  hf-ai account list           cuentas que se pueden conectar (ChatGPT, GitHub Copilot, Grok, Poe) y cuáles lo están
+  hf-ai account login <id>     inicia sesión en el navegador (por OpenCode): una línea JSON por estado; Ctrl+C cancela
+  hf-ai account logout <id>    cierra la sesión de esa cuenta
+                             Sus modelos solo se usan si los eliges: ni «Automático» ni el respaldo los tocan.
 
 Proveedor (Ajustes › IA, settings.json):
   aiProvider  "claude-code" (CLI `claude -p`, por defecto) | "opencode" | "ollama" | "openai-compatible" | "gemini" | "off"
@@ -74,7 +78,7 @@ Imágenes: con visión (claude-code por stream-json, Gemini inline_data, OpenAI 
   "vision") se mandan reducidas a 1568 px (ImageMagick); si no, su texto por OCR. aiVision true/false lo fuerza.
 Pruebas sin gastar: aiProvider "mock" responde con la lista JSON de $HF_AI_MOCK o ~/.cache/hyprfrijol/ai-mock.json.
 """
-import json, os, re, shlex, subprocess, sys, time, pathlib, shutil, urllib.request, urllib.error, urllib.parse
+import json, os, re, shlex, signal, subprocess, sys, time, pathlib, shutil, urllib.request, urllib.error, urllib.parse
 for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
     if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
@@ -2831,6 +2835,20 @@ OPENCODE_CFG = HOME / ".config/opencode/opencode.json"        # su configuració
 OPENCODE_PICK = HOME / ".cache/hyprfrijol/ai-opencode-model"  # el último modelo que respondió
 OPENCODE_DEFAULT = "opencode/deepseek-v4.1-flash-free"
 
+# Cuentas con inicio de sesión (por OpenCode, que guarda las credenciales; aquí no se leen: nunca /api/credential en
+# lectura). Sus modelos solo se usan si se eligen: usarlos solos gastaría tu plan y mandaría tu contexto sin avisar.
+# Google no está: no admite entrar desde otras aplicaciones (se han suspendido cuentas por hacerlo); Gemini va con clave.
+ACCOUNTS = [  # id en OpenCode, nombre, método de inicio de sesión, respuestas de su formulario
+    ("openai", "ChatGPT", "chatgpt-token-sharing", None),
+    ("github-copilot", "GitHub Copilot", "device", {"deploymentType": "github.com"}),
+    ("xai", "Grok (SuperGrok)", "device", None),
+    ("poe", "Poe", "browser", None),
+]
+ACCOUNT_NAMES = {a[0]: a[1] for a in ACCOUNTS}
+
+def account_model(mid):
+    return opencode_pair(mid)["providerID"] in ACCOUNT_NAMES
+
 def opencode_pair(m):
     """«proveedor/modelo» (como en `opencode models`; sin «/», de OpenCode Zen) → {"providerID", "id"}."""
     m = str(m or "").strip().split("#")[0]
@@ -2843,11 +2861,13 @@ def opencode_configured():
     return str(j.get("model") or "").strip().split("#")[0]
 
 def opencode_last():
-    """El último modelo que respondió bien (no se vuelve a probar el que se quedó sin cuota)."""
+    """El último modelo que respondió bien (no se vuelve a probar el que se quedó sin cuota). Los de tus cuentas no
+    cuentan: haber elegido uno una vez no los convierte en automáticos."""
     try:
-        return OPENCODE_PICK.read_text().strip()
+        m = OPENCODE_PICK.read_text().strip()
     except OSError:
         return ""
+    return "" if account_model(m) else m
 
 def opencode_remember(m):
     """El modelo que respondió: se apunta para no probar otra vez con el que se quedó sin cuota."""
@@ -2907,7 +2927,8 @@ def opencode_http(method, path, body=None, timeout=None, start=True):
                                               "Authorization": "Basic " + base64.b64encode(f"opencode:{pw}".encode()).decode()})
         try:
             with urllib.request.urlopen(req, timeout=timeout or WAIT or 120) as r:
-                return json.loads(r.read())
+                raw = r.read()
+                return json.loads(raw) if raw.strip() else {}     # borrar responde sin cuerpo
         except urllib.error.HTTPError as e:
             try:
                 d = json.loads(e.read().decode(errors="replace"))
@@ -2991,13 +3012,14 @@ def opencode_available():
             # «Gemma 4 (e4b) · Ollama local»: el nombre bonito y de dónde sale, para no buscarlo a ciegas
             name = f"{pretty_model(i)} · {LOCAL_PROVIDERS[p]}"
         else:
-            name = str(m.get("name") or i) + (" · gratis" if free else "" if p == "opencode" else f" · {p}")
+            name = str(m.get("name") or i) + (" · gratis" if free else "" if p == "opencode" else f" · {ACCOUNT_NAMES.get(p, p)}")
+        released = (m.get("time") or {}).get("released") if isinstance(m.get("time"), dict) else 0
         # Prestaciones (lo que declara el catálogo de OpenCode): qué admite y qué devuelve, además del texto.
         caps = m.get("capabilities") if isinstance(m.get("capabilities"), dict) else {}
         cin = [str(x) for x in (caps.get("input") or []) if str(x) != "text"]
         cout = [str(x) for x in (caps.get("output") or []) if str(x) != "text"]
         out.append({"id": f"{p}/{i}", "provider": p, "name": name, "free": free, "local": local, "ctx": ctx,
-                    "in": cin, "out": cout})
+                    "in": cin, "out": cout, "released": released if isinstance(released, (int, float)) else 0})
     # Este orden es el de uso (a quién se recurre cuando el elegido falla): los gratuitos de OpenCode Zen primero.
     # El de presentación (los locales arriba) lo hace opencode_models, sobre una copia.
     out.sort(key=lambda a: (not a["free"], a["provider"] != "opencode", a["name"].lower()))
@@ -3012,7 +3034,7 @@ def opencode_auto(avail=None):
     for x in (opencode_configured(), opencode_last()):
         if x and (not ids or x in ids):
             return x
-    return ids[0] if ids else OPENCODE_DEFAULT
+    return next((x for x in ids if not account_model(x)), OPENCODE_DEFAULT)
 
 # El catálogo tarda un poco (son unos cuantos modelos): se guarda un minuto, que da para varias preguntas seguidas.
 _OC_CAT = {"t": 0.0, "avail": None, "err": None}
@@ -3074,7 +3096,8 @@ def opencode_candidates(s):
     add(opencode_configured())
     add(opencode_last())
     for x in ids:
-        add(x)
+        if not account_model(x):
+            add(x)
     add(OPENCODE_DEFAULT)
     return out
 
@@ -3342,6 +3365,102 @@ def provider_vision(prov, s):
     if prov == "opencode":
         return opencode_sees_images(s)
     return prov in ("claude-code", "gemini", "openai-compatible", "mock")
+
+# ---------------------------------------------------------------- cuentas (hf-ai account)
+def opencode_data(method, path, body=None, timeout=30):
+    j = opencode_http(method, path, body, timeout)
+    d = j.get("data") if isinstance(j, dict) else None
+    return d if isinstance(d, dict) else {}
+
+def accounts_list():
+    avail, _ = opencode_catalog(max_age=0)
+    out, error, found = [], None, 0
+    for ident, name, method, _answer in ACCOUNTS:
+        try:
+            d = opencode_data("GET", f"/api/integration/{ident}", timeout=20)
+        except AIError as e:
+            if e.code != 404:
+                return {"accounts": [], "error": str(e)}
+            d = {}
+        usable = any(m.get("type") == "oauth" and m.get("id") == method for m in d.get("methods") or [])
+        found += usable
+        links = [c for c in d.get("connections") or [] if isinstance(c, dict)]
+        mine = [c for c in links if c.get("type") == "credential"]
+        models = sorted((m for m in avail if m["provider"] == ident), key=lambda m: m.get("released") or 0, reverse=True)
+        out.append({"id": ident, "name": name, "available": usable, "connected": bool(links),
+                    "label": ", ".join(str(c.get("label") or "") for c in mine if c.get("label")),
+                    "removable": bool(mine), "problem": next((str((c.get("status") or {}).get("message") or "") for c in links if c.get("status")), ""),
+                    "model": models[0]["id"] if models else ""})
+    if not found:
+        error = "Tu versión de OpenCode no permite iniciar sesión desde aquí: actualízalo (opencode upgrade)"
+    return {"accounts": out, "error": error}
+
+def account_login(ident, emit, wait=time.sleep):
+    """Un inicio de sesión de principio a fin; «emit» recibe cada estado. Si se interrumpe, se cancela en OpenCode."""
+    spec = next((a for a in ACCOUNTS if a[0] == ident), None)
+    if not spec:
+        return emit({"state": "error", "message": f"Cuenta desconocida: {ident}"})
+    _, name, method, answer = spec
+    base = f"/api/integration/{ident}/connect/oauth"
+    attempt, done = None, False
+    try:
+        a = opencode_data("POST", base, dict({"methodID": method}, **({"answer": answer} if answer else {})), timeout=60)
+        attempt, url = str(a.get("attemptID") or ""), str(a.get("url") or "")
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", attempt) or not url.startswith("https://"):
+            return emit({"state": "error", "message": "OpenCode no devolvió un enlace válido para iniciar sesión"})
+        code = re.search(r"code:?\s+([A-Z0-9]{3,}(?:-[A-Z0-9]{3,})*)\b", str(a.get("instructions") or ""))
+        emit({"state": "authorize", "name": name, "url": url, "code": code.group(1) if code else ""})
+        while True:
+            wait(2)
+            st = opencode_data("GET", f"{base}/{attempt}", timeout=20)
+            status = st.get("status")
+            if status == "complete":
+                done = True
+                return emit({"state": "done", "name": name})
+            if status != "pending":
+                why = str(st.get("message") or "")[:200]
+                return emit({"state": "error", "message": why or ("Caducó el tiempo para iniciar sesión" if status == "expired"
+                                                                   else "No se completó el inicio de sesión")})
+    except AIError as e:
+        emit({"state": "error", "message": str(e)})
+    finally:
+        if attempt and not done and re.fullmatch(r"[A-Za-z0-9_-]+", attempt):
+            try:
+                opencode_http("DELETE", f"{base}/{attempt}", timeout=10)
+            except AIError:
+                pass
+
+def account_logout(ident):
+    if ident not in ACCOUNT_NAMES:
+        return {"ok": False, "error": f"Cuenta desconocida: {ident}"}
+    try:
+        d = opencode_data("GET", f"/api/integration/{ident}", timeout=20)
+        for c in d.get("connections") or []:
+            if isinstance(c, dict) and c.get("type") == "credential":
+                opencode_http("DELETE", "/api/credential/" + urllib.parse.quote(str(c.get("id")), safe=""), timeout=20)
+    except AIError as e:
+        return {"ok": False, "error": str(e)}
+    return {"ok": True, "error": ""}
+
+def account_command(rest):
+    sub, ident = (rest + ["", ""])[:2]
+    if sub == "login":
+        def emit(d):
+            print(json.dumps(d, ensure_ascii=False), flush=True)
+            if d.get("state") == "authorize" and shutil.which("xdg-open"):
+                subprocess.Popen(["xdg-open", d["url"]], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL, start_new_session=True)
+        def stop(*_):
+            raise KeyboardInterrupt
+        signal.signal(signal.SIGTERM, stop)     # «Cancelar» en Ajustes cierra este proceso
+        try:
+            account_login(ident, emit)
+        except KeyboardInterrupt:
+            emit({"state": "cancelled"})
+        return None
+    if sub == "logout":
+        return account_logout(ident)
+    return accounts_list()
 
 # ---------------------------------------------------------------- Gemini (Google AI Studio, plan gratuito)
 GEMINI_API = os.environ.get("HF_GEMINI_API") or "https://generativelanguage.googleapis.com/v1beta"   # HF_GEMINI_API: solo para pruebas
@@ -5602,6 +5721,10 @@ def main(argv):
         out = greet() if arg == "--greet" else announce(arg)
     elif cmd == "voice-install":
         sys.exit(voice_install(tty="--tty" in rest))
+    elif cmd == "account":
+        out = account_command(rest)
+        if out is None:
+            return
     elif cmd == "key":
         sub, prov = (rest + ["", ""])[:2]
         prov = prov or "gemini"

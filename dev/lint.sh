@@ -5,6 +5,7 @@
 #   · JSON del repo (jq)
 #   · dev/coherencia.py: claves de ajustes con valor por defecto y programas en install/packages.tsv
 #   · dev/test_apply.py: lo que config/apply escribe a partir de los ajustes
+#   · dev/test_ai_accounts.py: iniciar y cerrar sesión de las cuentas del asistente, contra un OpenCode de mentira
 # Sale con 0 si todo bien, 1 si algo falla. Complemento: dev/check.sh (abre todas las vistas en una sesión anidada).
 #
 # Para tener shellcheck y pyflakes sin tocar el sistema:
@@ -41,6 +42,8 @@ else bad "coherencia:"; printf '%s\n' "$out" | sed 's|^|  |'; fi
 python3 dev/gen-settings-index.py --check >/dev/null && ok "índice de búsqueda de Ajustes al día" || bad "índice de Ajustes desactualizado: dev/gen-settings-index.py"
 if out="$(python3 dev/test_apply.py 2>&1)"; then ok "pruebas de config/apply"
 else bad "pruebas de config/apply:"; printf '%s\n' "$out" | sed 's|^|  |'; fi
+if out="$(python3 dev/test_ai_accounts.py 2>&1)"; then ok "pruebas de las cuentas del asistente"
+else bad "pruebas de las cuentas del asistente:"; printf '%s\n' "$out" | sed 's|^|  |'; fi
 python3 dev/spacing.py >/dev/null && ok "espaciado en la escala 4/8/12/16/24" || bad "espaciado fuera de la escala: dev/spacing.py (--fix lo corrige)"
 python3 dev/gen-pkgbuild.py --check >/dev/null && ok "PKGBUILD del AUR al día con packages.tsv" || bad "PKGBUILD desactualizado: dev/gen-pkgbuild.py"
 

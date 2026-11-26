@@ -37,7 +37,7 @@ Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están
 | Barra abajo / arriba / izquierda, fija o flotante | `quickshell/bar/` |
 | Spotlight (apps, archivos con vista previa y acciones rápidas, calculadora, comandos, ventanas) | `config/quickshell/modules/spotlight`, `scripts/hf-fileact` |
 | Ajustes rápidos y herramientas (pomodoro, notas, tareas, captura…), procesos en curso, notificaciones con respuesta, OSD | `config/quickshell/modules/quicksettings`, `notifications`, `osd` |
-| Panel lateral con el asistente de IA (¼ de pantalla), PiP mínimo | `config/quickshell/modules/sidepanel`, `pip` — ver `docs/IA.md` |
+| Panel lateral con el asistente de IA (¼ de pantalla; proveedores y cuentas de ChatGPT, Copilot, Grok o Poe), PiP mínimo | `config/quickshell/modules/sidepanel`, `pip` — ver `docs/IA.md` |
 | Vista general, Alt+Tab, Snap, dock y escritorio ordenado, widgets | `config/quickshell/modules/overview`, `alttab`, `snap`, `desktop`, `widgets` |
 | Selector de fondos (por monitor, por hora, mono), captura sobre la pantalla congelada (lupa, ventanas, fijar, OCR con cajas, anotación, IA) / grabación, selector de color (HEX · RGB · HSL · OKLCH, historial) | `config/quickshell/modules/wallpapers`, `capture`, `colorpicker` |
 | Portapapeles y emojis en Spotlight, agenda (con `.ics`), centro de actualizaciones con punto de restauración | `config/quickshell/modules/spotlight`, `agenda`, `updates` |

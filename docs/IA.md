@@ -100,7 +100,8 @@ y respuestas vacías; hoy cada uno declara su contexto —`ollama/gemma4:e4b`: 1
   OpenCode en `~/.config/opencode/opencode.json` (p. ej. `minimax/MiniMax-M3.1-Flash`), si no el último que respondió y
   si no el primero disponible. Así, con un proveedor propio en OpenCode (MiniMax, Anthropic…), el panel lo usa sin
   tocar nada. `hf-ai models opencode` dice cuál sería (`"auto"`).
-- **Si el modelo que toca no puede** (cuota agotada, sin clave, saturado), se prueba con otro sin preguntar: se
+- **Si el modelo que toca no puede** (cuota agotada, sin clave, saturado), se prueba con otro sin preguntar (nunca
+  con los de tus [cuentas](#cuentas-chatgpt-github-copilot-grok-y-poe)): se
   saltan los modelos del proveedor que falló (la cuota gratuita es una sola para todos) y se sigue con los de otro
   proveedor. En el panel se ve: «OpenCode: … no pudo (…); se probó con otro modelo». El que respondió se apunta para
   no repetir el que se quedó sin cuota.
@@ -137,6 +138,27 @@ scripts/hf-ai models opencode    # {"models": [["", "Automático"], ["minimax/Mi
 scripts/hf-ai caps opencode      # {"provider": "opencode", "model": "minimax/MiniMax-M3.1-Flash", "in": ["image"], "out": [], "label": "ve imágenes"}
 scripts/hf-ai test               # con aiProvider "opencode"
 scripts/hf-ai chat --print-request '{"messages":[{"role":"user","text":"Hola"}]}'
+```
+
+### Cuentas: ChatGPT, GitHub Copilot, Grok y Poe
+
+Ajustes › Asistente de IA › Proveedor y permisos › **Cuentas** (o «Conectar ChatGPT, Copilot, Grok o Poe…» en el
+desplegable del panel): **Iniciar sesión** abre el navegador (en Copilot y Grok se escribe allí un código). Es el
+inicio de sesión de OpenCode, pedido a su servicio local; las credenciales las guarda OpenCode y HyprFrijol no las lee.
+Al terminar, **Usar** pone ese proveedor y su modelo más reciente; los demás salen en la lista de modelos.
+
+- **Solo se usan si los eliges.** Ni «Automático», ni el respaldo ante fallos, ni «el último que respondió» tocan los
+  modelos de estas cuentas (tampoco si las conectaste con una clave desde OpenCode): gastarían tu plan y enviarían tu
+  contexto sin avisar. Si el modelo que elegiste falla, contestan los de siempre y el panel lo dice.
+- Lo que preguntes con uno de esos modelos va a ese servicio, con sus condiciones.
+- **Google no está**: no permite iniciar sesión desde otras aplicaciones y ha suspendido cuentas por hacerlo. Gemini se
+  usa con una [clave gratuita](#google-gemini-clave-gratuita).
+- Claude no ofrece esta vía: para usar tu suscripción, el proveedor **Claude** (Claude Code).
+
+```sh
+scripts/hf-ai account list                    # cuáles hay y cuáles están conectadas
+scripts/hf-ai account login github-copilot    # una línea JSON por estado; Ctrl + C cancela
+scripts/hf-ai account logout openai
 ```
 
 ### IA local con Ollama (respaldo y órdenes de voz)

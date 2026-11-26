@@ -3,6 +3,19 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.15.0] — 2026-11-26
+
+### Novedades
+- **Cuentas en el asistente** (Ajustes › Asistente de IA › Cuentas, o desde el panel): inicia sesión en **ChatGPT,
+  GitHub Copilot, Grok o Poe** desde el navegador y elige sus modelos. Funciona a través de OpenCode, que guarda las
+  credenciales.
+
+### Cambios
+- Los modelos de esas cuentas solo se usan cuando los eliges: ni «Automático» ni el respaldo los tocan.
+
+### Sin probar
+- Completar un inicio de sesión real y preguntar con uno de esos modelos.
+
 ## [0.14.1] — 2026-11-26
 
 ### Correcciones

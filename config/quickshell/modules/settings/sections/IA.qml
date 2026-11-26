@@ -82,6 +82,46 @@ ColumnLayout {
         Settings.setMany(ch);
     }
 
+    // ---- cuentas con inicio de sesión (hf-ai account; las guarda OpenCode) ----
+    property var accounts: []
+    property string accountsErr: ""
+    property string signing: ""          // cuenta con el inicio de sesión en marcha
+    property var sign: ({})              // su último estado: {state, url, code, message}
+    function refreshAccounts() { accList.running = false; accList.running = true; }
+    function login(id) {
+        root.sign = { state: "start" };
+        root.signing = id;
+        accLogin.command = [Paths.script("hf-ai"), "account", "login", id];
+        accLogin.running = true;
+    }
+    function useAccount(a) {
+        const ch = { aiProvider: "opencode", aiModel: a.model };
+        if (Settings.get("aiFallbackProvider", "") === "opencode") ch.aiFallbackProvider = "";
+        Settings.setMany(ch); root.testMsg = ""; statTimer.restart();
+    }
+    Process {
+        id: accList
+        running: root.hasOpencode
+        command: [Paths.script("hf-ai"), "account", "list"]
+        stdout: StdioCollector { onStreamFinished: { try { const j = JSON.parse(text); root.accounts = j.accounts ?? []; root.accountsErr = j.error ?? ""; } catch (e) { root.accountsErr = "No se pudo preguntar a OpenCode"; } } }
+    }
+    Process {
+        id: accLogin
+        stdout: SplitParser {
+            onRead: line => {
+                try { const j = JSON.parse(line); root.sign = Object.assign({}, root.sign, j); } catch (e) {}
+                if (root.sign.state === "done") { root.signing = ""; root.refreshAccounts(); }
+                if (root.sign.state === "cancelled") root.signing = "";
+            }
+        }
+        onExited: { if (root.signing !== "" && root.sign.state !== "error") root.signing = ""; }
+    }
+    Process {
+        id: accLogout
+        stdout: StdioCollector { onStreamFinished: { try { const j = JSON.parse(text); if (!j.ok) root.accountsErr = j.error; } catch (e) {} } }
+        onExited: root.refreshAccounts()
+    }
+
     // ---- Gemini: clave, modelos y prueba ----
     function refreshGemini(): void {
         keyStat.running = false; keyStat.running = true;
@@ -340,6 +380,67 @@ ColumnLayout {
                 Button { visible: !root.isPrimary(modelData) && !root.isFallback(modelData); text: "De respaldo"; h: 28; onClicked: root.useFallback(modelData) }
             }
         }
+    }
+
+    // Cuentas: entrar con tu usuario en vez de pegar una clave
+    Section {
+        Layout.fillWidth: true
+        visible: root.hasOpencode
+        title: "Cuentas"
+        headerRight: Button { kind: "link"; text: "Actualizar"; onClicked: root.refreshAccounts() }
+        Txt {
+            visible: text !== ""
+            Layout.fillWidth: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone; color: Theme.danger
+            text: root.accountsErr
+        }
+        Repeater {
+            model: root.accounts
+            InfoRow {
+                id: acc
+                required property var modelData
+                required property int index
+                readonly property bool inUse: root.prov === "opencode" && String(Settings.get("aiModel", "")).startsWith(modelData.id + "/")
+                separator: index > 0
+                label: modelData.name
+                sub: modelData.problem !== "" ? modelData.problem : modelData.connected ? "Conectada" + (modelData.label !== "" ? " · " + modelData.label : "")
+                     : modelData.available ? "Sin conectar" : "No disponible en tu OpenCode"
+                glyph: modelData.name.slice(0, 2).toUpperCase()
+                lit: inUse
+                badge: inUse ? "En uso" : ""
+                badgeStrong: inUse
+                Button { visible: acc.modelData.connected && acc.modelData.model !== "" && !acc.inUse; text: "Usar"; h: 28; onClicked: root.useAccount(acc.modelData) }
+                Button { visible: !acc.modelData.connected && acc.modelData.available; enabled: root.signing === ""; text: "Iniciar sesión"; h: 28; onClicked: root.login(acc.modelData.id) }
+                Button { visible: acc.modelData.removable; kind: "ghost"; text: "Cerrar sesión"; h: 28
+                         onClicked: { accLogout.command = [Paths.script("hf-ai"), "account", "logout", acc.modelData.id]; accLogout.running = true; } }
+            }
+        }
+        // el inicio de sesión en marcha
+        ColumnLayout {
+            visible: root.signing !== ""
+            Layout.fillWidth: true
+            spacing: 8
+            Txt {
+                Layout.fillWidth: true; size: 12; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                color: root.sign.state === "error" ? Theme.danger : Theme.t
+                text: root.sign.state === "error" ? root.sign.message
+                    : root.sign.state === "authorize" ? "Autoriza el acceso en el navegador que se ha abierto." + (root.sign.code ? " Escribe allí este código:" : "")
+                    : "Preparando…"
+            }
+            Mono { visible: !!root.sign.code && root.sign.state === "authorize"; muted: false; size: 18; text: root.sign.code ?? "" }
+            Flow {
+                Layout.fillWidth: true
+                spacing: 8
+                Button { visible: !!root.sign.code && root.sign.state === "authorize"; text: "Copiar el código"; h: 28; onClicked: Quickshell.clipboardText = root.sign.code }
+                Button { visible: root.sign.state === "authorize"; text: "Abrir otra vez"; h: 28; onClicked: Qt.openUrlExternally(root.sign.url) }
+                Button { kind: "ghost"; text: root.sign.state === "error" ? "Cerrar" : "Cancelar"; h: 28
+                         onClicked: { accLogin.running = false; root.signing = ""; } }
+            }
+        }
+        Txt {
+            Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+            text: "Sus modelos solo se usan cuando los eliges: ni «Automático» ni el respaldo los tocan. Las credenciales las guarda OpenCode en este equipo y lo que preguntes va a ese servicio. Gemini no está aquí: Google no permite entrar desde otras aplicaciones (ha suspendido cuentas por ello); úsalo con una clave gratuita."
+        }
+        Button { kind: "link"; text: "Usar Gemini con una clave ↗"; onClicked: { Settings.set("aiProvider", "gemini"); Qt.openUrlExternally("https://aistudio.google.com/apikey"); } }
     }
 
     // Modelos (hf-ai provider_for / fallback_for): modelo por tarea y respaldo si el proveedor falla
