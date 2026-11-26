@@ -62,5 +62,4 @@ Singleton {
     }
     function local(id: int): int { return perMonitor && id > 10 ? (id - 1) % 10 + 1 : id; }
     function owns(monitorName, id: int): bool { const b = base(monitorName); return !perMonitor || (id > b && id <= b + 10); }
-    function fontFor(st): string { return (st ?? style) === "japonesa" ? "Noto Sans CJK JP" : Theme.font; }
 }

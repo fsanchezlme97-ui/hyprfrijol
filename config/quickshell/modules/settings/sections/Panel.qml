@@ -148,5 +148,4 @@ ColumnLayout {
             }
         }
     }
-    function settingsSection(s) { Quickshell.execDetached(["qs", "-p", Paths.root + "/config/quickshell", "ipc", "call", "settings", "open", s]); }
 }

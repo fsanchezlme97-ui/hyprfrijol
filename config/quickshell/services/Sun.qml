@@ -33,7 +33,6 @@ Singleton {
     }
 
     // Ecuación de NOAA (General Solar Position, precisión ~1 min). Devuelve minutos locales redondeados.
-    // Igual que sun_times() de scripts/hf-apply: cambiar los dos a la vez.
     function calc(d, lat: real, lon: real, _day: int): var {
         const start = new Date(d.getFullYear(), 0, 1);
         const n = Math.floor((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - start) / 86400000) + 1;

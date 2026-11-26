@@ -21,7 +21,6 @@ ChipPopup {
         if (!all.length) return { lo: 0, hi: 1 };
         return { lo: Math.min(...all.map(d => d.min)), hi: Math.max(...all.map(d => d.max)) };
     }
-    function popTxt(p): string { return p >= 0 ? p + " %" : "—"; }
 
     Glass {
         id: card

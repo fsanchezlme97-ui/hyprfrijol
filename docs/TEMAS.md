@@ -146,7 +146,7 @@ En Ajustes › Apariencia:
 
 ## Fondos y colores automáticos
 
-Si activas `themeWallpaper: true` (o eliges el modo «Mono»), HyprFrijol genera la paleta a partir del fondo actual usando matugen. El tema resultante se guarda en `~/.local/state/hyprfrijol/theme.json`.
+Si eliges el modo «Mono», HyprFrijol genera la paleta a partir del fondo actual usando matugen. El tema resultante se guarda en `~/.local/state/hyprfrijol/theme.json`.
 
 ## Notas
 

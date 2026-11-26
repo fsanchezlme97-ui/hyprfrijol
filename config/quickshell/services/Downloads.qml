@@ -49,7 +49,6 @@ Singleton {
         if (!u.length) return;
         cmd(["add"].concat(type && type !== "auto" ? ["--type", type] : [], format ? ["--format", format] : [], u));
     }
-    function addFile(path: string, type: string): void { cmd(["add", "--file", path].concat(type && type !== "auto" ? ["--type", type] : [])); }
     function pause(id: string): void { cmd(["pause", id]); }
     function resume(id: string): void { cmd(["resume", id]); }
     function cancel(id: string): void { cmd(["cancel", id]); }

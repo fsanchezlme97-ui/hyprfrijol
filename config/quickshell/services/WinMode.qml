@@ -109,7 +109,6 @@ Singleton {
     function modeOf(ws: int): string { return overrides[String(ws)] ?? mode; }
     function baseFloat(ws: int, m: string): bool { return ws > 0 && m === "flotante"; }
     function isFloat(ws: int): bool { return ws > 0 && modeOf(ws) === "flotante"; }
-    function isScroll(ws: int): bool { return ws > 0 && modeOf(ws) === "desplazamiento"; }
     function layoutFor(m: string): string { return m === "desplazamiento" ? "scrolling" : tiledLayout; }
     // Escritorio ordenado por grupos (ajuste "deskIcons" = "ordenado"; el antiguo "flotante" también)
     readonly property string deskIcons: Settings.get("deskIcons", "todos")
@@ -165,8 +164,6 @@ Singleton {
         setWsMode(ws, next);
         announced(next);
     }
-    // Compatibilidad: flotar o no un espacio
-    function setFloat(ws: int, on: bool): void { setWsMode(ws, on ? "flotante" : (mode === "flotante" ? "mosaico" : mode)); }
     // Regla de espacio de Hyprland con el diseño (las reglas se pierden al recargar: reapplyRules)
     function wsLayout(ws: int, lay: string): void {
         Shell.dispatch('function() hl.workspace_rule({ workspace = "' + ws + '", layout = "' + lay + '" }) end');

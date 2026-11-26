@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.16.1] — 2026-11-26
+
+### Mantenimiento
+- **Depuración, sin cambios que se noten:** se quita lo que nadie usaba. Dos componentes (`HarperIcon`,
+  `PaletteSwatch`), tres ajustes por defecto que ningún código leía (`monoFondo`, `themeWallpaper`, `floatWorkspace`)
+  y varias funciones sueltas, entre ellas el cálculo del amanecer y el atardecer de `hf-apply` (ese cálculo ya lo
+  hace `services/Sun.qml`). Si tenías alguna de esas claves en tu `settings.json`, se ignora igual que antes.
+- La documentación de los temas decía que `themeWallpaper` sacaba la paleta del fondo: era falso. Lo que lo hace es
+  el modo «Mono».
+
 ## [0.16.0] — 2026-11-26
 
 ### Novedades

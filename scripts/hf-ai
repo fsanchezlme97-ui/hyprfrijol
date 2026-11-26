@@ -2788,9 +2788,6 @@ def which_cli(b):
 def local_clis():
     return [{"id": i, "name": n, "provider": p, "path": which_cli(b)} for i, n, b, p in LOCAL_CLIS if which_cli(b)]
 
-def cli_name(cid):
-    return next((r[1] for r in LOCAL_CLIS if r[0] == cid), "la IA de terminal")
-
 def cli_argv(cid, exe, system, prompt, model):
     """(órdenes, entrada estándar). La conversación va siempre por la entrada estándar: en los argumentos cualquier
     proceso la leería en /proc/<pid>/cmdline."""

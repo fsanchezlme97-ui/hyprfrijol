@@ -97,7 +97,6 @@
   "sideWidth": "cuarto",
   "sideSide": "izquierda",
   "sidePanelPinned": false,
-  "monoFondo": true,
   "wallpaperHora": false,
   "clipboardAutoPaste": true,
   "clipMaxItems": 750,
@@ -270,7 +269,6 @@
   "lightTo": 19,
   "themeSchedule": "horas",
   "sunAuto": true,
-  "themeWallpaper": false,
   "kbLayouts": [
     "latam",
     "us"
@@ -429,7 +427,6 @@
   "omarchyBarSlot": "derecha",
   "safeModeCrashLimit": 3,
   "hfUpdateCheck": "weekly",
-  "floatWorkspace": 6,
   "barAutoHide": false,
   "aiMcpServers": [],
   "alarms": [],
