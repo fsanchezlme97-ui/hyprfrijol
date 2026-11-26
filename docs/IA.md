@@ -99,7 +99,8 @@ y respuestas vacías; hoy cada uno declara su contexto —`ollama/gemma4:e4b`: 1
 - **El modelo se elige solo si en Ajustes no hay ninguno** (lo pone «Automático»): primero el que tiene configurado
   OpenCode en `~/.config/opencode/opencode.json` (p. ej. `minimax/MiniMax-M3.1-Flash`), si no el último que respondió y
   si no el primero disponible. Así, con un proveedor propio en OpenCode (MiniMax, Anthropic…), el panel lo usa sin
-  tocar nada. `hf-ai models opencode` dice cuál sería (`"auto"`).
+  tocar nada. `hf-ai models opencode` dice cuál sería (`"auto"`). Si el modelo de OpenCode es de una de tus
+  [cuentas](#cuentas-chatgpt-github-copilot-grok-y-poe), no se usa solo: se pasa al siguiente.
 - **Si el modelo que toca no puede** (cuota agotada, sin clave, saturado), se prueba con otro sin preguntar (nunca
   con los de tus [cuentas](#cuentas-chatgpt-github-copilot-grok-y-poe)): se
   saltan los modelos del proveedor que falló (la cuota gratuita es una sola para todos) y se sigue con los de otro

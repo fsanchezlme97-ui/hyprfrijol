@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.15.1] — 2026-11-26
+
+### Correcciones
+- El modelo de una cuenta tuya (ChatGPT, Copilot, Grok, Poe) ya no se usaba solo por estar configurado en OpenCode:
+  «Automático» y el respaldo lo saltaban. Ahora solo se usa si lo eliges tú, como se había prometido.
+
 ## [0.15.0] — 2026-11-26
 
 ### Novedades

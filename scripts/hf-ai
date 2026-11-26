@@ -2856,9 +2856,12 @@ def opencode_pair(m):
     return {"providerID": p, "id": mid} if mid else {"providerID": "opencode", "id": p}
 
 def opencode_configured():
-    """El modelo que OpenCode tiene configurado por su cuenta (el «model» de ~/.config/opencode/opencode.json)."""
+    """El modelo que OpenCode tiene configurado por su cuenta (el «model» de ~/.config/opencode/opencode.json).
+    Los de tus cuentas no cuentan: si conectaste ChatGPT en OpenCode y lo dejaste por defecto, usarlo sin avisar
+    gastaría tu plan."""
     j = load(OPENCODE_CFG, {}) or {}
-    return str(j.get("model") or "").strip().split("#")[0]
+    m = str(j.get("model") or "").strip().split("#")[0]
+    return "" if account_model(m) else m
 
 def opencode_last():
     """El último modelo que respondió bien (no se vuelve a probar el que se quedó sin cuota). Los de tus cuentas no

@@ -156,6 +156,24 @@ def main():
         assert not [m for m in got["solo"] if m.startswith("openai/")] and "mio/propio" in got["solo"], got
         assert got["elegido"][0] == "openai/nuevo" and got["elegido"].count("openai/nuevo") == 1 and "openai/viejo" not in got["elegido"], got
         assert got["fijado"] == ["openai/nuevo"], got
+
+        # lo mismo con el modelo de una cuenta puesto por defecto en la configuración de OpenCode: si conectaste
+        # ChatGPT en OpenCode y lo dejaste ahí, HyprFrijol no lo usa sin avisar (gastaría tu plan)
+        (tmp / ".config/opencode").mkdir(parents=True, exist_ok=True)
+        (tmp / ".config/opencode/opencode.json").write_text(json.dumps({"model": "openai/nuevo"}))
+        code = (
+            "import importlib.machinery, importlib.util, json, sys\n"
+            f"l = importlib.machinery.SourceFileLoader('ai', {str(ROOT / 'scripts/hf-ai')!r}); s = importlib.util.spec_from_loader('ai', l)\n"
+            "ai = importlib.util.module_from_spec(s); sys.dont_write_bytecode = True; l.exec_module(ai)\n"
+            "print(json.dumps({'configurado': ai.opencode_configured(), 'auto': ai.opencode_auto(),\n"
+            "  'solo': ai.opencode_candidates({}), 'elegido': ai.opencode_candidates({'aiModel': 'openai/nuevo'})}))\n")
+        r = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True, timeout=40)
+        assert r.returncode == 0, r.stderr
+        got = json.loads(r.stdout)
+        assert got["configurado"] == "", got
+        assert not got["auto"].startswith("openai/"), got
+        assert not [m for m in got["solo"] if m.startswith("openai/")], got
+        assert got["elegido"][0] == "openai/nuevo", got     # elegido a mano, sí se usa
     finally:
         server.shutdown()
         shutil.rmtree(tmp, ignore_errors=True)

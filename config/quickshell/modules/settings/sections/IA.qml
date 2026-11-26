@@ -268,8 +268,8 @@ ColumnLayout {
                 Layout.fillWidth: true; Layout.leftMargin: 128
                 size: 11; muted: true; wrapMode: Text.WordWrap; elide: Text.ElideNone
                 text: root.ocAuto !== ""
-                    ? "Automático: se usará «" + root.ocAuto + "» (el modelo que tiene configurado OpenCode; si no puede, se prueba con otro disponible)."
-                    : "Automático: se usará el modelo que tenga configurado OpenCode; si no puede, se prueba con otro disponible."
+                    ? "Automático: se usará «" + root.ocAuto + "» (el modelo que tiene configurado OpenCode, si no es de una cuenta tuya; si no puede, se prueba con otro disponible)."
+                    : "Automático: se usará el modelo que tenga configurado OpenCode, si no es de una cuenta tuya; si no puede, se prueba con otro disponible."
             }
             Txt {
                 // Las prestaciones del modelo elegido (las declara el catálogo de OpenCode): qué admite y qué devuelve
