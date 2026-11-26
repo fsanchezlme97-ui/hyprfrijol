@@ -6,6 +6,8 @@ antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X
 ## [0.13.0] — 2026-11-25
 
 ### Novedades
+- **Tema Neocarbon** (Ajustes › Apariencia), oscuro y claro: el negro y el durazno de Vesper con los acentos fríos de
+  Oxocarbon, también en la terminal.
 - **Frecuencia variable con cuatro opciones** (Ajustes › Pantallas): apagada, siempre, solo a pantalla completa o solo
   con juegos y vídeo.
 
