@@ -386,7 +386,7 @@
   {"f": "Pantallas", "l": "Orientación", "t": "row", "g": "Monitor seleccionado"},
   {"f": "Pantallas", "l": "Pantalla principal", "t": "row", "s": "el espacio 1 se abre en ella", "g": "Monitor seleccionado"},
   {"f": "Pantallas", "l": "Pantalla activada", "t": "row", "g": "Monitor seleccionado"},
-  {"f": "Pantallas", "l": "Frecuencia variable (VRR)", "t": "row", "s": "misc:vrr · menos tirones en juegos", "g": "Monitor seleccionado"},
+  {"f": "Pantallas", "l": "Frecuencia variable", "t": "row", "g": "Monitor seleccionado"},
   {"f": "Pantallas", "l": "HDR", "t": "row", "s": "cm = hdr · bitdepth = 10 (experimental)", "g": "Monitor seleccionado"},
   {"f": "Pantallas", "l": "Duplicar pantalla", "t": "row", "g": "Monitor seleccionado"},
   {"f": "Pantallas", "l": "Luz nocturna", "t": "card"},

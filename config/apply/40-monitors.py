@@ -1,10 +1,18 @@
-# Pantallas: Settings "monitors" = { "DP-1": { mode, position, scale, transform, vrr, hdr, mirror, disabled } } y uiScale.
+# Pantallas: Settings "monitors" = { "DP-1": { mode, position, scale, transform, vrr (0…3), hdr, mirror, disabled } } y
+# uiScale.
 # primaryMonitor: la pantalla principal (el espacio 1 se abre en ella).
 # wsPerMonitor (por defecto true): cada pantalla con sus espacios (1-10, 11-20…; orden y reglas en frijol/workspaces.lua).
 import json, re
 
 def _q(v):
     return json.dumps(str(v), ensure_ascii=False)   # escapa también «\» (un modo acabado en barra rompía settings.lua entero)
+
+def _vrr(v):
+    """0 apagada · 1 siempre · 2 solo a pantalla completa · 3 solo con juegos o vídeo. El «true» de antes es 1."""
+    if v is True:
+        return 1
+    return v if isinstance(v, int) and v in (1, 2, 3) else 0
+
 
 def _scale(v):
     try:
@@ -29,8 +37,8 @@ def hypr_lua(s, c):
             tr = 0
         if 0 < tr <= 7:
             parts.append(f"transform = {tr}")
-        if m.get("vrr"):
-            parts.append("vrr = 1")
+        if "vrr" in m:   # apagada también se escribe: si no, seguiría valiendo misc:vrr
+            parts.append(f"vrr = {_vrr(m['vrr'])}")
         if m.get("hdr"):
             parts += ['cm = "hdr"', "bitdepth = 10"]
         if m.get("mirror"):

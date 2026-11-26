@@ -46,7 +46,7 @@ ColumnLayout {
     readonly property string primary: Settings.get("primaryMonitor", "") || (mons.find(m => !m.disabled)?.name ?? "")
     function monLua(name, cur) {
         return cur.disabled ? "hl.monitor({ output = \"" + name + "\", disabled = true })" : "hl.monitor({ output = \"" + name + "\", mode = \"" + cur.mode + "\", position = \"" + cur.position + "\", scale = " + cur.scale
-            + (cur.transform ? ", transform = " + cur.transform : "") + (cur.vrr ? ", vrr = 1" : "") + (cur.hdr ? ", cm = \"hdr\", bitdepth = 10" : "") + (cur.mirror ? ", mirror = \"" + cur.mirror + "\"" : "") + " })";
+            + (cur.transform ? ", transform = " + cur.transform : "") + (cur.vrr !== undefined ? ", vrr = " + Number(cur.vrr) : "") + (cur.hdr ? ", cm = \"hdr\", bitdepth = 10" : "") + (cur.mirror ? ", mirror = \"" + cur.mirror + "\"" : "") + " })";
     }
     // what: si se da, el cambio es arriesgado (resolución, frecuencia, escala, giro…) → «¿Se ve bien?» de
     // services/Confirm.qml: sin «Mantener» en 15 s vuelve a la configuración de antes (también al momento con hyprctl)
@@ -207,7 +207,19 @@ ColumnLayout {
                 checked: !(root.sel?.disabled ?? false)
                 onToggled: v => root.setMon({ disabled: !v }, v ? "Pantalla activada" : "Pantalla desactivada")
             }
-            SwRow { label: "Frecuencia variable (VRR)"; sub: "misc:vrr · menos tirones en juegos"; mono: true; checked: !!root.mcfg.vrr || !!root.sel?.vrr; onToggled: v => root.setMon({ vrr: v }) }
+            LabeledRow {
+                label: "Frecuencia variable"; labelWidth: 130
+                Seg {
+                    model: [[0, "Apagada"], [1, "Siempre"], [2, "Pantalla completa"], [3, "Juegos y vídeo"]]
+                    // «true» es lo que se guardaba antes; sin nada guardado, lo que haga ahora la pantalla
+                    current: root.mcfg.vrr === undefined ? (root.sel?.vrr ? 1 : 0) : Number(root.mcfg.vrr)
+                    onPicked: k => root.setMon({ vrr: k })
+                }
+            }
+            Txt {
+                Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
+                text: "VRR (FreeSync, G-Sync): menos tirones en juegos. Si el escritorio parpadea con «Siempre», usa «Pantalla completa» o «Juegos y vídeo». Hace falta una pantalla compatible."
+            }
             SwRow { label: "HDR"; sub: "cm = hdr · bitdepth = 10 (experimental)"; mono: true; checked: !!root.mcfg.hdr; onToggled: v => root.setMon({ hdr: v }) }
             SwRow {
                 label: "Duplicar pantalla"; sub: root.mons.length > 1 ? "muestra lo mismo que " + (root.mons.find(m => m.name !== root.sel?.name)?.name ?? "") : "conecta otra pantalla"
