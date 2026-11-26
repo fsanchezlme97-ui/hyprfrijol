@@ -1,7 +1,9 @@
 # Apariencia y accesibilidad visual: esquinas, alto contraste, calidad del desenfoque, sombras y filtros de color.
-import os, sys, pathlib, glob
-
+import glob
 import json
+import os
+import pathlib
+import sys
 
 
 def _rgba(h, a=1.0):

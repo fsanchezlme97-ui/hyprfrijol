@@ -165,6 +165,18 @@ ColumnLayout {
         }
     }
 
+    // scratchpads → config/apply/55-scratchpads.py · ui/Scratchpads.qml
+    Section {
+        Layout.fillWidth: true
+        title: "Espacios ocultos con nombre"
+        headerRight: Mono { tech: true; text: "special:hfpad-1…4" }
+        Scratchpads {
+            Layout.fillWidth: true
+            pads: { const v = Settings.get("scratchpads", []); return Array.isArray(v) ? v : []; }
+            onApply: l => Settings.set("scratchpads", l)
+        }
+    }
+
     // Apps que flotan al centro (floatApps, floatAppsSize → config/apply/35-windows.py) · ui/FloatApps.qml
     Section {
         Layout.fillWidth: true

@@ -11,6 +11,8 @@ antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X
 - **Aviso en la barra cuando se ve tu pantalla**: al grabar, compartir en una videollamada o entrar por escritorio
   remoto aparece «Pantalla» junto al del micrófono; al pulsarlo se ve qué app es (Ajustes › Privacidad). Una captura
   suelta no lo enciende.
+- **Espacios ocultos con nombre** (Ajustes › Escritorio y gestos): hasta cuatro, cada uno con sus apps; Super + F1…F4
+  lo muestra o esconde y Super + Mayús + F1…F4 le envía la ventana.
 - **Ventanas en pestañas**: Super + Alt + G agrupa la ventana activa, Super + Ctrl + Alt + flechas mete otra en las
   pestañas de ese lado, Super + Alt + Tab cambia de pestaña y Super + Alt + Shift + G la saca. La barra de pestañas usa
   los colores del tema; también está en el menú de la ventana.

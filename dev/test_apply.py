@@ -40,6 +40,16 @@ def test_window_tabs_follow_the_theme():
     assert "ffc799" in line.lower() and line.count("{") == line.count("}"), line
 
 
+def test_named_scratchpads():
+    pads = [{"name": 'Música "x"); os.exit(', "apps": ["spotify", 'mal")', "org.kde.elisa"]}, {"name": ""}, "roto"]
+    pads += [{"name": f"p{i}"} for i in range(5)]
+    out = lua("55-scratchpads", {"scratchpads": pads})
+    assert "F1" in out and "F4" in out and "F5" not in out, out
+    assert 'workspace = "special:hfpad-1 silent"' in out and "spotify|org" in out and 'mal"' not in out, out
+    assert "Espacio oculto: Espacio 2" in out and '\\"x\\"' in out, out
+    assert lua("55-scratchpads", {}) == "" == lua("55-scratchpads", {"scratchpads": "x"})
+
+
 if __name__ == "__main__":
     failed = 0
     for name, test in list(globals().items()):
