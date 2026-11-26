@@ -21,11 +21,6 @@ HF = {
 function HF.sh(p) return (p:gsub("([^%w%._/%-+,:=@])", "\\%1")) end
 HF.scriptsDir = HF.root .. "/scripts"
 HF.scripts = HF.sh(HF.scriptsDir)
-HL = HF   -- nombre anterior (hypr-liquid): un local.lua antiguo con HL.terminal = … sigue funcionando
-
--- Primera vez tras el cambio de nombre: ~/.config|.local/state|.local/share|.cache/hypr-liquid → …/hyprfrijol (deja enlaces)
-if os.execute then pcall(os.execute, "for d in \"$HOME/.config/hypr-liquid\" \"$HOME/.local/state/hypr-liquid\" \"$HOME/.local/share/hypr-liquid\" \"$HOME/.cache/hypr-liquid\"; do "
-    .. "[ -d \"$d\" ] && [ ! -L \"$d\" ] && exec " .. HF.scripts .. "/hf-migrate --dirs-only --quiet; done; true") end
 HF.qs      = "qs -p " .. HF.sh(HF.root .. "/config/quickshell")
 
 package.path = HF.hypr .. "/?.lua;" .. package.path

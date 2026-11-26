@@ -8,8 +8,6 @@ Primero el portal (org.freedesktop.portal.FileChooser: el selector de GTK/GNOME 
 (dev/try.sh, HF_TRY) o con HF_NO_PORTAL=1 va directo a zenity. Lo usan Firmar y el teléfono de los ajustes rápidos.
 """
 import os, shutil, subprocess, sys, urllib.parse
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
 args = sys.argv[1:]
 title, filters, folder, multiple = "Elegir archivo", [], "", False

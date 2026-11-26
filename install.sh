@@ -14,7 +14,6 @@
 #   ./install.sh --greeter        (opcional) login visual con greetd; guarda el gestor actual para volver
 #   ./install.sh --greeter-off    vuelve al gestor de inicio que había antes
 #   ./install.sh --greeter-sync   copia tu tema y tu fondo al login (scripts/hf-greeter-sync)
-#   ./install.sh --migrate        pasa una instalación de hypr-liquid (nombre anterior) a hyprfrijol
 #   ./install.sh --perfil=ARCHIVO al terminar, deja el equipo como ese perfil (scripts/hf-perfil: paquetes, apps,
 #                                 servicios, acceso remoto, voz, dictado, modelos locales, login y tus ajustes)
 #   ./install.sh --perfil=RESPALDO.tar.gz   igual, desde el respaldo de hf-perfil respaldo: además tus datos, tus fondos
@@ -36,7 +35,7 @@
 # ~/.config/matugen: hyprfrijol se ejecuta desde esta carpeta como una sesión aparte.
 set -euo pipefail
 
-DRY=0 YES=0 FULL=0 DEPS=1 SYSTEM=1 SESSION=1 UNINSTALL=0 PURGE=0 GREETER="" MIGRATE=0 PERFIL="" REMOTO=0
+DRY=0 YES=0 FULL=0 DEPS=1 SYSTEM=1 SESSION=1 UNINSTALL=0 PURGE=0 GREETER="" PERFIL="" REMOTO=0
 EQUIPO=""   # gpu | cpu | ninguno (--equipo=…); vacío = detectar y preguntar
 APPS=""   # niveles de install/apps.json (--apps=…); vacío = preguntar (o «serie» con --yes/--dry-run)
 for a in "$@"; do
@@ -56,7 +55,6 @@ for a in "$@"; do
     --equipo=*)     EQUIPO="${a#--equipo=}"
                     case "$EQUIPO" in gpu|cpu|ninguno) ;; *) echo "--equipo: gpu, cpu o ninguno" >&2; exit 1 ;; esac ;;
     --no-apps)      APPS=none ;;
-    --migrate)      MIGRATE=1 ;;
     --perfil=*)     PERFIL="${a#--perfil=}" ;;
     --perfil)       PERFIL=publico ;;   # el del repo: HERE aún no está definido aquí
     --acceso-remoto) REMOTO=1 ;;
@@ -664,7 +662,6 @@ greeter_sync() {   # (en --dry-run solo se enseña: hf-greeter-sync --dry-run s�
 }
 greeter() {
   local PREV_FILE=/etc/greetd/hf-previous-dm
-  [ -e "$PREV_FILE" ] || [ ! -e /etc/greetd/hl-previous-dm ] || PREV_FILE=/etc/greetd/hl-previous-dm   # nombre anterior (hypr-liquid)
   if [ "$FAMILY" = nixos ]; then
     warn "NixOS: el login se declara en configuration.nix:"
     note "services.greetd = { enable = true; settings.default_session = { command = \"start-hyprland -- --config /etc/greetd/hyprland-greeter.lua\"; user = \"greeter\"; }; };" \
@@ -765,12 +762,11 @@ user_install() {
 uninstall() {
   hdr "Desinstalar"
   local s l t
-  for l in "$BIN"/hf-* "$BIN"/hl-*; do
+  for l in "$BIN"/hf-*; do
     [ -L "$l" ] || continue
     t="$(readlink "$l")"
     case "$(basename "$l")" in
       hf-*) case "$t" in */scripts/"$(basename "$l")") run rm "$l" ;; esac ;;     # también si el repo se movió
-      hl-*) case "$t" in hf-*|*/scripts/hf-*|*/scripts/hl-*) run rm "$l" ;; esac ;;   # enlaces de hf-migrate
     esac
   done
   done_ "enlaces de ~/.local/bin"
@@ -784,9 +780,9 @@ uninstall() {
   [ -L "$l" ] && case "$(readlink "$l")" in */config/nautilus/hyprfrijol.py) run rm "$l"; done_ "menú de Nautilus" ;; esac
   # La entrada de sesión es del sistema: solo se quita si arranca la sesión de ESTE usuario
   local sf
-  for sf in "$SESSION_FILE" "$SAFE_SESSION_FILE" /usr/share/wayland-sessions/hypr-liquid.desktop; do   # (el último: nombre anterior)
+  for sf in "$SESSION_FILE" "$SAFE_SESSION_FILE"; do
     [ -e "$sf" ] || continue
-    if grep -qsE "^Exec=$BIN/h[fl]-session( --safe)?\$" "$sf"; then root rm "$sf"; done_ "entrada de sesión $sf"
+    if grep -qsE "^Exec=$BIN/hf-session( --safe)?\$" "$sf"; then root rm "$sf"; done_ "entrada de sesión $sf"
     else warn "$sf arranca la sesión de otro usuario o carpeta: no la toco"; fi
   done
   if [ -e /etc/greetd/hf-previous-dm ] || grep -qs hyprland-greeter /etc/greetd/config.toml; then
@@ -797,8 +793,7 @@ uninstall() {
       # Quita el tema de las apps (kitty, GTK, Qt, btop, iconos) antes de borrar el estado
       if [ -d "$USERCFG" ]; then run env HF_ROOT="$HERE" "$HERE/scripts/hf-apply" set themeApps=false themeIcons=false --no-reload || true; fi
       [ -x "$HOME/.local/bin/matugen" ] && [ -f "$HOME/.local/.crates.toml" ] && grep -qs '^"matugen ' "$HOME/.local/.crates.toml" && run cargo uninstall --root "$HOME/.local" matugen
-      for s in "$USERCFG" "$STATE" "$HOME/.cache/hyprfrijol" "$HOME/.local/share/hyprfrijol" \
-               "$HOME/.config/hypr-liquid" "$HOME/.local/state/hypr-liquid" "$HOME/.cache/hypr-liquid" "$HOME/.local/share/hypr-liquid"; do
+      for s in "$USERCFG" "$STATE" "$HOME/.cache/hyprfrijol" "$HOME/.local/share/hyprfrijol"; do
         [ -e "$s" ] || [ -L "$s" ] || continue
         case "$HERE/" in "$s"/*) warn "No borro $s: contiene este repo"; continue ;; esac
         run rm -rf "$s"
@@ -841,14 +836,6 @@ summary() {
 detect_distro
 
 if [ "$UNINSTALL" = 1 ]; then uninstall; exit 0; fi
-
-# Migración desde hypr-liquid (nombre anterior). Solo aquí se crean los enlaces hl-* → hf-*.
-if [ "$MIGRATE" = 1 ] || { [ -d "$HOME/.config/hypr-liquid" ] && [ ! -L "$HOME/.config/hypr-liquid" ]; } || compgen -G "$BIN/hl-*" >/dev/null; then
-  say "Instalación anterior (hypr-liquid) encontrada: migrando a hyprfrijol"
-  margs=(); [ "$DRY" = 1 ] && margs+=(--dry-run)
-  "$HERE/scripts/hf-migrate" ${margs[@]+"${margs[@]}"} || warn "La migración no terminó (prueba: scripts/hf-migrate --dry-run)"
-  [ "$MIGRATE" = 1 ] && exit 0
-fi
 
 say "hyprfrijol desde $HERE"
 say "Distro: ${OS_PRETTY:-desconocida} · familia: $FAMILY · gestor: ${PM:-ninguno} · arranque: $INIT"

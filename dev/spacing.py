@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""dev/spacing.py — escala de espaciado de Math (docs/planes/temas.md §2.1): 4 / 8 / 12 / 16 / 24.
+"""dev/spacing.py — escala de espaciado de Math: 4 / 8 / 12 / 16 / 24.
 
   dev/spacing.py           lista los espaciados y márgenes literales fuera de la escala (sale con 1 si hay)
   dev/spacing.py --fix     los lleva al valor de la escala más cercano (empates hacia arriba: 6 → 8, 10 → 12)

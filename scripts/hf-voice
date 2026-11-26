@@ -30,8 +30,6 @@ Pruebas: HF_VOICE_OPEN="<orden>" abre las direcciones con esa orden en lugar de 
 HF_VOICE_NO_NET=1 no consulta YouTube (usa la búsqueda).
 """
 import difflib, json, os, pathlib, re, shlex, shutil, subprocess, sys, time, unicodedata, urllib.parse, urllib.request
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
 HOME = pathlib.Path.home()
 ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)

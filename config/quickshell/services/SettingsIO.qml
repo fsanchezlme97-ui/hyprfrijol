@@ -39,7 +39,7 @@ Singleton {
         importProc.command = ["sh", "-c", docs
             + "f=$1; if [ -n \"$f\" ]; then :; "
             + "elif command -v zenity >/dev/null; then f=$(zenity --file-selection --title='Importar ajustes' --filename=\"$d/\" --file-filter='JSON | *.json' 2>/dev/null) || { echo CANCEL; exit; }; "
-            + "else f=$(ls -t \"$d\"/hyprfrijol-ajustes-*.json \"$d\"/hypr-liquid-ajustes-*.json 2>/dev/null | head -n1); [ -n \"$f\" ] || { echo NOFILE; exit; }; fi; "
+            + "else f=$(ls -t \"$d\"/hyprfrijol-ajustes-*.json 2>/dev/null | head -n1); [ -n \"$f\" ] || { echo NOFILE; exit; }; fi; "
             + "[ -r \"$f\" ] || { echo \"NOREAD $f\"; exit; }; echo \"FILE $f\"; head -c 2000000 \"$f\"",
             "sh", path ?? ""];
         importProc.running = true;

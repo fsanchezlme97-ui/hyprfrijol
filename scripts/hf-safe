@@ -20,7 +20,6 @@
 # Las copias van en ~/.local/state/hyprfrijol/snapshots/<fecha>/ (se guardan las 12 últimas y la buena).
 # Opciones: --yes (sin preguntar) · --dry-run (solo enseña qué haría)
 set -uo pipefail
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 # El repo es SIEMPRE el de este script: un HF_ROOT roto no debe impedir recuperar
 ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 USERCFG="$HOME/.config/hyprfrijol"

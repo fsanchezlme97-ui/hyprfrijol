@@ -18,9 +18,9 @@ Servicios del sistema  ← PipeWire, NetworkManager, BlueZ, UPower, power-profil
 
 **Principio:** cada función tiene un script o comando que funciona solo (`hf-wallpaper`, `hf-capture`…). Quickshell es solo la cara visual. Así la IA, los atajos y la terminal usan lo mismo.
 
-## Pantallas del prototipo → piezas
+## Pantallas → piezas
 
-Todo vive en `config/quickshell/`. Cada vista del diseño es un módulo en `modules/<carpeta>/`, registrado en `modules/Modules.qml`, que se abre con `Shell.open("<vista>")`. Comparten `components/` (Glass, Btn, Toggle, Overlay…) y `services/` (audio, red, Bluetooth, batería, brillo, multimedia, reloj, eventos, clientes de Hyprland…).
+Todo vive en `config/quickshell/`. Cada vista es un módulo en `modules/<carpeta>/`, registrado en `modules/Modules.qml`, que se abre con `Shell.open("<vista>")`. Comparten `components/` (Glass, Btn, Toggle, Overlay…) y `services/` (audio, red, Bluetooth, batería, brillo, multimedia, reloj, eventos, clientes de Hyprland…).
 
 | Pantalla | Vista (`Shell.view`) | Módulo | Por debajo |
 |---|---|---|---|

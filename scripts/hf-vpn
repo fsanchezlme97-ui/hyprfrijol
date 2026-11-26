@@ -31,7 +31,6 @@
 # «directos» necesitan sudo y se abren en una terminal. hyprfrijol no trae agente de secretos de NetworkManager:
 # si hay uno gráfico (nm-applet, GNOME, Plasma) lo usa; si no, las contraseñas y el código 2FA se piden en una terminal.
 set -uo pipefail
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
 SELF="$(readlink -f "$0")"
 NMCLI="${HF_VPN_NMCLI:-nmcli}"

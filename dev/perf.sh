@@ -65,5 +65,5 @@ EOF
 chmod +x "$TMP/probe.sh"
 
 echo "▸ Sesión anidada con HOME falso; medida de ${T} s tras asentarse (~$((T + 30)) s)…"
-( unset HL_ROOT; export HF_ROOT="$ROOT" HOME="$FH"; "$ROOT/dev/try.sh" -w 20 -x "$TMP/probe.sh" -o "$TMP/perf.png" 2>&1 ) \
+( export HF_ROOT="$ROOT" HOME="$FH"; "$ROOT/dev/try.sh" -w 20 -x "$TMP/probe.sh" -o "$TMP/perf.png" 2>&1 ) \
   | sed -n '/--- sonda ---/,/^captura:/p' | grep -vE '^(--- sonda ---|captura:)'

@@ -8,7 +8,6 @@ import pathlib
 HOME = pathlib.Path.home()
 STATE = HOME / ".local/state/hyprfrijol"
 MARK = "hyprfrijol (Ajustes › Apariencia)"
-OLD_MARK = MARK.replace("hyprfrijol", "hypr-liquid")   # líneas que dejó el nombre anterior: se sustituyen
 
 def _line_file(path, line, want):
     path = pathlib.Path(path)
@@ -16,11 +15,11 @@ def _line_file(path, line, want):
         text = path.read_text() if path.exists() else ""
     except Exception:
         return
-    lines = [l for l in text.splitlines() if MARK not in l and OLD_MARK not in l]
+    lines = [l for l in text.splitlines() if MARK not in l]
     if want:
         lines.append(line)
     new = "\n".join(lines).strip("\n") + ("\n" if lines else "")
-    if new != text and (want or MARK in text or OLD_MARK in text):
+    if new != text and (want or MARK in text):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(new)
 
@@ -40,7 +39,6 @@ def _firmar_desktop():
         if not path.exists() or path.read_text() != text:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text)
-        (path.parent / "hl-firmar.desktop").unlink(missing_ok=True)   # nombre anterior (hypr-liquid)
     except Exception:
         pass
 

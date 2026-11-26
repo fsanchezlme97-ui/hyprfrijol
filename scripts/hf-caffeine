@@ -8,7 +8,6 @@
 # aparte atado a esta sesión de Hyprland: sobrevive a reinicios del shell y se suelta solo al cerrar la sesión.
 # Suspender a mano (menú de energía, tapa) sigue funcionando: solo se bloquea la inactividad.
 set -u
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 SIG="${HYPRLAND_INSTANCE_SIGNATURE:-sin-hyprland}"
 RUN="${XDG_RUNTIME_DIR:-/tmp}/hyprfrijol"
 PIDF="$RUN/caffeine-$SIG"

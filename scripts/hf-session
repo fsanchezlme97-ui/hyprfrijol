@@ -7,7 +7,6 @@
 #   hf-session --safe     modo seguro: Hyprland mínimo (config/hypr/safe.lua) sin shell, plugins ni local.lua,
 #                         con una terminal y el menú «Restaurar ajustes» (hf-safe). Combinable con --nested.
 set -euo pipefail
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 case "${1:-}" in -h|--help) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
 NESTED=0; SAFE=0
 for _a in "$@"; do case "$_a" in --nested) NESTED=1 ;; --safe) SAFE=1 ;; esac; done; unset _a
@@ -49,10 +48,6 @@ if [ "$SAFE" = 1 ]; then
   fi
   exec start-hyprland -- --config "$CFG"
 fi
-# Primera vez tras el cambio de nombre: mueve ~/.config|.local/state|.local/share|.cache/hypr-liquid a …/hyprfrijol (deja enlaces)
-for d in "$HOME/.config/hypr-liquid" "$HOME/.local/state/hypr-liquid" "$HOME/.local/share/hypr-liquid" "$HOME/.cache/hypr-liquid"; do
-  if [ -d "$d" ] && [ ! -L "$d" ]; then "$ROOT/scripts/hf-migrate" --dirs-only --quiet || true; break; fi
-done
 STATE="$HOME/.local/state/hyprfrijol"
 USERCFG="$HOME/.config/hyprfrijol"
 

@@ -14,8 +14,6 @@ en org.gtk.Actions: battery.state, share.uris, findmyphone.ring; la acción de l
 Si no está Valent pero sí kdeconnect-cli (alternativa), se usa ese.
 """
 import json, os, pathlib, shutil, subprocess, sys
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
 BUS = "ca.andyholmes.Valent"
 ROOT_PATH = "/ca/andyholmes/Valent"

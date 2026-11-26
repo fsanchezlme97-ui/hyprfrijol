@@ -1,5 +1,5 @@
 pragma Singleton
-// Iconos de trazo (caja 24×24, trazo 1.8) — los mismos del diseño (design/*.dc.html) + algunos comunes.
+// Iconos de trazo (caja 24×24, trazo 1.8) — propios del shell.
 // Uso:  Icon { name: "wifi" }   ·   o pega el SVG de un diseño:  Icon { svg: '<path d="…"/>' }
 import QtQuick
 import Quickshell

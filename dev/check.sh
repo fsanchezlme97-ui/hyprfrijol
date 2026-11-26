@@ -45,7 +45,7 @@ EOF
 chmod +x "$TMP/probe.sh"
 
 echo "▸ Sesión anidada con HOME falso; abriendo $(wc -w <<<"$VIEWS") vistas y $(wc -w <<<"$SECTIONS") secciones de Ajustes (~2 min)…"
-( unset HL_ROOT; export HF_ROOT="$ROOT" HOME="$FH"; "$ROOT/dev/try.sh" "${SET[@]}" -w 2 -x "$TMP/probe.sh" -o "$TMP/check.png" >"$TMP/try.log" 2>&1 )
+( export HF_ROOT="$ROOT" HOME="$FH"; "$ROOT/dev/try.sh" "${SET[@]}" -w 2 -x "$TMP/probe.sh" -o "$TMP/check.png" >"$TMP/try.log" 2>&1 )
 if ! grep -qx fin "$TMP/views.log" 2>/dev/null; then
   echo "✗ La prueba no llegó al final (¿arrancó la sesión anidada?):"; tail -20 "$TMP/try.log"; exit 1
 fi

@@ -1,4 +1,4 @@
-// Spotlight (vista "spotlight") — design/capturas/Lanzador.png
+// Spotlight (vista "spotlight")
 // Búsqueda difusa de apps (DesktopEntries), web apps, acciones del shell, ventanas, archivos,
 // calculadora (qalc), portapapeles, IA y web.
 // Prefijos: > comandos · = calcular · ? IA · @ ventanas · / archivos · : portapapeles · ; emojis · ! web

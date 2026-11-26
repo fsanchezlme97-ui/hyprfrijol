@@ -20,8 +20,6 @@ sirven también en la terminal y para la IA).
 """
 import hashlib, json, mimetypes, os, pathlib, re, shlex, shutil, subprocess, sys, tempfile, time, zipfile
 import xml.etree.ElementTree as ET
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
 ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
 SCRIPTS = ROOT / "scripts"

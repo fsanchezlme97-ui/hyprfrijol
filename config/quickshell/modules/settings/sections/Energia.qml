@@ -30,7 +30,7 @@ RowLayout {
         const dev = battery.split("/").slice(-2)[0];
         const rule = n < 100 ? 'SUBSYSTEM=="power_supply", KERNEL=="' + dev + '", ATTR{charge_control_end_threshold}="' + n + '"' : "";
         const cmd = 's="${2%end_threshold}start_threshold"; [ -f "$s" ] && [ "$(cat "$s")" -ge "$1" ] && echo $(($1 - 5)) > "$s"; '
-            + 'echo "$1" > "$2" && rm -f /etc/udev/rules.d/99-hypr-liquid-charge.rules && r=/etc/udev/rules.d/99-hyprfrijol-charge.rules && '
+            + 'echo "$1" > "$2" && r=/etc/udev/rules.d/99-hyprfrijol-charge.rules && '
             + 'if [ -n "$3" ]; then printf "# hyprfrijol · Ajustes › Energía (límite de carga)\n%s\n" "$3" > "$r"; else rm -f "$r"; fi';
         if (hasPkexec) Quickshell.execDetached(["pkexec", "sh", "-c", cmd, "sh", String(n), battery, rule]);
         else Pkg.runInTerminal("sudo sh -c '" + cmd.split("'").join("'\\''") + "' sh " + n + " '" + battery + "' '" + rule.split("'").join("'\\''") + "'", "Límite de carga");
@@ -107,7 +107,7 @@ RowLayout {
     Timer { id: loginLater; interval: 2500; onTriggered: root.loadLogin() }
     function setLogin(patch) {
         const c = Object.assign({}, login, patch);
-        Quickshell.execDetached(["pkexec", "sh", "-c", "mkdir -p /etc/systemd/logind.conf.d && rm -f /etc/systemd/logind.conf.d/hypr-liquid.conf && printf '# hyprfrijol · Ajustes › Energía\\n[Login]\\nHandleLidSwitch=%s\\nHandlePowerKey=%s\\n' \"$1\" \"$3\" > /etc/systemd/logind.conf.d/hyprfrijol.conf && "
+        Quickshell.execDetached(["pkexec", "sh", "-c", "mkdir -p /etc/systemd/logind.conf.d && printf '# hyprfrijol · Ajustes › Energía\\n[Login]\\nHandleLidSwitch=%s\\nHandlePowerKey=%s\\n' \"$1\" \"$3\" > /etc/systemd/logind.conf.d/hyprfrijol.conf && "
             + "{ [ -z \"$2\" ] || printf 'HandleLidSwitchExternalPower=%s\\n' \"$2\" >> /etc/systemd/logind.conf.d/hyprfrijol.conf; } && systemctl kill -s HUP systemd-logind",
             "sh", c.lid || "suspend", c.lidAC ?? "", c.power || "poweroff"]);
         login = c;

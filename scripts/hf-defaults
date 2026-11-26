@@ -13,8 +13,6 @@ Lo usan Ajustes › Apps predeterminadas e inicio, la Bienvenida y autostart.lua
   hf-defaults autostart-run             lanza las activas (Hyprland no lo hace solo); evita las que chocan con el shell
 """
 import configparser, glob, json, os, pathlib, re, shlex, shutil, subprocess, sys
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
 HOME = pathlib.Path.home()
 XDG_CONFIG = pathlib.Path(os.environ.get("XDG_CONFIG_HOME") or HOME / ".config")
@@ -233,7 +231,7 @@ def autostart_set(i, on):
     if w["user"]:
         e = dict(read_desktop(w["user"]) or {})
         # una copia que solo servía para ocultar la del sistema: al activarla, se borra
-        if on and w["system"] and "true" in (e.get("X-HF-Override"), e.get("X-HL-Override")):   # X-HL-: nombre anterior (hypr-liquid)
+        if on and w["system"] and e.get("X-HF-Override") == "true":
             dst.unlink(missing_ok=True)
             return {"ok": True}
     else:

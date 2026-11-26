@@ -23,7 +23,6 @@
 #   hf-capture status                      "recording RUTA INICIO" o "idle"
 set -uo pipefail
 
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 RUN="${XDG_RUNTIME_DIR:-/tmp}/hyprfrijol"
 TMPD="$RUN/capturas"
 mkdir -p "$TMPD"

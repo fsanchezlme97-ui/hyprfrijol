@@ -10,8 +10,6 @@ Orden: logo de la distro → distributor-logo → tux. Sin nada usable no escrib
   hf-oslogo --info     qué archivo ha elegido y en qué modo
 """
 import os
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 import re
 import sys
 import xml.etree.ElementTree as ET

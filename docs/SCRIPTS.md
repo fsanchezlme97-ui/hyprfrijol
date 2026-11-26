@@ -51,7 +51,7 @@ Cada función de HyprFrijol tiene un script o comando que funciona solo. Quicksh
 - **hf-doctor** — diagnóstico copiable para pedir ayuda.
 - **hf-safe** — modo seguro y recuperación.
 - **hf-remove-gtk** — quita apps GTK/GNOME instaladas por defecto.
-- **hf-migrate** — migra desde `hypr-liquid` (nombre anterior).
+- **hf-migrate** — limpia lo que dejaron funciones y ajustes retirados.
 - **hf-vm** — máquinas virtuales y contenedores.
 - **hf-vpn** — VPN de NetworkManager, FortiGate y GlobalProtect.
 - **hf-remote** — escritorio remoto (RDP, VNC, SSH, SPICE).

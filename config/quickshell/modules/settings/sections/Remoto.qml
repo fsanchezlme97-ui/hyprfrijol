@@ -47,7 +47,7 @@ ColumnLayout {
     Process {
         id: secProc
         running: true
-        command: ["sh", "-c", "command -v secret-tool >/dev/null || exit 0; for n in \"$@\"; do { secret-tool lookup service hyprfrijol-remote host \"$n\" || secret-tool lookup service hypr-liquid-remote host \"$n\"; } >/dev/null 2>&1 && echo \"$n\"; done", "sh"].concat(root.hosts.map(h => h.name))
+        command: ["sh", "-c", "command -v secret-tool >/dev/null || exit 0; for n in \"$@\"; do secret-tool lookup service hyprfrijol-remote host \"$n\" >/dev/null 2>&1 && echo \"$n\"; done", "sh"].concat(root.hosts.map(h => h.name))
         stdout: StdioCollector { onStreamFinished: { const o = {}; text.split("\n").filter(Boolean).forEach(n => o[n] = true); root.secrets = o; } }
     }
 

@@ -6,7 +6,6 @@
 #   hf-sunset off         apaga
 #   hf-sunset status      imprime on/off (sale 1 si está apagada)
 set -uo pipefail
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 SIG="${HYPRLAND_INSTANCE_SIGNATURE:-}"
 
 mine() {   # PIDs de hyprsunset que pertenecen a esta instancia de Hyprland

@@ -11,7 +11,6 @@
 #   hf-vm containers                     contenedores: {name,image,state,status,distrobox} por línea
 #   hf-vm box create <nombre> <imagen> · box enter|stop|rm <nombre>
 set -uo pipefail
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 have() { command -v "$1" >/dev/null 2>&1; }
 family() {
   local like=""; [ -r /etc/os-release ] && like="$(. /etc/os-release; echo "${ID:-} ${ID_LIKE:-}" | tr A-Z a-z)"

@@ -1,5 +1,5 @@
 .pragma library
-// Catálogo fijo del Spotlight: acciones del shell (design/Main.dc.html, ITEMS).
+// Catálogo fijo del Spotlight: acciones del shell.
 // act: lo ejecuta Spotlight.runAct(). top: aparece con la búsqueda vacía.
 
 var ACTIONS = [

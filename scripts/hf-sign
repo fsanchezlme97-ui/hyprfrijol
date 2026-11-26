@@ -21,9 +21,7 @@ Poppler + cairo (python-gobject + python-cairo; vuelve a dibujar cada página: e
 pero se pierden enlaces y formularios). El fondo se quita con ImageMagick (normaliza la iluminación de la
 foto, umbral suave → canal alfa); rembg es opcional.
 """
-import json, os, pathlib, re, shutil, subprocess, sys, tempfile, time
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
+import json, pathlib, re, shutil, subprocess, sys, tempfile, time
 
 HOME = pathlib.Path.home()
 LIB = HOME / ".local/share/hyprfrijol/firmas"

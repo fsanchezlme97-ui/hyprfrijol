@@ -79,8 +79,6 @@ Imágenes: con visión (claude-code por stream-json, Gemini inline_data, OpenAI 
 Pruebas sin gastar: aiProvider "mock" responde con la lista JSON de $HF_AI_MOCK o ~/.cache/hyprfrijol/ai-mock.json.
 """
 import json, os, re, shlex, signal, subprocess, sys, time, pathlib, shutil, urllib.request, urllib.error, urllib.parse
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
 HOME = pathlib.Path.home()
 ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
@@ -2622,8 +2620,8 @@ class AIError(Exception):
 LIVE = None
 
 def live_text(raw):
-    t = re.sub(r"```(?:hf-query|hf-actions|hl-actions)\b.*?```", "", raw, flags=re.S)
-    m = re.search(r"```(?:hf-query|hf-actions|hl-actions)\b", t)
+    t = re.sub(r"```(?:hf-query|hf-actions)\b.*?```", "", raw, flags=re.S)
+    m = re.search(r"```(?:hf-query|hf-actions)\b", t)
     if m:
         t = t[:m.start()]
     m = re.search(r"`{1,3}(?:h(?:[fl](?:-[a-z]*)?)?)?$", t)   # quizá el principio de uno de esos bloques
@@ -3475,7 +3473,6 @@ GEMINI_FALLBACK = [["gemini-flash-latest", "Gemini Flash (recomendado)"], ["gemi
                    ["gemini-pro-latest", "Gemini Pro (el más capaz, menos cuota)"]]
 SECRETS = HOME / ".config/hyprfrijol/secrets"
 SECRET_ATTRS = ["service", "hyprfrijol", "provider", "gemini"]
-OLD_SECRET_ATTRS = ["service", "hypr-liquid", "provider", "gemini"]   # nombre anterior: se sigue leyendo
 
 def _keyring_ok():
     return bool(shutil.which("secret-tool")) and not os.environ.get("HF_AI_NO_KEYRING")
@@ -3486,7 +3483,7 @@ def gemini_key():
         if os.environ.get(env, "").strip():
             return os.environ[env].strip(), "env:" + env
     if _keyring_ok():
-        k = run(["secret-tool", "lookup", *SECRET_ATTRS], timeout=5) or run(["secret-tool", "lookup", *OLD_SECRET_ATTRS], timeout=5)
+        k = run(["secret-tool", "lookup", *SECRET_ATTRS], timeout=5)
         if k:
             return k, "llavero"
     f = SECRETS / "gemini.key"
@@ -3527,7 +3524,6 @@ def key_set(provider, key):
 def key_clear(provider):
     if _keyring_ok():
         run(["secret-tool", "clear", *SECRET_ATTRS], timeout=5)
-        run(["secret-tool", "clear", *OLD_SECRET_ATTRS], timeout=5)
     (SECRETS / "gemini.key").unlink(missing_ok=True)
     return {"ok": True}
 
@@ -4020,7 +4016,7 @@ def parse_queries(raw):
         or re.search(r"^[ \t]*hf-query[ \t]*\n?[ \t]*(\[.*?\]|\{[^{}]*\})[ \t]*$", raw, re.S | re.M)
     if not m:
         # y a veces meten las consultas en el bloque de acciones: si todo lo que hay en él son consultas, lo son
-        m = re.search(r"```(?:hf-actions|hl-actions)\s*(.*?)\s*```", raw, re.S)
+        m = re.search(r"```hf-actions\s*(.*?)\s*```", raw, re.S)
         acts = actions_json(m.group(1)) if m else []
         only = set(QUERY_LABELS) - set(re.findall(r'"type":"(\w+)"', SCHEMA_DOC))
         if not acts or not all(isinstance(a, dict) and a.get("type") in only for a in acts):
@@ -4366,7 +4362,7 @@ def parse_reply(raw, s=None):
     actions = []
     # Las formas sueltas (un objeto, uno por línea) solo en un bloque hf-actions; en un ```json``` cualquiera (un ejemplo,
     # texto copiado de una web) solo vale la lista de siempre, para que un JSON de muestra no se vuelva un plan
-    m = re.search(r"```(?:hf-actions|hl-actions)\s*(.*?)\s*```", raw, re.S) or re.search(r"```json\s*(\[.*?\])\s*```", raw, re.S)
+    m = re.search(r"```hf-actions\s*(.*?)\s*```", raw, re.S) or re.search(r"```json\s*(\[.*?\])\s*```", raw, re.S)
     if m:
         asked = actions_json(m.group(1))
         # las coordenadas resueltas («at») solo las pone hf-screen con un análisis de esta petición, nunca el modelo

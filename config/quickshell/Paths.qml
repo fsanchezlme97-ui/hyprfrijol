@@ -8,7 +8,7 @@ Singleton {
     readonly property string state: home + "/.local/state/hyprfrijol"
     readonly property string userDir: home + "/.config/hyprfrijol"
     readonly property string cache: home + "/.cache/hyprfrijol"
-    readonly property string root: Quickshell.env("HF_ROOT") || Quickshell.env("HL_ROOT") || Quickshell.shellPath("../..").replace(/\/$/, "")
+    readonly property string root: Quickshell.env("HF_ROOT") || Quickshell.shellPath("../..").replace(/\/$/, "")
     readonly property string scripts: root + "/scripts"
     readonly property string assets: root + "/assets"
     readonly property string pictures: home + "/Imágenes"

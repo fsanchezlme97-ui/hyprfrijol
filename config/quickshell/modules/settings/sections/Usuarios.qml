@@ -40,7 +40,7 @@ RowLayout {
             + "  printf 'u\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' \"$n\" \"$id\" \"${g%%,*}\" \"$h\" \"$(id -nG \"$n\" 2>/dev/null | tr ' ' ',')\" \"$(ic $id)\"; done; "
             + "test -s \"$HOME/.face\" && echo face:yes; echo greetd:$(systemctl is-enabled greetd 2>/dev/null); "
             + "awk '/^\\[initial_session\\]/{s=1;next} /^\\[/{s=0} s && /^ *user *=/{gsub(/.*= *\"?|\"? *$/,\"\"); print \"auto:\"$0}' /etc/greetd/config.toml 2>/dev/null; "
-            + "f=/usr/share/wayland-sessions/hyprfrijol.desktop; [ -f \"$f\" ] || f=/usr/share/wayland-sessions/hypr-liquid.desktop; [ -f \"$f\" ] || f=/usr/share/wayland-sessions/hyprland.desktop; sed -n 's/^Exec=/exec:/p' \"$f\" 2>/dev/null | head -1"]
+            + "f=/usr/share/wayland-sessions/hyprfrijol.desktop; [ -f \"$f\" ] || f=/usr/share/wayland-sessions/hyprland.desktop; sed -n 's/^Exec=/exec:/p' \"$f\" 2>/dev/null | head -1"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const l = text.split("\n");

@@ -14,18 +14,13 @@ Uso:  hf-apply [--no-reload] [--print]
       hf-apply set clave=valor [clave=valor…]     (atajo para cambiar ajustes desde la terminal)
 """
 import json, os, re, sys, subprocess, pathlib
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
 HOME = pathlib.Path.home()
 ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
 STATE = HOME / ".local/state/hyprfrijol"
 USER = HOME / ".config/hyprfrijol"
 SETTINGS = USER / "settings.json"
-# Primera vez tras el cambio de nombre (hypr-liquid → hyprfrijol): mueve las carpetas antiguas y deja enlaces
-if any((HOME / d / "hypr-liquid").is_dir() and not (HOME / d / "hypr-liquid").is_symlink() for d in (".config", ".local/state", ".local/share", ".cache")):
-    subprocess.run([str(ROOT / "scripts/hf-migrate"), "--dirs-only", "--quiet"], check=False)
-# Funciones retiradas (perfiles de actividad, IA en el dictado) y la palabra «Frijol» → «Distro»: hf-migrate, paso 6
+# Funciones retiradas (perfiles de actividad, IA en el dictado) y la palabra «Frijol» → «Distro»: hf-migrate
 def _profiles_left():
     if any((STATE / f).exists() for f in ("profile", "profile-bar", "profile.lua", "notify-policy")):
         return True
@@ -35,9 +30,9 @@ def _profiles_left():
         return False
     if any(f'"{k}"' in t for k in ("profiles", "profileRules", "notifyFavorites", "dictationAI")):
         return True
-    if '"dictationWakeWord": "Frijol"' in t:      # nombre de antes: pasa a «Distro» (hf-migrate, paso 6)
+    if '"dictationWakeWord": "Frijol"' in t:      # nombre de antes: pasa a «Distro» (hf-migrate)
         return True
-    if re.search(r'"aiName":\s*"(Samantha|Helpert)"', t):   # asistente de antes: pasa a «Harper» (hf-migrate, paso 6)
+    if re.search(r'"aiName":\s*"(Samantha|Helpert)"', t):   # asistente de antes: pasa a «Harper» (hf-migrate)
         return True
     if any(f'"{k}"' in t for k in ("webapps", "webappEngine", "webappPreload")):   # web apps (retiradas en 0.8.28)
         return True
@@ -47,7 +42,7 @@ def _profiles_left():
                                    "aiCompanionFreq", "aiCompanionLook", "aiMuted", "aiVoiceLocal", "aiScreenAsk")) \
             or re.search(r'"dictationAiFix":\s*"asistente"', t):   # voz sin conversación (0.11.0)
         return True
-    try:   # personalidad de fábrica de antes de 0.11.1: pasa a la nueva (hf-migrate, paso 6)
+    try:   # personalidad de fábrica de antes de 0.11.1: pasa a la nueva (hf-migrate)
         import hashlib
         if hashlib.sha256(str(json.loads(t).get("aiPersona", "")).encode()).hexdigest() == "48a0582337e7ebe8e8c7f8399d5300d2d5a8b3e4a0b3e5ff919f3ec915034077":
             return True

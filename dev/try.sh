@@ -15,7 +15,7 @@
 # Para probar un módulo que aún no está en modules/Modules.qml:
 #   HF_DEV_MODULES="modules/spotlight/Spotlight.qml,modules/x/Otro.qml" dev/try.sh spotlight
 #
-# Imprime los avisos/errores de Quickshell. Compara la captura con design/capturas/<Pantalla>.png
+# Imprime los avisos/errores de Quickshell; deben salir vacíos.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 OUT=""; WAIT=9; EXTRA=""; KEEP=0; SETS=""; PROBE=""; RES="1440x900"; SAFE=""

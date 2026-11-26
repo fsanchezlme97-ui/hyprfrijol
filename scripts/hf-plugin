@@ -29,8 +29,6 @@ Formato (leído el 2026-11-07 de github.com/omacom/omarchy, rama quattro):
   bin/omarchy-theme-color (colors.toml). Catálogo: github.com/omacom/omarchy-plugin-marketplace (site/catalog.json).
 """
 import json, os, re, shutil, subprocess, sys, tempfile, time, pathlib
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
 HOME = pathlib.Path.home()
 ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)

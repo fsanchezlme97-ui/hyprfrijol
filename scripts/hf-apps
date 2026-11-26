@@ -27,8 +27,6 @@ Orden de fuentes: paquete nativo → AUR (Arch, con paru/yay) → repositorio de
   catálogo lo cambia para una app. Lo de sistema solo se ejecuta con sudo/pkexec cuando tú lo pides.
 """
 import hashlib, json, os, pathlib, re, shlex, shutil, subprocess, sys, urllib.request
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
 ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
 CAT = ROOT / "install/apps.json"

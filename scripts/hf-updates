@@ -13,7 +13,6 @@
 # Nunca ejecuta nada con sudo por su cuenta: «run» solo abre la terminal y tú escribes la contraseña.
 set -uo pipefail
 
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
 # setting <clave> <defecto>: ajuste del usuario, si no el de config/defaults, si no el defecto
 setting() {

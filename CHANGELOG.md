@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.17.0] — 2026-11-26
+
+### Cambios
+- **Se quita la compatibilidad con el nombre antiguo (`hypr-liquid`):** las variables `HL_*`, el alias `HL` de
+  `local.lua`, la migración automática de carpetas al arrancar, `install.sh --migrate`, los enlaces `hl-*`, la
+  lectura de claves guardadas con el servicio antiguo en el llavero y la limpieza de marcas, temas y lanzadores
+  con el nombre viejo. **Si todavía tienes una instalación sin migrar, pasa primero por la v0.16.1** (`hf-update apply
+  v0.16.1`, luego `./install.sh --migrate`) y después actualiza. `hf-migrate` se queda solo con la limpieza de
+  funciones y ajustes retirados, que sigue ejecutándose tras cada actualización.
+- **Menos peso en el repo:** se quita `design/` (el prototipo en HTML y sus 53 capturas, unos 10 MB) y los planes ya
+  ejecutados (`docs/planes/`, `docs/superpowers/`, `docs/PULIDOS.md`). Siguen en el historial de git (etiqueta
+  v0.16.1). La documentación y los comentarios que los citaban se han ajustado.
+- La respuesta del asistente solo acepta el bloque `hf-actions` (se quita el alias `hl-actions`).
+
 ## [0.16.1] — 2026-11-26
 
 ### Mantenimiento

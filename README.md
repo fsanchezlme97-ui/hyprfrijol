@@ -27,7 +27,7 @@ Así puedes tener otro rice instalado y elegir uno u otro al iniciar sesión.
 
 ## Estado
 
-Las 53 pantallas del prototipo (`design/`, renders en `design/capturas/`) están construidas en Quickshell. Cada vista se probó en una sesión anidada con `dev/try.sh`, sin avisos de QML.
+Cada pantalla está construida en Quickshell y cada vista se probó en una sesión anidada con `dev/try.sh`, sin avisos de QML.
 
 | Parte | Dónde |
 |---|---|
@@ -104,7 +104,6 @@ cd ~/hyprfrijol
 | `--greeter` / `--greeter-off` | login visual propio con greetd / volver al gestor anterior (se guarda cuál era) |
 | `--greeter-sync` | copia tu tema y tu fondo al login visual (`hf-greeter-sync`) |
 | `--uninstall` [`--purge`] | desinstalar [y borrar ajustes, estado y caché] |
-| `--migrate` | pasar una instalación de hypr-liquid (nombre anterior) a hyprfrijol |
 | `--apps=serie,productividad,…` | apps por nivel: `serie` (por defecto), `productividad`, `destacada`, `creativa`, `experimental`, `all`; `--no-apps` ninguna. Sin `--yes` pregunta. Lista: `scripts/hf-apps list` |
 | `--equipo=gpu\|cpu\|ninguno` | deja el asistente (Harper) y el dictado listos para el equipo: `gpu` (gráfica dedicada de 6 GB o más: IA local y dictado whisper turbo en la gráfica), `cpu` (portátil de oficina o gráfica integrada: IA local y dictado Parakeet en la CPU) o `ninguno`. Sin la opción, lo detecta y pregunta (con `--yes`, lo detectado). Perfiles: `perfil/equipo-gpu.json`, `perfil/equipo-cpu.json` |
 
@@ -190,10 +189,6 @@ Si mueves la carpeta del repo, ejecuta desde la nueva ubicación `./install.sh -
 
 Los paquetes del sistema no se desinstalan (pueden ser de otros programas). Después puedes borrar la carpeta del repo.
 
-### ¿Venías de hypr-liquid?
-
-`./install.sh --migrate` (o `scripts/hf-migrate --dry-run` para verlo antes) mueve `~/.config`, `~/.local/state`, `~/.local/share` y `~/.cache/hypr-liquid` a `…/hyprfrijol` (con enlaces desde los nombres antiguos), renombra la carpeta del repo si se llamaba `hypr-liquid` (dejando un enlace), deja `~/.local/bin/hl-*` como enlaces a los `hf-*` y te imprime los pasos con `sudo` que falten (entrada de sesión, greetd, logind). Las variables `HL_*` siguen valiendo.
-
 Los fondos se buscan en `~/Imágenes/Fondos`, si no en `~/Imágenes/Wallpapers` (o en `$HF_WALL_DIR`); si no hay, se usan los de `assets/wallpapers`.
 
 ## Estructura
@@ -215,8 +210,7 @@ assets/wallpapers/ fondos incluidos
 greeter/           login con greetd
 dev/               try.sh (sesión anidada + captura), lint.sh, check.sh, test_apply.py y DESARROLLO.md
 docs/              ARQUITECTURA.md, IA.md, AJUSTES.md, SCRIPTS.md, BINDS.md,
-                   TROUBLESHOOTING.md, PULIDOS.md, PENDIENTES.md y capturas/
-design/            prototipo y capturas de cada pantalla
+                   TROUBLESHOOTING.md, PENDIENTES.md y capturas/
 ```
 
 ## Documentación
@@ -229,8 +223,7 @@ design/            prototipo y capturas de cada pantalla
 - [`docs/TEMAS.md`](docs/TEMAS.md): cómo crear, guardar e importar temas.
 - [`docs/PLUGINS-OMARCHY.md`](docs/PLUGINS-OMARCHY.md): plugins de Omarchy compatibles.
 - [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md): problemas comunes y soluciones.
-- [`docs/MIGRACION.md`](docs/MIGRACION.md): migrar desde hypr-liquid, Omarchy u otros escritorios.
-- [`docs/PULIDOS.md`](docs/PULIDOS.md): plan de pulidos y deuda técnica documentada.
+- [`docs/MIGRACION.md`](docs/MIGRACION.md): migrar desde Omarchy u otros escritorios.
 - [`docs/PENDIENTES.md`](docs/PENDIENTES.md): siguiente trabajo estratégico.
 - [`docs/ALCANCE.md`](docs/ALCANCE.md): qué entra en el proyecto y qué no.
 - [README.en.md](README.en.md): resumen en inglés.

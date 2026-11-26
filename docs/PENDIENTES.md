@@ -1,7 +1,7 @@
 # Pendientes
 
-Lista de trabajo de HyprFrijol. Al terminar algo, se quita de aquí y va al CHANGELOG. Lo ya hecho de los planes
-está en el CHANGELOG y en `docs/planes/`.
+Lista de trabajo de HyprFrijol. Al terminar algo, se quita de aquí y va al CHANGELOG. Lo ya hecho está en el
+CHANGELOG.
 
 ## Pendiente
 
@@ -35,7 +35,7 @@ está en el CHANGELOG y en `docs/planes/`.
 - [x] Crear `docs/TROUBLESHOOTING.md` con problemas comunes.
 - [x] Crear `docs/TEMAS.md`: cómo crear y añadir un tema propio.
 - [x] Crear `docs/PLUGINS-OMARCHY.md`: plugins de Omarchy compatibles y cómo añadirlos.
-- [x] Crear `docs/MIGRACION.md`: migrar desde hypr-liquid u otros rices.
+- [x] Crear `docs/MIGRACION.md`: migrar desde otros rices.
 - [x] Añadir `--help` a todos los scripts bash.
 - [x] Revisar ajustes huérfanos (MQTT).
 

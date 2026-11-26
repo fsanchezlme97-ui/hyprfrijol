@@ -44,7 +44,6 @@
 # ~/.local/share/hyprfrijol/remmina/ con puerta de enlace, varias pantallas, portapapeles, sonido y carpeta.
 # HF_REMOTE_DRY_RUN=1 imprime la orden sin abrir nada.
 set -uo pipefail
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
 SETTINGS="$HOME/.config/hyprfrijol/settings.json"
 DEFAULTS="$ROOT/config/defaults/settings.json"
@@ -109,10 +108,9 @@ secret() {
   case "$op" in
     set) echo "Contraseña para «$n» (se guarda en el llavero, no en settings.json):"
          secret-tool store --label="hyprfrijol · $n" service hyprfrijol-remote host "$n";;
-    # hypr-liquid-remote: servicio anterior al cambio de nombre; se sigue leyendo
-    clear) secret-tool clear service hyprfrijol-remote host "$n"; secret-tool clear service hypr-liquid-remote host "$n";;
-    has) secret-tool lookup service hyprfrijol-remote host "$n" >/dev/null 2>&1 || secret-tool lookup service hypr-liquid-remote host "$n" >/dev/null 2>&1;;
-    get) secret-tool lookup service hyprfrijol-remote host "$n" 2>/dev/null || secret-tool lookup service hypr-liquid-remote host "$n" 2>/dev/null;;
+    clear) secret-tool clear service hyprfrijol-remote host "$n";;
+    has) secret-tool lookup service hyprfrijol-remote host "$n" >/dev/null 2>&1;;
+    get) secret-tool lookup service hyprfrijol-remote host "$n" 2>/dev/null;;
   esac
 }
 

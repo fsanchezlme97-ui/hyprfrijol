@@ -20,8 +20,6 @@ Instalar: sudo (o doas) en la terminal; pkexec con --pkexec o si no hay terminal
   --dry-run solo enseña los comandos.
 """
 import json, os, pathlib, shlex, shutil, subprocess, sys, unicodedata
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
 SELF_ROOT = pathlib.Path(__file__).resolve().parent.parent
 ROOT = pathlib.Path(os.environ.get("HF_ROOT") or SELF_ROOT)

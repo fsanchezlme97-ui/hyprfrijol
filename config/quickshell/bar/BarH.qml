@@ -1,4 +1,4 @@
-// Contenido de la barra horizontal (design/Main.dc.html, «Barra»), de izquierda a derecha:
+// Contenido de la barra horizontal, de izquierda a derecha:
 //   [Aplicaciones][一 二 三 … 九] | título ······ onda ······
 //   información (clima · sistema · impresora) → utilidades: lo que acompaña (gato bongo · pomodoro · cafeína), lo que
 //   escribe y habla (portapapeles · micrófono · asistente) y ajustes → bandeja

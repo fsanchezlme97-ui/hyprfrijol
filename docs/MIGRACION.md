@@ -2,24 +2,6 @@
  
  HyprFrijol se ejecuta como una sesión aparte, así que puedes probarlo sin romper tu escritorio actual.
  
- ## Desde hypr-liquid (nombre anterior)
- 
- ```bash
- ./install.sh --migrate
- # o, para ver qué haría antes:
- scripts/hf-migrate --dry-run
- ```
- 
- Esto:
- 
- - Mueve `~/.config/hypr-liquid`, `~/.local/state/hypr-liquid`, `~/.local/share/hypr-liquid` y `~/.cache/hypr-liquid` a `…/hyprfrijol`.
- - Deja enlaces simbólicos desde los nombres antiguos.
- - Renombra la carpeta del repo si se llamaba `hypr-liquid`.
- - Crea enlaces `~/.local/bin/hl-*` que apuntan a los nuevos `hf-*`.
- - Te dice los pasos que necesitan `sudo` (entrada de sesión, greetd, logind).
- 
- Las variables de entorno `HL_*` siguen valiendo.
- 
  ## Desde Omarchy
  
  Omarchy y HyprFrijol comparten Hyprland y Quickshell, pero son proyectos distintos.

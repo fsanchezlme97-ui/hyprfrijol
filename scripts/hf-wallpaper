@@ -32,7 +32,6 @@
 #   wallpaperFps (límite de cuadros), wallpaperTransition ("ninguna" → sin fundido).
 set -euo pipefail
 
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 ROOT="${HF_ROOT:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
 STATE="$HOME/.local/state/hyprfrijol"
 # Pids de los reproductores, por sesión de Hyprland: una de prueba (dev/try.sh, mismo HOME) pisaba los de la tuya y la

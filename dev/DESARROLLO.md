@@ -1,8 +1,8 @@
 # Desarrollo de hyprfrijol
 
 ## Reglas
-- Cada pantalla del diseño (`design/capturas/<Pantalla>.png`, fuente en `design/*.dc.html`) es la referencia.
-  El objetivo es **igual o mejor** que el lienzo: mismas medidas, colores, tipografía, textos en español.
+- Cada vista se prueba en una sesión anidada (`dev/try.sh <vista>`) y su captura se compara con la que ya tenía
+  (`docs/capturas/`): mismas medidas, colores y tipografía, textos en español.
 - Todo lo visual usa `Theme` (colores y estilo resueltos) y los componentes de `config/quickshell/components/`.
   Nunca colores fijos, salvo los que el diseño fija (p. ej. sombras).
 - Todo lo que el usuario puede cambiar va en `Settings` (`~/.config/hyprfrijol/settings.json`).
@@ -36,7 +36,7 @@ HF_DEV_MODULES="modules/x/X.qml" dev/try.sh x     # módulo aún no registrado e
 dev/try.sh -c 'notify-send Hola' -w 4             # comando dentro de la sesión antes de capturar
 dev/try.sh -s 'transparencia=true colorMode=elegir palette=claro' spotlight   # ajustes temporales
 ```
-Imprime avisos/errores de Quickshell: deben salir vacíos. Compara la captura con `design/capturas/`.
+Imprime avisos/errores de Quickshell: deben salir vacíos.
 
 ## Antes de publicar
 ```bash
@@ -132,19 +132,14 @@ está desactualizado.
 - `config/apply/17-theme-apps.py`: kitty, Qt (qt6ct; kdeglobals solo con el tema de Plasma), btop e iconos Papirus con carpetas del acento. Pruébalo
   siempre con un HOME de prueba (`HOME=… scripts/hf-apply --no-reload`, sin `HF_ROOT`/`HF_SESSION` de tu sesión).
 
-## Nombre anterior (hypr-liquid → hyprfrijol)
+## Prefijos y limpieza de lo retirado
 
-- Prefijos: scripts `hf-*`, variables `HF_*`, atajos globales `hf:<nombre>` (appid `hf`), capas `hf-*`, tabla Lua `HF`
-  (con `HL = HF` para un `local.lua` antiguo), módulos Lua en `config/hypr/frijol/`.
-- Compatibilidad que se mantiene a propósito: cada script copia las `HL_*` del entorno a `HF_*` si faltan (una línea al
-  principio); `Paths.root` acepta `HL_ROOT`; el llavero sigue leyendo los servicios `hypr-liquid`/`hypr-liquid-remote`;
-  17-theme-apps/16-gtk/90-files sustituyen las líneas y temas que dejó el nombre anterior; el greeter acepta la sesión
-  `hypr-liquid.desktop`.
-- `scripts/hf-migrate [--dry-run]` migra una instalación existente (carpetas, repo, `~/.local/bin/hl-*`, lanzadores) e
-  imprime los pasos con sudo. Su paso 6 limpia lo que dejaron funciones retiradas (los perfiles de actividad: estado en
-  `~/.local/state/hyprfrijol/`, claves de settings.json con copia `.antes-sin-perfiles`); solo ese paso:
-  `hf-migrate --retired-only`, que `hf-apply` lanza solo si queda algo. `hf-session`, `hf-apply` y `hyprland.lua` lo llaman con `--dirs-only` si aún existen las
-  carpetas `…/hypr-liquid` reales. Pruébalo siempre con `HOME=<carpeta de prueba> scripts/hf-migrate --repo <copia>`.
+- Prefijos: scripts `hf-*`, variables `HF_*`, atajos globales `hf:<nombre>` (appid `hf`), capas `hf-*`, tabla Lua `HF`,
+  módulos Lua en `config/hypr/frijol/`.
+- `scripts/hf-migrate [--dry-run]` limpia lo que dejaron funciones y ajustes retirados (los perfiles de actividad:
+  estado en `~/.local/state/hyprfrijol/`, claves de settings.json con copia `.antes-sin-perfiles`, y más; ver su
+  cabecera). `hf-apply` lo lanza solo (`--retired-only`) si queda algo y `hf-update` lo ejecuta tras cada
+  actualización. Pruébalo siempre con `HOME=<carpeta de prueba> scripts/hf-migrate --dry-run`.
 
 ## Instalador
 
@@ -190,7 +185,7 @@ está desactualizado.
   claves (`sk-…`, `ghp_…`, `AIza…`, `Bearer …`, `api_key=…`) y contraseñas en URLs: pásale cualquier texto nuevo.
 - **`scripts/hf-update`** (≠ `hf-updates`, que son los paquetes del sistema) — `check|status|list|notes|apply <tag>|rollback|auto`
   sobre el clon donde vive el script (`--repo` para otro). Cambia con `git checkout --detach <tag>`, guarda el historial
-  en `~/.local/state/hyprfrijol/hf-update-history`, después enlaza los `hf-*` nuevos, ejecuta `hf-migrate --no-repo`,
+  en `~/.local/state/hyprfrijol/hf-update-history`, después enlaza los `hf-*` nuevos, ejecuta `hf-migrate`,
   `hf-apply` y `hf-shell restart`. Se niega con cambios locales (código 3) salvo `--stash` o si lo aceptas en la terminal.
   `auto` (lo lanza `hf-shell` en una sesión real) respeta `hfUpdateCheck` (weekly|daily|never) y avisa una vez por versión.
   Probar sin red ni GitHub: `git clone --bare . /tmp/x/remote.git`, un clon «publicador» que crea commits y tags y hace
@@ -333,7 +328,7 @@ Como siempre, los scripts hacen el trabajo; el shell, la IA (`hf-ai`/`hf-mcp`) y
   sin uso; con un modelo grande y sin GPU, lo provisional sale de «base» en otro servidor (`live_model`). Vosk/híbrido si
   hay `python-vosk` (o `hf-dictate install-vosk`). Modos `ptt` (con `--hold`: no escribe hasta «release» por stdin),
   `toggle` y `continuo`.
-- **Sin IA en el dictado** (ronda 10): `dictationAI` retirada (hf-migrate paso 6, copia `settings.json.antes-sin-ia-dictado`).
+- **Sin IA en el dictado** (ronda 10): `dictationAI` retirada (hf-migrate, copia `settings.json.antes-sin-ia-dictado`).
   `auto` prefiere **Vosk** si está instalado con su modelo: `VoskEngine.stream()` da parciales palabra a palabra y la frase
   final con el fin de frase de Kaldi (`SetEndpointerDelays(…, dictationPauseMs, …)`), sin VAD propio ni reescrituras; si
   falta, whisper.cpp. Wake word por defecto **«Distro»** (`hf-voice` `WAKE_ALTS`/`WAKE_LOOSE`: «oye/hey Distro», «distro,»,

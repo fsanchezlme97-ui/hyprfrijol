@@ -20,8 +20,6 @@ Clave: $WALLHAVEN_API_KEY → llavero (secret-tool service=hyprfrijol provider=w
 wallhaven.key (600). Nunca va en settings.json ni en la línea de órdenes. Caché: ~/.cache/hyprfrijol/wallhaven.
 """
 import json, os, re, shutil, subprocess, sys, pathlib, random, urllib.request, urllib.parse, urllib.error
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
 HOME = pathlib.Path.home()
 ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)

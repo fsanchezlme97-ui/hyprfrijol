@@ -90,7 +90,6 @@ docs/                 Documentación de usuario
 ### Bash (scripts `hf-*`)
 
 - `set -euo pipefail` o `set -u` según el script.
-- Migración desde `hypr-liquid`: las variables `HL_*` siguen valiendo como `HF_*`.
 - Para Quickshell IPC: `qs -p "$HF_ROOT/config/quickshell" ipc call ...`
 
 ## Ajustes nuevos

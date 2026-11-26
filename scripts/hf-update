@@ -15,7 +15,6 @@
 #           --stash (guarda tus cambios locales con git stash antes) · --yes · --no-restart · --no-fetch
 # Con cambios locales sin guardar no actualiza: lo dice y ofrece --stash. Nunca hace push.
 set -uo pipefail
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 REPO="${HF_UPDATE_REPO:-$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)}"
 REMOTE=origin STASH=0 YES=0 RESTART=1 FETCH=1 JSON=0 ARGS=()
 while [ $# -gt 0 ]; do
@@ -159,7 +158,7 @@ post_update() {
     done
     [ "$n" -gt 0 ] && say "Enlaces nuevos en ~/.local/bin: $n"
   fi
-  [ -x "$REPO/scripts/hf-migrate" ] && { "$REPO/scripts/hf-migrate" --no-repo --quiet >/dev/null 2>&1 || warn "hf-migrate avisó de algo (ejecútalo a mano para verlo)"; }
+  [ -x "$REPO/scripts/hf-migrate" ] && { "$REPO/scripts/hf-migrate" --quiet >/dev/null 2>&1 || warn "hf-migrate avisó de algo (ejecútalo a mano para verlo)"; }
   if [ -x "$REPO/scripts/hf-apply" ]; then
     if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -n "${HF_SESSION:-}" ] && [ "$RESTART" = 1 ]; then HF_ROOT="$REPO" "$REPO/scripts/hf-apply" >/dev/null 2>&1
     else HF_ROOT="$REPO" "$REPO/scripts/hf-apply" --no-reload >/dev/null 2>&1; fi || warn "hf-apply falló: si algo se ve mal, hf-safe menu"

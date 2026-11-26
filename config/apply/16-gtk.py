@@ -13,7 +13,6 @@ import colorsys, os, pathlib, pwd, shutil, subprocess
 HOME = pathlib.Path.home()
 STATE = HOME / ".local/state/hyprfrijol"
 MARK = "hyprfrijol (GTK/libadwaita)"
-OLD_MARK = MARK.replace("hyprfrijol", "hypr-liquid")   # líneas que dejó el nombre anterior: se sustituyen
 SCHEMA = "org.gnome.desktop.interface"
 
 
@@ -73,11 +72,11 @@ def _line_file(path, line, want):
         text = path.read_text() if path.exists() else ""
     except Exception:
         return
-    lines = [l for l in text.splitlines() if MARK not in l and OLD_MARK not in l]
+    lines = [l for l in text.splitlines() if MARK not in l]
     if want:
         lines.append(line)
     new = "\n".join(lines).strip("\n") + ("\n" if lines else "")
-    if new != text and (want or MARK in text or OLD_MARK in text):
+    if new != text and (want or MARK in text):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(new)
 

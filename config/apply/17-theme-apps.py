@@ -23,9 +23,7 @@ import colorsys, hashlib, json, os, pathlib, pwd, shutil, subprocess
 HOME = pathlib.Path.home()
 STATE = HOME / ".local/state/hyprfrijol"
 MARK = "hyprfrijol (Ajustes › Apariencia)"
-OLD_MARK = MARK.replace("hyprfrijol", "hypr-liquid")   # líneas que dejó el nombre anterior: se sustituyen
 SCHEME = "HyprFrijol"
-OLD_SCHEME = "HyprLiquid"   # nombre anterior (hypr-liquid): se borra al escribir el nuevo
 KDE_SECTIONS = ("Colors:Button", "Colors:Complementary", "Colors:Header", "Colors:Header][Inactive",
                 "Colors:Selection", "Colors:Tooltip", "Colors:View", "Colors:Window")
 PAPIRUS_SIZES = ("22x22", "24x24", "32x32", "48x48", "64x64")
@@ -135,7 +133,7 @@ def apply_kitty(path, colors, font_pt):
             if l.startswith(KITTY_END):
                 inside = False
             continue
-        if MARK in l or OLD_MARK in l:   # include con comentario al final (versiones anteriores)
+        if MARK in l:   # include con comentario al final (versiones anteriores)
             continue
         if any(f in l for f in KITTY_FOREIGN):
             s = l.strip()
@@ -290,8 +288,7 @@ def apply_kde(c, on):
             scheme.append([head, ["%s=%s" % (k, _kde(v)) for k, v in kv.items()]])
         scheme.append(["WM", ["%s=%s" % (k, _kde(v)) for k, v in kde_wm(c).items()]])
         _write(HOME / ".local/share/color-schemes" / f"{SCHEME}.colors", _ini_text(scheme))
-        (HOME / ".local/share/color-schemes" / f"{OLD_SCHEME}.colors").unlink(missing_ok=True)
-        if path.exists() and not orig.exists() and _ini_get(secs, "General", "ColorScheme") not in (SCHEME, OLD_SCHEME):
+        if path.exists() and not orig.exists() and _ini_get(secs, "General", "ColorScheme") != SCHEME:
             try:
                 STATE.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(path, orig)
@@ -305,7 +302,7 @@ def apply_kde(c, on):
         _ini_set(secs, "General", "ColorSchemeHash", None)
         _ini_set(secs, "KDE", "widgetStyle", "Breeze")
     else:
-        if _ini_get(secs, "General", "ColorScheme") not in (SCHEME, OLD_SCHEME):
+        if _ini_get(secs, "General", "ColorScheme") != SCHEME:
             return False
         old = _ini_read(orig) if orig.exists() else []
         for head in KDE_SECTIONS + ("WM",):
@@ -348,7 +345,7 @@ def apply_qt6ct(c, on, icon_theme):
         changed |= _write(conf, _ini_text(secs))
     elif conf.exists():
         secs = _ini_read(conf)
-        if any(n in (_ini_get(secs, "Appearance", "color_scheme_path") or "") for n in ("hyprfrijol", "hypr-liquid")):   # hypr-liquid: nombre anterior
+        if "hyprfrijol" in (_ini_get(secs, "Appearance", "color_scheme_path") or ""):
             _ini_set(secs, "Appearance", "custom_palette", "false")
             changed |= _write(conf, _ini_text(secs))
     return changed
@@ -422,12 +419,10 @@ def apply_btop(c, on):
     cur = next((l.split("=", 1)[1].strip().strip('"') for l in lines if l.split("=", 1)[0].strip() == "color_theme"), None)
     if on:
         changed = _write(HOME / ".config/btop/themes/hyprfrijol.theme", btop_theme(c))
-        (HOME / ".config/btop/themes/hypr-liquid.theme").unlink(missing_ok=True)   # nombre anterior
         if cur != "hyprfrijol":
             try:
                 STATE.mkdir(parents=True, exist_ok=True)
-                if cur != "hypr-liquid":   # el tema con el nombre anterior también es nuestro: no es el «original»
-                    memo.write_text(cur or "Default")
+                memo.write_text(cur or "Default")
             except Exception:
                 pass
             want = 'color_theme = "hyprfrijol"'
@@ -436,7 +431,7 @@ def apply_btop(c, on):
                 lines.append(want)
             changed |= _write(conf, "\n".join(lines) + "\n")
         return changed
-    if cur in ("hyprfrijol", "hypr-liquid"):
+    if cur == "hyprfrijol":
         try:
             prev = memo.read_text().strip() or "Default"
         except Exception:
@@ -577,8 +572,8 @@ def apply_icons(s, c):
     try:
         build_icon_theme(name, base_name, base_dir, color)
         icons = HOME / ".local/share/icons"
-        for old in [*icons.glob("Papirus-Frijol-*"), *icons.glob("Papirus-Liquid-*")]:   # Liquid: nombre anterior
-            if old.name != name and ((old / ".hf-stamp").exists() or (old / ".hl-stamp").exists()):
+        for old in icons.glob("Papirus-Frijol-*"):
+            if old.name != name and (old / ".hf-stamp").exists():
                 shutil.rmtree(old, ignore_errors=True)
     except Exception:
         return base_name

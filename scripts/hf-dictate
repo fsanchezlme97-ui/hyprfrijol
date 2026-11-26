@@ -55,8 +55,6 @@ Pruebas: HF_DICTATE_OUTPUT=ninguna no escribe nada · HF_VOICE_DRY=1 no ejecuta 
 """
 import array, collections, io, json, math, os, pathlib, queue, shutil, signal, socket, subprocess, sys, tempfile
 import threading, time, urllib.request, uuid, wave, zipfile, re
-for _k, _v in list(os.environ.items()):   # variables HL_* (hypr-liquid): siguen valiendo
-    if _k.startswith("HL_"): os.environ.setdefault("HF_" + _k[3:], _v)
 
 HOME = pathlib.Path.home()
 ROOT = pathlib.Path(os.environ.get("HF_ROOT") or pathlib.Path(__file__).resolve().parent.parent)

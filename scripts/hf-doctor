@@ -11,10 +11,9 @@
 # Qué mira: versiones (Hyprland, Quickshell, Qt, distro, kernel, revisión de hyprfrijol), GPU y driver,
 # dependencias que faltan (install/packages.tsv; las recomendadas, por función y con su «hf-deps install …»), servicios (PipeWire, WirePlumber, NetworkManager, portales,
 # polkit, logind/seatd), variables de entorno, últimos errores (qs log, log de Hyprland, journalctl --user),
-# Hyprland --verify-config y fallos típicos (HF_ROOT/HL_ROOT, enlaces hf-*/hl-* rotos, include de kitty…).
+# Hyprland --verify-config y fallos típicos (HF_ROOT, enlaces hf-* rotos, include de kitty…).
 # Nunca incluye secretos: se ocultan claves de API, tokens, correos y tu carpeta personal (→ ~).
 set -uo pipefail
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 SELF_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 ROOT="${HF_ROOT:-$SELF_ROOT}"; [ -f "$ROOT/config/hypr/hyprland.lua" ] || ROOT="$SELF_ROOT"
 USERCFG="$HOME/.config/hyprfrijol"
@@ -233,7 +232,7 @@ fi
 section "Entorno"
 envv() { printf '%s' "${!1-}"; }
 for v in XDG_SESSION_TYPE XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP WAYLAND_DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS \
-         HF_ROOT HF_SESSION HL_ROOT QT_QPA_PLATFORM QT_QPA_PLATFORMTHEME GDK_BACKEND XCURSOR_THEME LANG; do
+         HF_ROOT HF_SESSION QT_QPA_PLATFORM QT_QPA_PLATFORMTHEME GDK_BACKEND XCURSOR_THEME LANG; do
   val="$(envv "$v")"; [ -n "$val" ] || continue
   case "$v" in DBUS_SESSION_BUS_ADDRESS) val="${val%%,*}" ;; esac
   add info "$v" "$val"
@@ -272,13 +271,8 @@ if [ -f "$USERCFG/local.lua" ]; then
   fi
 fi
 for f in theme.json settings.lua colors.json; do [ -s "$STATE/$f" ] || add warn "Estado" "falta ~/.local/state/hyprfrijol/$f (ejecuta hf-apply)"; done
-# HF_ROOT / HL_ROOT
+# HF_ROOT
 if [ -n "${HF_ROOT:-}" ] && [ ! -f "$HF_ROOT/config/hypr/hyprland.lua" ]; then add error "HF_ROOT" "apunta a $HF_ROOT, que no es un repo de hyprfrijol"; fi
-if [ -n "${HL_ROOT:-}" ]; then
-  if [ ! -d "$HL_ROOT" ]; then add warn "HL_ROOT" "variable antigua que apunta a una carpeta que no existe: quítala (usa HF_ROOT)"
-  elif [ -n "${HF_ROOT:-}" ] && [ "$(readlink -f "$HL_ROOT")" != "$(readlink -f "$HF_ROOT")" ]; then add warn "HL_ROOT" "variable antigua distinta de HF_ROOT: quítala"
-  else add info "HL_ROOT" "variable antigua (hypr-liquid); se puede quitar"; fi
-fi
 # Enlaces de ~/.local/bin
 BIN="$HOME/.local/bin"
 broken=() other=() nl=0 inst=""
@@ -298,8 +292,6 @@ else
   [ ${#missing[@]} -gt 0 ] && add warn "Enlaces que faltan" "${missing[*]} (./install.sh --no-deps los añade)"
   [ -n "${HF_ROOT:-}" ] && [ "$(readlink -f "$HF_ROOT")" != "$(readlink -f "$inst")" ] && add info "HF_ROOT ≠ instalado" "la sesión usa $HF_ROOT; ~/.local/bin apunta a $inst"
 fi
-stale=(); for l in "$BIN"/hl-*; do [ -L "$l" ] && [ ! -e "$l" ] && stale+=("$(basename "$l")"); done
-[ ${#stale[@]} -gt 0 ] && add warn "Enlaces hl-* antiguos rotos" "${stale[*]} (hf-migrate los rehace)"
 # kitty: include de los colores
 KC="$HOME/.config/kitty/kitty.conf"
 if [ -f "$KC" ]; then
@@ -312,7 +304,6 @@ if [ -f "$KC" ]; then
 fi
 # Entradas de sesión y login
 SF=/usr/share/wayland-sessions/hyprfrijol.desktop
-[ -f "$SF" ] || SF=/usr/share/wayland-sessions/hypr-liquid.desktop   # nombre anterior (sigue valiendo)
 if [ -f "$SF" ]; then
   ex="$(sed -n 's/^Exec=//p' "$SF" | awk '{print $1}')"
   [ -x "$ex" ] && add ok "Entrada de sesión" "$(basename "$SF") → $ex" || add error "Entrada de sesión" "hyprfrijol.desktop ejecuta $ex, que no existe (./install.sh)"

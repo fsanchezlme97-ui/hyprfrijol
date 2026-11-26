@@ -5,7 +5,6 @@
 #   hf-appfile owner <id>       «flatpak <app-id>» · «pacman|dpkg|rpm <paquete>» · nada si no viene de un paquete
 #   hf-appfile uninstall <id>   desinstala ese paquete (pide confirmación; pensado para correr en una terminal)
 set -u
-for _v in ${!HL_@}; do _n="HF_${_v#HL_}"; [ -n "${!_n+x}" ] || export "$_n=${!_v}"; done; unset _v _n   # variables HL_* (hypr-liquid): siguen valiendo
 cmd=${1:-}; id=${2:-}; id=${id%.desktop}
 case "$cmd" in -h|--help) sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
 [ -n "$cmd" ] && [ -n "$id" ] || { sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
