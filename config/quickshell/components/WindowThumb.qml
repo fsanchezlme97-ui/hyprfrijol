@@ -41,7 +41,9 @@ Item {
         x: (root.width - width) / 2
         y: (root.height - height) / 2
         visible: false
-        captureSource: root.live && root.width > 8 ? (root.toplevel?.wayland ?? null) : null
+        // de las apps ocultas al compartir no se hace miniatura: en la vista general se verían en tu transmisión
+        captureSource: root.live && root.width > 8 && !HyprClients.capturePrivate(HyprClients.client(root.address)?.class)
+                       ? (root.toplevel?.wayland ?? null) : null
         live: root.live
         paintCursor: false
         constraintSize: Qt.size(Math.ceil(width * 1.5), Math.ceil(height * 1.5))

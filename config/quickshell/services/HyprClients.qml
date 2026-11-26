@@ -11,6 +11,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import ".."
 
 Singleton {
     id: root
@@ -79,6 +80,18 @@ Singleton {
     function toplevelFor(address): var {
         const a = norm(address);
         return Hyprland.toplevels.values.find(t => norm(t.address) === a) ?? null;
+    }
+    // Apps que no se ven al compartir pantalla (ajuste hiddenFromCapture → regla hf-private de 35-windows.py)
+    function capturePrivate(cls): bool {
+        const v = Settings.get("hiddenFromCapture", []), k = String(cls ?? "").toLowerCase();
+        return Array.isArray(v) && v.some(c => String(c).toLowerCase() === k);
+    }
+    function setCapturePrivate(cls, on: bool): void {
+        const k = String(cls ?? "").toLowerCase(), v = Settings.get("hiddenFromCapture", []);
+        // clase de ventana válida (la misma comprobación que 35-windows.py)
+        if (!/^[A-Za-z0-9._-]{1,120}$/.test(cls)) return;
+        const rest = (Array.isArray(v) ? v : []).filter(c => String(c).toLowerCase() !== k);
+        Settings.set("hiddenFromCapture", on ? rest.concat([cls]) : rest);
     }
     function client(address): var { const a = norm(address); return clients.find(c => c.address === a) ?? null; }
     function monitorById(id): var { return monitors.find(m => m.id === id) ?? null; }

@@ -26,6 +26,14 @@ def test_vrr():
     assert "vrr" not in lua("40-monitors", {"monitors": {"DP-1": {"scale": 1}}})
 
 
+def test_hidden_from_capture():
+    out = lua("35-windows", {"hiddenFromCapture": ["org.keepassxc.KeePassXC", 'mal"} ) os.exit(', "", "Bitwarden"]})
+    rule = [line for line in out.splitlines() if "hf-private" in line]
+    assert len(rule) == 1 and "no_screen_share = true" in rule[0], out
+    assert "KeePassXC" in rule[0] and "Bitwarden" in rule[0] and "os.exit" not in out, rule
+    assert "hf-private" not in lua("35-windows", {"hiddenFromCapture": []}) + lua("35-windows", {"hiddenFromCapture": "texto"})
+
+
 if __name__ == "__main__":
     failed = 0
     for name, test in list(globals().items()):

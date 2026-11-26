@@ -160,7 +160,25 @@ RowLayout {
             }
             Txt {
                 Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
-                text: "Cuando una app usa el micrófono aparece un aviso en la barra. Las apps Flatpak piden permiso para la cámara, la pantalla y la ubicación a través del portal."
+                text: "Cuando una app usa el micrófono o se ve tu pantalla aparece un aviso en la barra. Las apps Flatpak piden permiso para la cámara, la pantalla y la ubicación a través del portal."
+            }
+        }
+        // hiddenFromCapture → config/apply/35-windows.py (regla hf-private) · también en el menú de cada ventana
+        Section {
+            Layout.fillWidth: true
+            title: "Ocultar al compartir pantalla"
+            headerRight: Mono { tech: true; text: "no_screen_share" }
+            FloatApps {
+                Layout.fillWidth: true
+                settingKey: "hiddenFromCapture"
+                intro: "Estas apps salen como un recuadro negro en videollamadas, grabaciones, escritorio remoto y capturas "
+                    + "(también en las tuyas); en tu pantalla se ven normal. El recuadro tapa también lo que tengan encima en esa zona. "
+                    + "También se activa desde el menú de la ventana (Alt + Espacio)."
+                groups: [
+                    { key: "claves", label: "Gestores de contraseñas", sub: "KeePassXC, Bitwarden, 1Password, KWallet",
+                      classes: ["org.keepassxc.KeePassXC", "keepassxc", "Bitwarden", "1Password", "org.kde.kwalletmanager"] }
+                ]
+                onApply: l => Settings.set("hiddenFromCapture", l)
             }
         }
         Section {

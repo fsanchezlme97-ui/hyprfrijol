@@ -11,6 +11,8 @@ antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X
 - **Aviso en la barra cuando se ve tu pantalla**: al grabar, compartir en una videollamada o entrar por escritorio
   remoto aparece «Pantalla» junto al del micrófono; al pulsarlo se ve qué app es (Ajustes › Privacidad). Una captura
   suelta no lo enciende.
+- **Ocultar apps al compartir pantalla** (Ajustes › Privacidad, o en el menú de cada ventana con Alt + Espacio): salen
+  en negro en videollamadas, grabaciones, escritorio remoto y capturas, y la vista general no hace su miniatura.
 - **Frecuencia variable con cuatro opciones** (Ajustes › Pantallas): apagada, siempre, solo a pantalla completa o solo
   con juegos y vídeo.
 

@@ -14,6 +14,7 @@
 # (calculadoras, reproductores de audio mínimos), que flotan centradas con su propio tamaño. No tocan el PiP (va
 # por título, 52-pip.py) ni los diálogos de rules.lua; services/WinMode.qml no las vuelve a mosaico al salir
 # del modo flotante.
+#   hiddenFromCapture = ["org.keepassxc.KeePassXC", …]  clases que no se ven en capturas ni al compartir (hf-private)
 import re
 
 COMPACT = {"org.kde.kcalc", "org.kde.kcharselect", "galculator"}
@@ -26,8 +27,8 @@ def _num(v, d):
         return d
 
 
-def _classes(s):
-    v = s.get("floatApps", [])
+def _classes(s, key="floatApps"):
+    v = s.get(key, [])
     if not isinstance(v, list):
         return []
     out = []
@@ -61,6 +62,10 @@ def hypr_lua(s, c):
     # Modo clásico (general o por espacio): los diálogos modales (Abrir, Guardar…) no se maximizan; WinMode.opensMax()
     # mira esta etiqueta. Solo la ponen las apps que se declaran modales (GTK 4, Qt 6; GTK 3 no)
     out.append('hl.window_rule({ name = "hf-dialog", match = { modal = true }, tag = "+hf-dialog" })')
+    # Ocultar al compartir (Ajustes › Privacidad): en capturas y videollamadas esas ventanas salen en negro
+    private = _classes(s, "hiddenFromCapture")
+    if private:
+        out.append(f'hl.window_rule({{ name = "hf-private", match = {{ class = "{_rx(private)}" }}, no_screen_share = true }})')
     cls = _classes(s)
     big = [x for x in cls if x.lower() not in COMPACT]
     small = [x for x in cls if x.lower() in COMPACT]

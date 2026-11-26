@@ -45,6 +45,7 @@ Overlay {
     readonly property string addr: target?.address ?? ""
     readonly property bool pinned: !!target?.pinned
     readonly property int wsNow: target?.workspace?.id ?? 0
+    readonly property bool hidden: HyprClients.capturePrivate(target?.class)
     // con espacios por pantalla (WsLabel), solo los de la pantalla de la ventana, con el número de su barra
     readonly property var workspaces: Hyprland.workspaces.values.filter(w => w.id > 0 && (!WsLabel.perMonitor || w.monitor?.id === target?.monitor))
         .map(w => w.id).sort((a, b) => a - b)
@@ -53,16 +54,18 @@ Overlay {
         { k: "max", icon: "maximize", l: WinMode.isMax(target) ? "Restaurar tamaño" : "Maximizar" },
         { k: "pin", icon: "pin", l: pinned ? "Quitar de todos los espacios" : "Mostrar en todos los espacios" },
         { k: "snap", icon: "grid", l: "Organizar…" },
+        { k: "private", icon: "shield", l: hidden ? "Mostrar al compartir pantalla" : "Ocultar al compartir pantalla" },
         { k: "close", icon: "x", l: "Cerrar", sep: true, danger: true }
     ]
     function run(k: string): void {
-        const a = addr, pin = pinned;
+        const a = addr, pin = pinned, cls = target?.class ?? "", wasHidden = hidden;
         Shell.close();
         if (!a) return;
         if (k === "min") WinMode.minimize(a);
         else if (k === "max") WinMode.toggleMaximize(a);
         else if (k === "pin") Shell.dispatch('hl.dsp.window.pin({ action = "' + (pin ? "disable" : "enable") + '", ' + WinMode.win(a) + ' })');
         else if (k === "snap") Shell.open("snap");
+        else if (k === "private") HyprClients.setCapturePrivate(cls, !wasHidden);
         else if (k === "close") WinMode.close(a);
         HyprClients.refresh();
     }
