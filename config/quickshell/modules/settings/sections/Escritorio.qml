@@ -126,7 +126,8 @@ ColumnLayout {
             Layout.fillWidth: true
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
             text: "Super + ñ / ´ pasa la columna activa por ⅓, ½, ⅔ y toda la pantalla · Super + Alt + J saca la ventana a una columna propia · "
-                + "Super + Ctrl + rueda cambia de espacio. En la vista general (Super + Tab) se ve la cinta entera."
+                + "Super + Ctrl + Mayús + F alterna entre ver todas las columnas juntas (mosaico) y la activa a pantalla completa · "
+                + "Super + Ctrl + rueda cambia de espacio. En la vista general (Super + Tab) se ven todas en mosaico."
         }
     }
     // Modo flotante como un escritorio clásico: encajar al soltar (config/hypr/frijol/floatsnap.lua + Snap.qml),

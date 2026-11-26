@@ -184,8 +184,10 @@ portales, la terminal de `terminal`… Avisa si el paquete trae más apps o si o
   (`focus l/r`; `Super + Ctrl + rueda` cambia de espacio), `Super + Ctrl + Mayús + ← / →` mueve la columna
   (`swapcol l/r`), `Super + Mayús + ← / →` mete la ventana en la columna de al lado, `Super + ñ / ´` pasa el ancho
   por ⅓ ½ ⅔ y completa (`colresize -conf/+conf`), `Super + Alt + J` saca la ventana a una columna propia
-  (`promote`) y `Super + Ctrl + F` encaja las columnas a la vista (`fit visible`). La vista general encoge la cinta
-  entera dentro de la miniatura del espacio y enmarca la parte que se ve.
+  (`promote`) `Super + Ctrl + F` encaja las columnas a la vista (`fit visible`) y `Super + Ctrl + Mayús + F` alterna entre ver
+  todas las columnas juntas a partes iguales (`fit all`, el mosaico) y la ventana activa a pantalla completa
+  (`fit active`); apilar ventanas en una columna (`Super + Mayús + ← / →`) las reparte el alto. La vista general
+  dibuja en mosaico, llenando la miniatura, las ventanas de la cinta que no caben en la pantalla.
 - Minimizar: la ventana va al espacio especial `special:minimized` (`Super + H`, `hf:minimizar`; también el
   botón de minimizar de la app, evento `minimized`). `Super + Mayús + H` (`hf:restaurar`) trae la última al espacio
   actual. En el dock: clic en la app activa la minimiza, clic en una minimizada (icono atenuado, punto apagado)

@@ -66,5 +66,6 @@
   "Proporción − / columna más estrecha": "HF.scroll(\"colresize -conf\", hl.dsp.layout(\"splitratio -0.1\"))",
   "Proporción + / columna más ancha": "HF.scroll(\"colresize +conf\", hl.dsp.layout(\"splitratio +0.1\"))",
   "Cambiar división / columna propia": "HF.scroll(\"promote\", hl.dsp.layout(\"togglesplit\"))",
-  "Encajar las columnas a la vista": "HF.scroll(\"fit visible\")"
+  "Encajar las columnas a la vista": "HF.scroll(\"fit visible\")",
+  "Ver todas las columnas juntas / la activa completa": "HF.scrollMosaic"
 }

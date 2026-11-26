@@ -25,6 +25,21 @@ function HF.scroll(msg, other)
     end
 end
 
+-- Super + Ctrl + Mayús + F: la cinta de columnas ⇄ mosaico. Si hay columnas fuera de la pantalla, las reparte todas a
+-- partes iguales («fit all»); si ya se ven todas, deja la activa a pantalla completa («fit active»). Sin estado: lo
+-- decide la posición de las ventanas del espacio. Para apilar ventanas en una columna: Super + Mayús + ← / →.
+function HF.scrollMosaic()
+    if not HF.scrolling() then return end
+    local mon, ws = hl.get_active_monitor(), hl.get_active_workspace()
+    if not (mon and ws) then return end
+    local x0, x1 = mon.position.x, mon.position.x + mon.width / mon.scale
+    local all = true
+    for _, w in ipairs(hl.get_windows({ workspace = ws.id, floating = false })) do
+        if w.at.x < x0 - 4 or w.at.x + w.size.x > x1 + 4 then all = false; break end
+    end
+    hl.dispatch(hl.dsp.layout(all and "fit active" or "fit all"))
+end
+
 -- ── Apps ──────────────────────────────────────────────────────────────────────
 b(mod .. " + RETURN",  function() hl.exec_cmd(HF.terminal) end, { description = "Terminal" })
 b(mod .. " + T",       function() hl.exec_cmd(HF.terminal) end)
@@ -112,6 +127,7 @@ for i, k in ipairs({ "APOSTROPHE", "code:48" }) do
       { repeating = true, description = i == 1 and "Proporción + / columna más ancha" or nil })
 end
 b(mod .. " + CTRL + F",    HF.scroll("fit visible"),          { description = "Encajar las columnas a la vista" })
+b(mod .. " + CTRL + SHIFT + F", HF.scrollMosaic,              { description = "Ver todas las columnas juntas / la activa completa" })
 b("CTRL + " .. mod .. " + BACKSLASH", hl.dsp.window.resize({ x = 640, y = 480, "exact" }))
 -- Super + arrastrar mueve / redimensiona cualquier ventana, también las que capturan el teclado (RustDesk, máquinas
 -- virtuales, juegos): con ellas el arrastre normal va a lo de dentro y Super no llegaría a Hyprland (dont_inhibit)

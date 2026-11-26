@@ -3,6 +3,17 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.16.0] — 2026-11-26
+
+### Novedades
+- **Mosaico dentro del modo Desplazamiento:** `Super + Ctrl + Mayús + F` alterna entre ver todas las columnas juntas, a
+  partes iguales (mosaico), y dejar la ventana activa a pantalla completa. Sirve en cualquier momento y sin guardar
+  nada: si hay columnas fuera de la pantalla las junta todas, y si ya se ven todas, deja la activa completa. Para
+  armar el mosaico a tu gusto: `Super + Mayús + ← / →` apila la ventana en la columna de al lado (se reparten el
+  alto) y `Super + ñ / ´` cambia el ancho de cada columna. Se puede reasignar en Ajustes › Teclado.
+- Los textos de Ajustes y de la documentación ya describen cómo dibuja la vista general las ventanas de la cinta
+  (en mosaico, desde la 0.10.2).
+
 ## [0.15.1] — 2026-11-26
 
 ### Correcciones
