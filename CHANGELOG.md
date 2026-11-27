@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.18.1] — 2026-11-26
+
+### Mantenimiento
+- `docs/PENDIENTES.md` queda con tres tareas: escritorio remoto integrado, correo y calendario integrados, y mejorar
+  el visor de máquinas virtuales (QEMU). El resto pasa a «Descartado».
+
 ## [0.18.0] — 2026-11-26
 
 ### Novedades
