@@ -418,20 +418,19 @@ Scope {
                             icon: "restart"; iconSize: 15; fg: Theme.tv
                             opacity: root.changedKeys.length ? 1 : 0.45
                             tooltip: root.changedKeys.length ? "Restaurar valores por defecto" : "Esta sección ya usa los valores por defecto"
-                            onClicked: if (root.changedKeys.length) { resetConfirm.armed = true; resetArm.restart(); }
+                            onClicked: if (root.changedKeys.length) resetArm.restart()
                         }
-                        ConfirmButton {
+                        HoldButton {
                             id: resetConfirm
                             visible: resetArm.running
                             Layout.alignment: Qt.AlignVCenter
                             Layout.leftMargin: 8
                             h: 26
-                            text: "Restaurar valores por defecto"
-                            confirmText: "¿Restaurar " + root.changedKeys.length + (root.changedKeys.length === 1 ? " ajuste" : " ajustes") + " por defecto? Sí"
+                            text: "Restaurar " + root.changedKeys.length + (root.changedKeys.length === 1 ? " ajuste" : " ajustes") + " por defecto"
                             onConfirmed: { resetArm.stop(); root.resetSection(); }
                         }
-                        Timer { id: resetArm; interval: 5000; onTriggered: resetConfirm.armed = false }
-                        Connections { target: root; function onSectionChanged() { resetArm.stop(); resetConfirm.armed = false; } }
+                        Timer { id: resetArm; interval: 6000 }
+                        Connections { target: root; function onSectionChanged() { resetArm.stop(); } }
                         IconBtn {
                             Layout.alignment: Qt.AlignVCenter
                             Layout.leftMargin: 8

@@ -3,6 +3,21 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.20.0] — 2026-11-27
+
+### Novedades
+- **«Mantén pulsado» en las acciones destructivas:** borrar, vaciar, quitar, olvidar, forzar el apagado, volver a una
+  instantánea o restaurar los valores por defecto ya no piden «¿Seguro? Sí», sino mantener el botón pulsado unos
+  0,8 s mientras un relleno rojo avanza. Soltar antes lo cancela; un clic corto avisa «Mantén pulsado». También
+  funciona con Enter o Espacio mantenidos.
+
+### Cambios
+- `HoldButton` sustituye a `ConfirmButton`, que se retira.
+
+### Mantenimiento
+- `docs/PENDIENTES.md`: el plan de renovación de la interfaz se reordena (lo independiente primero, la isla y el
+  modo de barra al final) y guarda el listón de rendimiento en reposo.
+
 ## [0.19.3] — 2026-11-27
 
 ### Mantenimiento

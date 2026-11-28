@@ -278,8 +278,8 @@ RowLayout {
                     Layout.bottomMargin: 4
                     spacing: 8
                     Button { text: "Cambiar contraseña…"; h: 28; onClicked: Pkg.runInTerminal("sudo passwd " + ur.modelData.name, "Contraseña de " + ur.modelData.name) }
-                    ConfirmButton { h: 28; text: "Quitar"; confirmText: "¿Quitar y conservar sus archivos?"; onConfirmed: root.removeUser(ur.modelData.name, false) }
-                    ConfirmButton { h: 28; text: "Quitar y borrar archivos"; confirmText: "¿Borrar " + ur.modelData.home + "? Sí"; onConfirmed: root.removeUser(ur.modelData.name, true) }
+                    HoldButton { h: 28; text: "Quitar"; onConfirmed: root.removeUser(ur.modelData.name, false) }
+                    HoldButton { h: 28; text: "Quitar y borrar archivos"; onConfirmed: root.removeUser(ur.modelData.name, true) }
                 }
             }
         }

@@ -205,9 +205,8 @@ RowLayout {
                                 text: "Opciones…"
                                 onClicked: root.has["system-config-printer"] ? Quickshell.execDetached(["system-config-printer"]) : Qt.openUrlExternally("http://localhost:631/printers/" + encodeURIComponent(pr.modelData.name))
                             }
-                            ConfirmButton {
+                            HoldButton {
                                 text: "Quitar"
-                                confirmText: "¿Quitar «" + (pr.modelData.info || pr.modelData.name) + "»? Sí"
                                 onConfirmed: { Quickshell.execDetached(["pkexec", "lpadmin", "-x", pr.modelData.name]); root.open = ""; later.restart(); }
                             }
                         }

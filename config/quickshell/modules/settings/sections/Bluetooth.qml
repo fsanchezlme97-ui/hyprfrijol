@@ -210,9 +210,8 @@ ColumnLayout {
                                     enabled: pd.modelData.connected || /phone|computer/.test(pd.modelData.icon)
                                     onClicked: root.sendFile(pd.modelData.address)
                                 }
-                                ConfirmButton {
+                                HoldButton {
                                     text: "Olvidar"
-                                    confirmText: "¿Olvidar «" + (pd.modelData.name || pd.modelData.address) + "»? Sí"
                                     onConfirmed: { root.open = ""; pd.modelData.forget(); }
                                 }
                                 Item { Layout.fillWidth: true }

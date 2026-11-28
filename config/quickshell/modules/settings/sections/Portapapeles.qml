@@ -33,7 +33,7 @@ ColumnLayout {
             Layout.fillWidth: true
             spacing: 12
             Txt { Layout.fillWidth: true; text: "Borrar ahora todo lo que no esté fijado"; muted: true; size: 11.5 }
-            ConfirmButton { h: 28; text: "Vaciar"; confirmText: "¿Vaciar el historial? Sí"; onConfirmed: Clip.wipe() }
+            HoldButton { h: 28; text: "Vaciar"; onConfirmed: Clip.wipe() }
         }
     }
 

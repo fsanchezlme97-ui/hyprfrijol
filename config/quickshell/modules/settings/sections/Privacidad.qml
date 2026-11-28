@@ -124,7 +124,7 @@ RowLayout {
             Txt { Layout.fillWidth: true; text: cr.label; weight: Font.DemiBold }
             Txt { Layout.fillWidth: true; visible: cr.sub !== ""; text: cr.sub; muted: true; size: 11.5 }
         }
-        ConfirmButton { text: cr.button; confirmText: "¿Seguro? Sí"; enabled: cr.enabled; onConfirmed: cr.go() }
+        HoldButton { text: cr.button; enabled: cr.enabled; onConfirmed: cr.go() }
     }
     component SecRow: RowLayout {
         id: sr

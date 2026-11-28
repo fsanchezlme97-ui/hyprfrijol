@@ -122,7 +122,7 @@ Rectangle {
                     Button { visible: root.paused; text: "Reanudar"; onClicked: root.act(root.args("resume")) }
                     Button { visible: root.running; text: "Reiniciar"; onClicked: root.act(root.args("reboot")) }
                     Button { visible: root.up; text: "Apagar"; onClicked: root.act(root.args("shutdown")) }
-                    ConfirmButton { visible: root.up; text: "Forzar apagado"; confirmText: "¿Forzar? Sí"; onConfirmed: root.act(root.args("destroy")) }
+                    HoldButton { visible: root.up; text: "Forzar apagado"; onConfirmed: root.act(root.args("destroy")) }
                     Button { visible: !root.raw; kind: "link"; text: root.open ? "Menos" : "Más"; onClicked: root.toggled() }
                 }
             }
@@ -188,8 +188,8 @@ Rectangle {
                     Row {
                         anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                         spacing: 8
-                        ConfirmButton { h: 26; text: "Volver a esta"; confirmText: "¿Volver? Sí"; onConfirmed: root.act(root.args("revert", [sr.modelData.name])) }
-                        ConfirmButton { h: 26; text: "Borrar"; confirmText: "¿Borrar? Sí"; onConfirmed: root.act(root.args("snapdel", [sr.modelData.name])) }
+                        HoldButton { h: 26; text: "Volver a esta"; onConfirmed: root.act(root.args("revert", [sr.modelData.name])) }
+                        HoldButton { h: 26; text: "Borrar"; onConfirmed: root.act(root.args("snapdel", [sr.modelData.name])) }
                     }
                 }
             }

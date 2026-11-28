@@ -96,10 +96,9 @@ ColumnLayout {
             Layout.fillWidth: true
             spacing: 12
             Txt { Layout.fillWidth: true; text: "Borrar todas las conversaciones guardadas"; muted: true; size: 11.5 }
-            ConfirmButton {
+            HoldButton {
                 h: 28
                 text: "Borrar todo"
-                confirmText: "¿Borrar el historial? Sí"
                 onConfirmed: Quickshell.execDetached(["sh", "-c", 'rm -f "$1"/*.json', "sh", Paths.home + "/.local/share/hyprfrijol/ai"])
             }
         }
