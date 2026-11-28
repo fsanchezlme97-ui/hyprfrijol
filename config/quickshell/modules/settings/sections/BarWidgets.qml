@@ -17,16 +17,16 @@ ColumnLayout {
 
     // id → [nombre, icono, qué hace]
     readonly property var info: ({
-        clima: ["Clima", "cloud", "temperatura · clic: próximas horas y 3 días"],
-        recursos: ["Sistema", "cpu", "CPU, GPU, RAM, disco, red y temperatura · clic: núcleos, procesos, discos y red"],
-        impresora: ["Impresora 3D", "printer", Printer.configured ? "estado y progreso · clic: cámara, temperaturas y pausa" : "configura la dirección debajo"],
-        bongo: ["Gato bongo", "smile", "toca el tambor mientras escribes"],
-        pomodoro: ["Pomodoro", "clock", "tiempo de foco y descansos · también en el centro de control"],
-        cafeina: ["Cafeína", "coffee", "no apagar la pantalla · clic derecho: 1 hora"],
-        portapapeles: ["Portapapeles", "clipboard", "abre el historial en Spotlight"],
-        atajos: ["Atajos de teclado", "keyboard", "abre la chuleta de atajos · también con Super + /"],
-        ia: ["Asistente de IA", "ai", "abre el panel del asistente"],
-        ajustes: ["Ajustes", "gear", "la tuerca: abre esta ventana"]
+        clima: [Settings.barWidgetNames.clima, "cloud", "temperatura · clic: próximas horas y 3 días"],
+        recursos: [Settings.barWidgetNames.recursos, "cpu", "CPU, GPU, RAM, disco, red y temperatura · clic: núcleos, procesos, discos y red"],
+        impresora: [Settings.barWidgetNames.impresora, "printer", Printer.configured ? "estado y progreso · clic: cámara, temperaturas y pausa" : "configura la dirección debajo"],
+        bongo: [Settings.barWidgetNames.bongo, "smile", "toca el tambor mientras escribes"],
+        pomodoro: [Settings.barWidgetNames.pomodoro, "clock", "tiempo de foco y descansos · también en el centro de control"],
+        cafeina: [Settings.barWidgetNames.cafeina, "coffee", "no apagar la pantalla · clic derecho: 1 hora"],
+        portapapeles: [Settings.barWidgetNames.portapapeles, "clipboard", "abre el historial en Spotlight"],
+        atajos: [Settings.barWidgetNames.atajos, "keyboard", "abre la chuleta de atajos · también con Super + /"],
+        ia: [Settings.barWidgetNames.ia, "ai", "abre el panel del asistente"],
+        ajustes: [Settings.barWidgetNames.ajustes, "gear", "la tuerca: abre esta ventana"]
     })
     function name(id: string): string {
         if (id.startsWith("sep:")) return "Separador";

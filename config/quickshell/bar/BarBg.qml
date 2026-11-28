@@ -14,6 +14,7 @@ Glass {
     property real borderW: !drawBorder || Settings.get("activeBorder", "sutil") === "ninguno" || Theme.glassy ? 0 : Theme.borderWidth
     property color borderColor: Theme.light ? Qt.rgba(0, 0, 0, 0.08) : Qt.rgba(0, 0, 0, 0.20)
     property real feather: 1
+    property string flat: ""          // lado pegado al borde (arriba · abajo · izquierda · derecha): sus esquinas, rectas
     kind: "bar"
     // Glass dibuja solo la sombra; el relleno, el esmerilado y el filo los hacemos nosotros con la misma
     // forma Bézier de las píldoras, así todos los modos se ven como el archipiélago.
@@ -24,13 +25,16 @@ Glass {
     readonly property real rr: Math.min(radius, width / 2, height / 2)
     function svg(w: real, h: real, r: real, inset: real): string {
         const x0 = inset, y0 = inset, x1 = w - inset, y1 = h - inset;
-        const q = Math.max(0, Math.min(r - inset, (x1 - x0) / 2, (y1 - y0) / 2)), c = q * (1 - 0.58);
-        const f = v => v.toFixed(3);
-        return "M" + f(x0 + q) + "," + f(y0)
-            + " L" + f(x1 - q) + "," + f(y0) + " C" + f(x1 - c) + "," + f(y0) + " " + f(x1) + "," + f(y0 + c) + " " + f(x1) + "," + f(y0 + q)
-            + " L" + f(x1) + "," + f(y1 - q) + " C" + f(x1) + "," + f(y1 - c) + " " + f(x1 - c) + "," + f(y1) + " " + f(x1 - q) + "," + f(y1)
-            + " L" + f(x0 + q) + "," + f(y1) + " C" + f(x0 + c) + "," + f(y1) + " " + f(x0) + "," + f(y1 - c) + " " + f(x0) + "," + f(y1 - q)
-            + " L" + f(x0) + "," + f(y0 + q) + " C" + f(x0) + "," + f(y0 + c) + " " + f(x0 + c) + "," + f(y0) + " " + f(x0 + q) + "," + f(y0) + " Z";
+        const q = Math.max(0, Math.min(r - inset, (x1 - x0) / 2, (y1 - y0) / 2));
+        // radio de cada esquina (las del lado «flat», rectas)
+        const tl = flat === "arriba" || flat === "izquierda" ? 0 : q, tr = flat === "arriba" || flat === "derecha" ? 0 : q;
+        const br = flat === "abajo" || flat === "derecha" ? 0 : q, bl = flat === "abajo" || flat === "izquierda" ? 0 : q;
+        const k = 1 - 0.58, f = v => v.toFixed(3);
+        return "M" + f(x0 + tl) + "," + f(y0)
+            + " L" + f(x1 - tr) + "," + f(y0) + " C" + f(x1 - tr * k) + "," + f(y0) + " " + f(x1) + "," + f(y0 + tr * k) + " " + f(x1) + "," + f(y0 + tr)
+            + " L" + f(x1) + "," + f(y1 - br) + " C" + f(x1) + "," + f(y1 - br * k) + " " + f(x1 - br * k) + "," + f(y1) + " " + f(x1 - br) + "," + f(y1)
+            + " L" + f(x0 + bl) + "," + f(y1) + " C" + f(x0 + bl * k) + "," + f(y1) + " " + f(x0) + "," + f(y1 - bl * k) + " " + f(x0) + "," + f(y1 - bl)
+            + " L" + f(x0) + "," + f(y0 + tl) + " C" + f(x0) + "," + f(y0 + tl * k) + " " + f(x0 + tl * k) + "," + f(y0) + " " + f(x0 + tl) + "," + f(y0) + " Z";
     }
     Shape {
         anchors.fill: parent

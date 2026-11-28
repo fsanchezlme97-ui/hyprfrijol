@@ -12,20 +12,16 @@ CHANGELOG.
 ### Renovación de la interfaz, por etapas
 
 Hecho: botón «mantener para borrar» (0.20.0), pastilla «Escuchando…» (0.21.0), widgets de calendario, próxima reunión y
-zonas horarias en el panel `Super + G` (0.22.0), fila de música en el centro de control (0.23.0), isla dinámica básica
-(0.24.0) y formas de barra «Muesca» y «Marco» (0.26.0, pulidas en 0.27.0; sustituyen a la «Isla integrada» de 0.25.0). Cada etapa sale como versión propia.
+zonas horarias en el panel `Super + G` (0.22.0), fila de música en el centro de control (0.23.0) y barra
+simplificada (0.28.0: forma fija o flotante, disposición completa, archipiélago o isla, tres tamaños y «Retraer»; la isla
+dinámica y las formas «Muesca» y «Marco» de 0.24.0 a 0.27.3 se quitaron). Cada etapa sale como versión propia.
 
 Reglas de calidad en todas: un interruptor en Ajustes para lo nuevo y vistoso; solo `Theme.*` y respetar «Reducir
 movimiento»; probado en claro y oscuro, con dos pantallas y con teclado; `dev/perf.sh` antes y después; captura en la
 sesión anidada (en la sesión anidada hay que sacar la captura dos veces: la primera de `grim` sale con el cuadro
 anterior); `lint`, `check` y documentación. Listón de reposo (2026-11-27, 0.23.0, sesión anidada): 323 MB de memoria y
-1-3 % de CPU del hilo principal; con la isla activada y sin actividad, 324 MB. No pasar de +30 MB ni de +1 % en reposo.
+1-3 % de CPU del hilo principal. No pasar de +30 MB ni de +1 % en reposo.
 
-- [ ] **Isla dinámica, lo que falta**: meter el dictado dentro de la isla (hoy su píldora va aparte, debajo), avisos
-      entrantes (se despliega unos segundos al llegar una notificación o al acabar un Pomodoro), varias pantallas
-      (hoy solo la principal), probarla en claro y medir su coste con actividad (solo se midió en reposo). «Muesca» y «Marco»: sin probar en
-      claro (en la sesión anidada el tema claro no se aplica sin hf-apply) ni con dos pantallas; la isla sigue a la
-      pantalla con foco.
 - [ ] **Widgets sobre el escritorio**: los widgets nuevos (y los de siempre) viven en el panel `Super + G`, no sobre el
       escritorio como en las referencias. Falta una capa en el fondo para colocarlos (calendario, próxima reunión,
       zonas horarias) y, si se quiere, el gráfico de contribuciones de GitHub (necesita red y un usuario público).

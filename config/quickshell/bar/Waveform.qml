@@ -1,22 +1,10 @@
 // Onda de audio en el centro de la barra (cava, 48 bandas a 30 fps).
 // Rendimiento: «barras» son 48 rectángulos que pinta la GPU (antes un Canvas pintado por la CPU y subido como imagen
-// en cada fotograma: ~6 % de CPU con música); «onda» y «línea» siguen en Canvas. Todo se mueve a 30 fps.
+// en cada fotograma: ~6 % de CPU con música); «onda» y «agujas» van en Canvas. Todo se mueve a 30 fps.
 // Estilos (Ajustes › Barra › Onda de audio, ajuste "waveStyle"):
 //   barras  barras redondeadas simétricas: cuerpo en primario tenue y la punta en terciario (por defecto)
 //   onda    curva suave rellena, simétrica
-//   linea   una sola línea fina que oscila
-//   zigzag  picos rectos que alternan arriba y abajo, como un trazo de osciloscopio
-//   cinta   dos curvas desfasadas que se cruzan, con el hueco relleno: una cinta que se retuerce
-//   escalones  columnas de bloques (vúmetro): la altura va por escalones
-//   capas   tres ondas suaves rellenas superpuestas, cada una más tenue y ancha
-//   burbujas  una fila de puntos que se hinchan con el sonido
 //   agujas  líneas finas desde el centro con una gota en cada punta
-//   montana  una sierra rellena que crece desde abajo, con el pie desvanecido
-//   reflejo  barras que suben desde abajo con su reflejo tenue debajo, como sobre agua
-//   pixeles  columnas de cuadraditos que crecen desde abajo, como un ecualizador de 8 bits
-//   eco      la línea y dos ecos más pequeños y tenues
-//   cuerdas  tres cuerdas que vibran con el sonido
-//   pulso    un trazo de electrocardiograma: plano y con latidos donde hay sonido
 // Colores: los del tema, del primario (izquierda) al terciario (derecha), sin atenuar.
 // Movimiento suave: cada banda sigue a cava con un suavizado (sube rápido y baja algo más despacio, sin gravedad ni
 // marcas de pico que caen), así no hay «lluvia» de barras cayendo.
@@ -42,7 +30,8 @@ Rectangle {
     property string forceKind: ""
     property var sample: null
     readonly property bool isPreview: sample !== null
-    readonly property string kind: forceKind || Settings.get("waveStyle", "barras")
+    // Solo barras, onda y agujas (0.28.0): los estilos retirados se dibujan como barras
+    readonly property string kind: { const v = forceKind || Settings.get("waveStyle", "barras"); return ["barras", "onda", "agujas"].includes(v) ? v : "barras"; }
     readonly property string aiState: isPreview ? "" : Shell.aiSpeaking ? "habla"
         : Shell.aiBusy || Shell.dictPhase === "trans" ? "piensa"
         : Shell.dictPhase === "rec" ? "escucha" : ""
@@ -201,121 +190,16 @@ Rectangle {
                     }
                     ctx.lineTo(w, mid);
                 };
-                const k = root.drawKind;
-                if (k === "onda") {
-                    ctx.globalAlpha = 0.9;
-                    ctx.beginPath(); curve(-1); curve(1); ctx.fill();
-                } else if (k === "zigzag") {
-                    ctx.lineWidth = 1.4; ctx.lineJoin = "miter";
-                    ctx.beginPath(); ctx.moveTo(0, mid);
-                    for (let i = 0; i < n; i++) ctx.lineTo(pts[i][0], mid + (i % 2 ? 1 : -1) * pts[i][1]);
-                    ctx.lineTo(w, mid); ctx.stroke();
-                } else if (k === "cinta") {
-                    // dos bordes: la amplitud por un seno que avanza a lo ancho; donde se cruzan, la cinta «gira»
-                    const edge = (sign) => {
-                        for (let i = 0; i < n; i++) {
-                            const [x, a] = pts[i], y = mid + sign * a * Math.cos(i / (n - 1) * Math.PI * 3);
-                            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-                        }
-                    };
-                    ctx.globalAlpha = 0.35; ctx.beginPath(); edge(1);
-                    for (let i = n - 1; i >= 0; i--) { const [x, a] = pts[i]; ctx.lineTo(x, mid - a * Math.cos(i / (n - 1) * Math.PI * 3)); }
-                    ctx.closePath(); ctx.fill();
-                    ctx.globalAlpha = 1; ctx.lineWidth = 1.3;
-                    ctx.beginPath(); edge(1); ctx.stroke(); ctx.beginPath(); edge(-1); ctx.stroke();
-                } else if (k === "escalones") {
-                    // 24 columnas (una por cada dos bandas) de bloques de 2 px con 1 px de hueco
-                    const cols = Math.floor(n / 2), cw = w / cols, step = 3;
-                    for (let c = 0; c < cols; c++) {
-                        const a = Math.max(pts[2 * c][1], pts[2 * c + 1]?.[1] ?? 0), blocks = Math.max(1, Math.round(a / step));
-                        for (let b = 0; b < blocks; b++) {
-                            ctx.globalAlpha = 1 - b / (blocks + 2) * 0.6;
-                            ctx.fillRect(c * cw + 0.5, mid - (b + 1) * step + 1, cw - 1.5, 2);
-                            ctx.fillRect(c * cw + 0.5, mid + b * step, cw - 1.5, 2);
-                        }
-                    }
-                } else if (k === "burbujas") {
-                    const cols = Math.floor(n / 2), cw = w / cols;
-                    for (let c = 0; c < cols; c++) {
-                        const a = (pts[2 * c][1] + (pts[2 * c + 1]?.[1] ?? 0)) / 2 / (mid - 1);
-                        ctx.globalAlpha = 0.45 + 0.55 * a;
-                        ctx.beginPath(); ctx.arc(c * cw + cw / 2, mid, Math.max(1, Math.min(cw / 2 - 0.4, 1 + a * mid)), 0, Math.PI * 2); ctx.fill();
-                    }
-                } else if (k === "agujas") {
+                if (root.drawKind === "agujas") {
                     ctx.lineWidth = 1; ctx.lineCap = "round";
                     for (let i = 0; i < n; i += 2) {
                         const [x, a] = pts[i];
                         ctx.globalAlpha = 0.55; ctx.beginPath(); ctx.moveTo(x, mid - a); ctx.lineTo(x, mid + a); ctx.stroke();
                         ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(x, mid - a, 1.3, 0, Math.PI * 2); ctx.arc(x, mid + a, 1.3, 0, Math.PI * 2); ctx.fill();
                     }
-                } else if (k === "montana") {
+                } else {   // onda rellena (también la voz del asistente con «barras»)
                     ctx.globalAlpha = 0.9;
-                    ctx.beginPath(); ctx.moveTo(0, h);
-                    for (let i = 0; i < n - 1; i++) {
-                        const [x0, a0] = pts[i], [x1, a1] = pts[i + 1];
-                        ctx.quadraticCurveTo(x0, h - 2 * a0, (x0 + x1) / 2, h - (a0 + a1));
-                    }
-                    ctx.lineTo(w, h); ctx.closePath(); ctx.fill();
-                } else if (k === "reflejo") {
-                    // línea de agua al 65 %: barras arriba y su reflejo (más corto y tenue) abajo
-                    const base = h * 0.65, cols = Math.floor(n / 2), cw = w / cols;
-                    for (let c = 0; c < cols; c++) {
-                        const a = Math.max(pts[2 * c][1], pts[2 * c + 1]?.[1] ?? 0) / (mid - 1), up = Math.max(1.5, a * (base - 1));
-                        ctx.globalAlpha = 1; ctx.fillRect(c * cw + 0.6, base - up, cw - 1.6, up);
-                        ctx.globalAlpha = 0.25; ctx.fillRect(c * cw + 0.6, base + 1, cw - 1.6, Math.min(h - base - 1, up * 0.45));
-                    }
-                } else if (k === "pixeles") {
-                    const cols = Math.floor(n / 2), cw = w / cols, cell = Math.max(2, Math.min(cw - 1, 3));
-                    for (let c = 0; c < cols; c++) {
-                        const a = Math.max(pts[2 * c][1], pts[2 * c + 1]?.[1] ?? 0) / (mid - 1), rows = Math.max(1, Math.round(a * h / (cell + 1)));
-                        for (let r = 0; r < rows; r++) {
-                            ctx.globalAlpha = 0.5 + 0.5 * (r + 1) / rows;
-                            ctx.fillRect(c * cw + (cw - cell) / 2, h - (r + 1) * (cell + 1), cell, cell);
-                        }
-                    }
-                } else if (k === "eco") {
-                    ctx.lineWidth = 1.5; ctx.lineJoin = "round";
-                    for (const [sc2, al] of [[0.45, 0.25], [0.72, 0.5], [1, 1]]) {
-                        ctx.globalAlpha = al;
-                        const old = pts.map(p => p[1]);
-                        for (let i = 0; i < n; i++) pts[i][1] = old[i] * sc2;
-                        ctx.beginPath(); curve(-1); ctx.stroke();
-                        for (let i = 0; i < n; i++) pts[i][1] = old[i];
-                    }
-                } else if (k === "cuerdas") {
-                    // la fase avanza con el reloj: las cuerdas ondulan mientras suena
-                    const ph = root.isPreview ? 0 : Date.now() / 160;
-                    ctx.lineWidth = 1.2;
-                    for (let st2 = 0; st2 < 3; st2++) {
-                        ctx.globalAlpha = st2 === 1 ? 1 : 0.55;
-                        const y0 = mid + (st2 - 1) * h * 0.24;
-                        ctx.beginPath();
-                        for (let i = 0; i < n; i++) {
-                            const [x, a] = pts[i], y = y0 + Math.sin(i * 0.9 + ph + st2 * 2.1) * a * 0.45;
-                            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-                        }
-                        ctx.stroke();
-                    }
-                } else if (k === "pulso") {
-                    // cada 4 bandas un latido (subida, bajada, rebote) proporcional al nivel
-                    ctx.lineWidth = 1.4; ctx.lineJoin = "round";
-                    const shape = [0.05, 1, -0.6, 0.15];
-                    ctx.beginPath(); ctx.moveTo(0, mid);
-                    for (let i = 0; i < n; i++) ctx.lineTo(pts[i][0], mid - pts[i][1] * shape[i % 4]);
-                    ctx.lineTo(w, mid); ctx.stroke();
-                } else if (k === "capas") {
-                    // la de fondo más ancha y tenue; cada capa, la misma onda escalada
-                    for (const [sc2, al] of [[1, 0.25], [0.7, 0.45], [0.4, 0.9]]) {
-                        ctx.globalAlpha = al;
-                        const old = pts.map(p => p[1]);
-                        for (let i = 0; i < n; i++) pts[i][1] = old[i] * sc2;
-                        ctx.beginPath(); curve(-1); curve(1); ctx.fill();
-                        for (let i = 0; i < n; i++) pts[i][1] = old[i];
-                    }
-                } else {
-                    ctx.lineWidth = 1.6; ctx.lineJoin = "round";
-                    ctx.beginPath(); curve(-1); ctx.stroke();
-                    ctx.globalAlpha = 0.35; ctx.beginPath(); curve(1); ctx.stroke();
+                    ctx.beginPath(); curve(-1); curve(1); ctx.fill();
                 }
             }
         }

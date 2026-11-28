@@ -63,31 +63,28 @@ Singleton {
     // Quita claves de settings.json («Restaurar valores por defecto» de una sección)
     function reset(keys): void { patch({}, keys); }
     // ---------- Barra: medidas compartidas (Bar, Overlay, OSD) ----------
-    // barHeight (Ajustes › Barra › Tamaño): grosor en px, de 24 a 56 (34 = «Normal», las medidas del diseño:
-    // fija 32 px, flotante/isla/archipiélago 30 px + margen, lateral 36 px de ancho). El contenido se escala en
-    // proporción (barScale), así iconos y textos crecen con la barra.
-    // barMode: "fija" · "flotante" · "isla" (mide lo que su contenido) · "archipielago" (cada grupo en su propia píldora) ·
-    // "muesca" (una pieza centrada que sale del borde con la isla dinámica dentro) · "marco" (fija, con las esquinas de
-    // la pantalla redondeadas hacia dentro: la barra abraza el contenido; bar/ScreenCorners.qml).
-    // barAlign: "inicio" · "centro" · "fin" (isla) controla la posición a lo largo del borde.
-    readonly property int barSize: Math.max(24, Math.min(56, Math.round(Number(get("barHeight", 34)) || 34)))
+    // barHeight (Ajustes › Barra › Tamaño): 32 «Compacta» · 34 «Normal» · 36 «Grande» (otros valores van al más cercano).
+    // El contenido se diseña a 32 px (fija) / 30 px (flotante) / 36 px de ancho (lateral) y se escala en proporción
+    // (barScale), así iconos y textos crecen con la barra.
+    // barMode: "fija" (pegada al borde) · "flotante" (separada del borde gapsOut px).
+    // barLayout: "completa" (de borde a borde) · "archipielago" (cada grupo en su propia píldora) · "isla" (mide lo que
+    // su contenido; barAlign "inicio" · "centro" · "fin" la coloca a lo largo del borde).
+    // Los valores de antes de 0.28.0 (barMode isla, archipielago, media, muesca, marco…) los convierte hf-migrate; aquí
+    // solo se leen con cuidado por si aún no ha pasado.
+    readonly property int barSize: { const v = Math.round(Number(get("barHeight", 34)) || 34); return v <= 32 ? 32 : v >= 36 ? 36 : 34; }
     readonly property string barPos: get("barPos", "abajo")
-    // "media" se eliminó de la UI: se comporta como "isla" (flotante y mide lo que pida el contenido); "integrada"
-    // (0.25.0) pasó a ser "muesca".
-    readonly property string barMode: { const v = get("barMode", "fija"); return v === "media" ? "isla" : v === "integrada" ? "muesca" : v; }
-    readonly property bool barFloating: ["flotante", "isla", "archipielago"].includes(barMode)
-    readonly property bool barIsland: barMode === "isla" || (barMode === "muesca" && barVertical)
+    readonly property string barMode: { const v = get("barMode", "flotante"); return v === "fija" || v === "marco" || v === "muesca" ? "fija" : "flotante"; }
+    readonly property string barLayout: {
+        const ok = ["completa", "archipielago", "isla"], v = user.barLayout, m = user.barMode;
+        if (ok.includes(v)) return v;
+        if (m === undefined) { const d = get("barLayout", "completa"); return ok.includes(d) ? d : "completa"; }
+        return m === "archipielago" ? "archipielago" : ["isla", "media", "muesca", "integrada"].includes(m) ? "isla" : "completa";
+    }
+    readonly property bool barFloating: barMode === "flotante"
+    readonly property bool barIsland: barLayout === "isla"
     readonly property string barAlign: ["inicio", "fin"].includes(get("barAlign", "centro")) ? get("barAlign", "centro") : "centro"
-    readonly property bool barArchipelago: barMode === "archipielago"
-    // Muesca: solo con la barra arriba o abajo (de lado se queda como una isla pegada al borde)
-    readonly property bool barNotch: barMode === "muesca" && !barVertical
-    // La isla va dentro de la muesca si además la barra está siempre visible; si no, flota como siempre
-    readonly property bool barIntegrated: barNotch && !barAutoHide && !barSmartHide
-    // ¿Va la isla dentro de la barra de esta pantalla? (la de la pantalla con foco, con barra completa)
-    function barIslandSlot(scr): bool { return barIntegrated && scr && scr === Shell.screen && !Shell.barHidden && Shell.barModeFor(scr) === "completa"; }
+    readonly property bool barArchipelago: barLayout === "archipielago"
     readonly property bool barVertical: barPos === "izquierda" || barPos === "derecha"
-    // Margen con el borde si flota: el mismo hueco que las ventanas (gapsOut), entre 2 y 4 px, igual en los 4 lados
-    // (config/apply/52-pip.py lo calcula igual)
     // Margen de la barra flotante con el borde: el mismo hueco que las ventanas (gaps_out), así barra, ventanas y
     // paneles quedan a la misma distancia del borde y entre sí (antes se forzaba a 2–4 px y no casaba)
     readonly property int barOffset: barFloating ? Math.max(0, Math.min(24, Math.round(Number(get("gapsOut", 1)) || 0))) : 0
@@ -96,14 +93,15 @@ Singleton {
     readonly property int barThickness: barVertical ? barSize + 2 : barSize - 2 - (barFloating ? 2 : 0)
     readonly property real barScale: barThickness / (barVertical ? 36 : barFloating ? 30 : 32)
     // Comportamiento (Ajustes › Barra): "siempre" · "auto" (se esconde y vuelve con el cursor en el borde) ·
-    // "inteligente" (se aparta cuando una ventana la tapa o hay una maximizada). Migra el antiguo barAutoHide.
+    // "retraer" (se esconde mientras haya alguna ventana no flotante en el espacio de su pantalla y vuelve con el cursor
+    // en el borde; antes "inteligente"). Migra el antiguo barAutoHide.
     readonly property string barBehavior: {
         const v = user.barBehavior ?? (user.barAutoHide === true ? "auto" : get("barBehavior", "siempre"));
-        return ["siempre", "auto", "inteligente"].includes(v) ? v : "siempre";
+        return v === "inteligente" ? "retraer" : ["siempre", "auto", "retraer"].includes(v) ? v : "siempre";
     }
     // Se oculta sola: el ajuste, o el modo sin distracciones con «Ocultar la barra»
     readonly property bool barAutoHide: barBehavior === "auto" || (Shell.focusMode && get("focusHideBar", true))
-    readonly property bool barSmartHide: barBehavior === "inteligente" && !barAutoHide
+    readonly property bool barSmartHide: barBehavior === "retraer" && !barAutoHide
     // ¿La barra ocupa sitio ahora? (si no, los paneles llegan al borde)
     readonly property bool barReserves: !barAutoHide && !Shell.barHidden
     // Hueco de los paneles con el borde de la pantalla y con la barra: el mismo que el de las ventanas en mosaico
@@ -125,6 +123,12 @@ Singleton {
     // barOrder = { izquierda: [ids], derecha: [ids] } guarda en qué isla va cada uno y su orden; los que no
     // aparecen (nuevos o sin tocar) van a la derecha en este orden. Encendido o apagado sigue en barModules.
     readonly property var barWidgetIds: ["clima", "recursos", "impresora", "bongo", "pomodoro", "cafeina", "portapapeles", "atajos", "ia", "ajustes"]
+    // Nombres de los módulos de la barra (Ajustes › Barra › Módulos y Widgets de la barra)
+    readonly property var barCoreNames: ({ espacios: "Espacios", titulo: "Ventanas del espacio", musica: "Onda de audio", red: "Red",
+        bateria: "Batería", notificaciones: "Notificaciones", reloj: "Reloj" })
+    readonly property var barWidgetNames: ({ clima: "Clima", recursos: "Sistema", impresora: "Impresora 3D", bongo: "Gato bongo",
+        pomodoro: "Pomodoro", cafeina: "Cafeína", portapapeles: "Portapapeles", atajos: "Atajos de teclado", ia: "Asistente de IA",
+        ajustes: "Ajustes" })
     readonly property var barCustomList: { const v = get("barCustom", null); return Array.isArray(v) ? v.filter(c => c && c.id) : []; }
     readonly property var barOrder: {
         const o = get("barOrder", null) || {};

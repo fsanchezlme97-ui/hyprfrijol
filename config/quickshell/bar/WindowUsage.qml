@@ -1,5 +1,5 @@
-// Todos los programas abiertos y lo que gastan, en cualquier espacio y pantalla (barra de las pantallas secundarias,
-// a la derecha: con una sola pantalla no se ve; ahí ya está el chip de sistema). Una entrada por programa (por su
+// Los programas abiertos y lo que gastan: en un espacio (workspace: su id; módulo «Ventanas del espacio» de la barra, a la
+// izquierda) o en cualquier espacio y pantalla (workspace: 0; barra de las pantallas secundarias, a la derecha). Una entrada por programa (por su
 // clase: dos kitty abiertos por separado son dos procesos, pero un solo programa): icono, CPU (% de todo el equipo)
 // y memoria propia (sin bibliotecas ni memoria compartida, que con el RSS contaban una vez por proceso), sumando cada proceso con todos sus hijos (SysStats.tree: pestañas de Chrome, apps Electron, lo que
 // corre en una terminal). Orden fijo (los abiertos antes, primero); si hay más de `max`, los que más gastan y «+N».
@@ -14,10 +14,11 @@ import "../services"
 Row {
     id: root
     property int max: 8
+    property int workspace: 0             // 0: todos los espacios
     spacing: 2
     readonly property var groups: {
         const by = {}, order = [];
-        for (const c of HyprClients.clients) {
+        for (const c of HyprClients.clients.filter(c => root.workspace === 0 || c.workspace?.id === root.workspace)) {
             const k = c.class ? "c" + c.class : c.address;
             if (!by[k]) { by[k] = []; order.push(k); }
             by[k].push(c);

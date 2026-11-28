@@ -1,5 +1,5 @@
 // Contenido de la barra horizontal, de izquierda a derecha:
-//   [Aplicaciones][一 二 三 … 九] | título ······ onda ······
+//   [Aplicaciones][一 二 三 … 八] | ventanas del espacio (icono y consumo de cada una) ······ onda ······
 //   información (clima · sistema · impresora) → utilidades: lo que acompaña (gato bongo · pomodoro · cafeína), lo que
 //   escribe y habla (portapapeles · micrófono · asistente) y ajustes → bandeja
 //   | [privacidad] [wifi vol bat · campana · vie 6 nov 10:11] ← grupo de estado: abre el centro de control
@@ -7,33 +7,23 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Hyprland
 import ".."
 import "../components"
 import "../services"
-import "../modules/island"
 
 Item {
     id: root
     required property var barWindow
     property bool compact: false          // isla central: los tres grupos seguidos, sin huecos
     property bool islands: false          // archipiélago: cada grupo en su propia píldora (BarPill)
-    // Muesca: una pieza ajustada a su contenido, de izquierda a derecha [apps · espacios · título] onda [isla] [estado]
-    property bool notch: false
-    property bool slot: false             // muesca con la isla dinámica (entre la onda y el grupo derecho)
-    readonly property real slotW: !notch || !slot ? 0 : islaLine.implicitWidth + 28
-    readonly property real notchPad: 20   // margen de los extremos (deja sitio a las esquinas redondeadas)
-    readonly property real notchGap: 16   // hueco entre los grupos dentro de la muesca
-    readonly property real waveW: wave.active ? wave.width + notchGap : 0
-    // Centro de la isla en la muesca
-    readonly property real slotCenter: notchPad + left.implicitWidth + notchGap + waveW + slotW / 2
     // Pantalla secundaria: sus espacios, el título de su ventana y, a la derecha, lo que gastan sus programas (sin
     // aplicaciones, onda, chips, bandeja ni estado)
     readonly property bool secondary: Shell.barModeFor(barWindow.screen) === "sencilla"
     // Píldoras del archipiélago (Bar.qml las usa de máscara para el ratón)
     readonly property var pills: [pillL, pillC, pillR, pillS]
     readonly property real gapC: 14
-    readonly property real naturalLength: notch ? notchPad * 2 + left.implicitWidth + notchGap + waveW + (slot ? slotW + notchGap : 0) + right.implicitWidth
-        : left.implicitWidth + (wave.active ? wave.width + gapC * 2 : gapC) + (secondary ? usage.width : right.implicitWidth) + 6
+    readonly property real naturalLength: left.implicitWidth + (wave.active ? wave.width + gapC * 2 : gapC) + (secondary ? usage.width : right.implicitWidth) + 6
     // Título de la ventana activa: tope fijo (isla) o 30 % de la barra (máx. 300 px), y nunca hasta la onda
     // central (ni hasta el grupo derecho sin onda). Se calcula sin depender del propio título (sin bucles).
     // (los widgets de la izquierda van tras el título y no encogen: cuentan como parte del arranque)
@@ -43,30 +33,12 @@ Item {
     readonly property real waveX: Math.min((width - wave.width) / 2, right.x - gapC - wave.width)
     // Archipiélago: la onda va en su píldora entre la izquierda y los chips; si no cabe (pantalla estrecha o barra
     // grande), se oculta en lugar de montarse sobre la píldora de los chips
-    readonly property bool waveFits: compact || notch || (islands ? titleStart + 12 + wave.width <= right.x - 26 : waveX >= titleStart - 8)
+    readonly property bool waveFits: compact || (islands ? titleStart + 12 + wave.width <= right.x - 26 : waveX >= titleStart - 8)
     readonly property real centerStart: !wave.active || !waveFits ? (secondary ? usage.x - 12 : right.x)
         : islands ? Math.min((width - wave.width) / 2, right.x - 26 - wave.width) - 22 - 10
         : waveX
-    readonly property real titleMax: compact || notch ? 240 : Math.max(0, Math.min(300, width * 0.3, centerStart - gapC - titleStart))
+    readonly property real titleMax: compact ? 240 : Math.max(0, Math.min(300, width * 0.3, centerStart - gapC - titleStart))
 
-    // Isla dinámica plegada en el centro de la muesca (services/Isla; pulsarla abre su vista)
-    Item {
-        visible: root.slot
-        x: root.slotCenter - width / 2
-        width: root.slotW; height: parent.height
-        Behavior on width { enabled: !Theme.still; NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
-        HoverHandler { cursorShape: Qt.PointingHandCursor }
-        TapHandler { onTapped: Isla.open() }
-        IslaLine {
-            id: islaLine
-            anchors.centerIn: parent
-        }
-        Rectangle {
-            visible: Isla.keys.length > 0 && Isla.top.progress >= 0
-            anchors { left: parent.left; bottom: parent.bottom; leftMargin: 16; bottomMargin: 4 }
-            width: (parent.width - 28) * Isla.top.progress; height: 2; radius: 1; color: Theme.p
-        }
-    }
     BarPill { id: pillL; bar: root.barWindow; visible: root.islands; x: 0; height: parent.height; width: left.x + left.implicitWidth + (title.visible ? 10 : 3) }
     BarPill { id: pillC; bar: root.barWindow; visible: root.islands && wave.active && root.waveFits; x: wave.x - 10; height: parent.height; width: wave.width + 20 }
     // Píldora de los chips (si hay alguno) y la del grupo de estado
@@ -80,13 +52,21 @@ Item {
 
     RowLayout {
         id: left
-        x: root.notch ? root.notchPad : 3
+        x: 3
         anchors.verticalCenter: parent.verticalCenter
         spacing: 8
         AppsBtn { id: apps; visible: !root.secondary }   // Aplicaciones (Spotlight): logo de la distribución
         Workspaces { id: ws; visible: Settings.barHas("espacios") || root.secondary; screen: root.barWindow.screen }
         Divider { visible: Settings.barHas("espacios") && title.visible }
-        ActiveTitle { id: title; screenName: root.barWindow.screen?.name ?? ""; visible: Settings.barHas("titulo") && text !== "" && root.titleMax >= 48; Layout.leftMargin: 2; Layout.maximumWidth: root.titleMax }
+        // Ventanas del espacio activo de esta pantalla (módulo «titulo»): icono y consumo de cada programa; caben tantos
+        // como deje titleMax (unos 84 px cada uno) y el resto va en «+N»
+        WindowUsage {
+            id: title
+            workspace: Hyprland.monitorFor(root.barWindow.screen)?.activeWorkspace?.id ?? -1
+            max: Math.max(1, Math.floor(root.titleMax / 84))
+            visible: Settings.barHas("titulo") && !root.secondary && groups.length > 0 && root.titleMax >= 48
+            Layout.leftMargin: 2
+        }
         // Widgets puestos en la isla izquierda (Ajustes › Widgets de la barra)
         RowLayout {
             id: leftZone
@@ -104,8 +84,7 @@ Item {
         visible: root.waveFits
         anchors.verticalCenter: parent.verticalCenter
         // Archipiélago: centrada, pero sin pisar las píldoras de los lados (12 px de hueco como mínimo)
-        x: root.notch ? root.notchPad + left.implicitWidth + root.notchGap
-         : root.compact ? left.x + left.implicitWidth + root.gapC
+        x: root.compact ? left.x + left.implicitWidth + root.gapC
          : root.islands ? Math.max(pillL.width + 22, Math.min((parent.width - width) / 2, right.x - 26 - width))
          : root.waveX
         sourceComponent: Waveform { barHeight: root.height }
@@ -150,7 +129,7 @@ Item {
     RowLayout {
         id: right
         visible: !root.secondary
-        x: root.notch ? root.width - root.notchPad - implicitWidth : root.compact ? (wave.active ? wave.x + wave.width + root.gapC : left.x + left.implicitWidth + root.gapC) : parent.width - implicitWidth - 3
+        x: root.compact ? (wave.active ? wave.x + wave.width + root.gapC : left.x + left.implicitWidth + root.gapC) : parent.width - implicitWidth - 3
         anchors.verticalCenter: parent.verticalCenter
         spacing: 2
         Repeater { model: root.zoneR; delegate: zoneItem }

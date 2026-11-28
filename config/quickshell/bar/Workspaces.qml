@@ -1,7 +1,7 @@
 // Espacios (20×20, radio 6, 11.5 px seminegrita). Activo: fondo p (una sola píldora que se desliza de un espacio al
 // otro y cambia de ancho); con ventanas: texto normal, vacío: atenuado. Clic → ir; rueda → siguiente/anterior.
 // Ajustes (Escritorio y gestos › Espacios de trabajo):
-//   "wsShowAll"  true (por defecto) → siempre del 1 al 9 (y cualquier otro ocupado); false → solo los
+//   "wsShowAll"  true (por defecto) → siempre del 1 al 8 (y cualquier otro ocupado o el activo); false → solo los
 //                ocupados y el activo
 //   "wsNumerals" numeración: japonesa (一 二 三, por defecto) · arábiga · romana · puntos (services/WsLabel.qml)
 //   "wsPerMonitor" true (por defecto) → cada pantalla muestra solo sus espacios (WsLabel.base / local)
@@ -28,7 +28,7 @@ Item {
     readonly property var ids: {
         const s = new Set(occupied);
         if (activeId > 0) s.add(activeId);
-        if (showAll) for (let i = 1; i <= 9; i++) s.add(base + i);
+        if (showAll) for (let i = 1; i <= 8; i++) s.add(base + i);
         return [...s].sort((a, b) => a - b);
     }
     readonly property var names: Settings.get("wsNames", ({})) ?? ({})
@@ -62,7 +62,7 @@ Item {
 
     Grid {
     id: grid
-    columns: root.vertical ? 1 : root.ids.length + 1
+    columns: root.vertical ? 1 : root.ids.length
     spacing: root.vertical ? 4 : 1
 
     Repeater {
@@ -116,22 +116,5 @@ Item {
         }
     }
 
-    // Modo de ventanas del espacio activo (WinMode): atenuado si es el general, de color si este espacio tiene el
-    // suyo. Clic: el siguiente modo solo para este espacio (como Super + Ctrl + Espacio).
-    Item {
-        id: modeCell
-        readonly property string m: { WinMode.overrides; WinMode.mode; return WinMode.modeOf(root.activeId); }
-        readonly property bool own: m !== WinMode.mode
-        width: root.vertical ? 24 : 20; height: 20
-        Icon { anchors.centerIn: parent; name: WinMode.icons[modeCell.m] ?? "tiles"; size: 12; color: modeCell.own ? Theme.p : Theme.o }
-        MouseArea {
-            id: modeMa
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: WinMode.cycleWs(root.activeId)
-        }
-        BarTip { target: modeMa; text: (WinMode.labels[modeCell.m] ?? "") + (modeCell.own ? " · solo este espacio" : "") + " · clic: cambiar" }
-    }
     }
 }

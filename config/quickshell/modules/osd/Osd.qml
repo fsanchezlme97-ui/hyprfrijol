@@ -38,7 +38,7 @@ PanelWindow {
     readonly property bool atT: OsdStack.atT
     readonly property bool atL: OsdStack.atL
     readonly property bool atR: OsdStack.atR
-    readonly property real stackRoom: 70 + OsdStack.islandPush          // sitio para apartarse de la píldora del dictado (42 + 8 + aire)
+    readonly property real stackRoom: 70          // sitio para apartarse de la píldora del dictado (42 + 8 + aire)
     anchors { bottom: atB; top: atT; left: atL; right: atR }
     margins { bottom: atB ? OsdStack.edge("abajo") : 0; top: atT ? OsdStack.edge("arriba") : 0; left: atL ? OsdStack.edge("izquierda") : 0; right: atR ? OsdStack.edge("derecha") : 0 }
     implicitWidth: pill.width + 40

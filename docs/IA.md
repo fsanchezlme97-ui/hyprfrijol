@@ -251,7 +251,7 @@ contra este esquema (todo lo demás se descarta) y genera las etiquetas en espa�
 | `browser` | `{"type":"browser","op":"new-tab"}` (`close-tab`, `back`, `reload`, `scroll-down`, `find`/`search`/`open` con `value`…) | Nueva pestaña |
 | `file` | `{"type":"file","op":"reveal","path":"/home/…/informe.pdf"}` (`open`) | Abrir la carpeta de informe.pdf |
 
-Claves de `set`: `estilo`, `colorMode`, `palette`, `themeMode`, `barPos`, `barMode`, `animado`,
+Claves de `set`: `estilo`, `colorMode`, `palette`, `themeMode`, `barPos`, `barMode`, `barLayout`, `animado`,
 `reduceTransparency`, `reduceMotion`, `gapsIn`, `gapsOut`, `pipSize`, `pipCorner`, `deskSort`.
 
 - **Aplicar** → `hf-ai apply` (`hf-apply set`, `hf-wallpaper`, `hyprctl dispatch`, `qs ipc`).

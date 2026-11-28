@@ -209,7 +209,7 @@ Scope {
             left: OsdStack.atL ? OsdStack.edge("izquierda") : 0; right: OsdStack.atR ? OsdStack.edge("derecha") : 0
         }
         implicitWidth: 680
-        implicitHeight: 42 + 40 + OsdStack.islandPush
+        implicitHeight: 42 + 40
         mask: Region { item: pill }
         Binding { target: OsdStack; property: "dictation"; value: win.shown ? pill.height : 0 }
 

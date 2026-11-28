@@ -1,5 +1,5 @@
-// Ajustes › Barra — posición, forma, altura, módulos visibles y comportamiento ("barBehavior": siempre /
-// auto / inteligente; migra el antiguo barAutoHide al elegir).
+// Ajustes › Barra — posición, forma (fija / flotante) y disposición (completa / archipiélago / isla), tamaño (32 / 34 /
+// 36 px), módulos visibles y comportamiento ("barBehavior": siempre / auto / retraer; migra el antiguo barAutoHide al elegir).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -14,7 +14,8 @@ ColumnLayout {
     id: root
     spacing: 12
     readonly property string pos: Settings.get("barPos", "abajo")
-    readonly property string mode: Settings.barMode
+    readonly property string mode: Settings.barMode               // fija · flotante
+    readonly property string layout: Settings.barLayout           // completa · archipielago · isla
     readonly property string align: Settings.barAlign
     readonly property bool vertical: root.pos === "izquierda" || root.pos === "derecha"
     readonly property bool archi: Settings.barArchipelago          // archipiélago: una píldora por grupo
@@ -44,7 +45,7 @@ ColumnLayout {
                         color: Theme.s4
                         border.width: card.on ? 3 : 1
                         border.color: card.on ? Theme.p : Theme.ov
-                        readonly property real m: ["fija", "muesca", "marco"].includes(root.mode) ? 0 : 6
+                        readonly property real m: root.mode === "fija" ? 0 : 6
                         Rectangle {   // ventana de ejemplo
                             x: card.k === "izquierda" ? 26 : 12
                             y: card.k === "arriba" ? 26 : 12
@@ -56,12 +57,11 @@ ColumnLayout {
                             readonly property bool vert: card.k === "izquierda" || card.k === "derecha"
                             readonly property real inset: (parent.border.width) + parent.m
                             color: card.on ? Theme.p : Theme.o
-                            radius: root.mode === "fija" ? 0 : 3
+                            radius: root.mode === "fija" && root.layout === "completa" ? 0 : 3
                             // isla: lo que su contenido (aquí un 40 %); alineada como barAlign
-                            // isla: un 40 %; muesca: un 60 % centrado
-                            readonly property real part: root.mode === "isla" ? 0.4 : root.mode === "muesca" ? 0.6 : 1
+                            readonly property real part: root.layout === "isla" ? 0.4 : 1
                             readonly property real span: (vert ? parent.height : parent.width) - inset * 2
-                            readonly property real along: inset + (root.align === "inicio" && root.mode !== "muesca" ? 0 : root.align === "fin" && root.mode !== "muesca" ? 1 : 0.5) * span * (1 - part)
+                            readonly property real along: inset + (root.align === "inicio" ? 0 : root.align === "fin" ? 1 : 0.5) * span * (1 - part)
                             width: vert ? 9 : span * part
                             height: vert ? span * part : 9
                             x: card.k === "izquierda" ? inset : card.k === "derecha" ? parent.width - width - inset : along
@@ -88,31 +88,27 @@ ColumnLayout {
                 }
             }
         }
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 24
-            LabeledRow {
-                Layout.preferredWidth: 1
-                label: "Forma"; labelWidth: 60
-                Seg {
-                    model: [["fija", "Fija al borde"], ["flotante", "Flotante"], ["isla", "Isla"], ["archipielago", "Archipiélago"], ["muesca", "Muesca"], ["marco", "Marco"]]
-                    current: root.mode
-                    onPicked: k => Confirm.change("Forma de la barra", { barMode: k })
-                }
+        // Forma (fija al borde o flotante) y, dentro de ella, la disposición de los módulos
+        LabeledRow {
+            label: "Forma"; labelWidth: 90
+            Seg {
+                model: [["fija", "Fija al borde"], ["flotante", "Flotante"]]
+                current: root.mode
+                onPicked: k => Confirm.change("Forma de la barra", { barMode: k, barLayout: root.layout })
             }
         }
-        Txt {
-            visible: root.mode === "muesca" || root.mode === "marco"
-            Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5
-            text: root.mode === "marco" ? "La barra va pegada a un borde y un marco fino de su color recorre los otros tres, con las esquinas redondeadas hacia dentro alrededor de las ventanas. Las ventanas se apartan del marco solo en esta forma: al volver a otra, quedan como estaban."
-                : Settings.barIntegrated ? "Una sola pieza centrada que sale del borde, con la isla dinámica dentro: pulsarla abre lo que enseña. Qué enseña la isla se elige en «Isla dinámica»."
-                : root.vertical ? "La muesca solo va arriba o abajo; de lado la barra queda pegada al borde, a la medida de su contenido."
-                : "Con la barra que se esconde sola, la isla dinámica no va dentro de la muesca: flota junto a ella."
+        LabeledRow {
+            label: "Disposición"; labelWidth: 90
+            Seg {
+                model: [["completa", "Completa"], ["archipielago", "Archipiélago"], ["isla", "Isla"]]
+                current: root.layout
+                onPicked: k => Confirm.change("Disposición de la barra", { barMode: root.mode, barLayout: k })
+            }
         }
         // Isla: dónde se coloca a lo largo del borde
         LabeledRow {
-            visible: root.mode === "isla"
-            label: "Alineación"; labelWidth: 60
+            visible: root.layout === "isla"
+            label: "Alineación"; labelWidth: 90
             Seg {
                 model: [["inicio", root.vertical ? "Arriba" : "Izquierda"], ["centro", "Centro"], ["fin", root.vertical ? "Abajo" : "Derecha"]]
                 current: root.align
@@ -121,8 +117,8 @@ ColumnLayout {
         }
         // Píldoras (isla / archipiélago): esquinas a partir de las de las ventanas, como mucho +4 px (no rompe el estilo)
         LabeledRow {
-            visible: root.archi || root.mode === "isla"
-            label: "Esquinas"; labelWidth: 60
+            visible: root.layout !== "completa"
+            label: "Esquinas"; labelWidth: 90
             Seg {
                 readonly property int win: Settings.get("rounding", null) ?? Theme.winRadius
                 model: [[0, "Como las ventanas (" + win + " px)"], [2, (win + 2) + " px"], [4, (win + 4) + " px"]]
@@ -134,17 +130,16 @@ ColumnLayout {
     Section {
         Layout.fillWidth: true
         title: "Tamaño"
-        headerRight: Mono { text: Settings.barSize + " px · contenido ×" + Settings.barScale.toFixed(2) }
+        headerRight: Mono { text: "contenido ×" + Settings.barScale.toFixed(2) }
         RowLayout {
             Layout.fillWidth: true
             spacing: 16
             Pills {
                 Layout.fillWidth: true
-                model: [[26, "Mini"], [30, "Compacta"], [34, "Normal"], [40, "Grande"], [46, "Muy grande"], [54, "Enorme"]]
+                model: [[32, "Compacta · 32 px"], [34, "Normal · 34 px"], [36, "Grande · 36 px"]]
                 current: Settings.barSize
                 onPicked: v => Confirm.change("Tamaño de la barra", { barHeight: v })
             }
-            Stepper { label: "Ajuste fino"; unit: " px"; from: 24; to: 56; step: 2; value: Settings.barSize; onStepped: v => Confirm.change("Tamaño de la barra", { barHeight: v }) }
         }
         Txt {
             Layout.fillWidth: true
@@ -154,18 +149,31 @@ ColumnLayout {
     }
     Section {
         Layout.fillWidth: true
-        title: "Módulos visibles"
+        title: "Módulos"
+        // Todos los módulos: los fijos, los widgets (y los propios) de barModules, y la bandeja, las memorias USB y las
+        // descargas, que tienen su propia clave
         Flow {
             Layout.fillWidth: true
             spacing: 8
             Repeater {
-                model: [["espacios", "Espacios"], ["titulo", "Título"], ["musica", "Música"], ["red", "Red"], ["bateria", "Batería"], ["notificaciones", "Notificaciones"], ["reloj", "Reloj"]]
+                model: Object.keys(Settings.barCoreNames).map(k => [k, Settings.barCoreNames[k]])
+                    .concat(Settings.barWidgetIds.map(k => [k, Settings.barWidgetNames[k]]))
+                    .concat(Settings.barCustomList.map(c => ["propio:" + c.id, c.name || "Widget propio"]))
                 Chip {
                     required property var modelData
                     readonly property var list: Settings.barModuleList
                     text: modelData[1]
                     on: list.includes(modelData[0])
                     onClicked: Settings.set("barModules", on ? list.filter(x => x !== modelData[0]) : list.concat([modelData[0]]))
+                }
+            }
+            Repeater {
+                model: [["barTray", "Bandeja del sistema"], ["devicesBarIcon", "Memorias USB"], ["downloadsBarIcon", "Descargas"]]
+                Chip {
+                    required property var modelData
+                    text: modelData[1]
+                    on: Settings.get(modelData[0], true) !== false
+                    onClicked: Settings.set(modelData[0], !on)
                 }
             }
         }
@@ -177,7 +185,7 @@ ColumnLayout {
         LabeledRow {
             label: "Mostrar la barra"; labelWidth: 120
             Seg {
-                model: [["siempre", "Siempre visible"], ["auto", "Ocultar automáticamente"], ["inteligente", "Ocultación inteligente"]]
+                model: [["siempre", "Siempre visible"], ["auto", "Ocultar automáticamente"], ["retraer", "Retraer"]]
                 current: Settings.barBehavior
                 onPicked: k => Settings.patch({ barBehavior: k }, ["barAutoHide"])
             }
@@ -186,7 +194,7 @@ ColumnLayout {
             Layout.fillWidth: true
             muted: true; size: 11.5; wrapMode: Text.WordWrap; elide: Text.ElideNone
             text: Settings.barBehavior === "auto" ? "Se esconde y aparece al llevar el cursor al borde de la pantalla."
-                : Settings.barBehavior === "inteligente" ? "Se aparta cuando una ventana flotante la tapa o hay una maximizada o a pantalla completa, y vuelve al llevar el cursor al borde. En mosaico sigue reservando su sitio."
+                : Settings.barBehavior === "retraer" ? "Se esconde siempre que haya ventanas en el espacio (las flotantes no cuentan), que ocupan entonces su sitio, y vuelve al acercar el cursor al borde donde está."
                 : "Siempre a la vista; las ventanas no se colocan debajo."
         }
         // Una fila por pantalla: completa (todo), sencilla (espacios y consumo por programa) u oculta
@@ -283,61 +291,21 @@ ColumnLayout {
     }
     Section {
         Layout.fillWidth: true
-        title: "Isla dinámica"
-        headerRight: Mono { tech: true; text: "island · islandShow · islandAlways" }
-        SwRow {
-            separator: false
-            label: "Isla dinámica"
-            sub: Settings.barIntegrated ? "siempre activa con la forma «Muesca» de la barra" : "una pastilla arriba al centro con lo que está pasando; pulsarla abre su vista completa"
-            enabled: !Settings.barIntegrated
-            key: "island"; def: false
-            onToggled: v => Settings.set("island", v)
-        }
-        SwRow {
-            label: "Siempre visible"
-            sub: "con nada en marcha enseña la hora; si no, se esconde"
-            key: "islandAlways"; def: false
-            onToggled: v => Settings.set("islandAlways", v)
-        }
-        LabeledRow {
-            label: "Mostrar"; labelWidth: 80
-            Flow {
-                Layout.fillWidth: true
-                spacing: 8
-                Repeater {
-                    model: [["reunion", "Reuniones"], ["pomodoro", "Pomodoro"], ["descargas", "Procesos"], ["musica", "Música"]]
-                    Chip {
-                        required property var modelData
-                        readonly property var list: Settings.get("islandShow", ["musica", "pomodoro", "descargas", "reunion"]) ?? []
-                        text: modelData[1]
-                        on: list.includes(modelData[0])
-                        onClicked: Settings.set("islandShow", on ? list.filter(x => x !== modelData[0]) : list.concat([modelData[0]]))
-                    }
-                }
-            }
-        }
-        Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5; text: "Va en el sitio de arriba de los indicadores de volumen: ellos y la píldora del dictado se apartan de ella. Una ventana a pantalla completa la tapa. El dictado no entra en la isla." }
-    }
-    Section {
-        Layout.fillWidth: true
         title: "Onda de audio"
         headerRight: Sw { checked: Settings.barHas("musica"); onToggled: v => { const l = Settings.barModuleList.filter(m => m !== "musica"); if (v) l.push("musica"); Settings.set("barModules", l); } }
         // Cada estilo dibujado con unos niveles de muestra (bar/Waveform.qml en modo muestra)
         GridLayout {
             id: waveGrid
             Layout.fillWidth: true
-            columns: width > 640 ? 4 : 3
+            columns: 3
             columnSpacing: 8; rowSpacing: 8
             readonly property var sample: Array.from({ length: 48 }, (_, i) => 0.18 + 0.55 * Math.abs(Math.sin(i * 0.37)) * (0.55 + 0.45 * Math.cos(i * 0.11)))
             Repeater {
-                model: [["barras", "Barras"], ["onda", "Onda rellena"], ["linea", "Línea"], ["zigzag", "Zigzag"],
-                        ["cinta", "Cinta"], ["escalones", "Escalones"], ["capas", "Capas suaves"], ["burbujas", "Burbujas"],
-                        ["agujas", "Agujas"], ["montana", "Montaña"], ["reflejo", "Reflejo"], ["pixeles", "Píxeles"],
-                        ["eco", "Eco"], ["cuerdas", "Cuerdas"], ["pulso", "Pulso"]]
+                model: [["barras", "Barras"], ["onda", "Onda rellena"], ["agujas", "Agujas"]]
                 Rectangle {
                     id: wc
                     required property var modelData
-                    readonly property bool sel: Settings.get("waveStyle", "barras") === modelData[0]
+                    readonly property bool sel: (["onda", "agujas"].includes(Settings.get("waveStyle", "barras")) ? Settings.get("waveStyle", "barras") : "barras") === modelData[0]
                     Layout.fillWidth: true
                     implicitHeight: 74
                     radius: Theme.r(7)

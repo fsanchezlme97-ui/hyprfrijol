@@ -435,7 +435,7 @@ Singleton {
     }
     // Arrastrar o redimensionar una ventana no avisa por IPC: mientras alguien use la ocultación inteligente
     // y haya ventanas flotantes a la vista, se mira la geometría cada poco
-    readonly property bool smartOn: Settings.barSmartHide || (["inteligente", "esquivar"].includes(Settings.get("dockBehavior", "inteligente"))
+    readonly property bool smartOn: (["inteligente", "esquivar"].includes(Settings.get("dockBehavior", "inteligente"))
         && (mode === "flotante" || dockInTiling || Object.values(overrides).includes("flotante")))
     readonly property bool floatingVisible: {
         HyprClients.refreshes;

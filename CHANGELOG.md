@@ -3,6 +3,31 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.28.0] — 2026-11-28
+
+### Cambios
+- **Barra simplificada**. Dos formas, «Fija» (pegada al borde) y «Flotante» (separada del borde), y dentro de cada una
+  tres disposiciones: completa, archipiélago (cada grupo en su píldora) o isla (lo que mide su contenido). Fija en
+  archipiélago o isla, las píldoras llevan recto el lado del borde. Nueva clave `barLayout`; `barMode` solo vale
+  `fija` o `flotante`.
+- **Tres tamaños**: compacta (32 px), normal (34 px) y grande (36 px), en lugar del control libre.
+- **Módulos**: Ajustes › Barra enseña todos los módulos de la barra (también bandeja, dispositivos y descargas) para
+  encenderlos o apagarlos.
+- **«Retraer»** sustituye a la ocultación inteligente: la barra se esconde y deja su sitio mientras haya una ventana no
+  flotante en el espacio activo de su pantalla, y vuelve al acercar el cursor a su borde.
+- **Ventanas del espacio** en lugar del título de la ventana activa: el icono de cada programa abierto en ese espacio con
+  su consumo (CPU y memoria) al lado.
+- **Espacios**: siempre los 8 primeros (y los que estén en uso), sin la casilla de cambiar el modo de ventanas.
+- **Onda de audio**: tres estilos, barras, onda rellena y agujas.
+
+### Quitado
+- La isla dinámica y las formas «Muesca» y «Marco» (de 0.24.0 a 0.27.3), con su IPC `isla`.
+
+### Migración
+- `hf-migrate` (lo lanza `hf-apply`) convierte los ajustes de antes una sola vez, con copia en
+  `settings.json.antes-barra-simple`: `barMode` antiguo → forma y disposición, `inteligente` → `retraer`, `barHeight` al
+  tamaño más cercano, estilos de onda retirados → barras, y fuera `island`, `islandAlways` e `islandShow`.
+
 ## [0.27.3] — 2026-11-28
 
 ### Cambios

@@ -17,4 +17,5 @@ BarBg {
     borderW: bar.pillBorderW
     borderColor: bar.pillBorder
     feather: 1 / bar.k
+    flat: bar.floating ? "" : bar.pos     // fija: pegada al borde, ese lado recto
 }

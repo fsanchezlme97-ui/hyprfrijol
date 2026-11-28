@@ -23,7 +23,6 @@ import "lock"
 import "focus"
 import "polkit"
 import "quicksettings"
-import "island"
 import "notifications"
 import "osd"
 import "sidepanel"
@@ -61,7 +60,6 @@ Scope {
     Focus {}
     Polkit {}
     Osd {}
-    Island {}
     SidePanel {}
     Pip {}
     AltTab {}

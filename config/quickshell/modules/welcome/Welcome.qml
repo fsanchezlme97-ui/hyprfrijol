@@ -338,8 +338,8 @@ Scope {
         id: stepBar
         ColumnLayout {
             spacing: 8
-            readonly property string cur: Settings.get("barPos", "abajo") === "abajo" && Settings.get("barMode", "fija") === "fija" ? "abajo"
-                : Settings.get("barPos", "abajo") === "arriba" && Settings.get("barMode", "fija") !== "fija" ? "arriba" : Settings.get("barPos", "abajo") === "izquierda" ? "izq" : ""
+            readonly property string cur: Settings.get("barPos", "abajo") === "abajo" && !Settings.barFloating ? "abajo"
+                : Settings.get("barPos", "abajo") === "arriba" && Settings.barFloating ? "arriba" : Settings.get("barPos", "abajo") === "izquierda" ? "izq" : ""
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 12
@@ -367,7 +367,7 @@ Scope {
                                 width: bo.modelData[0] === "izq" ? 10 : parent.width - x * 2
                                 height: bo.modelData[0] === "izq" ? parent.height - parent.border.width * 2 : 10
                             }
-                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Settings.setMany({ barPos: bo.modelData[2], barMode: bo.modelData[3] }) }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Settings.setMany({ barPos: bo.modelData[2], barMode: bo.modelData[3], barLayout: "completa" }) }
                         }
                         Txt { text: bo.modelData[1]; weight: Font.Medium }
                     }
@@ -434,7 +434,7 @@ Scope {
                     ["Idioma", root.localeLabel(root.lang)],
                     ["Superficies", Theme.glassy ? "Transparentes" : "Sólidas"],
                     ["Color", Theme.paletteName.replace(" · claro", "")],
-                    ["Barra", Settings.get("barPos", "abajo") === "izquierda" ? "Lateral" : (({ fija: "Fija ", muesca: "Muesca ", marco: "Marco " })[Settings.barMode] ?? "Flotante ") + Settings.get("barPos", "abajo")],
+                    ["Barra", Settings.get("barPos", "abajo") === "izquierda" ? "Lateral" : (Settings.barFloating ? "Flotante " : "Fija ") + Settings.get("barPos", "abajo")],
                     ["Archivos", ({ nautilus: "Nautilus", dolphin: "Dolphin", yazi: "Yazi" })[root.fm]],
                     ["Aplicaciones", root.packDefs.filter(p => root.packs[p[0]]).map(p => p[1]).join(", ") || "Ninguna"]
                 ]

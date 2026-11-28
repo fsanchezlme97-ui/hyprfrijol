@@ -19,6 +19,8 @@
 #      Asistente «Samantha» → «Helpert» (0.8.20), y su personalidad si era la de fábrica (copia en
 #      settings.json.antes-de-helpert).
 #      «Helpert» → «Harper» (0.10.28), igual (copia en settings.json.antes-de-harper).
+#      Barra simplificada (0.28.0): barMode fija/flotante + barLayout, barHeight 32/34/36, «inteligente» → «retraer»,
+#      waveStyle barras/onda/agujas y fuera island* (copia en settings.json.antes-barra-simple).
 #      Estilo único Math (0.9.0): «estilo» pasa a «math» y SkySoul a «transparencia: true» (copia en
 #      settings.json.antes-de-math); borra el enlace roto a la fuente Doto de Chroma.
 #      hf-apply lo lanza solo (--retired-only) si queda algo de esto.
@@ -100,6 +102,38 @@ d = json.load(open(p))
 d.pop("dictationAI", None)
 if str(d.get("dictationWakeWord", "")).strip().lower() == "frijol":
     d["dictationWakeWord"] = "Distro"
+tmp = p + ".tmp"
+with open(tmp, "w") as f:
+    f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
+os.replace(tmp, p)
+PY
+  fi
+  # Barra simplificada (0.28.0): forma fija/flotante + disposición (completa · archipiélago · isla), tres tamaños,
+  # «inteligente» → «retraer», tres estilos de onda y sin isla dinámica ni formas muesca/marco
+  if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(d,dict) and (d.get("barMode","flotante") not in ("fija","flotante") or d.get("barBehavior")=="inteligente" or d.get("barHeight",34) not in (32,34,36) or d.get("waveStyle","barras") not in ("barras","onda","agujas") or any(k in d for k in ("island","islandAlways","islandShow"))) else 1)' "$cfg" 2>/dev/null; then
+    local bak="$cfg.antes-barra-simple"; [ -e "$bak" ] && bak="$bak-$(date +%Y%m%d-%H%M%S)"
+    say "Barra: forma y disposición nuevas, tres tamaños y sin isla dinámica en $cfg (copia: $bak)"
+    run cp -p "$cfg" "$bak"
+    [ "$DRY" = 1 ] || python3 -I - "$cfg" <<'PY'
+import json, os, sys
+p = os.path.realpath(sys.argv[1])
+d = json.load(open(p))
+m = d.get("barMode")
+if m not in (None, "fija", "flotante"):
+    d.setdefault("barLayout", "archipielago" if m == "archipielago" else "isla" if m in ("isla", "media", "muesca", "integrada") else "completa")
+    d["barMode"] = "fija" if m in ("muesca", "marco") else "flotante"
+if d.get("barBehavior") == "inteligente":
+    d["barBehavior"] = "retraer"
+if "barHeight" in d:
+    try:
+        h = round(float(d["barHeight"]))
+    except (TypeError, ValueError):
+        h = 34
+    d["barHeight"] = 32 if h <= 32 else 36 if h >= 36 else 34
+if d.get("waveStyle", "barras") not in ("barras", "onda", "agujas"):
+    d["waveStyle"] = "barras"
+for k in ("island", "islandAlways", "islandShow"):
+    d.pop(k, None)
 tmp = p + ".tmp"
 with open(tmp, "w") as f:
     f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")

@@ -1,24 +1,21 @@
-// Barra del diseño. Posición: abajo / arriba / izquierda / derecha · forma: fija / flotante / isla / archipiélago
-// (isla y archipiélago comparten acabado de vidrio; isla alineada al inicio, centro o final del borde: barAlign)
+// Barra del diseño. Posición: abajo / arriba / izquierda / derecha · forma: fija / flotante · disposición: completa /
+// archipiélago / isla (isla alineada al inicio, centro o final del borde: barAlign). Fija y en isla o archipiélago, las
+// píldoras van pegadas al borde con ese lado recto (BarBg.flat)
 // (Ajustes › Barra). Medidas en Settings: barThickness (grosor), barOffset (margen si flota) y barScale
 // (el contenido se diseña a 32 px y se escala en proporción al tamaño elegido).
 // Ajustes que lee aquí:
 //   barBehavior          "siempre" · "auto" (se esconde y vuelve al llevar el cursor al borde; también en modo
-//                        sin distracciones si «Ocultar la barra» está activo; antes barAutoHide) · "inteligente"
-//                        (se aparta cuando una ventana flotante la tapa o hay una maximizada / a pantalla
-//                        completa; en los espacios en mosaico reserva su sitio salvo con una maximizada, en los
-//                        flotantes no reserva nada; vuelve con el cursor en el borde — WinMode.covered)
+//                        sin distracciones si «Ocultar la barra» está activo; antes barAutoHide) · "retraer"
+//                        (se esconde mientras haya una ventana no flotante en el espacio activo de su pantalla y no
+//                        reserva sitio; vuelve con el cursor en el borde)
 //   barScreens           por pantalla: completa · sencilla (espacios y consumo por programa) · oculta (Shell.barModeFor)
 //   barAllScreens        false → las pantallas sin elegir en barScreens, sin barra
 //   (Transparencia)      la barra es de vidrio esmerilado como la de macOS (Theme.glass = Theme.frost, el mismo de los
 //                        paneles y el dock); el contenido con los colores del tema (acento, onda, paleta)
 //   visualBell           parpadea al llegar un aviso (alerta visual en vez de sonido)
-// Isla: la barra flota y mide lo que su contenido; el resto de la franja deja pasar el ratón.
+// Isla: la barra mide lo que su contenido; el resto de la franja deja pasar el ratón.
 // Archipiélago: cada grupo de módulos en su propia píldora flotante (BarPill), con el escritorio visible entre
 // ellas; solo las píldoras reciben el ratón (máscara con content.item.pills).
-// Muesca (barMode "muesca", arriba o abajo): una sola pieza centrada, a la medida de su contenido, que sale del borde
-// (NotchBg), con la onda y la isla dinámica (services/Isla) antes del grupo derecho.
-// Marco (barMode "marco"): fija, con las esquinas de la pantalla redondeadas hacia dentro (ScreenCorners).
 // Super + J (Shell.barHidden) la deja escondida: vuelve al llevar el cursor al borde.
 import QtQuick
 import Quickshell
@@ -34,29 +31,19 @@ PanelWindow {
     readonly property bool floating: Settings.barFloating
     readonly property bool island: Settings.barIsland
     readonly property bool archi: Settings.barArchipelago
-    readonly property bool notch: Settings.barNotch && Shell.barModeFor(screen) !== "sencilla"   // la sencilla va fija
-    readonly property bool slot: Settings.barIslandSlot(screen)   // la isla dinámica va dentro de la muesca
     readonly property bool vertical: Settings.barVertical
     readonly property int off: Settings.barOffset
     readonly property int thickness: Settings.barThickness
     readonly property real k: Settings.barScale
     // Barra escondida con Super + J (Shell.barHidden) = se esconde sola: nunca desaparece sin forma de volver
     readonly property bool autoHide: Settings.barAutoHide || Shell.barHidden
-    // Ocultación inteligente: se esconde si una ventana tapa su franja (WinMode.covered)
+    // Retraer (barBehavior "retraer"; no se suma a la de ocultar automáticamente)
     readonly property bool smart: Settings.barSmartHide && !autoHide
     readonly property bool edgeMode: autoHide || smart
     readonly property int wsId: Hyprland.monitorFor(screen)?.activeWorkspace?.id ?? -1
-    readonly property bool smartCovered: {
-        if (!smart) return false;
-        const m = HyprClients.monitorByName(screen?.name ?? "");
-        if (!m) return false;
-        const L = HyprClients.logical(m), t = thickness + off, len = body.length;
-        const r = vertical ? { x: pos === "izquierda" ? L.x : L.x + L.w - t, y: L.y + (L.h - len) / 2, w: t, h: len }
-                           : { x: L.x + (L.w - len) / 2, y: pos === "arriba" ? L.y : L.y + L.h - t, w: len, h: t };
-        return WinMode.covered(m.name, r);
-    }
-    // En mosaico reserva su sitio (salvo con una ventana maximizada, que así ocupa toda la pantalla)
-    readonly property bool smartReserve: { WinMode.overrides; WinMode.mode; return smart && !WinMode.isFloat(wsId) && !WinMode.hasFullscreen(screen?.name ?? ""); }
+    // Retraer: se esconde mientras haya alguna ventana no flotante en el espacio activo de su pantalla (las ventanas
+    // ocupan entonces su sitio); vuelve con el cursor en el borde, por encima de ellas
+    readonly property bool smartCovered: smart && HyprClients.onWorkspace(wsId).some(c => !c.floating)
     readonly property bool onThisScreen: Shell.barModeFor(screen) !== "oculta"
     // Mostrada: siempre, salvo que se oculte sola y el cursor no esté encima
     readonly property bool revealed: (!autoHide && !smartCovered) || hover.hovered || hideDelay.running || flash.running
@@ -102,7 +89,7 @@ PanelWindow {
     }
     implicitHeight: vertical ? 0 : thickness + inner
     implicitWidth: vertical ? thickness + inner : 0
-    exclusiveZone: autoHide ? 0 : smart ? (smartReserve ? thickness + off : 0) : thickness
+    exclusiveZone: autoHide || smartCovered ? 0 : thickness
 
     // Zona que recibe el ratón: la barra (o la isla), o una franja de 2 px en el borde si está escondida
     // (archipiélago: solo las píldoras)
@@ -144,16 +131,16 @@ PanelWindow {
             // Largo natural del contenido (isla) ya escalado
             readonly property real natural: (content.item?.naturalLength ?? 400) * bar.k
             readonly property real full: bar.vertical ? parent.height : parent.width
-            readonly property real length: bar.island || bar.notch ? Math.min(natural, full) : full
+            readonly property real length: bar.island ? Math.min(natural, full) : full
             // Hueco libre a lo largo del borde, repartido según la alineación (isla)
             // (con el largo animado: el borde alineado se queda quieto mientras crece o encoge)
             readonly property real shown: bar.vertical ? height : width
-            readonly property real along: bar.notch ? (full - shown) / 2 : Settings.barAlign === "inicio" ? 0 : Settings.barAlign === "fin" ? full - shown : (full - shown) / 2
+            readonly property real along: Settings.barAlign === "inicio" ? 0 : Settings.barAlign === "fin" ? full - shown : (full - shown) / 2
             x: bar.vertical ? (bar.pos === "izquierda" ? bar.inner : 0) : along
-            y: bar.vertical ? along : (bar.pos === "arriba" ? bar.inner : parent.height - bar.thickness - bar.inner)
+            y: bar.vertical ? along : (bar.pos === "arriba" ? bar.inner : 0)
             width: bar.vertical ? bar.thickness : length
             height: bar.vertical ? length : bar.thickness
-            Behavior on width { enabled: (bar.island || bar.notch) && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+            Behavior on width { enabled: bar.island && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
             Behavior on height { enabled: bar.island && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
             // Escondida: se desliza hacia el borde
             readonly property real hiddenShift: bar.thickness + bar.off + 2
@@ -167,21 +154,16 @@ PanelWindow {
             BarBg {
                 id: bg
                 anchors.fill: parent
-                radius: bar.floating ? (Theme.pill || bar.island ? Math.min(Theme.barRadius * 2, bar.thickness / 2) : Theme.barRadius) : 0
+                radius: bar.floating || bar.island ? (Theme.pill || bar.island ? Math.min(Theme.barRadius * 2, bar.thickness / 2) : Theme.barRadius) : 0
+                flat: bar.floating ? "" : bar.pos
                 shadow: bar.floating
                 drawBorder: bar.floating
                 // Archipiélago: el fondo lo ponen las píldoras de cada grupo (BarPill)
-                visible: !bar.archi && !bar.notch
+                visible: !bar.archi
                 bellLevel: bar.bellLevel
                 feather: 1
             }
 
-            NotchBg {
-                visible: bar.notch
-                anchors.fill: parent
-                flip: bar.pos === "abajo"
-                bellLevel: bar.bellLevel
-            }
             // Alerta visual (visualBell): dos destellos del color primario sobre el fondo
             SequentialAnimation {
                 id: flash
@@ -205,7 +187,7 @@ PanelWindow {
             }
         }
     }
-    Component { id: hComp; BarH { barWindow: bar; compact: bar.island; islands: bar.archi; notch: bar.notch; slot: bar.slot } }
+    Component { id: hComp; BarH { barWindow: bar; compact: bar.island; islands: bar.archi } }
     Component { id: vComp; BarV { barWindow: bar; compact: bar.island; islands: bar.archi } }
 
     Connections {

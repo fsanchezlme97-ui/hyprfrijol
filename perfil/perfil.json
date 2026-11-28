@@ -140,11 +140,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.27.2",
+ "hyprfrijol": "v0.27.3",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-28 10:17",
+ "saved": "2026-11-28 11:18",
  "services": [
   "ufw",
   "cups.socket",
@@ -172,7 +172,7 @@
   "barAdaptive": true,
   "barAdaptiveStyle": "vidrio",
   "barAlign": "centro",
-  "barAutoHide": false,
+  "barBehavior": "inteligente",
   "barHeight": 34,
   "barMode": "archipielago",
   "barModules": [
@@ -248,7 +248,7 @@
    "org.gnome.Calculator",
    "com.t3tools.T3Code"
   ],
-  "dockBehavior": "inteligente",
+  "dockBehavior": "esquivar",
   "dockInTiling": false,
   "dockOnTop": false,
   "dockPos": "izquierda",
@@ -288,6 +288,8 @@
    "tr": "ninguna"
   },
   "inactiveOpacity": 0.92,
+  "island": false,
+  "islandAlways": false,
   "kbLayouts": [
    "es",
    "us"
@@ -329,6 +331,7 @@
   "rounding": 4,
   "roundingShape": "auto",
   "roundness": "sobrio",
+  "screenCorners": false,
   "shadows": "suaves",
   "sheenOpacity": 0.25,
   "sidePanelApps": [
@@ -372,7 +375,8 @@
   "windowMode": "desplazamiento",
   "workspaceAnim": "auto",
   "wsBarNames": false,
-  "wsNumerals": "japonesa"
+  "wsNumerals": "japonesa",
+  "wsShowAll": true
  },
  "userServices": [
   "ydotool"
