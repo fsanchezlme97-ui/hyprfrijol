@@ -6,6 +6,8 @@
 //  · mirar la pantalla (hf-ai screen_ask: solo si el usuario lo pide; aiSensitiveWindows: con una de esas a la vista
 //    pregunta antes de capturar)
 //  · historial del panel (aiHistory, aiHistoryDays → hf-ai prune_history; ~/.local/share/hyprfrijol/ai)
+//  · memoria (aiMemory → hf-ai memory_doc / recap: recuerdos aprobados y resumen de la conversación anterior, solo con
+//    modelo local); la lista está en el panel (vista «Recuerdos»), aquí solo el interruptor y el enlace
 //  · registro de acciones: `hf-ai log` (lo que aún se puede deshacer, ~/.cache/hyprfrijol/undo) y `hf-ai undo <id>`
 import QtQuick
 import QtQuick.Layouts
@@ -101,6 +103,21 @@ ColumnLayout {
                 text: "Borrar todo"
                 onConfirmed: Quickshell.execDetached(["sh", "-c", 'rm -f "$1"/*.json', "sh", Paths.home + "/.local/share/hyprfrijol/ai"])
             }
+        }
+    }
+
+    Section {
+        Layout.fillWidth: true
+        title: "Memoria"
+        headerRight: Button {
+            text: "Ver recuerdos"; kind: "outline"; h: 26
+            onClicked: Shell.open("ia", { memory: true })
+        }
+        SwRow {
+            separator: false
+            label: "Recordar lo que le cuentas"
+            sub: "propone guardar lo personal que le cuentas (lo apruebas tú) y, al empezar otra conversación, resume la anterior. Solo con un modelo local: a uno en la nube no se le manda"
+            key: "aiMemory"; def: true
         }
     }
 

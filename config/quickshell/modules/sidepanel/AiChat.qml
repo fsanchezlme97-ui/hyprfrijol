@@ -59,6 +59,7 @@ Item {
     readonly property int maxDocs: 8
     property bool showHistory: false        // lista de conversaciones guardadas (botón del reloj en la cabecera)
     property bool showLog: false            // registro del asistente (botón de la terminal en la cabecera; hf-ai activity)
+    property bool showMemory: false         // recuerdos de Emma (botón de la flor en la cabecera; hf-ai memory)
     readonly property int maxImages: 6
     readonly property bool allowCapture: Settings.get("aiContextCapture", true) !== false
     readonly property bool confirmChanges: Settings.get("aiConfirm", true) !== false
@@ -74,7 +75,7 @@ Item {
         : ["Resume mis notificaciones", "Temporizador de 10 min para el té", "Pon la barra arriba y el fondo lago", "Cierra las ventanas de Firefox"]
 
     function focusInput() { input.forceActiveFocus(); }
-    function clear() { stopRun(); runIdx = -1; queued = null; messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; showLog = false; focusInput(); }
+    function clear() { stopRun(); runIdx = -1; queued = null; messages = []; notice = null; busy = false; applyingIdx = -1; chatProc.running = false; liveText = ""; liveSteps = []; modelMenu = -1; input.text = ""; pending = []; pendingDocs = []; captureText = ""; historyFile = ""; winInfo = null; showHistory = false; showLog = false; showMemory = false; focusInput(); }
     function setWindow(w) { if (w && w.address) { winInfo = w; useWindow = true; } Qt.callLater(focusInput); }
     function patch(i, p) { const m = messages.slice(); m[i] = Object.assign({}, m[i], p); messages = m; }
     // Cada mensaje lleva su hora (t, ms de época): el pie del mensaje y los separadores por día (Hoy, Ayer, «lun 17 nov»)
@@ -148,7 +149,7 @@ Item {
         if (pendingDocs.length) m.files = pendingDocs;
         push(m);
         pending = []; pendingDocs = [];
-        showHistory = false;
+        showHistory = false; showMemory = false;
         input.text = "";
         send();
     }
@@ -339,6 +340,7 @@ Item {
         if (r.end && !r.error) { root.push({ role: "ai", text: r.text || "Vale." }); return; }
         if (r.error) {
             root.push({ role: "ai", text: r.error, error: true });
+            Shell.aiError = true;
             if (!root.active) Quickshell.execDetached(["notify-send", "-a", Settings.get("aiName", "") || "Asistente", "-i", "dialog-error", r.error]);
         } else {
             root.push({ role: "ai", text: r.text || (r.actions?.length ? "Puedo hacerlo. Estos son los pasos:" : "…"), ms: Date.now() - root.sentAt,
@@ -346,6 +348,7 @@ Item {
                         // filtro de secretos de hf-ai: se avisa cuántos datos sensibles no salieron del equipo
                         steps: (r.steps ?? []).concat(r.redacted ? [(r.redacted === 1 ? "Se ocultó 1 dato sensible" : "Se ocultaron " + r.redacted + " datos sensibles") + " del contexto"] : []),
                         code: r.code ?? "", state: "", sel: (r.actions ?? []).map(() => true), auto: !!r.auto, model: r.model ?? "",
+                        fallback: !!r.fallback,          // respondió el respaldo: el principal no contestó (cuota, caída…)
                         caps: r.caps?.label ?? "",       // lo que puede hacer el modelo que respondió («ve imágenes»)
                         choices: r.choices ?? [] });
             // Se aplica ya, con Deshacer: sin confirmación (Ajustes › IA) o todo «aprobado siempre» (aiAlwaysApprove)
@@ -540,7 +543,7 @@ Item {
                                   JSON.stringify({ messages: msgs.map(m => ({ role: m.role, text: m.text, images: m.images ?? [], files: m.files ?? [], labels: m.labels ?? [], plan: m.plan ?? [],
                                                                               steps: m.steps ?? [], code: m.code ?? "",
                                                                               state: m.state ?? "", error: !!m.error,
-                                                                              t: m.tApprox ? 0 : (m.t ?? 0), ms: m.ms ?? 0, model: m.model ?? "" })) }, null, 1));
+                                                                              t: m.tApprox ? 0 : (m.t ?? 0), ms: m.ms ?? 0, model: m.model ?? "", fallback: !!m.fallback })) }, null, 1));
             histWriter.stdinEnabled = true;
             histWriter.running = true;
         }
@@ -559,11 +562,39 @@ Item {
         const q = histQuery.trim().toLowerCase();
         return q === "" ? histList : histList.filter(h => h.title.toLowerCase().includes(q) || h.text.includes(q));
     }
-    function toggleHistory() { showHistory = !showHistory; showLog = false; if (showHistory) { histQuery = ""; loadHistory(); } else focusInput(); }
+    function toggleHistory() { showHistory = !showHistory; showLog = false; showMemory = false; if (showHistory) { histQuery = ""; loadHistory(); } else focusInput(); }
+
+    // ---- recuerdos (aiMemory): lo que Emma guardó con tu aprobación (acción remember) y el resumen de la conversación
+    // anterior. Solo van al modelo si es local (hf-ai memory_doc). Aquí se ven, se corrigen y se borran.
+    readonly property bool memoryOn: Settings.get("aiMemory", true) !== false
+    property var memList: []
+    property var memRecap: ({})
+    property string memEditing: ""          // id del recuerdo que se está corrigiendo
+    property bool memWipeArmed: false       // «Olvidar todo» pide una segunda pulsación
+    function toggleMemory() { showMemory = !showMemory; showHistory = false; showLog = false; memEditing = ""; if (showMemory) memCall([]); else focusInput(); }
+    function memCall(args) { memProc.running = false; memProc.command = [Paths.script("hf-ai"), "memory"].concat(args); memProc.running = true; }
+    Process {
+        id: memProc
+        command: [Paths.script("hf-ai"), "memory"]
+        stdout: StdioCollector { onStreamFinished: {
+            try { const d = JSON.parse(text); root.memList = (d.items ?? []).slice().reverse(); root.memRecap = d.recap ?? {}; }
+            catch (e) { root.memList = []; root.memRecap = {}; }
+        } }
+    }
+    Timer { id: memWipeTimer; interval: 3000; onTriggered: root.memWipeArmed = false }
+    // «+» (nueva conversación): antes de vaciar, Emma resume la que se cierra (hf-ai recap: solo el texto, en segundo
+    // plano) para retomarla en la siguiente. Borrar una conversación del historial no la resume.
+    function newChat() {
+        const ms = messages.filter(m => (m.role === "user" || m.role === "ai") && !m.error && !m.local && String(m.text ?? "").trim() !== "")
+            .slice(-20).map(m => ({ role: m.role, text: String(m.text).slice(0, 600) }));
+        if (keepHistory && memoryOn && ms.some(m => m.role === "user") && ms.some(m => m.role === "ai"))
+            Quickshell.execDetached(["sh", "-c", 'printf %s "$2" | "$1" recap >/dev/null 2>&1', "sh", Paths.script("hf-ai"), JSON.stringify(ms)]);
+        clear();
+    }
 
     // ---- registro: cada petición (quién respondió, cuánto tardó, respaldo, error, propuesta) y cada acción aplicada
     property var logList: []
-    function toggleLog() { showLog = !showLog; showHistory = false; if (showLog) loadLog(); else focusInput(); }
+    function toggleLog() { showLog = !showLog; showHistory = false; showMemory = false; if (showLog) loadLog(); else focusInput(); }
     function loadLog() { logProc.running = false; logProc.running = true; }
     onBusyChanged: {
         if (busy) return;
@@ -837,7 +868,7 @@ print(json.dumps(out[:300]))
         // ---------------------------------------------------- conversación
         Flickable {
             id: flick
-            visible: !root.showHistory && !root.showLog
+            visible: !root.showHistory && !root.showLog && !root.showMemory
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
@@ -940,18 +971,71 @@ print(json.dumps(out[:300]))
                 }
             }
 
-            // Vacío
+            // Vacío. Con aiDayBrief, el saludo del día: la fecha, el tiempo, la próxima cita y las tareas (sin llamar al
+            // modelo: lo que ya saben Weather, Events y Tasks). Solo al abrir el panel; nada se dispara solo.
             ColumnLayout {
+                id: empty
                 visible: root.messages.length === 0 && !root.busy && root.onboarded
                 anchors.centerIn: parent
                 width: parent.width - 64
                 spacing: 8
+                readonly property bool brief: Settings.get("aiDayBrief", true) !== false
+                readonly property int hour: Time.now.getHours()
+                readonly property bool wantWeather: visible && brief && root.active
+                onWantWeatherChanged: Weather.users += wantWeather ? 1 : -1
+                Component.onDestruction: if (wantWeather) Weather.users--
+                readonly property var lines: {
+                    if (!brief) return [];
+                    const out = [], now = Time.now;
+                    if (!isNaN(Weather.temp)) out.push(["cloud", Math.round(Weather.temp) + "° · " + Weather.desc + (Weather.city ? " en " + Weather.city : "")]);
+                    const ev = Events.next;
+                    if (ev && ev.start - now < 24 * 3600 * 1000) out.push(["calendar", Events.nextLabel]);
+                    const n = Tasks.pending.length, late = Tasks.overdue.length;
+                    out.push(["check", n === 0 ? "Sin tareas pendientes" : n + (n === 1 ? " tarea pendiente" : " tareas pendientes")
+                        + (late ? " (" + late + (late === 1 ? " vencida)" : " vencidas)") : "")]);
+                    return out;
+                }
                 Rectangle {
                     Layout.alignment: Qt.AlignHCenter
                     implicitWidth: 40; implicitHeight: 40; radius: Theme.r(11); color: Theme.pc
-                    Icon { anchors.centerIn: parent; name: "ai"; size: 18; color: Theme.pcText }
+                    AiFlower { anchors.centerIn: parent; size: 18; stroke: 1.8; color: Theme.pcText }
                 }
-                Txt { Layout.alignment: Qt.AlignHCenter; text: root.aiName ? "Soy " + root.aiName + ". ¿En qué te ayudo?" : "¿En qué te ayudo?"; size: 15; weight: Font.DemiBold }
+                Txt {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: empty.brief ? (empty.hour < 6 || empty.hour >= 20 ? "Buenas noches" : empty.hour < 13 ? "Buenos días" : "Buenas tardes")
+                                        + (root.aiName ? ". Soy " + root.aiName + "." : ".")
+                        : root.aiName ? "Soy " + root.aiName + ". ¿En qué te ayudo?" : "¿En qué te ayudo?"
+                    size: 15; weight: Font.DemiBold
+                }
+                Txt {
+                    visible: empty.brief
+                    Layout.alignment: Qt.AlignHCenter
+                    text: { const d = Qt.locale("es_ES").toString(Time.now, "dddd d 'de' MMMM"); return d.charAt(0).toUpperCase() + d.slice(1); }
+                    size: 12.5; muted: true
+                }
+                Rectangle {
+                    visible: empty.lines.length > 0
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    implicitHeight: briefCol.implicitHeight + 16
+                    radius: Theme.r(10)
+                    color: Theme.fill2
+                    ColumnLayout {
+                        id: briefCol
+                        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 12; rightMargin: 12 }
+                        spacing: 8
+                        Repeater {
+                            model: empty.lines
+                            RowLayout {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                spacing: 8
+                                Icon { name: modelData[0]; size: 13; color: Theme.tv }
+                                Txt { Layout.fillWidth: true; text: modelData[1]; size: 12; elide: Text.ElideRight }
+                            }
+                        }
+                    }
+                }
                 Txt {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
@@ -1032,7 +1116,7 @@ print(json.dumps(out[:300]))
                                 anchors.verticalCenter: parent.verticalCenter
                                 HoverHandler { id: timeHover }
                                 text: [msg.hasTime ? (timeHover.hovered ? root.fullWhen(msg.when) : Time.fmt(new Date(msg.when))) : "",
-                                       msg.modelData.model ?? "", msg.modelData.caps ?? "",
+                                       msg.modelData.model ?? "", msg.modelData.fallback ? "respaldo" : "", msg.modelData.caps ?? "",
                                        msg.modelData.ms ? root.secs(msg.modelData.ms) : ""].filter(x => x).join(" · ")
                                 size: 10.5; muted: true; tabular: true; rightPadding: 8
                             }
@@ -1514,18 +1598,18 @@ print(json.dumps(out[:300]))
 
         // ---------------------------------------------------- voz: la barra tiene un solo botón (la flor) y las órdenes están aquí
         RowLayout {
-            visible: !onboard.visible && !root.showHistory && !root.showLog
+            visible: !onboard.visible && !root.showHistory && !root.showLog && !root.showMemory
             Layout.fillWidth: true
             Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.topMargin: 4
             spacing: 8
             Btn {
-                Layout.fillWidth: true; h: 28; padX: 8; icon: "mic"; text: "Dictar  ·  Super + Alt + D"
+                Layout.fillWidth: true; Layout.preferredWidth: 1; h: 28; padX: 8; icon: "mic"; text: "Dictar"; hint: "Super Alt D"
                 active: Shell.dictPhase === "rec" && Shell.dictKind === "dictado"
                 // dictar escribe donde esté el cursor: en la entrada de este panel
                 onClicked: { input.forceActiveFocus(); Shell.voiceDo("dictado"); }
             }
             Btn {
-                Layout.fillWidth: true; h: 28; padX: 8; icon: "mic_orden"; text: "Orden de voz  ·  Super + Alt + V"
+                Layout.fillWidth: true; Layout.preferredWidth: 1; h: 28; padX: 8; icon: "mic_orden"; text: "Orden de voz"; hint: "Super Alt V"
                 active: Shell.dictPhase === "rec" && Shell.dictKind === "comando"
                 onClicked: Shell.voiceDo("comando")
             }
@@ -1535,7 +1619,7 @@ print(json.dumps(out[:300]))
         // Una sola fila que se desliza (rueda o arrastre): antes, en dos o tres filas, se comían la conversación
         Flickable {
             id: sugg
-            visible: !root.busy && !onboard.visible && !root.showHistory && !root.showLog && root.suggestions.length > 0
+            visible: !root.busy && !onboard.visible && !root.showHistory && !root.showLog && !root.showMemory && root.suggestions.length > 0
             Layout.fillWidth: true
             Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.bottomMargin: 8; Layout.topMargin: 4
             implicitHeight: 28
@@ -1650,6 +1734,110 @@ print(json.dumps(out[:300]))
             }
         }
 
+        // ---------------------------------------------------- recuerdos de Emma (aiMemory)
+        ColumnLayout {
+            visible: root.showMemory
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 8
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.topMargin: 12
+                spacing: 8
+                Txt { text: "Recuerdos"; size: 14; weight: Font.DemiBold }
+                Txt { text: root.memList.length ? String(root.memList.length) : ""; size: 11.5; muted: true }
+                Item { Layout.fillWidth: true }
+                SmallBtn {
+                    visible: root.memList.length > 0 || (root.memRecap.text ?? "") !== ""
+                    text: root.memWipeArmed ? "Pulsa otra vez" : "Olvidar todo"
+                    onClicked: {
+                        if (!root.memWipeArmed) { root.memWipeArmed = true; memWipeTimer.restart(); return; }
+                        root.memWipeArmed = false; root.memCall(["clear"]);
+                    }
+                }
+                IconBtn { icon: "x"; iconSize: 12; fg: Theme.tv; implicitWidth: 26; implicitHeight: 26; onClicked: root.toggleMemory() }
+            }
+            Txt {
+                Layout.fillWidth: true
+                Layout.leftMargin: 12; Layout.rightMargin: 12
+                wrapMode: Text.Wrap; size: 11.5; muted: true
+                text: !root.memoryOn ? "La memoria está apagada (Ajustes › Asistente de IA › Proveedor y permisos)."
+                    : "Lo que " + (root.aiName || "el asistente") + " guarda cuando le cuentas algo y lo apruebas. Solo se lo lleva un modelo local; pulsa uno para corregirlo."
+            }
+            ListView {
+                id: memView
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.leftMargin: 12; Layout.rightMargin: 12
+                clip: true
+                spacing: 4
+                boundsBehavior: Flickable.StopAtBounds
+                model: root.memList
+                header: Rectangle {
+                    visible: (root.memRecap.text ?? "") !== ""
+                    width: ListView.view.width
+                    height: visible ? rcol.implicitHeight + 14 + 8 : 0
+                    color: "transparent"
+                    Rectangle {
+                        anchors { left: parent.left; right: parent.right; top: parent.top }
+                        height: rcol.implicitHeight + 14
+                        radius: Theme.r(8)
+                        color: Theme.pc
+                        ColumnLayout {
+                            id: rcol
+                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 12; rightMargin: 12 }
+                            spacing: 2
+                            Txt { text: "Conversación anterior · " + root.histWhen(root.memRecap.t ?? 0); size: 10.5; color: Qt.alpha(Theme.pcText, 0.75) }
+                            Txt { Layout.fillWidth: true; text: root.memRecap.text ?? ""; size: 12; color: Theme.pcText; wrapMode: Text.Wrap; textFormat: Text.PlainText }
+                        }
+                    }
+                }
+                Txt {
+                    anchors.centerIn: parent
+                    visible: memView.count === 0 && !memProc.running && (root.memRecap.text ?? "") === ""
+                    width: parent.width - 32
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                    text: "Aún no recuerdo nada. Cuéntame algo de ti y te propondré guardarlo."
+                    muted: true
+                }
+                delegate: Rectangle {
+                    id: mrow
+                    required property var modelData
+                    readonly property bool editing: root.memEditing === modelData.id
+                    width: ListView.view.width
+                    height: Math.max(36, (editing ? memField.implicitHeight : mtxt.implicitHeight) + 14)
+                    radius: Theme.r(8)
+                    color: editing || mMa.containsMouse ? Theme.fill2 : "transparent"
+                    MouseArea {
+                        id: mMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: { root.memEditing = mrow.modelData.id; memField.text = mrow.modelData.text; memField.forceActiveFocus(); }
+                    }
+                    Txt {
+                        id: mtxt
+                        visible: !mrow.editing
+                        anchors { left: parent.left; right: mDel.left; verticalCenter: parent.verticalCenter; leftMargin: 12; rightMargin: 8 }
+                        text: mrow.modelData.text; size: 12.5; wrapMode: Text.Wrap; textFormat: Text.PlainText
+                    }
+                    Field {
+                        id: memField
+                        visible: mrow.editing
+                        anchors { left: parent.left; right: mDel.left; verticalCenter: parent.verticalCenter; leftMargin: 4; rightMargin: 4 }
+                        onAccepted: { root.memCall(["edit", mrow.modelData.id, text]); root.memEditing = ""; }
+                        Keys.onEscapePressed: root.memEditing = ""
+                    }
+                    IconBtn {
+                        id: mDel
+                        opacity: mMa.containsMouse || mrow.editing ? 1 : 0.4
+                        anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
+                        icon: "trash"; iconSize: 12; fg: Theme.tv; implicitWidth: 26; implicitHeight: 26
+                        tooltip: "Olvidar esto"
+                        onClicked: root.memCall(["del", mrow.modelData.id])
+                    }
+                }
+            }
+        }
+
         // ---------------------------------------------------- historial de conversaciones
         ColumnLayout {
             visible: root.showHistory
@@ -1663,7 +1851,7 @@ print(json.dumps(out[:300]))
                 Txt { text: "Conversaciones"; size: 14; weight: Font.DemiBold }
                 Txt { text: root.histList.length ? String(root.histList.length) : ""; size: 11.5; muted: true }
                 Item { Layout.fillWidth: true }
-                SmallBtn { text: "Nueva"; primary: true; onClicked: root.clear() }
+                SmallBtn { text: "Nueva"; primary: true; onClicked: root.newChat() }
                 IconBtn { icon: "x"; iconSize: 12; fg: Theme.tv; implicitWidth: 26; implicitHeight: 26; onClicked: root.toggleHistory() }
             }
             Rectangle {

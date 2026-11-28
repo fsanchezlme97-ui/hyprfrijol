@@ -3,6 +3,30 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.30.0] — 2026-11-28
+
+### Novedades
+- **Emma recuerda**. Cuando le cuentas algo personal (gustos, fechas, personas, proyectos, cómo estás) propone
+  guardarlo con su tarjeta de aprobar, y lo usa después con naturalidad. «Olvida lo de…» lo quita. Todo se deshace.
+  Interruptor en Ajustes › Asistente de IA › Privacidad › Memoria (`aiMemory`).
+- **Sigue el hilo**: al empezar otra conversación con «+», resume la anterior en una o dos frases y la retoma si viene a
+  cuento (vale 7 días; borrar una conversación no la resume).
+- **Solo en local**: recuerdos y resumen solo van al modelo si es local (Ollama, LM Studio, vLLM); con uno en la nube
+  no salen del equipo. Por MCP no se pueden escribir.
+- **Vista «Recuerdos»** en el panel (botón del destello en la cabecera o `qs ipc call sidepanel memory`): el resumen de
+  la conversación anterior y los recuerdos; pulsar uno lo corrige, la papelera lo borra, «Olvidar todo» con dos
+  pulsaciones. En la terminal, `hf-ai memory`.
+- **Diario**: «apunta en mi diario…» escribe una línea con la hora en `Documentos/Diario.md`.
+- **Saludo del día** con el panel vacío: «Buenos días», la fecha, el tiempo, la próxima cita y las tareas pendientes,
+  sin llamar al modelo (`aiDayBrief`, en Ajustes › Panel lateral y PiP).
+- **La flor está viva**: gira despacio mientras Emma piensa, late mientras habla, se abre mientras escucha (en el panel)
+  y se cierra un poco unos segundos si algo falla. Quieta en reposo y con «Reducir movimiento».
+- **Respaldo a la vista**: si contestó el proveedor de respaldo, la línea bajo la respuesta dice «respaldo».
+
+### Arreglos
+- Los botones «Dictar» y «Orden de voz» del panel ya no se pisan (el atajo va al lado, más pequeño).
+- Sin emojis en las respuestas: el prompt lo pide y se quitan los que se cuelen.
+
 ## [0.29.1] — 2026-11-28
 
 ### Cambios

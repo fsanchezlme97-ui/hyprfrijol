@@ -76,9 +76,13 @@ def t_apply_actions(a):
     runs = [x for x in acts if isinstance(x, dict) and x.get("type") == "run"]
     # usar la pantalla (clics y teclas, scripts/hf-screen) solo con la confirmación del panel o de la voz: nunca por MCP
     ptr = [x for x in acts if isinstance(x, dict) and x.get("type") == "pointer"]
-    res = apply([x for x in acts if not (isinstance(x, dict) and x.get("type") == "pointer")])
+    # la memoria de Emma y el diario solo los escribe ella con tu aprobación: un recuerdo puesto desde fuera iría en
+    # cada prompt (inyección persistente)
+    mine = [x for x in acts if isinstance(x, dict) and x.get("type") in ("remember", "forget", "note")]
+    res = apply([x for x in acts if not (isinstance(x, dict) and x.get("type") in ("pointer", "remember", "forget", "note"))])
     notes = (["Las acciones 'run' no se ejecutan por MCP; usa tu propia herramienta de terminal."] if runs else []) \
-        + (["Las acciones 'pointer' (clics y teclas en la pantalla) no se ejecutan por MCP."] if ptr else [])
+        + (["Las acciones 'pointer' (clics y teclas en la pantalla) no se ejecutan por MCP."] if ptr else []) \
+        + (["Los recuerdos y el diario del asistente no se tocan por MCP."] if mine else [])
     if notes:
         res["note"] = " ".join(notes)
     return res

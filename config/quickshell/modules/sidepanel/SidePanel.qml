@@ -108,7 +108,7 @@ PanelWindow {
         target: Shell
         function onPreloadRequested(v) { if (v === "ia") win.chatHeld = true; }   // cursor sobre el botón de la IA
     }
-    readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, toggleHistory: () => {}, showHistory: false, toggleLog: () => {}, showLog: false, setWindow: () => {}, handoffTo: null, handoff: () => {}, messages: [] })
+    readonly property var chat: chatLoader.item ?? ({ ask: () => {}, attach: () => {}, focusInput: () => {}, clear: () => {}, newChat: () => {}, toggleHistory: () => {}, showHistory: false, toggleLog: () => {}, showLog: false, toggleMemory: () => {}, showMemory: false, setWindow: () => {}, handoffTo: null, handoff: () => {}, messages: [] })
 
     readonly property string aiLabel: String(Settings.get("aiName", "") ?? "").trim() || "IA"
     // Bajo el nombre: quién responde y su respaldo («Gemini · respaldo Ollama»)
@@ -248,6 +248,7 @@ PanelWindow {
         if (a && typeof a === "object" && a.ask !== undefined) chat.ask(String(a.ask), "quick");
         else if (typeof a === "string" && a.startsWith("ask:")) chat.ask(a.slice(4), "quick");
         if (a && typeof a === "object" && a.log) { if (!chat.showLog) chat.toggleLog(); return; }   // qs ipc call sidepanel log
+        if (a && typeof a === "object" && a.memory) { if (!chat.showMemory) chat.toggleMemory(); return; }   // qs ipc call sidepanel memory
         Qt.callLater(() => win.chat.focusInput());
     }
     Connections {
@@ -303,7 +304,7 @@ PanelWindow {
                         Rectangle {
                             implicitWidth: 26; implicitHeight: 26; radius: Theme.r(8)
                             color: Theme.pc
-                            Icon { anchors.centerIn: parent; name: "ai"; size: 14; stroke: 2; color: Theme.pcText }
+                            AiFlower { anchors.centerIn: parent; size: 14; stroke: 2; color: Theme.pcText }
                             // respondiendo: un punto que late
                             Rectangle {
                                 visible: chat.busy ?? false
@@ -316,8 +317,8 @@ PanelWindow {
                         ColumnLayout {
                             id: labels
                             spacing: -1
-                            // lo que dejan los botones (≈ 200 px): un proveedor largo se corta y no los empuja fuera
-                            Layout.maximumWidth: win.panelW - 200
+                            // lo que dejan los botones (≈ 228 px): un proveedor largo se corta y no los empuja fuera
+                            Layout.maximumWidth: win.panelW - 228
                             Txt { Layout.fillWidth: true; text: win.aiLabel; weight: Font.DemiBold; size: 13 }
                             Txt { id: aiSubTxt; Layout.fillWidth: true; visible: win.aiSub !== ""; text: win.aiSub; size: 10.5; muted: true }
                             // la línea de quién responde es pulsable: abre el proveedor y el modelo (sin ir a Ajustes)
@@ -335,7 +336,7 @@ PanelWindow {
                         icon: "plus"; iconSize: 13; fg: Theme.tv
                         implicitWidth: 26; implicitHeight: 26
                         tooltip: "Nueva conversación"
-                        onClicked: chat.clear()
+                        onClicked: chat.newChat()
                     }
                     IconBtn {
                         icon: "clock"; iconSize: 13; fg: Theme.tv
@@ -350,6 +351,13 @@ PanelWindow {
                         active: chat.showLog
                         tooltip: "Registro del asistente"
                         onClicked: chat.toggleLog()
+                    }
+                    IconBtn {
+                        icon: "sparkle"; iconSize: 13; fg: Theme.tv
+                        implicitWidth: 26; implicitHeight: 26
+                        active: chat.showMemory
+                        tooltip: "Recuerdos"
+                        onClicked: chat.toggleMemory()
                     }
                     // «Seguir en …» (aiHandoff): lleva la conversación a otra herramienta de IA
                     IconBtn {
@@ -536,6 +544,7 @@ PanelWindow {
         function askImage(text: string, image: string): void { Shell.open("ia", { ask: text, image: image }); }
         // El registro del asistente (cada petición y cada acción aplicada)
         function log(): void { Shell.open("ia", { log: true }); }
+        function memory(): void { Shell.open("ia", { memory: true }); }
         // Apartar el panel mientras hf-screen captura la pantalla (no debe salir, ni tapar lo que hay debajo)
         function aside(on: bool): void {
             if (on) { win.reopenAfterAside = Shell.view === "ia"; win.asideForScreen = true; if (win.reopenAfterAside) Shell.close(); }

@@ -73,6 +73,11 @@ ColumnLayout {
                 key: "sidePanelPinned"
                 onToggled: v => { if (v) Shell.sideHidden = false; }
             }
+            SwRow {
+                label: "Saludo del día"
+                sub: "con el panel vacío: la fecha, el tiempo, la próxima cita y las tareas pendientes (sin llamar al modelo)"
+                key: "aiDayBrief"; def: true
+            }
         }
         Section {
             Layout.fillWidth: true

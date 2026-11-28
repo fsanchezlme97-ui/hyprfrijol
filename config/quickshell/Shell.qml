@@ -40,6 +40,9 @@ Singleton {
     property string dictPhase: "idle"
     property bool aiSpeaking: false        // hf-ai speak mientras suena la voz del asistente (onda en terciario en la barra)
     property bool aiBusy: false            // el asistente está pensando una respuesta (AiChat.qml: ola que va y viene en la barra)
+    property bool aiError: false           // la última respuesta falló: la flor de Emma se cierra un poco (AiFlower) unos segundos
+    onAiErrorChanged: if (aiError) aiErrorTimer.restart()
+    property Timer aiErrorTimer: Timer { interval: 4000; onTriggered: root.aiError = false }
     property string dictKind: "dictado"    // lo que escucha: dictado | comando (Dictado.qml; botones del panel de Emma)
     property var micLevels: []             // niveles recientes del micrófono al dictar o escuchar (0..1, el último el más nuevo)
     signal voiceDo(string what)            // botones de voz (panel de Emma y flor de la barra): dictado | comando

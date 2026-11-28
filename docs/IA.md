@@ -322,7 +322,8 @@ el panel y la voz: gemma4:e4b.
     preguntar nombrándola; la pregunta espera 5 minutos (`~/.cache/hyprfrijol/ai-screen-ask.json`);
   - lo que llega por MCP no es una petición tuya: la herramienta de pantalla nunca captura;
   - no hay nada que se dispare solo: el asistente espera a que le escribas (el resumen de avisos solo se genera al
-    abrir el centro de notificaciones, con el modelo local, y no mira la pantalla).
+    abrir el centro de notificaciones, con el modelo local, y no mira la pantalla; el saludo del día solo sale al
+    abrir el panel vacío y no llama al modelo).
 - **«No, gracias»** («estoy bien», «ahora no», «no hace falta»…) se entiende siempre como una negativa; un «no» o un
   «nada» a secas, solo justo después de una oferta. Emma contesta «Vale, aquí estoy si me necesitas.», sin llamar al
   modelo.
@@ -439,6 +440,34 @@ El botón con la flecha hacia fuera de la cabecera del panel lo hace. `hf-ai han
 Codex con `openai`) y si no, la primera instalada en el orden de la tabla; `off` quita el botón. Sin ninguna, el botón
 no aparece. `hf-ai handoff-targets` lista lo instalado y el destino elegido. Con más de 120 KB se pasa el archivo en vez
 del texto (un argumento no puede pasar de 128 KB).
+
+## Memoria, diario y saludo del día
+
+- **Recuerdos** (`aiMemory`, por defecto sí; Ajustes › Asistente de IA › Privacidad › Memoria): cuando le cuentas algo
+  personal que vale la pena recordar (gustos, fechas, personas, proyectos, cómo estás), Emma propone la acción
+  `remember` con su tarjeta, y solo se guarda si la apruebas (o si marcaste «Aprobar siempre»). «Olvida lo de…»
+  propone `forget`. Las dos se deshacen. Se guardan en `~/.local/state/hyprfrijol/ai-memoria.json` (modo 600; 40 como
+  mucho, de 160 caracteres, sin secretos).
+- **Conversación anterior**: al empezar otra con «+», el panel manda el texto de la que se cierra a `hf-ai recap`, que
+  la resume en una o dos frases con el modelo rápido y la guarda en `ai-recap.json`. Vale 7 días. Borrar una
+  conversación del historial no la resume, y sin historial (`aiHistory`) tampoco se resume.
+- **Solo en local**: recuerdos y resumen entran en el prompt (como datos sobre ti, no como instrucciones, con un tope
+  de ~2.400 caracteres) solo si responde un modelo local (Ollama, LM Studio, vLLM). Con un proveedor en la nube no se
+  mandan, y el resumen no se hace.
+- **Vista «Recuerdos»**: el botón del destello en la cabecera del panel (o `qs ipc call sidepanel memory`) los enseña con el
+  resumen arriba; pulsar uno lo corrige, la papelera lo borra y «Olvidar todo» (dos pulsaciones) los quita todos.
+  Desde la terminal: `hf-ai memory [list] | add TEXTO | edit ID TEXTO | del ID | clear`.
+- **Diario**: «apunta en mi diario…» propone la acción `note`, que añade una línea con la hora bajo la fecha del día
+  en `Documentos/Diario.md` (Deshacer la quita).
+- **Por MCP** no se pueden escribir recuerdos ni el diario: un recuerdo puesto desde fuera iría en cada prompt.
+- **Saludo del día** (`aiDayBrief`, por defecto sí; Ajustes › Panel lateral y PiP): con el panel vacío, «Buenos días»
+  (tardes, noches), la fecha y una tarjeta con el tiempo, la próxima cita de las próximas 24 h y las tareas
+  pendientes. Lo arma el panel con lo que ya saben el tiempo, la agenda y las tareas; no llama al modelo.
+- **La flor** (`components/AiFlower.qml`, en el botón de la barra y en el panel): gira despacio mientras piensa, late
+  mientras habla, se abre mientras escucha (en la barra sale el micrófono) y se cierra un poco unos segundos si la
+  respuesta falla (`Shell.aiError`). En reposo y con «Reducir movimiento», quieta.
+- **Respaldo**: si respondió el proveedor de respaldo (el principal no contestó: cuota, caída…), la línea bajo la
+  respuesta lo dice («respaldo»).
 
 ## Registro del asistente
 

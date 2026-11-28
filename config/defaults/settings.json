@@ -67,6 +67,8 @@
   "aiConfirm": true,
   "aiSpotlight": true,
   "aiHistory": true,
+  "aiMemory": true,
+  "aiDayBrief": true,
   "aiHistoryDays": 30,
   "aiModelQuick": "",
   "aiModelVision": "",

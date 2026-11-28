@@ -47,9 +47,16 @@ Loader {
             StateLayer { radius: iaBtn.radius; hovered: ma.containsMouse; pressed: ma.pressed; focused: iaBtn.activeFocus }
             Ripple { id: rip; anchors.fill: parent; radius: iaBtn.radius; color: active ? Theme.pcText : Theme.t }
             Icon {
+                visible: iaBtn.rec
                 anchors.centerIn: parent; size: 15; stroke: 2
-                name: iaBtn.rec ? "mic" : "ai"
-                color: iaBtn.rec ? Theme.bg : iaBtn.active ? Theme.pText : Theme.t
+                name: "mic"
+                color: Theme.bg
+            }
+            // la flor de Emma: gira pensando, late hablando, se cierra con un error (AiFlower)
+            AiFlower {
+                visible: !iaBtn.rec
+                anchors.centerIn: parent; size: 15; stroke: 2; listenOpens: false
+                color: iaBtn.active ? Theme.pText : Theme.t
             }
             MouseArea {
                 id: ma
