@@ -179,7 +179,6 @@ PanelWindow {
             NotchBg {
                 visible: bar.notch
                 anchors.fill: parent
-                radius: bar.thickness / 2     // extremos redondos, como una cápsula que sale del borde
                 flip: bar.pos === "abajo"
                 bellLevel: bar.bellLevel
             }

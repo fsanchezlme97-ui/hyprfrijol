@@ -3,6 +3,13 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.27.2] — 2026-11-28
+
+### Cambios
+- **Muesca con bordes suaves**: cada lado es ahora una sola curva en S que nace plana en el borde de la pantalla, baja
+  despacio y llega plana a la base (como `cubic-bezier(0.5, 0, 0.5, 1)`, unas 2,4 veces el grosor de la barra de
+  ancho), en lugar de una oreja pequeña y una esquina redondeada.
+
 ## [0.27.1] — 2026-11-28
 
 ### Cambios
