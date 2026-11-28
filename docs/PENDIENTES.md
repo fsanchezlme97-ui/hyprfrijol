@@ -31,11 +31,16 @@ sesión anidada; `lint`, `check` y documentación (`AJUSTES.md`, `BINDS.md` si h
       (como `Morph`), se expande al pasar el puntero, región de entrada mínima y una sola pantalla; (b) contenido por
       prioridad: dictado, enfoque/Pomodoro, música, descargas y procesos, y avisos entrantes; (c) medir contra la
       Etapa 0 y decidir si queda «siempre visible» o «solo con actividad». Sin muesca física: es una pastilla flotante.
-- [ ] **Etapa 4 · Widgets de escritorio con agenda**: calendario del mes, «Próxima reunión» con cuenta atrás y zonas
+- [ ] **Etapa 4 · Modo de barra «Isla integrada»** (`barMode`, junto a `archipielago`): la barra se reduce a pastillas
+      pequeñas a los lados (espacios y título a la izquierda; estado, reloj y ajustes a la derecha) y el centro queda
+      para la isla de la Etapa 3, que pasa a ser parte de la barra: reserva su sitio, se agranda sin tapar a las
+      pastillas y se encoge a un punto cuando no hay actividad. Debe funcionar con la barra arriba (lo normal) y, si
+      se puede, abajo; con barra a los lados el modo no aplica y se avisa en Ajustes. Reutiliza `BarWidgets` y `barOrder`.
+- [ ] **Etapa 5 · Widgets de escritorio con agenda**: calendario del mes, «Próxima reunión» con cuenta atrás y zonas
       horarias, sobre la agenda `.ics` y el cuadro de widgets existente. Va junto a «Correo y calendario integrados».
-- [ ] **Etapa 5 · Centro de control y avisos**: fichas con estado en segunda línea, deslizadores anchos de brillo y
+- [ ] **Etapa 6 · Centro de control y avisos**: fichas con estado en segunda línea, deslizadores anchos de brillo y
       volumen, fila de música; avisos agrupados por aplicación. Se rehace el aspecto, no el contenido.
-- [ ] **Etapa 6 · Pulido final**: paletas y temas, claro/oscuro, accesibilidad, capturas del README, comparación final
+- [ ] **Etapa 7 · Pulido final**: paletas y temas, claro/oscuro, accesibilidad, capturas del README, comparación final
       de rendimiento con la Etapa 0 y decidir qué se enciende de fábrica.
 
 ## Descartado (2026-11-13)
