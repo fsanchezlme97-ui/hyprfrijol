@@ -10,21 +10,22 @@ import ".."
 Item {
     id: root
     property real radius: 12           // esquinas de fuera de la barra
-    property real ear: 10              // orejas cóncavas junto al borde
+    property real ear: 14              // orejas cóncavas junto al borde
+    property real panelX: (width - panelW) / 2   // borde izquierdo del panel colgado
     property real panelW: 0
     property real panelH: 0
-    property real panelRadius: Theme.r(24)
+    property real panelRadius: Theme.r(22)
     property bool flip: false
     property real bellLevel: 0
 
     // Figura entera en coordenadas de la barra (x de -ear a width + ear; y de 0 a height + panelH)
     function path(W: real, T: real, Wp: real, Hp: real): string {
         const k = 0.552, e = ear, r = Math.min(radius, T / 2, W / 4);
-        const f0 = 12, f = Math.min(f0, Hp / 2);
+        const f0 = 14, f = Math.min(f0, Hp / 2);
         const wp = Math.min(Wp, W - 2 * (r + f0));
         const panel = Hp >= 1 && wp > 0;
         const rp = Math.max(0, Math.min(panelRadius, wp / 2, Hp - f));
-        const x0 = (W - wp) / 2, x1 = x0 + wp, B = T + Hp;
+        const x0 = Math.max(r + f0, Math.min(panelX, W - r - f0 - wp)), x1 = x0 + wp, B = T + Hp;
         const n = v => v.toFixed(2), P = (x, y) => n(x) + "," + n(y);
         let d = "M" + P(-e, 0) + " L" + P(W + e, 0)
             + " C" + P(W + e - e * k, 0) + " " + P(W, e - e * k) + " " + P(W, e)

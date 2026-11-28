@@ -25,7 +25,8 @@ def _bar_edges(s):
     thick = size + 2 if vertical else size - 2 - (2 if floating else 0)
     behavior = s.get("barBehavior") or ("auto" if s.get("barAutoHide") is True else "siempre")
     edge = 4 if behavior == "auto" else off + thick + 4
-    return {k: (edge if pos == k else 4) for k in ("izquierda", "arriba", "derecha", "abajo")}
+    rest = 4 + (6 if s.get("barMode") == "marco" else 0)   # «Marco»: el marco fino de los otros bordes (hf-apply FRAME)
+    return {k: (edge if pos == k else rest) for k in ("izquierda", "arriba", "derecha", "abajo")}
 
 
 def hypr_lua(s, c):

@@ -17,19 +17,22 @@ Item {
     required property var barWindow
     property bool compact: false          // isla central: los tres grupos seguidos, sin huecos
     property bool islands: false          // archipiélago: cada grupo en su propia píldora (BarPill)
-    property bool notch: false            // muesca: los grupos a cada lado del centro de la pantalla, sin onda
-    property bool slot: false             // muesca con la isla dinámica en el centro
-    // Hueco del centro en la muesca: la isla plegada (o un respiro entre los grupos si no está)
-    readonly property real slotW: !notch ? 0 : slot ? islaLine.implicitWidth + 28 : 24
-    readonly property real notchPad: 18   // margen de los extremos (deja sitio a las esquinas redondeadas)
+    // Muesca: una pieza ajustada a su contenido, de izquierda a derecha [apps · espacios · título] onda [isla] [estado]
+    property bool notch: false
+    property bool slot: false             // muesca con la isla dinámica (entre la onda y el grupo derecho)
+    readonly property real slotW: !notch || !slot ? 0 : islaLine.implicitWidth + 28
+    readonly property real notchPad: 20   // margen de los extremos (deja sitio a las esquinas redondeadas)
+    readonly property real notchGap: 16   // hueco entre los grupos dentro de la muesca
+    readonly property real waveW: wave.active ? wave.width + notchGap : 0
+    // Centro de la isla en la muesca (Bar.qml cuelga de ahí el panel desplegado)
+    readonly property real slotCenter: notchPad + left.implicitWidth + notchGap + waveW + slotW / 2
     // Pantalla secundaria: sus espacios, el título de su ventana y, a la derecha, lo que gastan sus programas (sin
     // aplicaciones, onda, chips, bandeja ni estado)
     readonly property bool secondary: Shell.barModeFor(barWindow.screen) === "sencilla"
     // Píldoras del archipiélago (Bar.qml las usa de máscara para el ratón)
     readonly property var pills: [pillL, pillC, pillR, pillS]
     readonly property real gapC: 14
-    // Muesca: centrada en la pantalla con la isla en medio, así que mide dos veces el lado largo (cada grupo en su extremo)
-    readonly property real naturalLength: notch ? 2 * (Math.max(left.implicitWidth, right.implicitWidth) + 12 + notchPad) + slotW
+    readonly property real naturalLength: notch ? notchPad * 2 + left.implicitWidth + notchGap + waveW + (slot ? slotW + notchGap : 0) + right.implicitWidth
         : left.implicitWidth + (wave.active ? wave.width + gapC * 2 : gapC) + (secondary ? usage.width : right.implicitWidth) + 6
     // Título de la ventana activa: tope fijo (isla) o 30 % de la barra (máx. 300 px), y nunca hasta la onda
     // central (ni hasta el grupo derecho sin onda). Se calcula sin depender del propio título (sin bucles).
@@ -40,7 +43,7 @@ Item {
     readonly property real waveX: Math.min((width - wave.width) / 2, right.x - gapC - wave.width)
     // Archipiélago: la onda va en su píldora entre la izquierda y los chips; si no cabe (pantalla estrecha o barra
     // grande), se oculta en lugar de montarse sobre la píldora de los chips
-    readonly property bool waveFits: compact || (islands ? titleStart + 12 + wave.width <= right.x - 26 : waveX >= titleStart - 8)
+    readonly property bool waveFits: compact || notch || (islands ? titleStart + 12 + wave.width <= right.x - 26 : waveX >= titleStart - 8)
     readonly property real centerStart: !wave.active || !waveFits ? (secondary ? usage.x - 12 : right.x)
         : islands ? Math.min((width - wave.width) / 2, right.x - 26 - wave.width) - 22 - 10
         : waveX
@@ -49,7 +52,7 @@ Item {
     // Isla dinámica plegada en el centro de la muesca (services/Isla; desplegada, su panel lo pone Bar.qml)
     Item {
         visible: root.slot
-        x: (root.width - width) / 2
+        x: root.slotCenter - width / 2
         width: root.slotW; height: parent.height
         Behavior on width { enabled: !Theme.still; NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
         HoverHandler { onHoveredChanged: Isla.hovered(hovered) }
@@ -99,11 +102,12 @@ Item {
 
     Loader {
         id: wave
-        active: Settings.barHas("musica") && !root.secondary && !root.notch
+        active: Settings.barHas("musica") && !root.secondary
         visible: root.waveFits
         anchors.verticalCenter: parent.verticalCenter
         // Archipiélago: centrada, pero sin pisar las píldoras de los lados (12 px de hueco como mínimo)
-        x: root.compact ? left.x + left.implicitWidth + root.gapC
+        x: root.notch ? root.notchPad + left.implicitWidth + root.notchGap
+         : root.compact ? left.x + left.implicitWidth + root.gapC
          : root.islands ? Math.max(pillL.width + 22, Math.min((parent.width - width) / 2, right.x - 26 - width))
          : root.waveX
         sourceComponent: Waveform { barHeight: root.height }

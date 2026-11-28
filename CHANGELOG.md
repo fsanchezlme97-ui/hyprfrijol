@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.27.0] — 2026-11-28
+
+### Cambios
+- **Marco, completo**: además de las esquinas, un marco fino del color de la barra recorre los otros tres bordes, y las
+  esquinas de dentro son concéntricas con las de las ventanas (radio de las ventanas + su hueco). Las ventanas se
+  apartan del marco solo en esta forma: `hf-apply` lo deriva de `barMode` sin tocar `gapsOut`, así que al volver al
+  archipiélago (o a cualquier otra forma) los huecos son los de antes. Las esquinas usan un arco exacto.
+- **Muesca, más fina**: ahora mide lo que su contenido (ya no el doble del grupo más ancho), con los extremos
+  redondos como una cápsula y orejas más suaves donde se une al borde. La isla va entre la onda y el grupo derecho y
+  el panel desplegado cuelga justo debajo de ella.
+
+### Correcciones
+- La onda de audio vuelve a la barra en la forma «Muesca» (0.26.0 la quitaba).
+
 ## [0.26.0] — 2026-11-28
 
 ### Novedades

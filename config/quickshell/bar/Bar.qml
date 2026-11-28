@@ -16,10 +16,10 @@
 // Isla: la barra flota y mide lo que su contenido; el resto de la franja deja pasar el ratón.
 // Archipiélago: cada grupo de módulos en su propia píldora flotante (BarPill), con el escritorio visible entre
 // ellas; solo las píldoras reciben el ratón (máscara con content.item.pills).
-// Muesca (barMode "muesca", arriba o abajo): una sola pieza centrada que sale del borde (NotchBg), con la isla dinámica
-// en el centro (services/Isla); al desplegarse, de la muesca cuelga un panel con sus filas que es parte de la misma
-// figura. Para eso la ventana es más alta que la barra (la reserva sigue siendo el grosor y la máscara solo cubre la
-// figura). Sin onda de audio en ese modo.
+// Muesca (barMode "muesca", arriba o abajo): una sola pieza centrada, a la medida de su contenido, que sale del borde
+// (NotchBg), con la onda y la isla dinámica (services/Isla) antes del grupo derecho; al desplegarse, de la muesca
+// cuelga bajo la isla un panel con sus filas que es parte de la misma figura. Para eso la ventana es más alta que la
+// barra (la reserva sigue siendo el grosor y la máscara solo cubre la figura).
 // Marco (barMode "marco"): fija, con las esquinas de la pantalla redondeadas hacia dentro (ScreenCorners).
 // Super + J (Shell.barHidden) la deja escondida: vuelve al llevar el cursor al borde.
 import QtQuick
@@ -184,8 +184,9 @@ PanelWindow {
             NotchBg {
                 visible: bar.notch
                 anchors.fill: parent
-                radius: Math.min(Theme.r(16), bar.thickness / 2)
+                radius: bar.thickness / 2     // extremos redondos, como una cápsula que sale del borde
                 flip: bar.pos === "abajo"
+                panelX: panel.x
                 panelW: panel.width
                 panelH: panel.height
                 bellLevel: bar.bellLevel
@@ -194,7 +195,9 @@ PanelWindow {
             Item {
                 id: panel
                 readonly property bool open: bar.slot && Isla.expanded
-                x: (parent.width - width) / 2
+                // centrado bajo la isla plegada, sin salirse de la muesca
+                readonly property real cx: (content.item?.slotCenter ?? parent.width / 2 / bar.k) * bar.k
+                x: Math.max(bar.thickness / 2 + 14, Math.min(cx - width / 2, parent.width - bar.thickness / 2 - 14 - width))
                 y: bar.pos === "abajo" ? -height : parent.height
                 width: open ? Math.min(400, parent.width - 56) : 120
                 height: open ? Isla.expandedH : 0

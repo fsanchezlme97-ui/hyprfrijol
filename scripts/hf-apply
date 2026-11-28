@@ -614,6 +614,20 @@ def active_border(c, S, s):
         return 1, '"%s"' % rgba_hypr(W, .42 if LT else .10), '"%s"' % rgba_hypr(W, .28 if LT else .05)
     return 1, '"%s"' % rgba_hypr(mix(c["p"], c["ov"], .25), .55 if LT else .45), '"%s"' % soft_in
 
+# Forma de barra «Marco» (barMode = "marco"): un marco fino del color de la barra en los otros tres bordes
+# (bar/ScreenCorners.qml), así que las ventanas se apartan de esos bordes FRAME px más. Se deriva de barMode, no se
+# guarda: al volver a otra forma, los huecos son los de siempre. (config/quickshell/bar/ScreenCorners.qml: mismo FRAME)
+FRAME = 6
+
+
+def frame_gaps(s, go):
+    if s.get("barMode") != "marco":
+        return go
+    pos = s.get("barPos", "abajo")
+    side = {"arriba": "top", "abajo": "bottom", "izquierda": "left", "derecha": "right"}.get(pos, "bottom")
+    return "{ " + ", ".join(f"{k} = {go if k == side else go + FRAME}" for k in ("top", "right", "bottom", "left")) + " }"
+
+
 def hypr_lua(c, S, s):
     focus = bool(s.get("_focus"))
     # Opacidad de las ventanas sin foco (inactiveOpacity: 0 = automática, 0.97 con desenfoque; 1 = opacas)
@@ -629,7 +643,7 @@ def hypr_lua(c, S, s):
         "-- GENERADO por hf-apply a partir de ~/.config/hyprfrijol/settings.json — no editar",
         "hl.config({",
         "    general = {",
-        f"        gaps_in = {gi}, gaps_out = {go}, border_size = {0 if focus else bsize},",
+        f"        gaps_in = {gi}, gaps_out = {frame_gaps(s, go) if not focus else go}, border_size = {0 if focus else bsize},",
         f'        col = {{ active_border = {act}, inactive_border = {inact} }},',
         "    },",
         "    decoration = {",

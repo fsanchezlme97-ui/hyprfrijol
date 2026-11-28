@@ -104,8 +104,8 @@ ColumnLayout {
         Txt {
             visible: root.mode === "muesca" || root.mode === "marco"
             Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5
-            text: root.mode === "marco" ? "La barra va pegada al borde y las esquinas de la pantalla se redondean hacia dentro, como un marco alrededor de las ventanas."
-                : Settings.barIntegrated ? "Una sola pieza centrada que sale del borde, con la isla dinámica en el centro: al pasar el puntero crece hacia el escritorio. La onda de audio no se muestra; qué enseña la isla se elige en «Isla dinámica»."
+            text: root.mode === "marco" ? "La barra va pegada a un borde y un marco fino de su color recorre los otros tres, con las esquinas redondeadas hacia dentro alrededor de las ventanas. Las ventanas se apartan del marco solo en esta forma: al volver a otra, quedan como estaban."
+                : Settings.barIntegrated ? "Una sola pieza centrada que sale del borde, con la isla dinámica dentro: al pasar el puntero crece hacia el escritorio. Qué enseña la isla se elige en «Isla dinámica»."
                 : root.vertical ? "La muesca solo va arriba o abajo; de lado la barra queda pegada al borde, a la medida de su contenido."
                 : "Con la barra que se esconde sola, la isla dinámica no va dentro de la muesca: flota junto a ella."
         }
