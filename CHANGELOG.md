@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.19.2] — 2026-11-27
+
+### Mantenimiento
+- `docs/PENDIENTES.md` suma el plan por etapas de la renovación de la interfaz (botón «mantener para confirmar»,
+  pastilla «Escuchando…», isla dinámica, widgets de agenda y centro de control), con las reglas de calidad de cada una.
+
 ## [0.19.1] — 2026-11-27
 
 ### Correcciones

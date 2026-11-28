@@ -139,11 +139,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.19.0",
+ "hyprfrijol": "v0.19.1",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-27 19:30",
+ "saved": "2026-11-27 21:20",
  "services": [
   "ufw",
   "cups.socket",
@@ -203,8 +203,11 @@
    ],
    "izquierda": []
   },
-  "barPos": "abajo",
+  "barPos": "arriba",
   "barRoundExtra": 0,
+  "barScreens": {
+   "VGA-1": "sencilla"
+  },
   "barStatsShow": [
    "cpu",
    "gpu",
@@ -225,7 +228,7 @@
   "blurVibrancy": 0.55,
   "blurVibrancyDarkness": 0.18,
   "bongoSleep": false,
-  "calendarCollapsed": true,
+  "calendarCollapsed": false,
   "clipExpireDays": 0,
   "colorMode": "elegir",
   "deskIconSize": "pequeno",
@@ -312,14 +315,14 @@
   "pipAuto": false,
   "pipCorner": "sup-der",
   "pipFree": [
-   0.8375,
-   0.3133
+   -0.1375,
+   0.0325
   ],
   "pipHoverControls": true,
   "pipMargin": 4,
   "pipOpacity": 1,
   "pipSize": "pequeno",
-  "profileCard": true,
+  "profileCard": false,
   "protonWayland": false,
   "rimOpacity": 0.15,
   "rounding": 4,
