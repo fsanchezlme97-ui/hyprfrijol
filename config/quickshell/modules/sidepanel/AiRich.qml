@@ -5,7 +5,7 @@
 //   ```hf-chart {…}```  gráfico: {"type":"bar"|"line"|"pie", "title", "labels":[…], "series":[{"name","values":[…]}],
 //                   "unit"} (hf-ai explica el formato al modelo; si el JSON no vale, se ve como código)
 //   ![alt](url)     imagen (http(s) o ruta local) en una línea propia; clic → se abre fuera
-//   ```svg …```     esquema de Harper (hf-ai clean_svg: limpio y con estilo, con marcadores __P__… que aquí pasan a los
+//   ```svg …```     esquema de Emma (hf-ai clean_svg: limpio y con estilo, con marcadores __P__… que aquí pasan a los
 //                   colores del tema); Guardar / Copiar / Abrir en grande. Un SVG sin ese estilo se ve como código
 //   AiRich { text: "…"; color: Theme.t; width: … }
 import QtQuick
@@ -207,7 +207,7 @@ ColumnLayout {
                         model: [["Guardar", "save-svg"], ["Copiar", ""], ["Abrir en grande", "open-svg"]]
                         Txt {
                             required property var modelData
-                            text: sv.done === modelData[0] ? (modelData[1] === "" ? "Copiado" : "Guardado en Imágenes › Harper") : modelData[0]
+                            text: sv.done === modelData[0] ? (modelData[1] === "" ? "Copiado" : "Guardado en Imágenes › Emma") : modelData[0]
                             size: 10.5; muted: !lnk.containsMouse
                             MouseArea {
                                 id: lnk

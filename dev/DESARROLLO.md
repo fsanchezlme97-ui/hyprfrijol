@@ -345,7 +345,7 @@ Como siempre, los scripts hacen el trabajo; el shell, la IA (`hf-ai`/`hf-mcp`) y
   `qs ipc call dictado file <clip.wav> [dictado|comando]`. `HF_VOICE_OPEN=<orden>` abre las direcciones con otra orden
   (un navegador falso), nunca tu navegador. Pon `aiProvider: "mock"` en el HOME de prueba: lo no entendido va al asistente.
 - **Conversación e interrupciones**: `HF_DICTATE_SILENCE=1.2 HF_DICTATE_AIFIX=0 hf-dictate record --mode continuo --tts
-  --file mezcla.wav --simulate-live`: con `--tts` el audio cuenta como «Harper hablando»; debe salir `{"ev":"barge"}`
+  --file mezcla.wav --simulate-live`: con `--tts` el audio cuenta como «Emma hablando»; debe salir `{"ev":"barge"}`
   solo cuando empieza tu voz y no con el eco solo. Mezcla de prueba: la voz de Piper a −16/−24 dB como eco y otra frase
   encima a −4 dB (`ffmpeg … amix`); con `--simulate-live` el turno también se corta por silencio, como en vivo.
 

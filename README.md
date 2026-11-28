@@ -105,7 +105,7 @@ cd ~/hyprfrijol
 | `--greeter-sync` | copia tu tema y tu fondo al login visual (`hf-greeter-sync`) |
 | `--uninstall` [`--purge`] | desinstalar [y borrar ajustes, estado y caché] |
 | `--apps=serie,productividad,…` | apps por nivel: `serie` (por defecto), `productividad`, `destacada`, `creativa`, `experimental`, `all`; `--no-apps` ninguna. Sin `--yes` pregunta. Lista: `scripts/hf-apps list` |
-| `--equipo=gpu\|cpu\|ninguno` | deja el asistente (Harper) y el dictado listos para el equipo: `gpu` (gráfica dedicada de 6 GB o más: IA local y dictado whisper turbo en la gráfica), `cpu` (portátil de oficina o gráfica integrada: IA local y dictado Parakeet en la CPU) o `ninguno`. Sin la opción, lo detecta y pregunta (con `--yes`, lo detectado). Perfiles: `perfil/equipo-gpu.json`, `perfil/equipo-cpu.json` |
+| `--equipo=gpu\|cpu\|ninguno` | deja el asistente (Emma) y el dictado listos para el equipo: `gpu` (gráfica dedicada de 6 GB o más: IA local y dictado whisper turbo en la gráfica), `cpu` (portátil de oficina o gráfica integrada: IA local y dictado Parakeet en la CPU) o `ninguno`. Sin la opción, lo detecta y pregunta (con `--yes`, lo detectado). Perfiles: `perfil/equipo-gpu.json`, `perfil/equipo-cpu.json` |
 
 Se puede repetir sin miedo: solo hace lo que falta. Al final enseña un resumen de lo instalado, lo saltado y lo que te toca a ti. Las dependencias están en [`install/packages.tsv`](install/packages.tsv) (imprescindibles, recomendadas y opcionales, con el nombre del paquete en cada familia).
 
@@ -216,7 +216,7 @@ docs/              ARQUITECTURA.md, IA.md, AJUSTES.md, SCRIPTS.md, BINDS.md,
 ## Documentación
 
 - [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md): cómo está construido y cómo se comunican las piezas.
-- [`docs/IA.md`](docs/IA.md): asistente Harper, proveedores, MCP, dictado y órdenes de voz.
+- [`docs/IA.md`](docs/IA.md): asistente Emma, proveedores, MCP, dictado y órdenes de voz.
 - [`docs/AJUSTES.md`](docs/AJUSTES.md): tabla completa de ajustes.
 - [`docs/SCRIPTS.md`](docs/SCRIPTS.md): índice de scripts `hf-*`.
 - [`docs/BINDS.md`](docs/BINDS.md): referencia completa de atajos de teclado.
@@ -268,7 +268,7 @@ Son los mismos que en illogical-impulse (misma tecla, misma función), más los 
 | Ctrl + Super + Shift + D | Claro / oscuro |
 | Super + - / Super + = (o ¡) | Lupa |
 | Super + Shift + B · N · P · M | Pista anterior · siguiente · reproducir/pausar · silenciar |
-| Super + Alt + M · Super + Alt + V | Dictado (como «Dictar» en el panel de Harper, que se abre con el botón `>_` de la barra) · orden de voz («abre Firefox», «lee el archivo notas.md»); si Harper está leyendo en voz alta, lo corta |
+| Super + Alt + M · Super + Alt + V | Dictado (como «Dictar» en el panel de Emma, que se abre con el botón de la magnolia de la barra) · orden de voz («abre Firefox», «lee el archivo notas.md»); si Emma está leyendo en voz alta, lo corta |
 | Super + Z | Modo sin distracciones |
 | Super + L · Super + Shift + L | Bloquear · suspender |
 | Super + Esc · Ctrl + Alt + Supr | Menú de energía |

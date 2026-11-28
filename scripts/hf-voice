@@ -86,7 +86,8 @@ WAKE_DEFAULT = "distro"     # en homenaje a las distribuciones de Linux; se camb
 # con «oye/hey» delante, con coma detrás o si lo que sigue es una orden que se entiende (wake_split).
 WAKE_ALTS = {"distro": {"distro", "distros", "distró", "dis tro", "disto", "destro", "dystro", "distra", "distrou"},
              "frijol": {"frijol", "frijoles", "frejol", "frijo", "fri jol", "free jol", "frijolito"},
-             "harper": {"harper", "jarper", "harpe", "jarpe", "arper", "har per", "jar per"}}
+             "harper": {"harper", "jarper", "harpe", "jarpe", "arper", "har per", "jar per"},
+             "emma": {"emma", "ema", "enma", "hemma", "hema", "emá"}}
 WAKE_LOOSE = {"distro": {"diestro", "distrito", "bistro", "dextro", "de stro", "de tro", "district"}}
 WAKE_PRE = r"(?:(?:oye|hey|ey|ok|okey|eh|hola|vale)[\s,]+)"
 

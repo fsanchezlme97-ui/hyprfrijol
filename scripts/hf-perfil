@@ -261,7 +261,7 @@ def plan(p, yes=False):
     if r.get("rustdeskPortal"):
         steps.append(("Portal RemoteDesktop (RustDesk en Wayland)", sh(SCRIPTS / "hf-remote", "rustdesk", "portal")))
     if p.get("voice", {}).get("helpert"):
-        steps.append(("Voz de Harper", sh(SCRIPTS / "hf-ai", "voice-install", "--tty")))
+        steps.append(("Voz de Emma", sh(SCRIPTS / "hf-ai", "voice-install", "--tty")))
     d = p.get("dictation", {})
     if d.get("nemotron"):
         steps.append(("Dictado: Nemotron", sh(SCRIPTS / "hf-dictate", "install-nemotron", "--tty")))

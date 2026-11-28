@@ -32,7 +32,7 @@ def _profiles_left():
         return True
     if '"dictationWakeWord": "Frijol"' in t:      # nombre de antes: pasa a «Distro» (hf-migrate)
         return True
-    if re.search(r'"aiName":\s*"(Samantha|Helpert)"', t):   # asistente de antes: pasa a «Harper» (hf-migrate)
+    if re.search(r'"aiName":\s*"(Samantha|Helpert|Harper)"', t):   # asistente de antes: pasa a «Emma» (hf-migrate)
         return True
     if any(f'"{k}"' in t for k in ("webapps", "webappEngine", "webappPreload")):   # web apps (retiradas en 0.8.28)
         return True

@@ -69,7 +69,7 @@ Scope {
     SettingsApp {}
     Tools {}
     Dictado {}
-    Puntero {}       // cursor fantasma y marcas de Harper sobre la pantalla (scripts/hf-screen)
+    Puntero {}       // cursor fantasma y marcas de Emma sobre la pantalla (scripts/hf-screen)
     Firmar {}
     Tareas {}             // app «Tareas» (su ventana es diferida)
     Apps {}               // Conexiones remotas, Máquinas virtuales y Cola de impresión (ventanas diferidas)

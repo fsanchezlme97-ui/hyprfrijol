@@ -20,7 +20,7 @@
 #                                 y el idioma, teclado y hora del sistema (todo menos contraseñas y claves)
 #   ./install.sh --perfil         lo mismo con el perfil público del repo (perfil/perfil.json, sin datos personales)
 #   ./install.sh --acceso-remoto  con --perfil: activa el acceso remoto del perfil sin preguntar (si no, se pregunta)
-#   ./install.sh --equipo=gpu|cpu|ninguno   asistente (Harper) y dictado listos para este equipo (perfil/equipo-*.json):
+#   ./install.sh --equipo=gpu|cpu|ninguno   asistente (Emma) y dictado listos para este equipo (perfil/equipo-*.json):
 #                                 gpu = gráfica dedicada de 6 GB o más (IA y dictado en la GPU), cpu = sin ella
 #                                 (portátiles de oficina: todo en la CPU), ninguno = sin IA. Sin la opción, lo
 #                                 detecta y lo pregunta (con --yes, lo detectado)
@@ -957,7 +957,7 @@ equipo_install() {
     v=$(vram_gib); det=cpu; [ "$v" -ge 6 ] && det=gpu
     eq=$det
     if [ "$YES" = 0 ] && [ "$DRY" = 0 ]; then
-      say "Asistente (Harper) y dictado: gráfica dedicada con ${v} GB de memoria → recomiendo «$det»"
+      say "Asistente (Emma) y dictado: gráfica dedicada con ${v} GB de memoria → recomiendo «$det»"
       note "gpu      gráfica de 6 GB o más: IA local en la gráfica (~0,5 s por orden) y dictado más preciso (whisper turbo)" \
            "cpu      sin gráfica dedicada (portátil de oficina): IA local en la CPU (2–5 s por orden) y dictado Parakeet" \
            "ninguno  sin IA ni dictado local (luego: ./install.sh --no-deps --equipo=gpu|cpu)"

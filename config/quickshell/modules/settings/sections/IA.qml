@@ -497,19 +497,19 @@ ColumnLayout {
         }
     }
 
-    // Leer en voz alta (aiVoice): la voz de Harper (local, Piper) solo lee, no conversa. hf-ai announce y greet;
+    // Leer en voz alta (aiVoice): la voz de Emma (local, Piper) solo lee, no conversa. hf-ai announce y greet;
     // Notifs.qml lee los urgentes. Nunca en «no molestar».
     Section {
         Layout.fillWidth: true
         title: "Leer en voz alta"
         SwRow {
             label: "Leer en voz alta"; key: "aiVoice"; def: false
-            sub: root.voiceLocal === false ? "falta la voz de Harper: instálala abajo"
-                                           : (Settings.get("aiName", "") || "Harper") + " lee los avisos que elijas con su voz local (rápida y sin internet). No conversa: el asistente se usa por escrito"
+            sub: root.voiceLocal === false ? "falta la voz de Emma: instálala abajo"
+                                           : (Settings.get("aiName", "") || "Emma") + " lee los avisos que elijas con su voz local (rápida y sin internet). No conversa: el asistente se usa por escrito"
         }
         Button {
             visible: root.voiceLocal === false
-            text: "Instalar la voz de Harper (Piper, ~250 MB, sin internet)"
+            text: "Instalar la voz de Emma (Piper, ~250 MB, sin internet)"
             onClicked: { Pkg.runInTerminal(Paths.script("hf-ai") + " voice-install --tty", "Voz del asistente"); voiceLater.n = 0; voiceLater.restart(); }
         }
         SwRow {

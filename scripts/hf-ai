@@ -41,8 +41,8 @@
   hf-ai dictfix '{"vocab","before"}' < texto   corrige nombres mal oídos de un dictado (hf-dictate, dictationAiFix)
   hf-ai recipes | recipe <id> | recipe-save '<json>' | recipe-remove <id>   recetas (Resumir, Traducir, Corregir…):
                              la lista, ejecutar una, guardar o borrar una propia (~/.local/share/hyprfrijol/ai-recetas.json)
-  hf-ai speak "texto" | - | --stop   Harper lo lee en voz alta (corta lo anterior): voz local Piper (sharvard), la única voz
-  hf-ai announce "texto" | - | --greet   Harper lo anuncia.
+  hf-ai speak "texto" | - | --stop   Emma lo lee en voz alta (corta lo anterior): voz local Piper (sharvard), la única voz
+  hf-ai announce "texto" | - | --greet   Emma lo anuncia.
                              Calla en «no molestar». --greet: saludo con la hora y el tiempo, una vez por sesión
                              (aiAnnounceGreet)
   hf-ai voice-install [--tty]  instala la voz local: venv con piper-tts y la voz es_ES-sharvard-medium (~77 MB)
@@ -391,19 +391,19 @@ def can_read(s=None):
 
 PERSONA_MAX = 2000
 
-# Por voz whisper escribe el nombre como le suena («Jarper», «járper», «har per»…): se corrige antes de que llegue al
-# modelo. Solo palabras completas: «harpa» o «arpegio» no se tocan.
-NAME_RE = re.compile(r"\b[hj]?[aá]r ?pe(?:r)?\b", re.I)
+# Por voz whisper escribe el nombre como le suena («Ema», «Enma», «Hemma»…): se corrige antes de que llegue al
+# modelo. Solo palabras completas: «tema» o «gema» no se tocan.
+NAME_RE = re.compile(r"\bh?e(?:mm?|nm)a\b", re.I)
 
 def norm_name(text):
-    return NAME_RE.sub("Harper", text) if isinstance(text, str) else text
+    return NAME_RE.sub("Emma", text) if isinstance(text, str) else text
 
 def _selftest_name():
-    assert norm_name("Jarper, pon la barra arriba") == "Harper, pon la barra arriba"
-    assert norm_name("oye járper qué hora es") == "oye Harper qué hora es"
-    assert norm_name("jar per abre ajustes") == "Harper abre ajustes"
-    assert norm_name("harper") == "Harper"
-    assert norm_name("toca la harpa") == "toca la harpa" and norm_name("un arpegio") == "un arpegio"
+    assert norm_name("Ema, pon la barra arriba") == "Emma, pon la barra arriba"
+    assert norm_name("oye enma qué hora es") == "oye Emma qué hora es"
+    assert norm_name("hemma abre ajustes") == "Emma abre ajustes"
+    assert norm_name("emma") == "Emma"
+    assert norm_name("cambia el tema") == "cambia el tema" and norm_name("una gema") == "una gema" and norm_name("emmanuel") == "emmanuel"
 
 def persona_doc(s=None):
     """Ajustes › IA › Personalidad: nombre (aiName) e instrucciones propias (aiPersona). Se AÑADEN al prompt base;
@@ -3531,12 +3531,12 @@ def key_status(provider):
     k, where = gemini_key()
     return {"stored": bool(k), "where": where, "hint": (k[:4] + "…" + k[-4:]) if len(k) > 12 else ""}
 
-# ---------------------------------------------------------------- voz (Harper, local)
+# ---------------------------------------------------------------- voz (Emma, local)
 TTS_DIR = pathlib.Path(os.environ.get("XDG_RUNTIME_DIR") or HOME / ".cache/hyprfrijol")   # privado: nunca /tmp
 TTS_PID = TTS_DIR / "hf-ai-voice.pid"
-# Voz local (conversación, Harper): Piper con «sharvard» (es_ES, hablante 0 = M). ~150 MB de RAM; en frío tarda ~1 s en
+# Voz local (conversación, Emma): Piper con «sharvard» (es_ES, hablante 0 = M). ~150 MB de RAM; en frío tarda ~1 s en
 # sonar (arrancar Python y cargar el modelo) y con la voz residente (VOICE_SOCK) ~0,2 s; genera ×30 más rápido de lo que habla. Lo instala `hf-ai voice-install`.
-# Es la única voz: Harper dice las respuestas, los avisos (`hf-ai announce`) y el saludo.
+# Es la única voz: Emma dice las respuestas, los avisos (`hf-ai announce`) y el saludo.
 PIPER_DIR = HOME / ".local/share/hyprfrijol/tts"
 PIPER_VENV = PIPER_DIR / "piper-venv"
 PIPER_VOICE, PIPER_SPEAKER = "es_ES-sharvard-medium", 0
@@ -3565,7 +3565,7 @@ def voice_install(tty=False):
     r = subprocess.run([py, "-I", "-m", "piper.download_voices", "--data-dir", str(PIPER_MODEL.parent), PIPER_VOICE])
     if r.returncode != 0 or not piper_ready():
         say("No se pudo descargar la voz"); return 1
-    say("Voz local lista: Harper ya habla sin depender de Google.")
+    say("Voz local lista: Emma ya habla sin depender de Google.")
     return 0
 
 def speakable(text, limit=PIPER_MAX):
@@ -3733,14 +3733,14 @@ def speak_resident(t, play):
     return {"ok": True, "error": ""}
 
 def speak(text, s=None):
-    """Harper lee «text» en voz alta y corta lo que estuviera diciendo. → {"ok", "error"}
+    """Emma lee «text» en voz alta y corta lo que estuviera diciendo. → {"ok", "error"}
     Una sola voz, local (Piper): conversación, avisos y saludo. Sin depender de Google, no hay esperas ni cuotas."""
     t = speakable(text, PIPER_MAX)
     speak_stop()
     if not t:
         return {"ok": False, "error": "Nada que leer"}
     if not piper_ready():
-        return {"ok": False, "error": "Falta la voz de Harper: instálala en Ajustes › Asistente de IA (hf-ai voice-install)"}
+        return {"ok": False, "error": "Falta la voz de Emma: instálala en Ajustes › Asistente de IA (hf-ai voice-install)"}
     player = shutil.which("pw-play") or shutil.which("paplay")
     if not player:
         return {"ok": False, "error": "Falta pw-play o paplay"}
@@ -3756,7 +3756,7 @@ def dnd_on():
     return not until.isdigit() or int(until) > time.time() * 1000
 
 def announce(text, s=None):
-    """Harper lee un aviso (sin emojis ni marcas HTML del cuerpo de las notificaciones). Calla en «no molestar»."""
+    """Emma lee un aviso (sin emojis ni marcas HTML del cuerpo de las notificaciones). Calla en «no molestar»."""
     if dnd_on():
         return {"ok": False, "error": "No molestar"}
     t = re.sub(r"<[^>]+>", " ", str(text or ""))
@@ -3784,7 +3784,7 @@ def greeting():
     return " ".join(parts)
 
 def greet():
-    """Saludo de Harper al entrar (aiVoice y aiAnnounceGreet): una vez por sesión de Hyprland, aunque el shell se reinicie."""
+    """Saludo de Emma al entrar (aiVoice y aiAnnounceGreet): una vez por sesión de Hyprland, aunque el shell se reinicie."""
     s = settings()
     if not (s.get("aiVoice") and s.get("aiAnnounceGreet")):
         return {"ok": False, "error": "Saludo desactivado"}
@@ -4289,12 +4289,12 @@ def themed_svg(raw, colors):
 
 def save_svg(raw, colors="{}", open_it=False):
     """«Guardar» / «Abrir en grande» de un esquema (lo manda AiRich.qml con los colores aparte): se guarda en
-    Imágenes/Harper."""
+    Imágenes/Emma."""
     svg = themed_svg(raw, colors)
     if not svg:
-        return {"ok": False, "error": "No es un esquema de Harper"}
+        return {"ok": False, "error": "No es un esquema de Emma"}
     pics = run(["xdg-user-dir", "PICTURES"]).strip() if shutil.which("xdg-user-dir") else ""
-    d = pathlib.Path(pics or HOME / "Imágenes") / "Harper"
+    d = pathlib.Path(pics or HOME / "Imágenes") / "Emma"
     d.mkdir(parents=True, exist_ok=True)
     f = d / (time.strftime("%Y%m%d-%H%M%S") + ".svg")
     f.write_text(svg)
@@ -4569,7 +4569,7 @@ YES_W = (r"(si|vale|ok|okay|okey|claro|adelante|hazlo|dale|de acuerdo|perfecto|v
 YES_RE = re.compile(rf"{YES_W}( (y |e )?{YES_W})*")
 NO_RE = re.compile(r"(no|nope|cancela|dejalo|mejor no|ni hablar|olvidalo|para nada)( .*)?")
 FILLER_RE = re.compile(r"(m+h*m*|h?m+|e+h*|a+h+|u+m+|bueno|pues|este|oye|mira|a ver)")
-# «No, gracias» y compañía: siempre son una negativa. Un «no» o un «nada» a secas, solo si Harper acaba de ofrecer algo.
+# «No, gracias» y compañía: siempre son una negativa. Un «no» o un «nada» a secas, solo si Emma acaba de ofrecer algo.
 DECLINE_STRONG = re.compile(
     r"(no )?(muchas )?gracias (no|estoy bien|todo bien|asi esta bien|por ahora no|de momento no)|"
     r"no( muchas)? gracias( estoy bien| todo bien| por ahora| de momento)?|"
@@ -4669,7 +4669,7 @@ def yes_no(text):
     return True if YES_RE.fullmatch(h) else None
 
 def declined(text, last_ai):
-    """¿Rechaza lo que Harper le ofrecía? «No, gracias», «estoy bien», «ahora no»; un «no» a secas solo tras una oferta."""
+    """¿Rechaza lo que Emma le ofrecía? «No, gracias», «estoy bien», «ahora no»; un «no» a secas solo tras una oferta."""
     h = words_of(text)
     if DECLINE_STRONG.fullmatch(h):
         return True
@@ -4810,7 +4810,7 @@ def _do_chat(req, print_request=False):
     if not fn:
         return {"error": f"Proveedor desconocido: {prov}"}
     ctx = req.get("context") or {}
-    for m in req.get("messages") or [] if (s0.get("aiName") or "").strip() == "Harper" else []:
+    for m in req.get("messages") or [] if (s0.get("aiName") or "").strip() == "Emma" else []:
         if isinstance(m, dict) and m.get("role") == "user":
             m["text"] = norm_name(m.get("text"))
     last_user = next((m for m in reversed(req.get("messages") or []) if isinstance(m, dict) and m.get("role") == "user"), {})

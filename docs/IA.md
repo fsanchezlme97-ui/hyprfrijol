@@ -270,8 +270,8 @@ El panel puede mostrar un bloque de código con dos botones: **Ejecutar aquí** 
 
 ### Voz: órdenes, sin conversación
 
-No se conversa por voz con Harper (desde 0.11.0): la conversación por voz y los modelos grandes viven en otro
-proyecto (Open WebUI con su modo de llamada). Aquí se quedan el dictado, las órdenes de voz y la voz de Harper como
+No se conversa por voz con Emma (desde 0.11.0): la conversación por voz y los modelos grandes viven en otro
+proyecto (Open WebUI con su modo de llamada). Aquí se quedan el dictado, las órdenes de voz y la voz de Emma como
 **lectora** opcional (`aiVoice`, apagada por defecto: avisos urgentes y el saludo con lo pendiente del día).
 
 El **dictado nunca usa IA** (la antigua limpieza `dictationAI` se retiró; `hf-migrate --retired-only` quita la clave con
@@ -314,7 +314,7 @@ el panel y la voz: gemma4:e4b.
 - **Mirar la pantalla, solo si se lo pides** (Ajustes › Asistente de IA › Privacidad › «Mirar la pantalla»):
   - cuenta como petición que tu último mensaje lo diga («mira mi pantalla», «¿qué ves?») o pida usarla («haz clic en
     Responder»), además de «+ Captura» y el atajo de la ventana actual (Super + Ctrl + A), que adjuntan la captura;
-  - si no, Harper no captura ni lo pregunta: las consultas `screen`/`ui` le contestan que no ha pedido que mire y
+  - si no, Emma no captura ni lo pregunta: las consultas `screen`/`ui` le contestan que no ha pedido que mire y
     responde sin la pantalla; la ventana activa se lee sin captura nueva;
   - **ventanas sensibles** (`aiSensitiveWindows`: correo, banca, pagos, mensajería, inicios de sesión…, por la clase o
     el título): aunque se lo pidas, con una a la vista pregunta antes y dice por qué;
@@ -324,7 +324,7 @@ el panel y la voz: gemma4:e4b.
   - no hay nada que se dispare solo: el asistente espera a que le escribas (el resumen de avisos solo se genera al
     abrir el centro de notificaciones, con el modelo local, y no mira la pantalla).
 - **«No, gracias»** («estoy bien», «ahora no», «no hace falta»…) se entiende siempre como una negativa; un «no» o un
-  «nada» a secas, solo justo después de una oferta. Harper contesta «Vale, aquí estoy si me necesitas.», sin llamar al
+  «nada» a secas, solo justo después de una oferta. Emma contesta «Vale, aquí estoy si me necesitas.», sin llamar al
   modelo.
 - **«Repite»** («¿qué dijiste?», «otra vez», «¿cómo?») vuelve a decir la última respuesta sin llamar al modelo.
 - **Seguir el hilo:** una respuesta corta (hasta 4 palabras) a un mensaje que acababa en pregunta le llega al modelo con
@@ -334,7 +334,7 @@ el panel y la voz: gemma4:e4b.
 
 ### Esquemas (dibujos con código)
 
-Harper dibuja **solo si se lo pides** (un dibujo, esquema o diagrama) o si un esquema explica algo mucho mejor que el
+Emma dibuja **solo si se lo pides** (un dibujo, esquema o diagrama) o si un esquema explica algo mucho mejor que el
 texto. El modelo no elige colores: escribe un SVG sencillo con piezas con clase y el estilo lo pone HyprFrijol.
 
 - **Piezas** (bloque ```` ```hf-diagram ````): `box`, `pill`, `node`, `accent` (lo importante), `arrow`, `line`,
@@ -354,7 +354,7 @@ texto. El modelo no elige colores: escribe un SVG sencillo con piezas con clase 
   redondas, flechas con punta y borde del color principal en `accent`. Los colores van como marcadores (`__P__`…)
   que `AiRich.qml` cambia por los del tema al dibujarlo: si cambias de tema, el esquema cambia con él.
 - **En el panel:** Qt SVG (sin red ni JavaScript; las animaciones se ven quietas). Debajo, «Guardar» (en
-  `Imágenes/Harper`), «Copiar» y «Abrir en grande» (`hf-ai save-svg` / `open-svg`). El panel les pasa el esquema
+  `Imágenes/Emma`), «Copiar» y «Abrir en grande» (`hf-ai save-svg` / `open-svg`). El panel les pasa el esquema
   con marcadores y los colores aparte: hf-ai lo vuelve a limpiar con la lista blanca y solo acepta colores `#rrggbb`,
   porque el archivo puede acabar en un navegador. Las vallas se reconocen igual que en `AiRich.qml` (sin distinguir
   mayúsculas), así que todo lo que el panel dibuja como esquema ha pasado por `clean_svg`.
@@ -378,7 +378,7 @@ texto. El modelo no elige colores: escribe un SVG sencillo con piezas con clase 
 
 ## Usar la pantalla (Computer Use)
 
-Harper puede señalar y usar lo que se ve en la pantalla, siempre con tu permiso (Ajustes › IA › «Usar la pantalla»,
+Emma puede señalar y usar lo que se ve en la pantalla, siempre con tu permiso (Ajustes › IA › «Usar la pantalla»,
 `aiScreenControl`):
 
 1. **Análisis de la pantalla** (Screen Parsing, consulta `ui`). `hf-screen parse`:
@@ -421,7 +421,7 @@ Harper puede señalar y usar lo que se ve en la pantalla, siempre con tu permiso
    - Por MCP no se ejecutan.
 
 Lo que se lee en la pantalla son datos, no instrucciones. Por eso nada se hace sin tu «sí»: una web no puede pedirle a
-Harper que haga clic por ti.
+Emma que haga clic por ti.
 
 ## «Seguir en … ↗» (cualquier herramienta de IA)
 

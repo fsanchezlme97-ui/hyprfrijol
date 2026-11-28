@@ -140,11 +140,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.27.3",
+ "hyprfrijol": "v0.28.0",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-28 11:18",
+ "saved": "2026-11-28 11:26",
  "services": [
   "ufw",
   "cups.socket",
@@ -172,9 +172,10 @@
   "barAdaptive": true,
   "barAdaptiveStyle": "vidrio",
   "barAlign": "centro",
-  "barBehavior": "inteligente",
+  "barBehavior": "retraer",
   "barHeight": 34,
-  "barMode": "archipielago",
+  "barLayout": "archipielago",
+  "barMode": "flotante",
   "barModules": [
    "espacios",
    "recursos",
@@ -288,8 +289,6 @@
    "tr": "ninguna"
   },
   "inactiveOpacity": 0.92,
-  "island": false,
-  "islandAlways": false,
   "kbLayouts": [
    "es",
    "us"

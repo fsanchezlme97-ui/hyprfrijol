@@ -19,6 +19,7 @@
 #      Asistente «Samantha» → «Helpert» (0.8.20), y su personalidad si era la de fábrica (copia en
 #      settings.json.antes-de-helpert).
 #      «Helpert» → «Harper» (0.10.28), igual (copia en settings.json.antes-de-harper).
+#      «Harper» → «Emma» (0.29.0), igual (copia en settings.json.antes-de-emma).
 #      Barra simplificada (0.28.0): barMode fija/flotante + barLayout, barHeight 32/34/36, «inteligente» → «retraer»,
 #      waveStyle barras/onda/agujas y fuera island* (copia en settings.json.antes-barra-simple).
 #      Estilo único Math (0.9.0): «estilo» pasa a «math» y SkySoul a «transparencia: true» (copia en
@@ -171,6 +172,25 @@ d = json.load(open(p))
 new = json.load(open(sys.argv[2]))
 d["aiName"] = new["aiName"]
 if hashlib.sha256(str(d.get("aiPersona", "")).encode()).hexdigest() == "6e1875ceac777e8354284e96980251112c042d90fbcee9e7c1ae559fca078588":
+    d["aiPersona"] = new["aiPersona"]
+tmp = p + ".tmp"
+with open(tmp, "w") as f:
+    f.write(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
+os.replace(tmp, p)
+PY
+  fi
+  # Asistente «Harper» (0.10.28) → «Emma» (0.29.0); la personalidad solo si era la de fábrica (huella sha256)
+  if [ -f "$cfg" ] && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(d,dict) and d.get("aiName")=="Harper" else 1)' "$cfg" 2>/dev/null; then
+    local bak="$cfg.antes-de-emma"; [ -e "$bak" ] && bak="$bak-$(date +%Y%m%d-%H%M%S)"
+    say "Asistente: «Harper» pasa a llamarse «Emma» en $cfg (copia: $bak)"
+    run cp -p "$cfg" "$bak"
+    [ "$DRY" = 1 ] || python3 -I - "$cfg" "$root/config/defaults/settings.json" <<'PY'
+import hashlib, json, os, sys
+p = os.path.realpath(sys.argv[1])
+d = json.load(open(p))
+new = json.load(open(sys.argv[2]))
+d["aiName"] = new["aiName"]
+if hashlib.sha256(str(d.get("aiPersona", "")).encode()).hexdigest() == "4096bf403cb70c9496e7ee3b13132661dc48b86c3f9c16c36677b5c43227516a":
     d["aiPersona"] = new["aiPersona"]
 tmp = p + ".tmp"
 with open(tmp, "w") as f:

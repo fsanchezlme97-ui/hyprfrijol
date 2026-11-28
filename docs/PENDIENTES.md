@@ -42,7 +42,7 @@ Se deja de seguir; si vuelve a hacer falta, entra arriba como tarea nueva.
 - Desbloqueo facial (Howdy).
 - Que la IA asigne los papeles de los colores de un tema.
 - Pruebas con uso real que quedaban abiertas: RustDesk entrante, `hf-perfil` en una máquina virtual, IA local y
-  dictado con la voz del autor, interrumpir a Harper hablando, micrófono de tres modos, gesto de 3 dedos en un
+  dictado con la voz del autor, interrumpir a Emma hablando, micrófono de tres modos, gesto de 3 dedos en un
   touchpad, iconos en hardware real, renumerar espacios al quitar una pantalla, animaciones en la VGA y login tras
   reiniciar.
 - Avisos que no tienen arreglo desde HyprFrijol: `eglCreateSyncKHR … EGL_BAD_ATTRIBUTE` (aquamarine copiando a la

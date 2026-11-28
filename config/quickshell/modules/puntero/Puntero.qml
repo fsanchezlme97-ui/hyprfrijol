@@ -1,4 +1,4 @@
-// Superposición de Harper sobre la pantalla (scripts/hf-screen, Computer Use): no recibe clics ni teclado.
+// Superposición de Emma sobre la pantalla (scripts/hf-screen, Computer Use): no recibe clics ni teclado.
 //   · cursor fantasma (Ghost Cursor): una flecha que viaja desde tu cursor hasta donde va a actuar, con un bocadillo
 //     que dice qué hará («Clic: Guardar») y un resaltado del elemento (Visual Overlay / Highlighting)
 //   · marcas (Set-of-Mark): los elementos que analizó, con su número, para ver lo mismo que ve el asistente

@@ -16,10 +16,9 @@ Singleton {
         "clipboard": '<rect x="8" y="3" width="8" height="4" rx="1"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>',
         // Cafeína (no apagar la pantalla): taza con vapor
         "coffee": '<path d="M4 10h13v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 11.5h1.5a2.5 2.5 0 0 1 0 5H16.5"/><path d="M8 3.5c-.8 1 .8 2 0 3.5M12 3.5c-.8 1 .8 2 0 3.5"/>',
-        // IA (barra, Spotlight, panel lateral, Ajustes): brújula de Harper.
-        // Dentro del círculo va el símbolo >!; fuera, arriba a la derecha, la bolita de estado.
-        "ai": '<circle cx="12" cy="12" r="9"/><path d="M9 8.5l3 3-3 3M14 8.5v5.5"/><circle cx="14" cy="15.5" r=".9" fill="currentColor" stroke="none"/><circle cx="19.5" cy="4.5" r="2.8" fill="currentColor" stroke="none"/>',
-        "ai_body": '<circle cx="12" cy="12" r="9"/><path d="M9 8.5l3 3-3 3M14 8.5v5.5"/><circle cx="14" cy="15.5" r=".9" fill="currentColor" stroke="none"/>',
+        // IA (barra, Spotlight, panel lateral, Ajustes): magnolia (Magnolia grandiflora), la flor de Emma: cuenco de
+        // pétalos anchos, el pétalo de dentro con el cono relleno y dos hojas en la base.
+        "ai": '<path d="M5 10.5C5 15 8 18 12 18s7-3 7-7.5c-2.8 0-5.2 1.6-7 4.3-1.8-2.7-4.2-4.3-7-4.3z"/><path d="M8.2 11.4C7.9 8.6 9.3 6 12 5c2.7 1 4.1 3.6 3.8 6.4"/><rect x="10.9" y="7.6" width="2.2" height="4.4" rx="1.1" fill="currentColor" stroke="none"/><path d="M8.5 17.2C6.5 19.4 4 20.2 2.5 19.8c.5-1.8 2.8-3.2 5-3.4M15.5 17.2c2 2.2 4.5 3 6 2.6-.5-1.8-2.8-3.2-5-3.4"/>',
         "sparkle": '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
         "wifi": '<path d="M2.5 9.2a14 14 0 0 1 19 0"/><path d="M5.6 12.6a9.5 9.5 0 0 1 12.8 0"/><path d="M8.8 16a5 5 0 0 1 6.4 0"/><circle cx="12" cy="19.4" r="1.3" fill="currentColor" stroke="none"/>',
         "volume": '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>',
@@ -92,9 +91,9 @@ Singleton {
         "hdmi": '<path d="M3 8h18v5l-3 3H6l-3-3z"/><path d="M7 11h10"/>',
         "mic": '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',
         "mic-off": '<path d="M15 9.5V5a3 3 0 0 0-5.6-1.5M9 9v2a3 3 0 0 0 4.9 2.3"/><path d="M5 11a7 7 0 0 0 11.4 5.4M18.6 13.6A7 7 0 0 0 19 11M12 18v4"/><path d="M3.5 3.5l17 17"/>',
-        // Micrófono (panel de Harper y barra): dictado (con líneas de texto); grabando, relleno (mic_rec)
+        // Micrófono (panel de Emma y barra): dictado (con líneas de texto); grabando, relleno (mic_rec)
         "mic_dictado": '<rect x="3.5" y="2.5" width="6" height="11" rx="3"/><path d="M1.5 10.5a5 5 0 0 0 10 0M6.5 15.5v5"/><path d="M14.5 6.5h7M14.5 11h7M14.5 15.5h4.5"/>',
-        // Orden de voz (panel de Harper): micrófono con «>» a la izquierda, el símbolo de las órdenes en Spotlight
+        // Orden de voz (panel de Emma): micrófono con «>» a la izquierda, el símbolo de las órdenes en Spotlight
         "mic_orden": '<rect x="13.5" y="2.5" width="6" height="11" rx="3"/><path d="M11.5 10.5a5 5 0 0 0 10 0M16.5 15.5v5"/><path d="M2.5 7l4.5 4-4.5 4"/>',
         "mic_orden_rec": '<rect x="13.5" y="2.5" width="6" height="11" rx="3" fill="currentColor"/><path d="M11.5 10.5a5 5 0 0 0 10 0M16.5 15.5v5"/><path d="M2.5 7l4.5 4-4.5 4"/>',
         "mic_rec": '<rect x="9" y="2" width="6" height="12" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',

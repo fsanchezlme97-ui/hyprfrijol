@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""hf-screen — Harper ve la pantalla, la señala y la usa (Computer Use), siempre con tu permiso (hf-ai lo confirma).
+"""hf-screen — Emma ve la pantalla, la señala y la usa (Computer Use), siempre con tu permiso (hf-ai lo confirma).
 
   hf-screen parse                      analiza la pantalla activa (Screen Parsing): captura (hf-ai peek, que respeta las
                                        apps privadas) + OCR (tesseract) → elementos con texto numerados (Set-of-Mark) y

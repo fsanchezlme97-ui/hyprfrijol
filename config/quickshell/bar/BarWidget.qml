@@ -33,7 +33,7 @@ Loader {
             implicitWidth: 26
             implicitHeight: root.vertical ? 26 : 22
             radius: Theme.pill ? Math.min(width, height) / 2 + 2 : Theme.r(7)
-            // Botón único de Harper: abre su panel (ahí están el dictado y las órdenes de voz). Mientras escucha enseña
+            // Botón único de Emma: abre su panel (ahí están el dictado y las órdenes de voz). Mientras escucha enseña
             // el micrófono, y el clic termina de escuchar.
             readonly property bool rec: Shell.dictPhase === "rec"
             color: rec ? Theme.ter : active ? Theme.p : "transparent"
@@ -48,7 +48,7 @@ Loader {
             Ripple { id: rip; anchors.fill: parent; radius: iaBtn.radius; color: active ? Theme.pcText : Theme.t }
             Icon {
                 anchors.centerIn: parent; size: 15; stroke: 2
-                name: iaBtn.rec ? "mic" : "terminal"
+                name: iaBtn.rec ? "mic" : "ai"
                 color: iaBtn.rec ? Theme.bg : iaBtn.active ? Theme.pText : Theme.t
             }
             MouseArea {

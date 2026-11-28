@@ -5,12 +5,12 @@
 // lo provisional se corrige al terminar cada frase (scripts/hf-dictate: VAD + whisper-server residente). Al dictar,
 // «Distro, …» al principio de una frase es una orden (dictationWake); las órdenes las entiende scripts/hf-voice (reglas
 // y, si no encajan, una IA local que solo elige entre órdenes conocidas) y lo demás va escrito al asistente.
-// No hay conversación por voz: la voz de Harper solo lee (avisos, saludo); pulsar cualquier botón de voz la corta.
+// No hay conversación por voz: la voz de Emma solo lee (avisos, saludo); pulsar cualquier botón de voz la corta.
 // La píldora va donde el OSD y con su estilo (services/OsdStack.qml): pegada al borde y el OSD se aparta.
 // IPC:  qs -p <repo>/config/quickshell ipc call dictado toggle|start|stop|cancel|state|command|hush
 //       … dictado file <clip.wav> [dictado|comando]  (pruebas: el audio sale del archivo, a tiempo real)
 // Ajustes › Dictado (sections/Dictado.qml).
-// Botones: el panel de Harper (sidepanel/AiChat.qml: dictar y orden de voz) y el >_ de la barra mientras escucha.
+// Botones: el panel de Emma (sidepanel/AiChat.qml: dictar y orden de voz) y la magnolia de la barra mientras escucha.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -43,7 +43,7 @@ Scope {
     readonly property string mode: Settings.get("dictationMode", "ptt")
     readonly property bool busy: proc.running
 
-    // Que Harper deje de leer en voz alta
+    // Que Emma deje de leer en voz alta
     function hush(): void { Quickshell.execDetached([Paths.script("hf-ai"), "speak", "--stop"]); }
 
     function start(k, extra, fromKey): void {
@@ -120,7 +120,7 @@ Scope {
     Binding { target: Shell; property: "dictPhase"; value: root.phase }
     Binding { target: Shell; property: "dictKind"; value: root.kind }
     Binding { target: Shell; property: "micLevels"; value: root.levels }
-    // Botones de voz (panel de Harper y barra): «dictado» o «comando». Con Harper leyendo, el
+    // Botones de voz (panel de Emma y barra): «dictado» o «comando». Con Emma leyendo, el
     // clic la corta; micrófono silenciado, el clic solo lo vuelve a activar. Si escucha lo otro, lo termina y empieza esto.
     function voiceDo(what): void {
         const k = what === "comando" ? "comando" : "dictado";
@@ -179,9 +179,9 @@ Scope {
     IpcHandler {
         target: "dictado"
         function toggle(): void { root.toggle("dictado"); }
-        function hush(): void { root.hush(); }                // que Harper deje de leer
+        function hush(): void { root.hush(); }                // que Emma deje de leer
         function command(): void { root.toggle("comando"); }
-        function micro(): void { root.voiceDo("dictado"); }   // como el botón «Dictar» del panel de Harper
+        function micro(): void { root.voiceDo("dictado"); }   // como el botón «Dictar» del panel de Emma
         function start(): void { root.start("dictado", null); }
         function stop(): void { root.stop(); }
         function cancel(): void { root.cancel(); }

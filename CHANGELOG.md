@@ -3,6 +3,21 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.29.0] — 2026-11-28
+
+### Cambios
+- **Harper pasa a llamarse Emma**. A su personalidad se suma lo que evoca su nombre (universal, completa, entera; dulce,
+  elegante y delicada; ternura y sofisticación) y su flor, la magnolia: pureza y delicadeza, elegancia, serenidad,
+  dignidad y nobleza. Ya no te llama «mi señor» ni «mi amo», sino «mi creador» (alguna vez «mi progenitor»).
+- **Icono nuevo**: una magnolia (Magnolia grandiflora) en la barra, el panel, Spotlight y Ajustes, en lugar de la
+  brújula y del `>_`. Mientras escucha, el botón de la barra sigue enseñando el micrófono.
+- El dictado corrige cómo escribe whisper su nombre («Ema», «Enma», «Hemma» → «Emma») y «Emma» vale como palabra de
+  activación. Los esquemas se guardan en `Imágenes/Emma`.
+
+### Migración
+- `hf-migrate` (lo lanza `hf-apply`) cambia `aiName` de «Harper» a «Emma» y, si no la habías tocado, pone la
+  personalidad nueva (copia en `settings.json.antes-de-emma`). La voz queda como estaba.
+
 ## [0.28.0] — 2026-11-28
 
 ### Cambios

@@ -268,7 +268,7 @@ Singleton {
         }
     }
 
-    // Harper lee en voz alta los avisos urgentes (recordatorios del asistente, batería…): aiVoice y aiAnnounceUrgent.
+    // Emma lee en voz alta los avisos urgentes (recordatorios del asistente, batería…): aiVoice y aiAnnounceUrgent.
     // Nunca en «no molestar» ni de apps silenciadas; el mismo aviso repetido en menos de 1 min, una sola vez.
     property string lastSpoken: ""
     property real lastSpokenT: 0

@@ -59,7 +59,7 @@ PanelWindow {
         ignoreUnknownSignals: true
         function onCapturingChanged() { win.chatCapturing = chatLoader.item?.capturing ?? false; }
     }
-    // hf-screen parse (Harper analiza la pantalla para usarla): el panel se aparta un momento y vuelve
+    // hf-screen parse (Emma analiza la pantalla para usarla): el panel se aparta un momento y vuelve
     property bool asideForScreen: false
     property bool reopenAfterAside: false
     readonly property bool pinShown: pinActive && !fsHere && !chatCapturing && !asideForScreen
