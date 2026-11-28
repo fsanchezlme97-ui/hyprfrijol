@@ -24,6 +24,8 @@ RowLayout {
     property var boxes: []
     property bool loaded: false
     property string busy: ""
+    property var openVms: ({})      // tarjetas desplegadas, por nombre (la lista se rehace al cambiar algo)
+    property string vmsRaw: ""
     // "enabled/active", "disabled/inactive"… (systemctl is-enabled / is-active)
     function unitOn(u) { return /^enabled|\/active$/.test(u ?? ""); }
     readonly property bool socketOn: unitOn(st.libvirtd) || unitOn(st.virtqemud)
@@ -36,7 +38,7 @@ RowLayout {
     Timer { interval: 6000; running: Shell.settingsSeen; repeat: true; onRunningChanged: if (running) triggered(); onTriggered: root.refresh() }
     Timer { id: later; interval: 5000; repeat: true; property int n: 0; onTriggered: { root.refresh(); if (++n > 24) { n = 0; stop(); } } }
     Process { id: stProc; running: true; command: [root.cmd, "status"]; stdout: StdioCollector { onStreamFinished: { try { root.st = JSON.parse(text); root.loaded = true; } catch (e) {} } } }
-    Process { id: vmProc; running: true; command: [root.cmd, "list"]; stdout: StdioCollector { onStreamFinished: { root.vms = root.lines(text); root.busy = ""; } } }
+    Process { id: vmProc; running: true; command: [root.cmd, "list"]; stdout: StdioCollector { onStreamFinished: { if (text !== root.vmsRaw) { root.vmsRaw = text; root.vms = root.lines(text); } root.busy = ""; } } }
     Process { id: ctProc; running: true; command: [root.cmd, "containers"]; stdout: StdioCollector { onStreamFinished: root.boxes = root.lines(text) } }
     Process { id: act; onExited: root.refresh() }
     function run(args) { act.command = [cmd].concat(args); act.running = true; }
@@ -163,24 +165,14 @@ RowLayout {
             }
             Repeater {
                 model: root.vms
-                InfoRow {
-                    id: vr
+                VmCard {
                     required property var modelData
-                    required property int index
-                    readonly property bool up: modelData.state === "running" || modelData.state === "en ejecución" || modelData.state === "paused" || modelData.state === "pausado"
-                    separator: index > 0
-                    icon: "monitor"
-                    lit: up
-                    label: modelData.name
-                    sub: (root.busy === modelData.name ? "…" : ({ "running": "encendida", "shut off": "apagada", "paused": "en pausa", "crashed": "se cerró con error", "pmsuspended": "suspendida" })[modelData.state] ?? modelData.state)
-                        + " · " + (modelData.uri === "qemu:///session" ? "de tu usuario" : "del sistema")
-                    Button { visible: vr.up; kind: "link"; text: "Forzar apagado"; onClicked: { root.busy = vr.modelData.name; root.run(["destroy", vr.modelData.name, vr.modelData.uri]); } }
-                    Button { visible: vr.up; text: "Pantalla"; onClicked: Quickshell.execDetached([root.cmd, "console", vr.modelData.name, vr.modelData.uri]) }
-                    Button {
-                        kind: vr.up ? "outline" : "primary"
-                        text: vr.up ? "Apagar" : "Encender"
-                        onClicked: { root.busy = vr.modelData.name; root.run([vr.up ? "shutdown" : "start", vr.modelData.name, vr.modelData.uri]); }
-                    }
+                    vm: modelData
+                    cmd: root.cmd
+                    busy: root.busy === modelData.name
+                    open: !!root.openVms[modelData.name]
+                    onToggled: { const o = Object.assign({}, root.openVms); o[modelData.name] = !o[modelData.name]; root.openVms = o; }
+                    onAct: a => { root.busy = modelData.name; root.run(a); }
                 }
             }
         }

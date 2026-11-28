@@ -379,8 +379,10 @@ instalaciones y lo que necesita `sudo` se abren en una terminal (`Pkg.runInTermi
   socket de libvirt, grupo `libvirt`, Cockpit + cockpit-machines y `cockpit.socket`), «Instalar Cockpit + Máquinas»
   (paquetes por distro, activa los servicios, te añade al grupo y arranca la red `default`), «Abrir Cockpit»
   (`cockpitUrl`), GNOME Boxes, virt-manager, virt-viewer, lista de máquinas (`virsh`, `qemu:///system` solo si
-  estás en el grupo, para no disparar polkit) con encender/apagar/pantalla, y contenedores (Podman, Distrobox,
-  BoxBuddy) con «Nuevo contenedor».
+  estás en el grupo, para no disparar polkit) como tarjetas (`ui/VmCard.qml`): captura de la pantalla cada 12 s,
+  estado, vCPU y RAM, encender/pantalla/pausar/reanudar/reiniciar/apagar/forzar apagado y, en «Más», arranque
+  automático, disco ISO (las `.iso` de Descargas y `~/ISOs`) e instantáneas (crear, volver, borrar); y contenedores
+  (Podman, Distrobox, BoxBuddy) con «Nuevo contenedor».
 
 ```sh
 scripts/hf-vpn list | plugins | mesh | up|down|delete|edit <uuid|nombre> | import [archivo] [tipo]
@@ -389,7 +391,9 @@ scripts/hf-vpn add fortinet|gp <nombre> <servidor> [usuario] --auth password|sam
 scripts/hf-vpn backends fortinet|gp | cmdline <vpn> | trust <vpn> | official | open-official forticlient|globalprotect   (--dry-run)
 scripts/hf-remote list | clients | connect <nombre|rdp://usuario@equipo> | secret set|clear <nombre>
 scripts/hf-remote server status|start|stop|auth [usuario]|noauth
-scripts/hf-vm status | list | start|shutdown|destroy|console <vm> [uri] | install cockpit|virtmanager|boxes|viewer|containers|boxbuddy
+scripts/hf-vm status | list | start|shutdown|destroy|pause|resume|reboot|console <vm> [uri] | shot <vm> <uri>
+scripts/hf-vm autostart <vm> <uri> on|off | snap|snaps|revert|snapdel <vm> <uri> [instantánea] | iso <vm> <uri> <ruta|eject> | isos
+scripts/hf-vm install cockpit|virtmanager|boxes|viewer|containers|boxbuddy
 scripts/hf-vm enable cockpit|libvirt|group|network | containers | box create <nombre> <imagen> | box enter|stop|rm <nombre>
 ```
 

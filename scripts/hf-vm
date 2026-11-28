@@ -4,7 +4,11 @@
 #
 #   hf-vm status                         KVM, paquetes, servicios y grupo libvirt (un objeto JSON)
 #   hf-vm list                           máquinas: {name,uri,state} por línea (qemu:///system y qemu:///session)
-#   hf-vm start|shutdown|destroy|console <nombre> [uri]
+#   hf-vm start|shutdown|destroy|pause|resume|reboot|console <nombre> [uri]
+#   hf-vm autostart <nombre> <uri> on|off            arranque automático con el equipo
+#   hf-vm shot <nombre> <uri>                        captura de la pantalla → imprime la ruta del archivo
+#   hf-vm snap <nombre> <uri> [nombre-de-la-instantánea] · snaps · revert · snapdel <nombre> <uri> [instantánea]
+#   hf-vm iso <nombre> <uri> <ruta.iso|eject>        pone o saca el disco del lector virtual · isos: lista las .iso
 #   hf-vm cockpit                        abre https://localhost:9090
 #   hf-vm install <cockpit|virtmanager|boxes|viewer|containers|boxbuddy>   instala (pide sudo: para una terminal)
 #   hf-vm enable <cockpit|libvirt|group|network>                           activa servicios / grupo (sudo)
@@ -12,6 +16,7 @@
 #   hf-vm box create <nombre> <imagen> · box enter|stop|rm <nombre>
 set -uo pipefail
 have() { command -v "$1" >/dev/null 2>&1; }
+case "${1:-}" in list|snaps|iso) export LC_ALL=C;; esac   # estados y campos de virsh siempre en inglés: la interfaz los traduce
 family() {
   local like=""; [ -r /etc/os-release ] && like="$(. /etc/os-release; echo "${ID:-} ${ID_LIKE:-}" | tr A-Z a-z)"
   case "$like" in *arch*) echo arch;; *debian*|*ubuntu*) echo debian;; *fedora*|*rhel*) echo fedora;; *suse*) echo suse;; *) echo arch;; esac
@@ -58,6 +63,17 @@ status() {
       groupDb:$groupDb,groupNow:$groupNow,family:$family}'
 }
 
+vm_json() {   # vm_json <uri> <nombre> → {name,uri,state,vcpus,memMB,autostart,snaps}
+  local u="$1" n="$2" info snaps
+  info="$(timeout 3 virsh -q -c "$u" dominfo "$n" 2>/dev/null)"
+  snaps="$(timeout 3 virsh -q -c "$u" snapshot-list --name "$n" 2>/dev/null | grep -c .)"
+  jq -cn --arg name "$n" --arg uri "$u" --arg state "$(timeout 3 virsh -q -c "$u" domstate "$n" 2>/dev/null | head -1)" \
+    --arg cpus "$(awk -F: '/^CPU\(s\)/{gsub(/ /,"",$2); print $2}' <<<"$info")" \
+    --arg mem "$(awk -F: '/^Max memory/{gsub(/[^0-9]/,"",$2); print $2}' <<<"$info")" \
+    --arg auto "$(awk -F: '/^Autostart/{gsub(/ /,"",$2); print $2}' <<<"$info")" --arg snaps "${snaps:-0}" \
+    '{name:$name,uri:$uri,state:$state,vcpus:($cpus|tonumber? // 0),memMB:((($mem|tonumber? // 0)/1024)|floor),autostart:($auto=="enable"),snaps:($snaps|tonumber? // 0)}'
+}
+
 list() {
   have virsh || return 0
   local uris=(qemu:///session) u n
@@ -65,10 +81,37 @@ list() {
   in_libvirt_now && uris=(qemu:///system qemu:///session)
   for u in "${uris[@]}"; do
     timeout 5 virsh -q -c "$u" list --all --name 2>/dev/null | while read -r n; do
-      [ -n "$n" ] || continue
-      jq -cn --arg name "$n" --arg uri "$u" --arg state "$(timeout 3 virsh -q -c "$u" domstate "$n" 2>/dev/null | head -1)" '{name:$name,uri:$uri,state:$state}'
+      [ -n "$n" ] && vm_json "$u" "$n"
     done
   done
+}
+
+vmshot() {   # captura de pantalla en ~/.cache/hyprfrijol/vm/<nombre>.img (el formato lo elige virsh: PNG o PPM)
+  local n="${1:?nombre}" u="${2:-qemu:///system}" d="${XDG_CACHE_HOME:-$HOME/.cache}/hyprfrijol/vm" f
+  mkdir -p "$d"; f="$d/${n//[^A-Za-z0-9._-]/_}.img"
+  timeout 6 virsh -q -c "$u" screenshot "$n" "$f" >/dev/null 2>&1 && echo "$f"
+}
+snaps() {   # snaps <vm> <uri> → {name,time,state} por línea
+  local n="${1:?nombre}" u="${2:-qemu:///system}" s info
+  timeout 5 virsh -q -c "$u" snapshot-list --name "$n" 2>/dev/null | while read -r s; do
+    [ -n "$s" ] || continue
+    info="$(timeout 3 virsh -q -c "$u" snapshot-info "$n" "$s" 2>/dev/null)"
+    jq -cn --arg name "$s" --arg time "$(awk -F': +' '/^Creation Time/{print $2}' <<<"$info")" \
+      --arg state "$(awk -F': +' '/^State/{print $2}' <<<"$info")" '{name:$name,time:$time,state:$state}'
+  done
+}
+cdrom() {   # primer lector de discos de la máquina: su "target" (sda, hda…)
+  virsh -q -c "$1" domblklist --details "$2" 2>/dev/null | awk '$2=="cdrom"{print $3; exit}'
+}
+iso() {
+  local n="${1:?nombre}" u="${2:?uri}" f="${3:?ruta o eject}" t
+  t="$(cdrom "$u" "$n")"; [ -n "$t" ] || { echo "La máquina no tiene lector de discos virtual" >&2; return 1; }
+  if [ "$f" = eject ]; then virsh -c "$u" change-media "$n" "$t" --eject --current
+  else [ -r "$f" ] || { echo "No se puede leer $f" >&2; return 1; }; virsh -c "$u" change-media "$n" "$t" "$f" --update --current; fi
+}
+isos() {   # .iso en Descargas y ~/ISOs (hasta 2 niveles), las más nuevas primero
+  local d; d="$(xdg-user-dir DOWNLOAD 2>/dev/null || echo "$HOME/Downloads")"
+  find "$d" "$HOME/ISOs" -maxdepth 2 -type f -iname '*.iso' -printf '%T@ %p\n' 2>/dev/null | sort -rn | cut -d' ' -f2- | head -30
 }
 
 pm_install() {
@@ -142,17 +185,28 @@ box() {
 }
 
 case "${1:-}" in
-  -h|--help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  -h|--help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   status) status;;
   list) list;;
   start) virsh -c "${3:-qemu:///system}" start "${2:?nombre}";;
   shutdown) virsh -c "${3:-qemu:///system}" shutdown "${2:?nombre}";;
   destroy) virsh -c "${3:-qemu:///system}" destroy "${2:?nombre}";;
+  pause) virsh -c "${3:-qemu:///system}" suspend "${2:?nombre}";;
+  resume) virsh -c "${3:-qemu:///system}" resume "${2:?nombre}";;
+  reboot) virsh -c "${3:-qemu:///system}" reboot "${2:?nombre}";;
+  autostart) if [ "${4:-on}" = off ]; then virsh -c "${3:?uri}" autostart --disable "${2:?nombre}"; else virsh -c "${3:?uri}" autostart "${2:?nombre}"; fi >/dev/null;;
+  shot) vmshot "${2:-}" "${3:-}";;
+  snap) virsh -c "${3:?uri}" snapshot-create-as "${2:?nombre}" --name "${4:-$(date +%F_%H-%M)}";;
+  snaps) snaps "${2:-}" "${3:-}";;
+  revert) virsh -c "${3:?uri}" snapshot-revert "${2:?nombre}" "${4:?instantánea}";;
+  snapdel) virsh -c "${3:?uri}" snapshot-delete "${2:?nombre}" "${4:?instantánea}";;
+  iso) iso "${2:-}" "${3:-}" "${4:-}";;
+  isos) isos;;
   console) console "${2:-}" "${3:-}";;
   cockpit) xdg-open https://localhost:9090 >/dev/null 2>&1 &;;
   install) install "${2:-}";;
   enable) enable "${2:-}";;
   containers) containers;;
   box) shift; box "$@";;
-  *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 1;;
+  *) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 1;;
 esac

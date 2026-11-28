@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.19.0] — 2026-11-27
+
+### Novedades
+- **Máquinas virtuales renovadas:** cada máquina es ahora una tarjeta con la captura de su pantalla (se actualiza cada
+  12 s y al pulsarla se abre la pantalla), estado, vCPU y RAM. Se puede encender, pausar, reanudar, reiniciar, apagar y
+  forzar el apagado (con confirmación). En «Más»: arranque automático con el equipo, poner o expulsar una ISO en el
+  lector virtual (elige entre las `.iso` de Descargas y `~/ISOs`) e instantáneas (crear, volver a una y borrar, las
+  dos últimas con confirmación). `hf-vm` gana `pause`, `resume`, `reboot`, `autostart`, `shot`, `snap`, `snaps`,
+  `revert`, `snapdel`, `iso` e `isos`.
+
+### Cambios
+- `hf-vm list` ahora trae vCPU, memoria, arranque automático y número de instantáneas, y los estados salen siempre en
+  inglés para que la interfaz los traduzca igual con cualquier idioma del sistema.
+
 ## [0.18.1] — 2026-11-26
 
 ### Mantenimiento

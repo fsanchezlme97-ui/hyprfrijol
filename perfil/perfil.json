@@ -139,11 +139,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.17.0",
+ "hyprfrijol": "v0.18.1",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-26 14:25",
+ "saved": "2026-11-27 19:22",
  "services": [
   "ufw",
   "cups.socket",
@@ -184,7 +184,8 @@
    "titulo",
    "bongo",
    "musica",
-   "clima"
+   "clima",
+   "atajos"
   ],
   "barOrder": {
    "derecha": [
@@ -306,10 +307,10 @@
   "numlock": true,
   "osdOffset": 4,
   "osdPos": "arriba",
-  "palette": "oxocarbon",
+  "palette": "cyberdream",
   "pip": true,
   "pipAuto": false,
-  "pipCorner": "libre",
+  "pipCorner": "sup-der",
   "pipFree": [
    0.8375,
    0.3133
@@ -364,7 +365,7 @@
   ],
   "widgetsOnDesktop": false,
   "winOpacity": 0.88,
-  "windowMode": "mosaico",
+  "windowMode": "desplazamiento",
   "workspaceAnim": "auto",
   "wsBarNames": false,
   "wsNumerals": "japonesa"

@@ -541,6 +541,7 @@
   {"f": "Usuarios", "l": "Nombre completo", "t": "row", "g": "Usuarios del equipo"},
   {"f": "Usuarios", "l": "Usuario", "t": "row", "g": "Usuarios del equipo"},
   {"f": "Usuarios", "l": "Administrador", "t": "row", "s": "puede instalar programas y cambiar el sistema (grupo wheel)", "g": "Usuarios del equipo"},
+  {"f": "Virtualizacion", "l": "Arrancar con el equipo", "t": "row", "s": "se enciende sola al iniciar el servicio de máquinas", "g": "Tus máquinas"},
   {"f": "Virtualizacion", "l": "Tus máquinas y contenedores", "t": "card"},
   {"f": "Virtualizacion", "l": "Cockpit y libvirt", "t": "card"},
   {"f": "Virtualizacion", "l": "Tus máquinas", "t": "card"},
