@@ -306,6 +306,7 @@ Overlay {
                         visible: active
                         source: "AudioPanel.qml"
                     }
+                    MusicRow {}
 
                     Segmented {
                         Layout.fillWidth: true

@@ -60,7 +60,7 @@ Capturas reales a 1920×1080 de una sesión de HyprFrijol 0.9.64 con la configur
 | ![Escritorio con la barra en archipiélago](docs/capturas/escritorio.webp) | ![Terminal kitty con fastfetch y btop](docs/capturas/terminal.webp) |
 | **Escritorio** · barra arriba en islas: espacios, onda de audio, tiempo, recursos y reloj | **Terminal** · kitty, GTK, Qt/KDE y btop siguen la paleta activa |
 | ![Centro de control](docs/capturas/centro-de-control.webp) | ![Spotlight con resultados](docs/capturas/spotlight.webp) |
-| **Centro de control** · ajustes rápidos, avisos, agenda y relojes del mundo en un solo panel | **Spotlight** · apps, ajustes, acciones, archivos, calculadora, IA y web desde un buscador |
+| **Centro de control** · ajustes rápidos, música, avisos, agenda y relojes del mundo en un solo panel | **Spotlight** · apps, ajustes, acciones, archivos, calculadora, IA y web desde un buscador |
 | ![Asistente de IA en el panel lateral](docs/capturas/asistente-ia.webp) | ![Vista general de los espacios](docs/capturas/vista-general.webp) |
 | **Asistente de IA** · panel lateral con dictado y sugerencias; cambia el escritorio con tu aprobación | **Vista general** · espacios de trabajo con sus ventanas y buscador |
 | ![Selector de fondos](docs/capturas/selector-de-fondos.webp) | ![Pantalla de bloqueo](docs/capturas/bloqueo.webp) |

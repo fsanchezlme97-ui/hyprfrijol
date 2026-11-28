@@ -11,8 +11,9 @@ CHANGELOG.
 
 ### Renovación de la interfaz, por etapas
 
-Referencia: botón «mantener para borrar» (hecho en 0.20.0), pastilla «Escuchando…» (hecha en 0.21.0), widgets de agenda (hechos en 0.22.0), isla dinámica y
-centro de control. Orden: primero lo independiente y de poco riesgo, al final lo grande que depende de la medida.
+Hecho: botón «mantener para borrar» (0.20.0), pastilla «Escuchando…» (0.21.0), widgets de agenda (0.22.0) y música en
+el centro de control (0.23.0; ya tenía fichas con estado, deslizadores y avisos por app). Queda la isla dinámica y lo
+que depende de ella, que es lo grande: va al final y se mide contra el listón.
 Cada etapa sale como versión propia y no empieza la siguiente hasta que la anterior esté aplicada.
 
 Reglas de calidad en todas: un interruptor en Ajustes (lo nuevo y vistoso, apagado de fábrica hasta aprobarlo); solo
@@ -21,18 +22,16 @@ con teclado; `dev/perf.sh` antes y después; captura antes/después en la sesió
 (`AJUSTES.md`, `BINDS.md` si hay atajos). Listón de reposo medido el 2026-11-27 (0.19.3, sesión anidada): 322 MB de
 memoria, 2,85 % de CPU del hilo principal y 0,75 % de render. No pasar de +30 MB ni de +1 % en reposo.
 
-- [ ] **Etapa 1 · Centro de control y avisos**: fichas con estado en segunda línea, deslizadores anchos de brillo y
-      volumen, fila de música; avisos agrupados por aplicación. Se rehace el aspecto, no el contenido.
-- [ ] **Etapa 2 · Isla dinámica**, en tres tramos: (a) estructura: pastilla arriba al centro con animación de forma
+- [ ] **Etapa 1 · Isla dinámica**, en tres tramos: (a) estructura: pastilla arriba al centro con animación de forma
       (como `Morph`), se expande al pasar el puntero, región de entrada mínima y una sola pantalla; (b) contenido por
       prioridad: dictado, enfoque/Pomodoro, música, descargas y procesos, y avisos entrantes; (c) medir contra el
       listón y decidir si queda «siempre visible» o «solo con actividad». Sin muesca física: es una pastilla flotante.
-- [ ] **Etapa 3 · Modo de barra «Isla integrada»** (`barMode`, junto a `archipielago`): la barra se reduce a pastillas
+- [ ] **Etapa 2 · Modo de barra «Isla integrada»** (`barMode`, junto a `archipielago`): la barra se reduce a pastillas
       pequeñas a los lados (espacios y título a la izquierda; estado, reloj y ajustes a la derecha) y el centro queda
-      para la isla de la Etapa 2, que pasa a ser parte de la barra: reserva su sitio, se agranda sin tapar a las
+      para la isla de la Etapa 1, que pasa a ser parte de la barra: reserva su sitio, se agranda sin tapar a las
       pastillas y se encoge a un punto cuando no hay actividad. Debe funcionar con la barra arriba (lo normal) y, si
       se puede, abajo; con barra a los lados el modo no aplica y se avisa en Ajustes. Reutiliza `BarWidgets` y `barOrder`.
-- [ ] **Etapa 4 · Pulido final**: paletas y temas, claro/oscuro, accesibilidad, capturas del README, comparación final
+- [ ] **Etapa 3 · Pulido final**: paletas y temas, claro/oscuro, accesibilidad, capturas del README, comparación final
       de rendimiento con el listón y decidir qué se enciende de fábrica.
 
 ## Descartado (2026-11-13)
