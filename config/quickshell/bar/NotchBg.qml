@@ -9,7 +9,7 @@ import ".."
 
 Item {
     id: root
-    property real slope: height * 2.4     // ancho de cada curva lateral
+    property real slope: height * 1.8     // ancho de cada curva lateral
     property bool flip: false
     property real bellLevel: 0
 
