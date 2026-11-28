@@ -16,8 +16,11 @@
 // Isla: la barra flota y mide lo que su contenido; el resto de la franja deja pasar el ratón.
 // Archipiélago: cada grupo de módulos en su propia píldora flotante (BarPill), con el escritorio visible entre
 // ellas; solo las píldoras reciben el ratón (máscara con content.item.pills).
-// Isla integrada (barMode "integrada"): como el archipiélago pero con el centro libre para la isla dinámica
-// (modules/island), que se pone ahí y se despliega hacia el escritorio. Sin onda de audio en ese modo.
+// Muesca (barMode "muesca", arriba o abajo): una sola pieza centrada que sale del borde (NotchBg), con la isla dinámica
+// en el centro (services/Isla); al desplegarse, de la muesca cuelga un panel con sus filas que es parte de la misma
+// figura. Para eso la ventana es más alta que la barra (la reserva sigue siendo el grosor y la máscara solo cubre la
+// figura). Sin onda de audio en ese modo.
+// Marco (barMode "marco"): fija, con las esquinas de la pantalla redondeadas hacia dentro (ScreenCorners).
 // Super + J (Shell.barHidden) la deja escondida: vuelve al llevar el cursor al borde.
 import QtQuick
 import Quickshell
@@ -26,6 +29,7 @@ import Quickshell.Hyprland
 import ".."
 import "../components"
 import "../services"
+import "../modules/island"
 
 PanelWindow {
     id: bar
@@ -33,7 +37,9 @@ PanelWindow {
     readonly property bool floating: Settings.barFloating
     readonly property bool island: Settings.barIsland
     readonly property bool archi: Settings.barArchipelago
-    readonly property bool slot: Settings.barIslandSlot(screen)   // hueco central para la isla dinámica
+    readonly property bool notch: Settings.barNotch && Shell.barModeFor(screen) !== "sencilla"   // la sencilla va fija
+    readonly property bool slot: Settings.barIslandSlot(screen)   // la isla dinámica va dentro de la muesca
+    readonly property real extra: slot ? Isla.expandedMax + 8 : 0  // alto de más para el panel que cuelga
     readonly property bool vertical: Settings.barVertical
     readonly property int off: Settings.barOffset
     readonly property int thickness: Settings.barThickness
@@ -98,7 +104,7 @@ PanelWindow {
         left: pos === "izquierda" && edgeMode ? 0 : off
         right: pos === "derecha" && edgeMode ? 0 : off
     }
-    implicitHeight: vertical ? 0 : thickness + inner
+    implicitHeight: vertical ? 0 : thickness + inner + extra
     implicitWidth: vertical ? thickness + inner : 0
     exclusiveZone: autoHide ? 0 : smart ? (smartReserve ? thickness + off : 0) : thickness
 
@@ -106,6 +112,7 @@ PanelWindow {
     // (archipiélago: solo las píldoras)
     mask: Region {
         item: hit
+        Region { item: panel }
         Region { readonly property var r: bar.pillRect(0); x: r.x; y: r.y; width: r.w; height: r.h }
         Region { readonly property var r: bar.pillRect(1); x: r.x; y: r.y; width: r.w; height: r.h }
         Region { readonly property var r: bar.pillRect(2); x: r.x; y: r.y; width: r.w; height: r.h }
@@ -142,16 +149,16 @@ PanelWindow {
             // Largo natural del contenido (isla) ya escalado
             readonly property real natural: (content.item?.naturalLength ?? 400) * bar.k
             readonly property real full: bar.vertical ? parent.height : parent.width
-            readonly property real length: bar.island ? Math.min(natural, full) : full
+            readonly property real length: bar.island || bar.notch ? Math.min(natural, full) : full
             // Hueco libre a lo largo del borde, repartido según la alineación (isla)
             // (con el largo animado: el borde alineado se queda quieto mientras crece o encoge)
             readonly property real shown: bar.vertical ? height : width
-            readonly property real along: Settings.barAlign === "inicio" ? 0 : Settings.barAlign === "fin" ? full - shown : (full - shown) / 2
+            readonly property real along: bar.notch ? (full - shown) / 2 : Settings.barAlign === "inicio" ? 0 : Settings.barAlign === "fin" ? full - shown : (full - shown) / 2
             x: bar.vertical ? (bar.pos === "izquierda" ? bar.inner : 0) : along
-            y: bar.vertical ? along : (bar.pos === "arriba" ? bar.inner : 0)
+            y: bar.vertical ? along : (bar.pos === "arriba" ? bar.inner : parent.height - bar.thickness - bar.inner)
             width: bar.vertical ? bar.thickness : length
             height: bar.vertical ? length : bar.thickness
-            Behavior on width { enabled: bar.island && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
+            Behavior on width { enabled: (bar.island || bar.notch) && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
             Behavior on height { enabled: bar.island && !Theme.still; NumberAnimation { duration: Theme.dur; easing.type: Easing.OutCubic } }
             // Escondida: se desliza hacia el borde
             readonly property real hiddenShift: bar.thickness + bar.off + 2
@@ -169,9 +176,33 @@ PanelWindow {
                 shadow: bar.floating
                 drawBorder: bar.floating
                 // Archipiélago: el fondo lo ponen las píldoras de cada grupo (BarPill)
-                visible: !bar.archi
+                visible: !bar.archi && !bar.notch
                 bellLevel: bar.bellLevel
                 feather: 1
+            }
+
+            NotchBg {
+                visible: bar.notch
+                anchors.fill: parent
+                radius: Math.min(Theme.r(16), bar.thickness / 2)
+                flip: bar.pos === "abajo"
+                panelW: panel.width
+                panelH: panel.height
+                bellLevel: bar.bellLevel
+            }
+            // Isla desplegada: cuelga del centro de la muesca (hacia abajo; hacia arriba con la barra abajo)
+            Item {
+                id: panel
+                readonly property bool open: bar.slot && Isla.expanded
+                x: (parent.width - width) / 2
+                y: bar.pos === "abajo" ? -height : parent.height
+                width: open ? Math.min(400, parent.width - 56) : 120
+                height: open ? Isla.expandedH : 0
+                clip: true
+                Behavior on width { enabled: !Theme.still; NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
+                Behavior on height { enabled: !Theme.still; NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
+                HoverHandler { enabled: bar.slot; onHoveredChanged: Isla.hovered(hovered) }
+                IslaRows { width: 400 - 24; anchors.fill: undefined; x: (parent.width - width) / 2; y: 12; height: Isla.expandedH - 24 }
             }
 
             // Alerta visual (visualBell): dos destellos del color primario sobre el fondo
@@ -197,7 +228,7 @@ PanelWindow {
             }
         }
     }
-    Component { id: hComp; BarH { barWindow: bar; compact: bar.island; islands: bar.archi; slot: bar.slot } }
+    Component { id: hComp; BarH { barWindow: bar; compact: bar.island; islands: bar.archi; notch: bar.notch; slot: bar.slot } }
     Component { id: vComp; BarV { barWindow: bar; compact: bar.island; islands: bar.archi } }
 
     Connections {

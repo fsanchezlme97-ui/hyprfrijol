@@ -3,6 +3,26 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.26.0] — 2026-11-28
+
+### Novedades
+- **Dos formas de barra nuevas** (Ajustes › Barra › Forma) que sustituyen a la «Isla integrada» de 0.25.0:
+  - **Muesca**: la barra entera es una sola pieza centrada que sale del borde de la pantalla, pegada a él, con las
+    esquinas de fuera redondeadas y dos «orejas» cóncavas que la funden con el borde. Cada grupo va en su extremo y la
+    isla dinámica en el centro, en la línea central de la pantalla: un punto sin nada en marcha, una línea con la
+    actividad, y al pasar el puntero o pulsarla cuelga de la muesca un panel con sus filas que es parte de la misma
+    figura (hacia arriba si la barra está abajo). Arriba o abajo; de lado queda pegada al borde a la medida de su
+    contenido.
+  - **Marco**: la barra va fija al borde y las cuatro esquinas de la zona de las ventanas se redondean hacia dentro con
+    su color, así la barra abraza el contenido. Vale en los cuatro lados.
+
+### Cambios
+- `barMode` `integrada` sigue valiendo y se comporta como `muesca`.
+- La isla suelta y la de la muesca comparten estado e IPC en `services/Isla.qml` (con `IslaLine` e `IslaRows`).
+
+### Mantenimiento
+- Fuera `OsdStack.barLeft` y `barRight` (la isla ya no se coloca en el hueco entre píldoras).
+
 ## [0.25.0] — 2026-11-28
 
 ### Novedades

@@ -10,20 +10,27 @@ import Quickshell
 import ".."
 import "../components"
 import "../services"
+import "../modules/island"
 
 Item {
     id: root
     required property var barWindow
     property bool compact: false          // isla central: los tres grupos seguidos, sin huecos
     property bool islands: false          // archipiélago: cada grupo en su propia píldora (BarPill)
-    property bool slot: false             // isla integrada: el centro queda libre para la isla dinámica (sin onda)
+    property bool notch: false            // muesca: los grupos a cada lado del centro de la pantalla, sin onda
+    property bool slot: false             // muesca con la isla dinámica en el centro
+    // Hueco del centro en la muesca: la isla plegada (o un respiro entre los grupos si no está)
+    readonly property real slotW: !notch ? 0 : slot ? islaLine.implicitWidth + 28 : 24
+    readonly property real notchPad: 18   // margen de los extremos (deja sitio a las esquinas redondeadas)
     // Pantalla secundaria: sus espacios, el título de su ventana y, a la derecha, lo que gastan sus programas (sin
     // aplicaciones, onda, chips, bandeja ni estado)
     readonly property bool secondary: Shell.barModeFor(barWindow.screen) === "sencilla"
     // Píldoras del archipiélago (Bar.qml las usa de máscara para el ratón)
     readonly property var pills: [pillL, pillC, pillR, pillS]
     readonly property real gapC: 14
-    readonly property real naturalLength: left.implicitWidth + (wave.active ? wave.width + gapC * 2 : gapC) + (secondary ? usage.width : right.implicitWidth) + 6
+    // Muesca: centrada en la pantalla con la isla en medio, así que mide dos veces el lado largo (cada grupo en su extremo)
+    readonly property real naturalLength: notch ? 2 * (Math.max(left.implicitWidth, right.implicitWidth) + 12 + notchPad) + slotW
+        : left.implicitWidth + (wave.active ? wave.width + gapC * 2 : gapC) + (secondary ? usage.width : right.implicitWidth) + 6
     // Título de la ventana activa: tope fijo (isla) o 30 % de la barra (máx. 300 px), y nunca hasta la onda
     // central (ni hasta el grupo derecho sin onda). Se calcula sin depender del propio título (sin bucles).
     // (los widgets de la izquierda van tras el título y no encogen: cuentan como parte del arranque)
@@ -34,16 +41,31 @@ Item {
     // Archipiélago: la onda va en su píldora entre la izquierda y los chips; si no cabe (pantalla estrecha o barra
     // grande), se oculta en lugar de montarse sobre la píldora de los chips
     readonly property bool waveFits: compact || (islands ? titleStart + 12 + wave.width <= right.x - 26 : waveX >= titleStart - 8)
-    readonly property real slotMin: 160      // hueco que se deja a la isla plegada (la mínima, con su margen)
-    readonly property real centerStart: slot ? right.x - slotMin
-        : !wave.active || !waveFits ? (secondary ? usage.x - 12 : right.x)
+    readonly property real centerStart: !wave.active || !waveFits ? (secondary ? usage.x - 12 : right.x)
         : islands ? Math.min((width - wave.width) / 2, right.x - 26 - wave.width) - 22 - 10
         : waveX
-    readonly property real titleMax: compact ? 240 : Math.max(0, Math.min(300, width * 0.3, centerStart - gapC - titleStart))
+    readonly property real titleMax: compact || notch ? 240 : Math.max(0, Math.min(300, width * 0.3, centerStart - gapC - titleStart))
 
-    // Con la isla en la barra: el hueco libre entre las píldoras de los lados (px de pantalla), para que no las pise al crecer
-    Binding { target: OsdStack; property: "barLeft"; when: root.slot; value: pillL.width * root.barWindow.k + Settings.barOffset }
-    Binding { target: OsdStack; property: "barRight"; when: root.slot; value: (right.x - 4) * root.barWindow.k + Settings.barOffset }
+    // Isla dinámica plegada en el centro de la muesca (services/Isla; desplegada, su panel lo pone Bar.qml)
+    Item {
+        visible: root.slot
+        x: (root.width - width) / 2
+        width: root.slotW; height: parent.height
+        Behavior on width { enabled: !Theme.still; NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
+        HoverHandler { onHoveredChanged: Isla.hovered(hovered) }
+        TapHandler { onTapped: Isla.pinned = !Isla.pinned }
+        IslaLine {
+            id: islaLine
+            anchors.centerIn: parent
+            opacity: Isla.expanded ? 0 : 1
+            Behavior on opacity { NumberAnimation { duration: Theme.durShort } }
+        }
+        Rectangle {
+            visible: Isla.keys.length > 0 && Isla.top.progress >= 0 && !Isla.expanded
+            anchors { left: parent.left; bottom: parent.bottom; leftMargin: 16; bottomMargin: 4 }
+            width: (parent.width - 28) * Isla.top.progress; height: 2; radius: 1; color: Theme.p
+        }
+    }
     BarPill { id: pillL; bar: root.barWindow; visible: root.islands; x: 0; height: parent.height; width: left.x + left.implicitWidth + (title.visible ? 10 : 3) }
     BarPill { id: pillC; bar: root.barWindow; visible: root.islands && wave.active && root.waveFits; x: wave.x - 10; height: parent.height; width: wave.width + 20 }
     // Píldora de los chips (si hay alguno) y la del grupo de estado
@@ -57,7 +79,7 @@ Item {
 
     RowLayout {
         id: left
-        x: 3
+        x: root.notch ? root.notchPad : 3
         anchors.verticalCenter: parent.verticalCenter
         spacing: 8
         AppsBtn { id: apps; visible: !root.secondary }   // Aplicaciones (Spotlight): logo de la distribución
@@ -77,7 +99,7 @@ Item {
 
     Loader {
         id: wave
-        active: Settings.barHas("musica") && !root.secondary && !root.slot
+        active: Settings.barHas("musica") && !root.secondary && !root.notch
         visible: root.waveFits
         anchors.verticalCenter: parent.verticalCenter
         // Archipiélago: centrada, pero sin pisar las píldoras de los lados (12 px de hueco como mínimo)
@@ -126,7 +148,7 @@ Item {
     RowLayout {
         id: right
         visible: !root.secondary
-        x: root.compact ? (wave.active ? wave.x + wave.width + root.gapC : left.x + left.implicitWidth + root.gapC) : parent.width - implicitWidth - 3
+        x: root.notch ? root.width - root.notchPad - implicitWidth : root.compact ? (wave.active ? wave.x + wave.width + root.gapC : left.x + left.implicitWidth + root.gapC) : parent.width - implicitWidth - 3
         anchors.verticalCenter: parent.verticalCenter
         spacing: 2
         Repeater { model: root.zoneR; delegate: zoneItem }

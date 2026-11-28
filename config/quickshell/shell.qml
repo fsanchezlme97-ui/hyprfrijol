@@ -19,6 +19,7 @@ ShellRoot {
             required property var modelData
             Wallpaper { id: wall; screen: perScreen.modelData }
             Bar { screen: perScreen.modelData }
+            ScreenCorners { screen: perScreen.modelData }   // forma «Marco» de la barra
             // Pantalla de carga al iniciar sesión (logo + barrita) hasta que el fondo se ve
             Splash { screen: perScreen.modelData; ready: wall.ready }
         }

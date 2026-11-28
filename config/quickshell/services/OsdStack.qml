@@ -23,9 +23,6 @@ Singleton {
     property real dictation: 0
     // alto de la isla dinámica plegada mientras se ve (0 = oculta; modules/island): lo de arriba se aparta de ella
     property real island: 0
-    // hueco libre de la barra entre sus píldoras (x de pantalla, con la isla integrada; lo publica bar/BarH)
-    property real barLeft: 0
-    property real barRight: 0
     readonly property real islandPush: atT && island > 0 ? island + 8 : 0
     readonly property real gap: 8
     readonly property real push: dictation > 0 ? dictation + gap : 0

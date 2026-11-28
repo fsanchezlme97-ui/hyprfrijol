@@ -17,7 +17,7 @@ ColumnLayout {
     readonly property string mode: Settings.barMode
     readonly property string align: Settings.barAlign
     readonly property bool vertical: root.pos === "izquierda" || root.pos === "derecha"
-    readonly property bool archi: Settings.barArchipelago          // archipiélago o isla integrada: una píldora por grupo
+    readonly property bool archi: Settings.barArchipelago          // archipiélago: una píldora por grupo
 
     BarTabs { current: "barra" }   // Barra | Widgets (una sola entrada en la lista)
 
@@ -44,7 +44,7 @@ ColumnLayout {
                         color: Theme.s4
                         border.width: card.on ? 3 : 1
                         border.color: card.on ? Theme.p : Theme.ov
-                        readonly property real m: root.mode === "fija" ? 0 : 6
+                        readonly property real m: ["fija", "muesca", "marco"].includes(root.mode) ? 0 : 6
                         Rectangle {   // ventana de ejemplo
                             x: card.k === "izquierda" ? 26 : 12
                             y: card.k === "arriba" ? 26 : 12
@@ -58,9 +58,10 @@ ColumnLayout {
                             color: card.on ? Theme.p : Theme.o
                             radius: root.mode === "fija" ? 0 : 3
                             // isla: lo que su contenido (aquí un 40 %); alineada como barAlign
-                            readonly property real part: root.mode === "isla" ? 0.4 : 1
+                            // isla: un 40 %; muesca: un 60 % centrado
+                            readonly property real part: root.mode === "isla" ? 0.4 : root.mode === "muesca" ? 0.6 : 1
                             readonly property real span: (vert ? parent.height : parent.width) - inset * 2
-                            readonly property real along: inset + (root.align === "inicio" ? 0 : root.align === "fin" ? 1 : 0.5) * span * (1 - part)
+                            readonly property real along: inset + (root.align === "inicio" && root.mode !== "muesca" ? 0 : root.align === "fin" && root.mode !== "muesca" ? 1 : 0.5) * span * (1 - part)
                             width: vert ? 9 : span * part
                             height: vert ? span * part : 9
                             x: card.k === "izquierda" ? inset : card.k === "derecha" ? parent.width - width - inset : along
@@ -94,17 +95,19 @@ ColumnLayout {
                 Layout.preferredWidth: 1
                 label: "Forma"; labelWidth: 60
                 Seg {
-                    model: [["fija", "Fija al borde"], ["flotante", "Flotante"], ["isla", "Isla"], ["archipielago", "Archipiélago"], ["integrada", "Isla integrada"]]
+                    model: [["fija", "Fija al borde"], ["flotante", "Flotante"], ["isla", "Isla"], ["archipielago", "Archipiélago"], ["muesca", "Muesca"], ["marco", "Marco"]]
                     current: root.mode
                     onPicked: k => Confirm.change("Forma de la barra", { barMode: k })
                 }
             }
         }
         Txt {
-            visible: root.mode === "integrada"
+            visible: root.mode === "muesca" || root.mode === "marco"
             Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5
-            text: Settings.barIntegrated ? "La isla dinámica ocupa el centro de la barra y se despliega hacia el escritorio; la onda de audio no se muestra. Qué enseña se elige en «Isla dinámica»."
-                : "La isla solo cabe dentro de la barra si está arriba o abajo y siempre visible; con esta configuración flota junto a ella."
+            text: root.mode === "marco" ? "La barra va pegada al borde y las esquinas de la pantalla se redondean hacia dentro, como un marco alrededor de las ventanas."
+                : Settings.barIntegrated ? "Una sola pieza centrada que sale del borde, con la isla dinámica en el centro: al pasar el puntero crece hacia el escritorio. La onda de audio no se muestra; qué enseña la isla se elige en «Isla dinámica»."
+                : root.vertical ? "La muesca solo va arriba o abajo; de lado la barra queda pegada al borde, a la medida de su contenido."
+                : "Con la barra que se esconde sola, la isla dinámica no va dentro de la muesca: flota junto a ella."
         }
         // Isla: dónde se coloca a lo largo del borde
         LabeledRow {
@@ -285,8 +288,8 @@ ColumnLayout {
         SwRow {
             separator: false
             label: "Isla dinámica"
-            sub: root.mode === "integrada" ? "siempre activa con la forma «Isla integrada» de la barra" : "una pastilla arriba al centro con lo que está pasando; se despliega al pasar el puntero o al pulsarla"
-            enabled: root.mode !== "integrada"
+            sub: Settings.barIntegrated ? "siempre activa con la forma «Muesca» de la barra" : "una pastilla arriba al centro con lo que está pasando; se despliega al pasar el puntero o al pulsarla"
+            enabled: !Settings.barIntegrated
             key: "island"; def: false
             onToggled: v => Settings.set("island", v)
         }

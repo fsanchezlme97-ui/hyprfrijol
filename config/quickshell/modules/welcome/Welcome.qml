@@ -434,7 +434,7 @@ Scope {
                     ["Idioma", root.localeLabel(root.lang)],
                     ["Superficies", Theme.glassy ? "Transparentes" : "Sólidas"],
                     ["Color", Theme.paletteName.replace(" · claro", "")],
-                    ["Barra", Settings.get("barPos", "abajo") === "izquierda" ? "Lateral" : (Settings.get("barMode", "fija") === "fija" ? "Fija " : "Flotante ") + Settings.get("barPos", "abajo")],
+                    ["Barra", Settings.get("barPos", "abajo") === "izquierda" ? "Lateral" : (({ fija: "Fija ", muesca: "Muesca ", marco: "Marco " })[Settings.barMode] ?? "Flotante ") + Settings.get("barPos", "abajo")],
                     ["Archivos", ({ nautilus: "Nautilus", dolphin: "Dolphin", yazi: "Yazi" })[root.fm]],
                     ["Aplicaciones", root.packDefs.filter(p => root.packs[p[0]]).map(p => p[1]).join(", ") || "Ninguna"]
                 ]

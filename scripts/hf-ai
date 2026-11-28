@@ -127,7 +127,7 @@ SET_KEYS = {
     "themeMode": ("Tema", {"oscuro": "Oscuro", "claro": "Claro", "auto": "Automático (por horas o según el sol)"}),
     "barPos": ("Barra", {"abajo": "abajo", "arriba": "arriba", "izquierda": "lateral izquierda"}),
     "barMode": ("Barra", {"fija": "fija", "flotante": "flotante", "media": "media", "isla": "isla",
-                          "archipielago": "archipiélago", "integrada": "isla integrada"}),
+                          "archipielago": "archipiélago", "muesca": "muesca", "marco": "marco"}),
     "animado": ("Animaciones", {True: "activadas", False: "desactivadas"}),
     "animPreset": ("Movimiento", {"fluido": "fluido", "equilibrado": "equilibrado", "rapido": "rápido", "cinematico": "cinemático",
                                   "minimalista": "minimalista", "minimo": "mínimo (solo fundidos)", "ninguno": "sin animaciones"}),
@@ -269,7 +269,7 @@ SCHEMA_DOC = """Acciones disponibles (lista JSON de objetos, se aplican en orden
   colorMode (auto|elegir|mono), palette (@PALETTES@;
   implica colorMode "elegir"), themeMode (oscuro|claro|auto), animPreset (fluido|equilibrado|cinematico|rapido|minimalista|minimo|ninguno),
   shadows (ninguna|suaves|marcadas), activeBorder (sutil|color|brillo|ninguno), barPos (abajo|arriba|izquierda),
-  barMode (fija|flotante|media|isla|archipielago|integrada), barAlign (inicio|centro|fin: media e isla), animado, reduceTransparency, reduceMotion, nightLight, clock24 (bool), gapsIn (0-30),
+  barMode (fija|flotante|media|isla|archipielago|muesca|marco), barAlign (inicio|centro|fin: media e isla), animado, reduceTransparency, reduceMotion, nightLight, clock24 (bool), gapsIn (0-30),
   gapsOut (0-40), pipSize (minimo|pequeno|mediano|grande), pipCorner (sup-der|sup-izq|inf-der|inf-izq),
   deskSort (tipo|fecha|nombre), notifyPosition (auto|sup-der|sup-centro|sup-izq|inf-der|inf-centro|inf-izq).
   Cualquier otra clave de settings.json vale con su mismo tipo: búscala antes con la consulta "settings".
