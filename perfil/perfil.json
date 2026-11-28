@@ -140,11 +140,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.28.0",
+ "hyprfrijol": "v0.29.0",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-28 11:26",
+ "saved": "2026-11-28 11:44",
  "services": [
   "ufw",
   "cups.socket",
@@ -172,7 +172,7 @@
   "barAdaptive": true,
   "barAdaptiveStyle": "vidrio",
   "barAlign": "centro",
-  "barBehavior": "retraer",
+  "barBehavior": "siempre",
   "barHeight": 34,
   "barLayout": "archipielago",
   "barMode": "flotante",
@@ -312,7 +312,7 @@
   "numlock": true,
   "osdOffset": 4,
   "osdPos": "arriba",
-  "palette": "cyberdream",
+  "palette": "oxocarbon",
   "pip": true,
   "pipAuto": false,
   "pipCorner": "sup-der",

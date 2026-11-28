@@ -268,7 +268,7 @@ Son los mismos que en illogical-impulse (misma tecla, misma función), más los 
 | Ctrl + Super + Shift + D | Claro / oscuro |
 | Super + - / Super + = (o ¡) | Lupa |
 | Super + Shift + B · N · P · M | Pista anterior · siguiente · reproducir/pausar · silenciar |
-| Super + Alt + M · Super + Alt + V | Dictado (como «Dictar» en el panel de Emma, que se abre con el botón de la magnolia de la barra) · orden de voz («abre Firefox», «lee el archivo notas.md»); si Emma está leyendo en voz alta, lo corta |
+| Super + Alt + M · Super + Alt + V | Dictado (como «Dictar» en el panel de Emma, que se abre con el botón de la flor de la barra) · orden de voz («abre Firefox», «lee el archivo notas.md»); si Emma está leyendo en voz alta, lo corta |
 | Super + Z | Modo sin distracciones |
 | Super + L · Super + Shift + L | Bloquear · suspender |
 | Super + Esc · Ctrl + Alt + Supr | Menú de energía |

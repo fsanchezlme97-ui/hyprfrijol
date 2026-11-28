@@ -3,6 +3,12 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.29.1] — 2026-11-28
+
+### Cambios
+- **Icono de Emma**: una flor de sakura de cinco pétalos, con la muesca en la punta y el centro relleno, en lugar de la
+  magnolia (a tamaño de barra se leía como una mancha). Sale en la barra, el panel, Spotlight y Ajustes.
+
 ## [0.29.0] — 2026-11-28
 
 ### Cambios

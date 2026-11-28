@@ -10,7 +10,7 @@
 // IPC:  qs -p <repo>/config/quickshell ipc call dictado toggle|start|stop|cancel|state|command|hush
 //       … dictado file <clip.wav> [dictado|comando]  (pruebas: el audio sale del archivo, a tiempo real)
 // Ajustes › Dictado (sections/Dictado.qml).
-// Botones: el panel de Emma (sidepanel/AiChat.qml: dictar y orden de voz) y la magnolia de la barra mientras escucha.
+// Botones: el panel de Emma (sidepanel/AiChat.qml: dictar y orden de voz) y la flor de la barra mientras escucha.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell

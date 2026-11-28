@@ -16,9 +16,9 @@ Singleton {
         "clipboard": '<rect x="8" y="3" width="8" height="4" rx="1"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>',
         // Cafeína (no apagar la pantalla): taza con vapor
         "coffee": '<path d="M4 10h13v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 11.5h1.5a2.5 2.5 0 0 1 0 5H16.5"/><path d="M8 3.5c-.8 1 .8 2 0 3.5M12 3.5c-.8 1 .8 2 0 3.5"/>',
-        // IA (barra, Spotlight, panel lateral, Ajustes): magnolia (Magnolia grandiflora), la flor de Emma: cuenco de
-        // pétalos anchos, el pétalo de dentro con el cono relleno y dos hojas en la base.
-        "ai": '<path d="M5 10.5C5 15 8 18 12 18s7-3 7-7.5c-2.8 0-5.2 1.6-7 4.3-1.8-2.7-4.2-4.3-7-4.3z"/><path d="M8.2 11.4C7.9 8.6 9.3 6 12 5c2.7 1 4.1 3.6 3.8 6.4"/><rect x="10.9" y="7.6" width="2.2" height="4.4" rx="1.1" fill="currentColor" stroke="none"/><path d="M8.5 17.2C6.5 19.4 4 20.2 2.5 19.8c.5-1.8 2.8-3.2 5-3.4M15.5 17.2c2 2.2 4.5 3 6 2.6-.5-1.8-2.8-3.2-5-3.4"/>',
+        // IA (barra, Spotlight, panel lateral, Ajustes): la flor de Emma, una sakura de cinco pétalos con la muesca en
+        // la punta y el centro relleno (se dibujó con 5 pétalos girados 72°; contorno de una sola pieza para que se lea a 15 px).
+        "ai": '<path d="M10.2 10.0C8.0 7.7 7.6 3.4 10.0 3.0L12.0 4.7L14.0 3.0C16.4 3.4 16.0 7.7 13.8 10.0C15.3 7.1 19.2 5.5 20.3 7.6L19.3 10.0L21.5 11.4C21.9 13.8 17.7 14.7 14.9 13.3C18.0 13.9 20.8 17.1 19.1 18.8L16.5 18.6L15.9 21.2C13.7 22.2 11.6 18.6 12.0 15.4C12.4 18.6 10.3 22.2 8.1 21.2L7.5 18.6L4.9 18.8C3.2 17.1 6.0 13.9 9.1 13.3C6.3 14.7 2.1 13.8 2.5 11.4L4.7 10.0L3.7 7.6C4.8 5.5 8.7 7.1 10.2 10.0Z"/><circle cx="12" cy="12.4" r="1.5" fill="currentColor" stroke="none"/>',
         "sparkle": '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
         "wifi": '<path d="M2.5 9.2a14 14 0 0 1 19 0"/><path d="M5.6 12.6a9.5 9.5 0 0 1 12.8 0"/><path d="M8.8 16a5 5 0 0 1 6.4 0"/><circle cx="12" cy="19.4" r="1.3" fill="currentColor" stroke="none"/>',
         "volume": '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>',

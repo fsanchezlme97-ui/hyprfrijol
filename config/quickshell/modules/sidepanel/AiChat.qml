@@ -1512,7 +1512,7 @@ print(json.dumps(out[:300]))
             }
         }
 
-        // ---------------------------------------------------- voz: la barra tiene un solo botón (la magnolia) y las órdenes están aquí
+        // ---------------------------------------------------- voz: la barra tiene un solo botón (la flor) y las órdenes están aquí
         RowLayout {
             visible: !onboard.visible && !root.showHistory && !root.showLog
             Layout.fillWidth: true
