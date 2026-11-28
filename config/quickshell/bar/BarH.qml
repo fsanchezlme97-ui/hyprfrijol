@@ -24,7 +24,7 @@ Item {
     readonly property real notchPad: 20   // margen de los extremos (deja sitio a las esquinas redondeadas)
     readonly property real notchGap: 16   // hueco entre los grupos dentro de la muesca
     readonly property real waveW: wave.active ? wave.width + notchGap : 0
-    // Centro de la isla en la muesca (Bar.qml cuelga de ahí el panel desplegado)
+    // Centro de la isla en la muesca
     readonly property real slotCenter: notchPad + left.implicitWidth + notchGap + waveW + slotW / 2
     // Pantalla secundaria: sus espacios, el título de su ventana y, a la derecha, lo que gastan sus programas (sin
     // aplicaciones, onda, chips, bandeja ni estado)
@@ -49,22 +49,20 @@ Item {
         : waveX
     readonly property real titleMax: compact || notch ? 240 : Math.max(0, Math.min(300, width * 0.3, centerStart - gapC - titleStart))
 
-    // Isla dinámica plegada en el centro de la muesca (services/Isla; desplegada, su panel lo pone Bar.qml)
+    // Isla dinámica plegada en el centro de la muesca (services/Isla; pulsarla abre su vista)
     Item {
         visible: root.slot
         x: root.slotCenter - width / 2
         width: root.slotW; height: parent.height
         Behavior on width { enabled: !Theme.still; NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
-        HoverHandler { onHoveredChanged: Isla.hovered(hovered) }
-        TapHandler { onTapped: Isla.pinned = !Isla.pinned }
+        HoverHandler { cursorShape: Qt.PointingHandCursor }
+        TapHandler { onTapped: Isla.open() }
         IslaLine {
             id: islaLine
             anchors.centerIn: parent
-            opacity: Isla.expanded ? 0 : 1
-            Behavior on opacity { NumberAnimation { duration: Theme.durShort } }
         }
         Rectangle {
-            visible: Isla.keys.length > 0 && Isla.top.progress >= 0 && !Isla.expanded
+            visible: Isla.keys.length > 0 && Isla.top.progress >= 0
             anchors { left: parent.left; bottom: parent.bottom; leftMargin: 16; bottomMargin: 4 }
             width: (parent.width - 28) * Isla.top.progress; height: 2; radius: 1; color: Theme.p
         }

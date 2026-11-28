@@ -105,7 +105,7 @@ ColumnLayout {
             visible: root.mode === "muesca" || root.mode === "marco"
             Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5
             text: root.mode === "marco" ? "La barra va pegada a un borde y un marco fino de su color recorre los otros tres, con las esquinas redondeadas hacia dentro alrededor de las ventanas. Las ventanas se apartan del marco solo en esta forma: al volver a otra, quedan como estaban."
-                : Settings.barIntegrated ? "Una sola pieza centrada que sale del borde, con la isla dinámica dentro: al pasar el puntero crece hacia el escritorio. Qué enseña la isla se elige en «Isla dinámica»."
+                : Settings.barIntegrated ? "Una sola pieza centrada que sale del borde, con la isla dinámica dentro: pulsarla abre lo que enseña. Qué enseña la isla se elige en «Isla dinámica»."
                 : root.vertical ? "La muesca solo va arriba o abajo; de lado la barra queda pegada al borde, a la medida de su contenido."
                 : "Con la barra que se esconde sola, la isla dinámica no va dentro de la muesca: flota junto a ella."
         }
@@ -288,7 +288,7 @@ ColumnLayout {
         SwRow {
             separator: false
             label: "Isla dinámica"
-            sub: Settings.barIntegrated ? "siempre activa con la forma «Muesca» de la barra" : "una pastilla arriba al centro con lo que está pasando; se despliega al pasar el puntero o al pulsarla"
+            sub: Settings.barIntegrated ? "siempre activa con la forma «Muesca» de la barra" : "una pastilla arriba al centro con lo que está pasando; pulsarla abre su vista completa"
             enabled: !Settings.barIntegrated
             key: "island"; def: false
             onToggled: v => Settings.set("island", v)

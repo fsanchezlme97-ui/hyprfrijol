@@ -1,8 +1,9 @@
 pragma Singleton
 // Estado de la isla dinámica, compartido por la isla suelta (modules/island/Island.qml) y la muesca de la barra
-// (bar/Bar.qml, barMode «muesca»): qué actividades hay, si está desplegada y su IPC.
-//   Isla.keys · Isla.info(clave) · Isla.expanded · Isla.inBar · Isla.dot
-// IPC:  qs -p <repo>/config/quickshell ipc call isla expand | collapse | state
+// (bar/BarH.qml, barMode «muesca»): qué actividades hay y su IPC. No se despliega: pulsarla abre la vista completa
+// de lo que enseña (Isla.open: Pomodoro, procesos, música o agenda).
+//   Isla.keys · Isla.top · Isla.info(clave) · Isla.inBar · Isla.dot · Isla.open()
+// IPC:  qs -p <repo>/config/quickshell ipc call isla open | state
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -15,9 +16,6 @@ Singleton {
     readonly property bool on: Settings.get("island", false) === true || inBar
     readonly property bool always: Settings.get("islandAlways", false) === true
     readonly property var wanted: Settings.get("islandShow", ["musica", "pomodoro", "descargas", "reunion"]) ?? []
-    property bool pinned: false             // desplegada por IPC o por un clic
-    property bool hover: false              // el puntero está encima (con un respiro al salir para que no parpadee)
-    readonly property bool expanded: (pinned || hover) && shown
 
     // Qué actividades hay, por prioridad. Solo la lista de claves (como texto) para que las filas no se rehagan cada segundo;
     // lo que cambia (cuenta atrás, porcentaje…) lo lee cada fila de info(clave).
@@ -32,10 +30,6 @@ Singleton {
     readonly property var keys: keysRaw ? keysRaw.split(",") : []
     readonly property bool shown: on && !Shell.locked && (keys.length > 0 || always || inBar)
     readonly property bool dot: inBar && keys.length === 0 && !always    // sin nada en marcha: un punto en la muesca
-    readonly property int rows: Math.max(1, Math.min(3, keys.length))
-    // Alto del contenido desplegado (filas de 52 px con 8 de hueco, o la hora si no hay nada) más 12 arriba y abajo
-    readonly property real expandedH: 24 + (keys.length ? rows * 52 + (rows - 1) * 8 : 54)
-    readonly property real expandedMax: 24 + 3 * 52 + 2 * 8
     readonly property var top: info(keys.length ? keys[0] : "")
 
     function pct(v): string { return v >= 0 ? Math.round(v * 100) + " %" : ""; }
@@ -56,14 +50,10 @@ Singleton {
         }
         return { icon: "clock", title: Time.hhmm, sub: Time.longDate, progress: -1, view: "agenda" };
     }
-    // Puntero dentro/fuera (con 260 ms de respiro al salir)
-    function hovered(h: bool): void { if (h) { leave.stop(); hover = true; } else leave.restart(); }
-
-    Timer { id: leave; interval: 260; onTriggered: root.hover = false }
+    function open(): void { Shell.open(top.view); }
     IpcHandler {
         target: "isla"
-        function expand(): void { root.pinned = true; }
-        function collapse(): void { root.pinned = false; root.hover = false; }
-        function state(): string { return (root.shown ? "visible" : "oculta") + (root.inBar ? " en la barra" : "") + " · " + (root.expanded ? "desplegada" : "plegada") + " · " + (root.keysRaw || "sin actividad"); }
+        function open(): void { root.open(); }
+        function state(): string { return (root.shown ? "visible" : "oculta") + (root.inBar ? " en la barra" : "") + " · " + (root.keysRaw || "sin actividad"); }
     }
 }

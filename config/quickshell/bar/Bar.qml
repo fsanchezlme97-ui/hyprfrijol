@@ -17,9 +17,7 @@
 // Archipiélago: cada grupo de módulos en su propia píldora flotante (BarPill), con el escritorio visible entre
 // ellas; solo las píldoras reciben el ratón (máscara con content.item.pills).
 // Muesca (barMode "muesca", arriba o abajo): una sola pieza centrada, a la medida de su contenido, que sale del borde
-// (NotchBg), con la onda y la isla dinámica (services/Isla) antes del grupo derecho; al desplegarse, de la muesca
-// cuelga bajo la isla un panel con sus filas que es parte de la misma figura. Para eso la ventana es más alta que la
-// barra (la reserva sigue siendo el grosor y la máscara solo cubre la figura).
+// (NotchBg), con la onda y la isla dinámica (services/Isla) antes del grupo derecho.
 // Marco (barMode "marco"): fija, con las esquinas de la pantalla redondeadas hacia dentro (ScreenCorners).
 // Super + J (Shell.barHidden) la deja escondida: vuelve al llevar el cursor al borde.
 import QtQuick
@@ -29,7 +27,6 @@ import Quickshell.Hyprland
 import ".."
 import "../components"
 import "../services"
-import "../modules/island"
 
 PanelWindow {
     id: bar
@@ -39,7 +36,6 @@ PanelWindow {
     readonly property bool archi: Settings.barArchipelago
     readonly property bool notch: Settings.barNotch && Shell.barModeFor(screen) !== "sencilla"   // la sencilla va fija
     readonly property bool slot: Settings.barIslandSlot(screen)   // la isla dinámica va dentro de la muesca
-    readonly property real extra: slot ? Isla.expandedMax + 8 : 0  // alto de más para el panel que cuelga
     readonly property bool vertical: Settings.barVertical
     readonly property int off: Settings.barOffset
     readonly property int thickness: Settings.barThickness
@@ -104,7 +100,7 @@ PanelWindow {
         left: pos === "izquierda" && edgeMode ? 0 : off
         right: pos === "derecha" && edgeMode ? 0 : off
     }
-    implicitHeight: vertical ? 0 : thickness + inner + extra
+    implicitHeight: vertical ? 0 : thickness + inner
     implicitWidth: vertical ? thickness + inner : 0
     exclusiveZone: autoHide ? 0 : smart ? (smartReserve ? thickness + off : 0) : thickness
 
@@ -112,7 +108,6 @@ PanelWindow {
     // (archipiélago: solo las píldoras)
     mask: Region {
         item: hit
-        Region { item: panel }
         Region { readonly property var r: bar.pillRect(0); x: r.x; y: r.y; width: r.w; height: r.h }
         Region { readonly property var r: bar.pillRect(1); x: r.x; y: r.y; width: r.w; height: r.h }
         Region { readonly property var r: bar.pillRect(2); x: r.x; y: r.y; width: r.w; height: r.h }
@@ -186,28 +181,8 @@ PanelWindow {
                 anchors.fill: parent
                 radius: bar.thickness / 2     // extremos redondos, como una cápsula que sale del borde
                 flip: bar.pos === "abajo"
-                panelX: panel.x
-                panelW: panel.width
-                panelH: panel.height
                 bellLevel: bar.bellLevel
             }
-            // Isla desplegada: cuelga del centro de la muesca (hacia abajo; hacia arriba con la barra abajo)
-            Item {
-                id: panel
-                readonly property bool open: bar.slot && Isla.expanded
-                // centrado bajo la isla plegada, sin salirse de la muesca
-                readonly property real cx: (content.item?.slotCenter ?? parent.width / 2 / bar.k) * bar.k
-                x: Math.max(bar.thickness / 2 + 14, Math.min(cx - width / 2, parent.width - bar.thickness / 2 - 14 - width))
-                y: bar.pos === "abajo" ? -height : parent.height
-                width: open ? Math.min(400, parent.width - 56) : 120
-                height: open ? Isla.expandedH : 0
-                clip: true
-                Behavior on width { enabled: !Theme.still; NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
-                Behavior on height { enabled: !Theme.still; NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
-                HoverHandler { enabled: bar.slot; onHoveredChanged: Isla.hovered(hovered) }
-                IslaRows { width: 400 - 24; anchors.fill: undefined; x: (parent.width - width) / 2; y: 12; height: Isla.expandedH - 24 }
-            }
-
             // Alerta visual (visualBell): dos destellos del color primario sobre el fondo
             SequentialAnimation {
                 id: flash

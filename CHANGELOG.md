@@ -3,6 +3,16 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.27.1] — 2026-11-28
+
+### Cambios
+- **La isla dinámica ya no se despliega**: ni la de la muesca ni la suelta abren un panel al pasar el puntero. Se queda
+  en su línea (actividad y cuenta atrás) y pulsarla abre la vista completa de lo que enseña (Pomodoro, procesos,
+  música o agenda). La muesca vuelve a medir lo que la barra. IPC: `isla open | state` (fuera `expand` y `collapse`).
+
+### Mantenimiento
+- Fuera `IslaRows.qml` y el panel colgado de `NotchBg`.
+
 ## [0.27.0] — 2026-11-28
 
 ### Cambios

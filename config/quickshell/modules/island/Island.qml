@@ -1,6 +1,6 @@
 // Isla dinámica suelta (ajuste island, apagada de fábrica): una pastilla arriba al centro, bajo la barra, con lo que está
 // pasando. Plegada enseña lo más importante en una línea (reunión en menos de 10 min > Pomodoro > procesos en curso >
-// música sonando); al pasar el puntero (o pulsarla) se despliega con todo ello y sus controles. Qué se muestra:
+// música sonando); pulsarla abre la vista completa de eso (Pomodoro, procesos, música o agenda). Qué se muestra:
 // islandShow (musica · pomodoro · descargas · reunion). Sin nada en marcha se esconde, o enseña la hora con islandAlways.
 // Estado e IPC en services/Isla.qml. Con la barra en forma «Muesca» la isla va dentro de la barra (bar/Bar.qml) y esta
 // ventana no se crea.
@@ -33,7 +33,7 @@ Scope {
         anchors { top: true }
         margins { top: OsdStack.edge("arriba") }
         implicitWidth: 440
-        implicitHeight: 20 + 24 + 3 * 52 + 2 * 8 + 40
+        implicitHeight: 20 + 32 + 20
         mask: Region { item: pill }
 
         Glass {
@@ -42,29 +42,23 @@ Scope {
             anchors.horizontalCenter: parent.horizontalCenter
             y: 20
             opacity: root.shown ? 1 : 0
-            width: Isla.expanded ? 400 : Math.max(120, Math.min(300, line.implicitWidth + 28))
-            height: Isla.expanded ? Isla.expandedH : 32
-            radius: Isla.expanded ? Theme.r(24) : height / 2
+            width: Math.max(120, Math.min(300, line.implicitWidth + 28))
+            height: 32
+            radius: height / 2
             Behavior on opacity { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
             Behavior on width { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
-            Behavior on height { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
-            Behavior on radius { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.OutCubic } }
-            HoverHandler { onHoveredChanged: Isla.hovered(hovered) }
-            TapHandler { onTapped: Isla.pinned = !Isla.pinned }
+            HoverHandler { cursorShape: Qt.PointingHandCursor }
+            TapHandler { onTapped: Isla.open() }
 
             IslaLine {
                 id: line
                 anchors.centerIn: parent
-                opacity: Isla.expanded ? 0 : 1
-                visible: opacity > 0.01
-                Behavior on opacity { NumberAnimation { duration: Theme.durShort } }
             }
             Rectangle {
-                visible: !Isla.expanded && Isla.keys.length > 0 && Isla.top.progress >= 0
+                visible: Isla.keys.length > 0 && Isla.top.progress >= 0
                 anchors { left: parent.left; bottom: parent.bottom; leftMargin: 16; bottomMargin: 4 }
                 width: (parent.width - 32) * Isla.top.progress; height: 2; radius: 1; color: Theme.p
             }
-            IslaRows {}
         }
     }
 }
