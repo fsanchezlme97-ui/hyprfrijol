@@ -37,6 +37,10 @@ Rectangle {
     border.width: activeFocus ? 2 : 1
     border.color: activeFocus ? Theme.p : Qt.alpha(Theme.danger, 0.6)
     activeFocusOnTab: true
+    // Si el botón se oculta, se desactiva o pierde el foco a mitad de la pulsación, se cancela (nunca confirma solo)
+    onVisibleChanged: if (!visible) release()
+    onEnabledChanged: if (!enabled) release()
+    onActiveFocusChanged: if (!activeFocus) release()
     Keys.onPressed: e => { if (!e.isAutoRepeat && (e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space)) { root.press(); e.accepted = true; } }
     Keys.onReleased: e => { if (!e.isAutoRepeat && (e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space)) { root.release(); e.accepted = true; } }
 

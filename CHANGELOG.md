@@ -3,6 +3,25 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.24.0] — 2026-11-27
+
+### Novedades
+- **Isla dinámica** (Ajustes › Barra › Isla dinámica, apagada de fábrica): una pastilla arriba al centro, bajo la
+  barra, con lo que está pasando. Plegada enseña una línea con lo más importante (reunión en menos de 10 min, Pomodoro,
+  procesos en curso o música sonando); al pasar el puntero o pulsarla se despliega con una fila por actividad y sus
+  controles (pausar, siguiente, saltar bloque, «Unirse»). Se elige qué entra y si enseña la hora cuando no hay nada.
+  El OSD y la píldora del dictado se apartan de ella; una ventana a pantalla completa la tapa. Medido en reposo con la
+  isla activada: sin diferencia apreciable de memoria (324 MB frente a 329 MB).
+
+### Correcciones
+- `HoldButton`: si se oculta, se desactiva o pierde el foco a mitad de la pulsación, se cancela en vez de poder
+  confirmar solo (afectaba a «Restaurar valores por defecto» al agotarse sus 6 s y a mantener con Enter o Espacio).
+
+### Mantenimiento
+- `docs/PENDIENTES.md` pasa a listar con claridad lo que falta de la renovación: isla con dictado y avisos, modo de
+  barra «Isla integrada», widgets sobre el escritorio, centro de notificaciones, interruptores en Ajustes y pruebas en
+  claro de las versiones 0.20.0 a 0.23.0.
+
 ## [0.23.0] — 2026-11-27
 
 ### Novedades

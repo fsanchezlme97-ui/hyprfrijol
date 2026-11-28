@@ -273,6 +273,42 @@ ColumnLayout {
     }
     Section {
         Layout.fillWidth: true
+        title: "Isla dinámica"
+        headerRight: Mono { tech: true; text: "island · islandShow · islandAlways" }
+        SwRow {
+            separator: false
+            label: "Isla dinámica"
+            sub: "una pastilla arriba al centro con lo que está pasando; se despliega al pasar el puntero o al pulsarla"
+            key: "island"; def: false
+            onToggled: v => Settings.set("island", v)
+        }
+        SwRow {
+            label: "Siempre visible"
+            sub: "con nada en marcha enseña la hora; si no, se esconde"
+            key: "islandAlways"; def: false
+            onToggled: v => Settings.set("islandAlways", v)
+        }
+        LabeledRow {
+            label: "Mostrar"; labelWidth: 80
+            Flow {
+                Layout.fillWidth: true
+                spacing: 8
+                Repeater {
+                    model: [["reunion", "Reuniones"], ["pomodoro", "Pomodoro"], ["descargas", "Procesos"], ["musica", "Música"]]
+                    Chip {
+                        required property var modelData
+                        readonly property var list: Settings.get("islandShow", ["musica", "pomodoro", "descargas", "reunion"]) ?? []
+                        text: modelData[1]
+                        on: list.includes(modelData[0])
+                        onClicked: Settings.set("islandShow", on ? list.filter(x => x !== modelData[0]) : list.concat([modelData[0]]))
+                    }
+                }
+            }
+        }
+        Txt { Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5; text: "Va en el sitio de arriba de los indicadores de volumen: ellos y la píldora del dictado se apartan de ella. Una ventana a pantalla completa la tapa. El dictado no entra en la isla." }
+    }
+    Section {
+        Layout.fillWidth: true
         title: "Onda de audio"
         headerRight: Sw { checked: Settings.barHas("musica"); onToggled: v => { const l = Settings.barModuleList.filter(m => m !== "musica"); if (v) l.push("musica"); Settings.set("barModules", l); } }
         // Cada estilo dibujado con unos niveles de muestra (bar/Waveform.qml en modo muestra)

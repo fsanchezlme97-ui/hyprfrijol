@@ -11,28 +11,33 @@ CHANGELOG.
 
 ### Renovación de la interfaz, por etapas
 
-Hecho: botón «mantener para borrar» (0.20.0), pastilla «Escuchando…» (0.21.0), widgets de agenda (0.22.0) y música en
-el centro de control (0.23.0; ya tenía fichas con estado, deslizadores y avisos por app). Queda la isla dinámica y lo
-que depende de ella, que es lo grande: va al final y se mide contra el listón.
-Cada etapa sale como versión propia y no empieza la siguiente hasta que la anterior esté aplicada.
+Hecho: botón «mantener para borrar» (0.20.0), pastilla «Escuchando…» (0.21.0), widgets de calendario, próxima reunión y
+zonas horarias en el panel `Super + G` (0.22.0), fila de música en el centro de control (0.23.0) e isla dinámica básica
+(0.24.0). Cada etapa sale como versión propia.
 
-Reglas de calidad en todas: un interruptor en Ajustes (lo nuevo y vistoso, apagado de fábrica hasta aprobarlo); solo
-`Theme.*` (colores, duraciones, radios) y respetar «Reducir movimiento»; probado en claro y oscuro, con dos pantallas y
-con teclado; `dev/perf.sh` antes y después; captura antes/después en la sesión anidada; `lint`, `check` y documentación
-(`AJUSTES.md`, `BINDS.md` si hay atajos). Listón de reposo medido el 2026-11-27 (0.19.3, sesión anidada): 322 MB de
-memoria, 2,85 % de CPU del hilo principal y 0,75 % de render. No pasar de +30 MB ni de +1 % en reposo.
+Reglas de calidad en todas: un interruptor en Ajustes para lo nuevo y vistoso; solo `Theme.*` y respetar «Reducir
+movimiento»; probado en claro y oscuro, con dos pantallas y con teclado; `dev/perf.sh` antes y después; captura en la
+sesión anidada (en la sesión anidada hay que sacar la captura dos veces: la primera de `grim` sale con el cuadro
+anterior); `lint`, `check` y documentación. Listón de reposo (2026-11-27, 0.23.0, sesión anidada): 323 MB de memoria y
+1-3 % de CPU del hilo principal; con la isla activada y sin actividad, 324 MB. No pasar de +30 MB ni de +1 % en reposo.
 
-- [ ] **Etapa 1 · Isla dinámica**, en tres tramos: (a) estructura: pastilla arriba al centro con animación de forma
-      (como `Morph`), se expande al pasar el puntero, región de entrada mínima y una sola pantalla; (b) contenido por
-      prioridad: dictado, enfoque/Pomodoro, música, descargas y procesos, y avisos entrantes; (c) medir contra el
-      listón y decidir si queda «siempre visible» o «solo con actividad». Sin muesca física: es una pastilla flotante.
-- [ ] **Etapa 2 · Modo de barra «Isla integrada»** (`barMode`, junto a `archipielago`): la barra se reduce a pastillas
-      pequeñas a los lados (espacios y título a la izquierda; estado, reloj y ajustes a la derecha) y el centro queda
-      para la isla de la Etapa 1, que pasa a ser parte de la barra: reserva su sitio, se agranda sin tapar a las
-      pastillas y se encoge a un punto cuando no hay actividad. Debe funcionar con la barra arriba (lo normal) y, si
-      se puede, abajo; con barra a los lados el modo no aplica y se avisa en Ajustes. Reutiliza `BarWidgets` y `barOrder`.
-- [ ] **Etapa 3 · Pulido final**: paletas y temas, claro/oscuro, accesibilidad, capturas del README, comparación final
-      de rendimiento con el listón y decidir qué se enciende de fábrica.
+- [ ] **Isla dinámica, lo que falta**: meter el dictado dentro de la isla (hoy su píldora va aparte, debajo), avisos
+      entrantes (se despliega unos segundos al llegar una notificación o al acabar un Pomodoro), varias pantallas
+      (hoy solo la principal), probarla en claro y medir su coste con actividad (solo se midió en reposo).
+- [ ] **Modo de barra «Isla integrada»** (`barMode`, junto a `archipielago`): la barra se reduce a pastillas pequeñas
+      a los lados (espacios y título a la izquierda; estado, reloj y ajustes a la derecha) y el centro queda para la
+      isla, que pasa a ser parte de la barra: reserva su sitio, se agranda sin tapar a las pastillas y se encoge a un
+      punto cuando no hay actividad. Con la barra arriba (lo normal) y, si se puede, abajo; con barra a los lados no
+      aplica y se avisa en Ajustes. Reutiliza `BarWidgets` y `barOrder`. Hoy la isla flota bajo la barra.
+- [ ] **Widgets sobre el escritorio**: los widgets nuevos (y los de siempre) viven en el panel `Super + G`, no sobre el
+      escritorio como en las referencias. Falta una capa en el fondo para colocarlos (calendario, próxima reunión,
+      zonas horarias) y, si se quiere, el gráfico de contribuciones de GitHub (necesita red y un usuario público).
+- [ ] **Centro de notificaciones**: no se ha tocado. Ya agrupa por aplicación e historial; las referencias piden
+      acciones rápidas y un aspecto más compacto.
+- [ ] **Interruptores en Ajustes** para lo nuevo de 0.20.0 a 0.23.0 (botón de mantener, pastilla de puntos, fila de
+      música): hoy sustituyen a lo anterior sin opción de volver.
+- [ ] **Medir y probar en claro** lo de 0.20.0 a 0.23.0: solo se probó en oscuro y sin medir rendimiento aparte del reposo.
+- [ ] **Pulido final**: paletas y temas, accesibilidad, capturas del README y decidir qué se enciende de fábrica.
 
 ## Descartado (2026-11-13)
 

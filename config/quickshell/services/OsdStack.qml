@@ -21,12 +21,15 @@ Singleton {
 
     // alto de la píldora del dictado mientras se ve (0 = oculta)
     property real dictation: 0
+    // alto de la isla dinámica plegada mientras se ve (0 = oculta; modules/island): lo de arriba se aparta de ella
+    property real island: 0
+    readonly property real islandPush: atT && island > 0 ? island + 8 : 0
     readonly property real gap: 8
     readonly property real push: dictation > 0 ? dictation + gap : 0
 
     // y de una píldora de alto h dentro de una ventana de alto winH, desplazada «shift» px hacia dentro
     function pillY(winH, h, shift) {
-        if (atT) return 20 + shift;
+        if (atT) return 20 + shift + islandPush;
         if (atB) return winH - 20 - h - shift;
         return (winH - h) / 2 + shift;
     }
