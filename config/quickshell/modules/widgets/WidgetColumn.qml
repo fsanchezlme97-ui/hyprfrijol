@@ -1,5 +1,5 @@
 // Columna de widgets (vista «widgets», Super + G): clima, impresora, sistema, agenda, pomodoro, notas,
-// reproductor, red. Ajuste "widgets" = cuáles y en qué orden («Editar widgets»).
+// reproductor, red, calendario del mes, próxima reunión y zonas horarias. Ajuste "widgets" = cuáles y en qué orden («Editar widgets»).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -18,7 +18,8 @@ ColumnLayout {
     readonly property var all: [
         { k: "clima", n: "Clima" }, { k: "impresora", n: "Impresora 3D" }, { k: "sistema", n: "Sistema" },
         { k: "agenda", n: "Agenda" }, { k: "pomodoro", n: "Pomodoro" }, { k: "notas", n: "Notas" },
-        { k: "reproductor", n: "Reproductor" }, { k: "red", n: "Red" }
+        { k: "reproductor", n: "Reproductor" }, { k: "red", n: "Red" },
+        { k: "calendario", n: "Calendario" }, { k: "proxima", n: "Próxima reunión" }, { k: "zonas", n: "Zonas horarias" }
     ]
     readonly property var keys: (Settings.get("widgets", ["clima", "impresora", "sistema"]) ?? []).filter(k => all.some(a => a.k === k))
     function setKeys(l): void { Settings.set("widgets", l); }
@@ -45,7 +46,8 @@ ColumnLayout {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 sourceComponent: ({ clima: weatherC, impresora: printerC, sistema: systemC, agenda: agendaC,
-                                    pomodoro: pomoC, notas: notesC, reproductor: mediaC, red: netC })[slot.modelData] ?? null
+                                    pomodoro: pomoC, notas: notesC, reproductor: mediaC, red: netC,
+                                    calendario: monthC, proxima: nextC, zonas: zonesC })[slot.modelData] ?? null
             }
             // Más detalles (la ventana del chip de la barra)
             Rectangle {
@@ -321,6 +323,10 @@ ColumnLayout {
             WBtn { Layout.topMargin: 8; text: "Abrir agenda"; icon: "calendar"; onClicked: { col.closeRequested(); Shell.open("agenda"); } }
         }
     }
+
+    Component { id: monthC; WMonth { editing: col.editing } }
+    Component { id: nextC; WNext { editing: col.editing } }
+    Component { id: zonesC; WZones { editing: col.editing } }
 
     Component {
         id: pomoC

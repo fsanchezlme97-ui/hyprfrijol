@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.22.0] — 2026-11-27
+
+### Novedades
+- **Tres widgets nuevos** en el panel de widgets (`Super + G` › «Editar widgets»): **Calendario** (el mes, hoy marcado
+  y un punto en los días con eventos; ‹ › cambian de mes), **Próxima reunión** (cuenta atrás hh:mm, título, horario y
+  «Unirse» si el evento trae enlace de videollamada) y **Zonas horarias** (hasta tres relojes de Ajustes › Fecha,
+  hora e idioma). Leen la misma agenda `.ics` y eventos locales de siempre.
+
 ## [0.21.0] — 2026-11-27
 
 ### Novedades
