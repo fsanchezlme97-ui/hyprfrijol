@@ -11,7 +11,7 @@ CHANGELOG.
 
 ### Renovación de la interfaz, por etapas
 
-Referencia: botón «mantener para borrar» (hecho en 0.20.0), pastilla «Escuchando…», isla dinámica, widgets de agenda y
+Referencia: botón «mantener para borrar» (hecho en 0.20.0), pastilla «Escuchando…» (hecha en 0.21.0), isla dinámica, widgets de agenda y
 centro de control. Orden: primero lo independiente y de poco riesgo, al final lo grande que depende de la medida.
 Cada etapa sale como versión propia y no empieza la siguiente hasta que la anterior esté aplicada.
 
@@ -21,23 +21,20 @@ con teclado; `dev/perf.sh` antes y después; captura antes/después en la sesió
 (`AJUSTES.md`, `BINDS.md` si hay atajos). Listón de reposo medido el 2026-11-27 (0.19.3, sesión anidada): 322 MB de
 memoria, 2,85 % de CPU del hilo principal y 0,75 % de render. No pasar de +30 MB ni de +1 % en reposo.
 
-- [ ] **Etapa 1 · Pastilla «Escuchando…»**: el dictado y las órdenes de voz con rejilla de puntos que sigue el nivel del
-      micrófono, texto de estado y botón de parar, en el sitio de `OsdStack`. Primero hay que confirmar de dónde sale el
-      nivel del micrófono (`hf-dictate`); si no lo da, se añade ahí.
-- [ ] **Etapa 2 · Widgets de escritorio con agenda**: calendario del mes, «Próxima reunión» con cuenta atrás y zonas
+- [ ] **Etapa 1 · Widgets de escritorio con agenda**: calendario del mes, «Próxima reunión» con cuenta atrás y zonas
       horarias, sobre la agenda `.ics` y el cuadro de widgets existente. Va junto a «Correo y calendario integrados».
-- [ ] **Etapa 3 · Centro de control y avisos**: fichas con estado en segunda línea, deslizadores anchos de brillo y
+- [ ] **Etapa 2 · Centro de control y avisos**: fichas con estado en segunda línea, deslizadores anchos de brillo y
       volumen, fila de música; avisos agrupados por aplicación. Se rehace el aspecto, no el contenido.
-- [ ] **Etapa 4 · Isla dinámica**, en tres tramos: (a) estructura: pastilla arriba al centro con animación de forma
+- [ ] **Etapa 3 · Isla dinámica**, en tres tramos: (a) estructura: pastilla arriba al centro con animación de forma
       (como `Morph`), se expande al pasar el puntero, región de entrada mínima y una sola pantalla; (b) contenido por
       prioridad: dictado, enfoque/Pomodoro, música, descargas y procesos, y avisos entrantes; (c) medir contra el
       listón y decidir si queda «siempre visible» o «solo con actividad». Sin muesca física: es una pastilla flotante.
-- [ ] **Etapa 5 · Modo de barra «Isla integrada»** (`barMode`, junto a `archipielago`): la barra se reduce a pastillas
+- [ ] **Etapa 4 · Modo de barra «Isla integrada»** (`barMode`, junto a `archipielago`): la barra se reduce a pastillas
       pequeñas a los lados (espacios y título a la izquierda; estado, reloj y ajustes a la derecha) y el centro queda
-      para la isla de la Etapa 4, que pasa a ser parte de la barra: reserva su sitio, se agranda sin tapar a las
+      para la isla de la Etapa 3, que pasa a ser parte de la barra: reserva su sitio, se agranda sin tapar a las
       pastillas y se encoge a un punto cuando no hay actividad. Debe funcionar con la barra arriba (lo normal) y, si
       se puede, abajo; con barra a los lados el modo no aplica y se avisa en Ajustes. Reutiliza `BarWidgets` y `barOrder`.
-- [ ] **Etapa 6 · Pulido final**: paletas y temas, claro/oscuro, accesibilidad, capturas del README, comparación final
+- [ ] **Etapa 5 · Pulido final**: paletas y temas, claro/oscuro, accesibilidad, capturas del README, comparación final
       de rendimiento con el listón y decidir qué se enciende de fábrica.
 
 ## Descartado (2026-11-13)

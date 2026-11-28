@@ -229,8 +229,7 @@ Scope {
         readonly property string hint: root.phase !== "rec" ? ""
             : !root.ready ? "Preparando el micrófono…"
             : root.kind === "comando" ? "Di una orden: «pon Walk de Foo Fighters en YouTube»"
-            : Settings.get("dictationWake", true) ? "Habla… · «" + (String(Settings.get("dictationWakeWord", "Distro")).trim() || "Distro") + ", …» para una orden"
-            : "Habla…"
+            : "Escuchando…"
         readonly property string sub: root.cmdMsg !== "" ? root.cmdMsg
             : root.phase === "cmd" ? "Haciéndolo…"
             : root.phase === "rec" && !root.partial && !root.committed && (root.latched || root.mode !== "ptt") ? (root.mode === "continuo" ? "para solo al callarte" : "pulsa otra vez para terminar")
@@ -269,22 +268,22 @@ Scope {
                     }
                     Icon { anchors.centerIn: parent; size: 14; name: win.iconName; color: win.accent }
                 }
-                // medidor de nivel
-                Row {
+                // medidor de nivel: rejilla de 3 filas de puntos, una columna por muestra; se encienden de abajo arriba
+                Grid {
                     visible: root.phase === "rec" && root.cmdText === ""
-                    spacing: 2
+                    rows: 3; flow: Grid.TopToBottom
+                    rowSpacing: 4; columnSpacing: 4
                     Layout.alignment: Qt.AlignVCenter
                     Repeater {
-                        model: root.levels.length
+                        model: root.levels.length * 3
                         Rectangle {
                             required property int index
-                            readonly property real v: root.levels[index] ?? 0
-                            width: 3; radius: 1.5
-                            height: 3 + v * 18
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: Theme.t
-                            opacity: 0.35 + v * 0.65
-                            Behavior on height { NumberAnimation { duration: Theme.ms(70); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+                            readonly property real v: root.levels[Math.floor(index / 3)] ?? 0
+                            readonly property int fromBottom: 2 - index % 3
+                            width: 4; height: 4; radius: 2
+                            color: win.accent
+                            opacity: v > fromBottom / 3 + 0.04 || fromBottom === 0 && root.speaking ? 1 : 0.22
+                            Behavior on opacity { NumberAnimation { duration: Theme.ms(80) } }
                         }
                     }
                 }
@@ -315,7 +314,7 @@ Scope {
                     Layout.fillWidth: true
                     Layout.maximumWidth: 460
                     weight: Font.Medium
-                    elide: root.phase === "rec" || root.phase === "trans" ? Text.ElideLeft : Text.ElideRight
+                    elide: (root.phase === "rec" || root.phase === "trans") && win.mainText ? Text.ElideLeft : Text.ElideRight
                     text: win.mainText || win.hint
                     color: root.phase === "error" ? Theme.danger
                          : !win.mainText || (root.partial && win.mainText === root.partial) ? Theme.tv : Theme.t
@@ -342,9 +341,9 @@ Scope {
                 // terminar (manos libres)
                 Rectangle {
                     visible: root.phase === "rec" && (root.latched || root.mode !== "ptt")
-                    implicitWidth: 24; implicitHeight: 24; radius: 12
-                    color: Qt.alpha(Theme.danger, sma.containsMouse ? 0.3 : 0.18)
-                    Rectangle { anchors.centerIn: parent; width: 8; height: 8; radius: 2; color: Theme.danger }
+                    implicitWidth: 22; implicitHeight: 22; radius: 7
+                    color: Qt.alpha(Theme.danger, sma.containsMouse ? 1 : 0.85)
+                    Behavior on color { ColorAnimation { duration: Theme.durShort } }
                     MouseArea { id: sma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.stop() }
                 }
                 // cancelar

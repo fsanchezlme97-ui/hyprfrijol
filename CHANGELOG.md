@@ -3,6 +3,17 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.21.0] — 2026-11-27
+
+### Novedades
+- **Pastilla «Escuchando…» renovada:** el dictado y las órdenes de voz muestran el nivel del micrófono como una
+  rejilla de puntos (tres filas que se encienden de abajo arriba, una columna por muestra), el texto de estado dice
+  «Escuchando…» y el botón de terminar es un cuadrado redondeado.
+
+### Cambios
+- Se quita de la pantalla del dictado el aviso «“Distro, …” para una orden»: la palabra de orden sigue funcionando
+  y está en Ajustes › Dictado.
+
 ## [0.20.0] — 2026-11-27
 
 ### Novedades
