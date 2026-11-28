@@ -383,6 +383,10 @@ instalaciones y lo que necesita `sudo` se abren en una terminal (`Pkg.runInTermi
   estado, vCPU y RAM, encender/pantalla/pausar/reanudar/reiniciar/apagar/forzar apagado y, en «Más», arranque
   automático, disco ISO (las `.iso` de Descargas y `~/ISOs`) e instantáneas (crear, volver, borrar); y contenedores
   (Podman, Distrobox, BoxBuddy) con «Nuevo contenedor».
+  También lista las **QEMU sueltas** (sin libvirt): cada carpeta de `~/vm/` (`HF_VM_DIR`) con un `.qcow2`; si está
+  encendida con `-qmp unix:<carpeta>/qmp.sock,server`, se controla por QMP (captura, pausar, reanudar, reiniciar,
+  apagar, forzar). Para encenderla desde la app, su comando va en `~/.config/hyprfrijol/vms.json`:
+  `{"win11": {"start": "/ruta/run.sh"}}`. Estas no tienen pantalla externa, ISO ni instantáneas.
 
 ```sh
 scripts/hf-vpn list | plugins | mesh | up|down|delete|edit <uuid|nombre> | import [archivo] [tipo]

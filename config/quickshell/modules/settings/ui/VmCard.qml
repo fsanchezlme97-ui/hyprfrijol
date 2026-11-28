@@ -1,7 +1,7 @@
 // Tarjeta de una máquina virtual: captura de su pantalla, estado y recursos, y las acciones de uso diario
-// (pantalla, pausar, reiniciar, apagar); desplegada, arranque automático, disco ISO e instantáneas.
+// (pantalla, pausar, reiniciar, apagar); desplegada, arranque automático, disco ISO e instantáneas. kind "qemu": QEMU suelta.
 // Lógica en scripts/hf-vm; la tarjeta solo pide acciones con act([...]) y la lista las ejecuta.
-//   VmCard { vm: {name,uri,state,vcpus,memMB,autostart,snaps}; cmd: "…/hf-vm"; busy: false; open: false; onAct: a => … }
+//   VmCard { vm: {name,uri,state,vcpus,memMB,autostart,snaps,kind,canStart}; cmd: "…/hf-vm"; busy: false; open: false; onAct: a => … }
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
@@ -24,6 +24,7 @@ Rectangle {
 
     readonly property bool running: vm.state === "running"
     readonly property bool paused: vm.state === "paused"
+    readonly property bool raw: vm.kind === "qemu"      // QEMU suelta (sin libvirt): sin pantalla externa, ISO ni instantáneas
     readonly property bool up: running || paused
     readonly property string stateText: busy ? "…" : ({ "running": "encendida", "shut off": "apagada", "paused": "en pausa",
         "crashed": "se cerró con error", "pmsuspended": "suspendida", "in shutdown": "apagándose" })[vm.state] ?? vm.state
@@ -83,7 +84,7 @@ Rectangle {
                 }
                 Txt { visible: root.paused && pic.status === Image.Ready; anchors.centerIn: parent; text: "En pausa"; weight: Font.DemiBold }
                 MouseArea {
-                    anchors.fill: parent; enabled: root.up; cursorShape: Qt.PointingHandCursor
+                    anchors.fill: parent; enabled: root.up && !root.raw; cursorShape: Qt.PointingHandCursor
                     onClicked: Quickshell.execDetached([root.cmd, "console", root.vm.name, root.vm.uri])
                 }
             }
@@ -103,21 +104,26 @@ Rectangle {
                 }
                 Txt {
                     Layout.fillWidth: true; muted: true; size: 11.5; wrapMode: Text.WordWrap
-                    text: root.vm.vcpus + " vCPU · " + root.memText + " · " + (root.vm.uri === "qemu:///session" ? "de tu usuario" : "del sistema")
+                    text: (root.vm.vcpus > 0 ? root.vm.vcpus + " vCPU · " + root.memText + " · " : "")
+                        + (root.raw ? "QEMU suelta" : root.vm.uri === "qemu:///session" ? "de tu usuario" : "del sistema")
                         + (root.vm.autostart ? " · arranca con el equipo" : "")
                         + (root.vm.snaps > 0 ? " · " + root.vm.snaps + (root.vm.snaps === 1 ? " instantánea" : " instantáneas") : "")
+                }
+                Txt {
+                    visible: root.raw && !root.vm.canStart && !root.up; Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5
+                    text: "Para encenderla desde aquí, añade su comando en ~/.config/hyprfrijol/vms.json."
                 }
                 Flow {
                     Layout.fillWidth: true
                     spacing: 8
-                    Button { visible: !root.up; kind: "primary"; text: "Encender"; onClicked: root.act(root.args("start")) }
-                    Button { visible: root.up; kind: "primary"; text: "Pantalla"; onClicked: Quickshell.execDetached([root.cmd, "console", root.vm.name, root.vm.uri]) }
+                    Button { visible: !root.up; kind: "primary"; text: "Encender"; enabled: !root.raw || root.vm.canStart; onClicked: root.act(root.args("start")) }
+                    Button { visible: root.up && !root.raw; kind: "primary"; text: "Pantalla"; onClicked: Quickshell.execDetached([root.cmd, "console", root.vm.name, root.vm.uri]) }
                     Button { visible: root.running; text: "Pausar"; onClicked: root.act(root.args("pause")) }
                     Button { visible: root.paused; text: "Reanudar"; onClicked: root.act(root.args("resume")) }
                     Button { visible: root.running; text: "Reiniciar"; onClicked: root.act(root.args("reboot")) }
                     Button { visible: root.up; text: "Apagar"; onClicked: root.act(root.args("shutdown")) }
                     ConfirmButton { visible: root.up; text: "Forzar apagado"; confirmText: "¿Forzar? Sí"; onConfirmed: root.act(root.args("destroy")) }
-                    Button { kind: "link"; text: root.open ? "Menos" : "Más"; onClicked: root.toggled() }
+                    Button { visible: !root.raw; kind: "link"; text: root.open ? "Menos" : "Más"; onClicked: root.toggled() }
                 }
             }
         }

@@ -3,6 +3,15 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.19.1] — 2026-11-27
+
+### Correcciones
+- **Máquinas virtuales: ahora salen las QEMU sueltas.** La app solo mostraba las de libvirt, así que una VM lanzada
+  con `qemu-system` (por ejemplo `~/vm/win11`) no aparecía. Ahora lista cada carpeta de `~/vm/` con un `.qcow2` y,
+  si está encendida con socket QMP, muestra su captura y permite pausar, reanudar, reiniciar, apagar y forzar el
+  apagado. Para encenderla desde la app se escribe su comando en `~/.config/hyprfrijol/vms.json`
+  (`{"nombre": {"start": "comando"}}`). No tienen pantalla externa, ISO ni instantáneas.
+
 ## [0.19.0] — 2026-11-27
 
 ### Novedades

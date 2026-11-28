@@ -3,7 +3,10 @@
 # Lo usan Ajustes › Máquinas virtuales, la IA y la terminal. Salida JSON.
 #
 #   hf-vm status                         KVM, paquetes, servicios y grupo libvirt (un objeto JSON)
-#   hf-vm list                           máquinas: {name,uri,state} por línea (qemu:///system y qemu:///session)
+#   hf-vm list                           máquinas: {name,uri,state,vcpus,memMB,autostart,snaps,kind} por línea: libvirt
+#                                        (qemu:///system y qemu:///session) y QEMU sueltas (carpetas ~/vm/<nombre> con un
+#                                        .qcow2 y su socket qmp.sock; uri «raw:<nombre>»; cómo encenderlas: ~/.config/hyprfrijol/vms.json
+#                                        → {"<nombre>": {"start": "comando"}}). De las sueltas: start, shutdown, destroy, pause, resume, reboot, shot
 #   hf-vm start|shutdown|destroy|pause|resume|reboot|console <nombre> [uri]
 #   hf-vm autostart <nombre> <uri> on|off            arranque automático con el equipo
 #   hf-vm shot <nombre> <uri>                        captura de la pantalla → imprime la ruta del archivo
@@ -74,7 +77,62 @@ vm_json() {   # vm_json <uri> <nombre> → {name,uri,state,vcpus,memMB,autostart
     '{name:$name,uri:$uri,state:$state,vcpus:($cpus|tonumber? // 0),memMB:((($mem|tonumber? // 0)/1024)|floor),autostart:($auto=="enable"),snaps:($snaps|tonumber? // 0)}'
 }
 
+# --- QEMU sueltas (sin libvirt): una carpeta por máquina en ${HF_VM_DIR:-~/vm}, con un .qcow2 y qmp.sock cuando está encendida ---
+RAWDIR="${HF_VM_DIR:-$HOME/vm}"
+VMSJSON="${XDG_CONFIG_HOME:-$HOME/.config}/hyprfrijol/vms.json"
+qmp() {   # qmp <nombre> <comando> [argumentos en JSON] → el "return" de QMP; falla si la máquina no responde
+  local a="${3:-}"; [ -n "$a" ] || a='{}'
+  python3 - "$RAWDIR/$1/qmp.sock" "$2" "$a" <<'PY'
+import json, socket, sys
+try:
+    s = socket.socket(socket.AF_UNIX); s.settimeout(4); s.connect(sys.argv[1]); f = s.makefile("rw"); f.readline()
+    def call(c, a=None):
+        f.write(json.dumps({"execute": c, "arguments": a or {}}) + "\n"); f.flush()
+        while True:
+            r = json.loads(f.readline())
+            if "return" in r or "error" in r: return r
+    call("qmp_capabilities"); r = call(sys.argv[2], json.loads(sys.argv[3]))
+except (OSError, ValueError): sys.exit(1)
+if "error" in r: print(r["error"].get("desc", ""), file=sys.stderr); sys.exit(1)
+print(json.dumps(r["return"]))
+PY
+}
+raw_json() {   # raw_json <nombre> → igual que vm_json, para una QEMU suelta
+  local n="$1" st="shut off" cpus=0 mem=0 q can=false
+  q="$(qmp "$n" query-status 2>/dev/null)" && st="$(jq -r '.status' <<<"$q")"
+  if [ "$st" != "shut off" ]; then
+    cpus="$(qmp "$n" query-cpus-fast 2>/dev/null | jq 'length' 2>/dev/null)"
+    mem="$(qmp "$n" query-memory-size-summary 2>/dev/null | jq '(."base-memory" / 1048576 | floor)' 2>/dev/null)"
+  fi
+  jq -e --arg n "$n" '.[$n].start // empty' "$VMSJSON" >/dev/null 2>&1 && can=true
+  jq -cn --arg name "$n" --arg state "$st" --argjson cpus "${cpus:-0}" --argjson mem "${mem:-0}" --argjson can "$can" \
+    '{name:$name,uri:("raw:"+$name),state:$state,vcpus:$cpus,memMB:$mem,autostart:false,snaps:0,kind:"qemu",canStart:$can}'
+}
+raw_list() {
+  local d
+  for d in "$RAWDIR"/*/; do
+    compgen -G "${d}*.qcow2" >/dev/null && raw_json "$(basename "$d")"
+  done
+}
+raw() {   # raw <operación> <nombre>
+  local op="$1" n="$2" cmd f
+  case "$op" in
+    start) cmd="$(jq -r --arg n "$n" '.[$n].start // empty' "$VMSJSON" 2>/dev/null)"
+           [ -n "$cmd" ] || { echo "Falta el comando de arranque de $n en $VMSJSON" >&2; return 1; }
+           setsid -f sh -c "$cmd" >/dev/null 2>&1;;
+    shutdown) qmp "$n" system_powerdown >/dev/null;;
+    destroy) qmp "$n" quit >/dev/null;;
+    pause) qmp "$n" stop >/dev/null;;
+    resume) qmp "$n" cont >/dev/null;;
+    reboot) qmp "$n" system_reset >/dev/null;;
+    shot) f="${XDG_CACHE_HOME:-$HOME/.cache}/hyprfrijol/vm/${n//[^A-Za-z0-9._-]/_}.img"; mkdir -p "$(dirname "$f")"
+          qmp "$n" screendump "$(jq -cn --arg f "$f" '{filename:$f,format:"png"}')" >/dev/null && echo "$f";;
+    *) echo "Esa acción no existe para una máquina QEMU suelta" >&2; return 1;;
+  esac
+}
+
 list() {
+  raw_list
   have virsh || return 0
   local uris=(qemu:///session) u n
   # qemu:///system solo si tenemos permiso (grupo libvirt); si no, libvirt pediría la contraseña con polkit
@@ -184,8 +242,11 @@ box() {
   esac
 }
 
+case "${1:-}:${3:-}" in
+  start:raw:*|shutdown:raw:*|destroy:raw:*|pause:raw:*|resume:raw:*|reboot:raw:*|shot:raw:*) raw "$1" "${2:?nombre}"; exit;;
+esac
 case "${1:-}" in
-  -h|--help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  -h|--help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   status) status;;
   list) list;;
   start) virsh -c "${3:-qemu:///system}" start "${2:?nombre}";;
@@ -208,5 +269,5 @@ case "${1:-}" in
   enable) enable "${2:-}";;
   containers) containers;;
   box) shift; box "$@";;
-  *) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 1;;
+  *) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 1;;
 esac
