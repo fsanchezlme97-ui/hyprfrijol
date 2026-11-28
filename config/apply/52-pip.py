@@ -19,7 +19,7 @@ def _bar_edges(s):
     """Margen de cada borde (izq, arr, der, aba) como Settings.barEdge del shell."""
     pos = s.get("barPos", "abajo")
     size = max(24, min(56, round(_num(s.get("barHeight"), 34) or 34)))
-    floating = s.get("barMode", "fija") in ("flotante", "media", "isla", "archipielago")
+    floating = s.get("barMode", "fija") in ("flotante", "media", "isla", "archipielago", "integrada")
     vertical = pos in ("izquierda", "derecha")
     off = max(2, min(4, round(_num(s.get("gapsOut"), 4) or 0))) if floating else 0
     thick = size + 2 if vertical else size - 2 - (2 if floating else 0)

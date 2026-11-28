@@ -17,6 +17,7 @@ ColumnLayout {
     readonly property string mode: Settings.barMode
     readonly property string align: Settings.barAlign
     readonly property bool vertical: root.pos === "izquierda" || root.pos === "derecha"
+    readonly property bool archi: Settings.barArchipelago          // archipiélago o isla integrada: una píldora por grupo
 
     BarTabs { current: "barra" }   // Barra | Widgets (una sola entrada en la lista)
 
@@ -51,7 +52,7 @@ ColumnLayout {
                             radius: Theme.r(3); color: Theme.s3; opacity: 0.9
                         }
                         Rectangle {   // la barra
-                            visible: root.mode !== "archipielago"
+                            visible: !root.archi
                             readonly property bool vert: card.k === "izquierda" || card.k === "derecha"
                             readonly property real inset: (parent.border.width) + parent.m
                             color: card.on ? Theme.p : Theme.o
@@ -66,7 +67,7 @@ ColumnLayout {
                             y: card.k === "arriba" ? inset : card.k === "abajo" ? parent.height - height - inset : along
                         }
                         Repeater {   // archipiélago: una píldora por grupo, con hueco entre ellas
-                            model: root.mode === "archipielago" ? (card.k === "izquierda" || card.k === "derecha" ? [[0, 0.3], [0.62, 0.38]] : [[0, 0.3], [0.38, 0.24], [0.7, 0.3]]) : []
+                            model: root.archi ? (card.k === "izquierda" || card.k === "derecha" ? [[0, 0.3], [0.62, 0.38]] : [[0, 0.3], [0.38, 0.24], [0.7, 0.3]]) : []
                             Rectangle {
                                 required property var modelData
                                 readonly property bool vert: card.k === "izquierda" || card.k === "derecha"
@@ -93,11 +94,17 @@ ColumnLayout {
                 Layout.preferredWidth: 1
                 label: "Forma"; labelWidth: 60
                 Seg {
-                    model: [["fija", "Fija al borde"], ["flotante", "Flotante"], ["isla", "Isla"], ["archipielago", "Archipiélago"]]
+                    model: [["fija", "Fija al borde"], ["flotante", "Flotante"], ["isla", "Isla"], ["archipielago", "Archipiélago"], ["integrada", "Isla integrada"]]
                     current: root.mode
                     onPicked: k => Confirm.change("Forma de la barra", { barMode: k })
                 }
             }
+        }
+        Txt {
+            visible: root.mode === "integrada"
+            Layout.fillWidth: true; wrapMode: Text.WordWrap; muted: true; size: 11.5
+            text: Settings.barIntegrated ? "La isla dinámica ocupa el centro de la barra y se despliega hacia el escritorio; la onda de audio no se muestra. Qué enseña se elige en «Isla dinámica»."
+                : "La isla solo cabe dentro de la barra si está arriba o abajo y siempre visible; con esta configuración flota junto a ella."
         }
         // Isla: dónde se coloca a lo largo del borde
         LabeledRow {
@@ -111,7 +118,7 @@ ColumnLayout {
         }
         // Píldoras (isla / archipiélago): esquinas a partir de las de las ventanas, como mucho +4 px (no rompe el estilo)
         LabeledRow {
-            visible: root.mode === "archipielago" || root.mode === "isla"
+            visible: root.archi || root.mode === "isla"
             label: "Esquinas"; labelWidth: 60
             Seg {
                 readonly property int win: Settings.get("rounding", null) ?? Theme.winRadius
@@ -278,7 +285,8 @@ ColumnLayout {
         SwRow {
             separator: false
             label: "Isla dinámica"
-            sub: "una pastilla arriba al centro con lo que está pasando; se despliega al pasar el puntero o al pulsarla"
+            sub: root.mode === "integrada" ? "siempre activa con la forma «Isla integrada» de la barra" : "una pastilla arriba al centro con lo que está pasando; se despliega al pasar el puntero o al pulsarla"
+            enabled: root.mode !== "integrada"
             key: "island"; def: false
             onToggled: v => Settings.set("island", v)
         }

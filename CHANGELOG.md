@@ -3,6 +3,20 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.25.0] — 2026-11-28
+
+### Novedades
+- **Forma de barra «Isla integrada»** (Ajustes › Barra › Forma): como el archipiélago, pero el centro de la barra queda
+  libre para la isla dinámica, que pasa a ser parte de ella. Con nada en marcha es un punto; con actividad mide lo que la
+  barra y al pasar el puntero o pulsarla crece hacia el escritorio (hacia arriba con la barra abajo) en el hueco entre
+  las píldoras de los lados, sin pisarlas. Va con la barra arriba o abajo y siempre visible; con barra lateral o que se
+  esconde sola, la isla flota como antes y Ajustes lo avisa. En esta forma la isla está siempre activa y la onda de
+  audio no se muestra (la música sale en la isla).
+
+### Mantenimiento
+- `OsdStack.barLeft` y `barRight` publican el hueco libre de la barra; `Settings.barIslandSlot()` decide si la isla va
+  dentro de la barra de una pantalla.
+
 ## [0.24.0] — 2026-11-27
 
 ### Novedades

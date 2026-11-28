@@ -12,8 +12,8 @@ CHANGELOG.
 ### Renovación de la interfaz, por etapas
 
 Hecho: botón «mantener para borrar» (0.20.0), pastilla «Escuchando…» (0.21.0), widgets de calendario, próxima reunión y
-zonas horarias en el panel `Super + G` (0.22.0), fila de música en el centro de control (0.23.0) e isla dinámica básica
-(0.24.0). Cada etapa sale como versión propia.
+zonas horarias en el panel `Super + G` (0.22.0), fila de música en el centro de control (0.23.0), isla dinámica básica
+(0.24.0) y forma de barra «Isla integrada» (0.25.0). Cada etapa sale como versión propia.
 
 Reglas de calidad en todas: un interruptor en Ajustes para lo nuevo y vistoso; solo `Theme.*` y respetar «Reducir
 movimiento»; probado en claro y oscuro, con dos pantallas y con teclado; `dev/perf.sh` antes y después; captura en la
@@ -23,12 +23,8 @@ anterior); `lint`, `check` y documentación. Listón de reposo (2026-11-27, 0.23
 
 - [ ] **Isla dinámica, lo que falta**: meter el dictado dentro de la isla (hoy su píldora va aparte, debajo), avisos
       entrantes (se despliega unos segundos al llegar una notificación o al acabar un Pomodoro), varias pantallas
-      (hoy solo la principal), probarla en claro y medir su coste con actividad (solo se midió en reposo).
-- [ ] **Modo de barra «Isla integrada»** (`barMode`, junto a `archipielago`): la barra se reduce a pastillas pequeñas
-      a los lados (espacios y título a la izquierda; estado, reloj y ajustes a la derecha) y el centro queda para la
-      isla, que pasa a ser parte de la barra: reserva su sitio, se agranda sin tapar a las pastillas y se encoge a un
-      punto cuando no hay actividad. Con la barra arriba (lo normal) y, si se puede, abajo; con barra a los lados no
-      aplica y se avisa en Ajustes. Reutiliza `BarWidgets` y `barOrder`. Hoy la isla flota bajo la barra.
+      (hoy solo la principal), probarla en claro y medir su coste con actividad (solo se midió en reposo). «Isla integrada»: sin probar en claro ni
+      con dos pantallas; la isla sigue a la pantalla con foco.
 - [ ] **Widgets sobre el escritorio**: los widgets nuevos (y los de siempre) viven en el panel `Super + G`, no sobre el
       escritorio como en las referencias. Falta una capa en el fondo para colocarlos (calendario, próxima reunión,
       zonas horarias) y, si se quiere, el gráfico de contribuciones de GitHub (necesita red y un usuario público).

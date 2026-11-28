@@ -66,16 +66,21 @@ Singleton {
     // barHeight (Ajustes › Barra › Tamaño): grosor en px, de 24 a 56 (34 = «Normal», las medidas del diseño:
     // fija 32 px, flotante/isla/archipiélago 30 px + margen, lateral 36 px de ancho). El contenido se escala en
     // proporción (barScale), así iconos y textos crecen con la barra.
-    // barMode: "fija" · "flotante" · "isla" (mide lo que su contenido) · "archipielago" (cada grupo en su propia píldora).
+    // barMode: "fija" · "flotante" · "isla" (mide lo que su contenido) · "archipielago" (cada grupo en su propia píldora) ·
+    // "integrada" (archipiélago con el centro libre para la isla dinámica: modules/island).
     // barAlign: "inicio" · "centro" · "fin" (isla) controla la posición a lo largo del borde.
     readonly property int barSize: Math.max(24, Math.min(56, Math.round(Number(get("barHeight", 34)) || 34)))
     readonly property string barPos: get("barPos", "abajo")
     // "media" se eliminó de la UI: se comporta como "isla" (flotante y mide lo que pida el contenido).
     readonly property string barMode: { const v = get("barMode", "fija"); return v === "media" ? "isla" : v; }
-    readonly property bool barFloating: ["flotante", "isla", "archipielago"].includes(barMode)
+    readonly property bool barFloating: ["flotante", "isla", "archipielago", "integrada"].includes(barMode)
     readonly property bool barIsland: barMode === "isla"
     readonly property string barAlign: ["inicio", "fin"].includes(get("barAlign", "centro")) ? get("barAlign", "centro") : "centro"
-    readonly property bool barArchipelago: barMode === "archipielago"
+    readonly property bool barArchipelago: barMode === "archipielago" || barMode === "integrada"
+    // «Isla integrada» solo con la barra arriba o abajo y siempre visible; si no, la isla flota como siempre
+    readonly property bool barIntegrated: barMode === "integrada" && !barVertical && !barAutoHide && !barSmartHide
+    // ¿Tiene la isla su hueco en la barra de esta pantalla? (la principal, con barra completa)
+    function barIslandSlot(scr): bool { return barIntegrated && scr && scr === Shell.screen && !Shell.barHidden && Shell.barModeFor(scr) === "completa"; }
     readonly property bool barVertical: barPos === "izquierda" || barPos === "derecha"
     // Margen con el borde si flota: el mismo hueco que las ventanas (gapsOut), entre 2 y 4 px, igual en los 4 lados
     // (config/apply/52-pip.py lo calcula igual)

@@ -16,6 +16,7 @@ Item {
     required property var barWindow
     property bool compact: false          // isla central: los tres grupos seguidos, sin huecos
     property bool islands: false          // archipiélago: cada grupo en su propia píldora (BarPill)
+    property bool slot: false             // isla integrada: el centro queda libre para la isla dinámica (sin onda)
     // Pantalla secundaria: sus espacios, el título de su ventana y, a la derecha, lo que gastan sus programas (sin
     // aplicaciones, onda, chips, bandeja ni estado)
     readonly property bool secondary: Shell.barModeFor(barWindow.screen) === "sencilla"
@@ -33,11 +34,16 @@ Item {
     // Archipiélago: la onda va en su píldora entre la izquierda y los chips; si no cabe (pantalla estrecha o barra
     // grande), se oculta en lugar de montarse sobre la píldora de los chips
     readonly property bool waveFits: compact || (islands ? titleStart + 12 + wave.width <= right.x - 26 : waveX >= titleStart - 8)
-    readonly property real centerStart: !wave.active || !waveFits ? (secondary ? usage.x - 12 : right.x)
+    readonly property real slotMin: 160      // hueco que se deja a la isla plegada (la mínima, con su margen)
+    readonly property real centerStart: slot ? right.x - slotMin
+        : !wave.active || !waveFits ? (secondary ? usage.x - 12 : right.x)
         : islands ? Math.min((width - wave.width) / 2, right.x - 26 - wave.width) - 22 - 10
         : waveX
     readonly property real titleMax: compact ? 240 : Math.max(0, Math.min(300, width * 0.3, centerStart - gapC - titleStart))
 
+    // Con la isla en la barra: el hueco libre entre las píldoras de los lados (px de pantalla), para que no las pise al crecer
+    Binding { target: OsdStack; property: "barLeft"; when: root.slot; value: pillL.width * root.barWindow.k + Settings.barOffset }
+    Binding { target: OsdStack; property: "barRight"; when: root.slot; value: (right.x - 4) * root.barWindow.k + Settings.barOffset }
     BarPill { id: pillL; bar: root.barWindow; visible: root.islands; x: 0; height: parent.height; width: left.x + left.implicitWidth + (title.visible ? 10 : 3) }
     BarPill { id: pillC; bar: root.barWindow; visible: root.islands && wave.active && root.waveFits; x: wave.x - 10; height: parent.height; width: wave.width + 20 }
     // Píldora de los chips (si hay alguno) y la del grupo de estado
@@ -71,7 +77,7 @@ Item {
 
     Loader {
         id: wave
-        active: Settings.barHas("musica") && !root.secondary
+        active: Settings.barHas("musica") && !root.secondary && !root.slot
         visible: root.waveFits
         anchors.verticalCenter: parent.verticalCenter
         // Archipiélago: centrada, pero sin pisar las píldoras de los lados (12 px de hueco como mínimo)

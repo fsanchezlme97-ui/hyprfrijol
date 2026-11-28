@@ -16,6 +16,8 @@
 // Isla: la barra flota y mide lo que su contenido; el resto de la franja deja pasar el ratón.
 // Archipiélago: cada grupo de módulos en su propia píldora flotante (BarPill), con el escritorio visible entre
 // ellas; solo las píldoras reciben el ratón (máscara con content.item.pills).
+// Isla integrada (barMode "integrada"): como el archipiélago pero con el centro libre para la isla dinámica
+// (modules/island), que se pone ahí y se despliega hacia el escritorio. Sin onda de audio en ese modo.
 // Super + J (Shell.barHidden) la deja escondida: vuelve al llevar el cursor al borde.
 import QtQuick
 import Quickshell
@@ -31,6 +33,7 @@ PanelWindow {
     readonly property bool floating: Settings.barFloating
     readonly property bool island: Settings.barIsland
     readonly property bool archi: Settings.barArchipelago
+    readonly property bool slot: Settings.barIslandSlot(screen)   // hueco central para la isla dinámica
     readonly property bool vertical: Settings.barVertical
     readonly property int off: Settings.barOffset
     readonly property int thickness: Settings.barThickness
@@ -194,7 +197,7 @@ PanelWindow {
             }
         }
     }
-    Component { id: hComp; BarH { barWindow: bar; compact: bar.island; islands: bar.archi } }
+    Component { id: hComp; BarH { barWindow: bar; compact: bar.island; islands: bar.archi; slot: bar.slot } }
     Component { id: vComp; BarV { barWindow: bar; compact: bar.island; islands: bar.archi } }
 
     Connections {

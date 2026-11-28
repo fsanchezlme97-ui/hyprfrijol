@@ -132,6 +132,7 @@
  "greeter": true,
  "groups": [
   "audio",
+  "docker",
   "i2c",
   "input",
   "lp",
@@ -139,11 +140,11 @@
   "storage",
   "video"
  ],
- "hyprfrijol": "v0.23.0",
+ "hyprfrijol": "v0.24.0",
  "ollama": [
   "gemma4:e4b"
  ],
- "saved": "2026-11-27 22:02",
+ "saved": "2026-11-28 08:14",
  "services": [
   "ufw",
   "cups.socket",
