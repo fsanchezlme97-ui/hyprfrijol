@@ -3,6 +3,14 @@
 Cada versión es una etiqueta de git `vX.Y.Z`. `hf-update` muestra esta lista (o la anotación de la etiqueta)
 antes de actualizar. Formato: la versión más nueva arriba, una sección `## [X.Y.Z] — AAAA-MM-DD` por versión.
 
+## [0.30.1] — 2026-11-28
+
+### Seguridad
+- Recordar, olvidar y escribir en el diario piden confirmación siempre, aunque la confirmación esté apagada o hayas
+  marcado «Aprobar siempre»: un texto malicioso en el portapapeles no puede colar un recuerdo que vaya en cada prompt.
+- El resumen de la conversación anterior no se hace si la conversación leyó datos de fuera (capturas, imágenes,
+  documentos o consultas).
+
 ## [0.30.0] — 2026-11-28
 
 ### Novedades

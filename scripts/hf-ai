@@ -834,7 +834,9 @@ def meta(a):
         ro = (mcp_tool(str(a.get("server") or ""), str(a.get("tool") or "")) or {}).get("readOnly")
         return {"label": label(a), "undo": False, "confirm": True, "kind": approve_kind(a), "preview": preview(a),
                 **({"note": "Solo lectura: te enseño lo que responda"} if ro else {})}
-    return {"label": label(a), "undo": not irreversible, "confirm": irreversible and not quiet,
+    # la memoria y el diario siempre preguntan: un recuerdo colado (p. ej. desde el portapapeles) iría en cada prompt
+    mine = t in ("remember", "forget", "note")
+    return {"label": label(a), "undo": not irreversible, "confirm": mine or (irreversible and not quiet),
             "kind": approve_kind(a), "preview": preview(a)}
 
 def _num(v):
@@ -1358,6 +1360,9 @@ def _selftest_memory():
             _private_write(RECAP, {"t": int(time.time()) - 9 * 86400, "text": "viejo"})
             assert "viejo" not in memory_doc("ollama", {})
             assert a and validate([{"type": "remember", "text": "x" * 500}])[0]["text"] == "x" * MEM_ITEM
+            for t in ("remember", "forget", "note"):     # nunca se aplican solos (ni con «Aprobar siempre»)
+                po = plan_out("", [{"type": t, "text": "x"}], {"aiAlwaysApprove": [t]})
+                assert po["confirm"] and not po["auto"], po
         finally:
             MEMORY, RECAP = keep
 

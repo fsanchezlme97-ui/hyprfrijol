@@ -445,12 +445,15 @@ del texto (un argumento no puede pasar de 128 KB).
 
 - **Recuerdos** (`aiMemory`, por defecto sí; Ajustes › Asistente de IA › Privacidad › Memoria): cuando le cuentas algo
   personal que vale la pena recordar (gustos, fechas, personas, proyectos, cómo estás), Emma propone la acción
-  `remember` con su tarjeta, y solo se guarda si la apruebas (o si marcaste «Aprobar siempre»). «Olvida lo de…»
+  `remember` con su tarjeta, y solo se guarda si la apruebas: recordar, olvidar y el diario preguntan siempre, aunque
+  la confirmación esté apagada o marques «Aprobar siempre» (un recuerdo colado, p. ej. desde el portapapeles, iría en
+  cada prompt). «Olvida lo de…»
   propone `forget`. Las dos se deshacen. Se guardan en `~/.local/state/hyprfrijol/ai-memoria.json` (modo 600; 40 como
   mucho, de 160 caracteres, sin secretos).
 - **Conversación anterior**: al empezar otra con «+», el panel manda el texto de la que se cierra a `hf-ai recap`, que
   la resume en una o dos frases con el modelo rápido y la guarda en `ai-recap.json`. Vale 7 días. Borrar una
-  conversación del historial no la resume, y sin historial (`aiHistory`) tampoco se resume.
+  conversación del historial no la resume, y sin historial (`aiHistory`) tampoco se resume. Tampoco la que leyó datos de
+  fuera (capturas, imágenes, documentos o consultas), que podrían traer órdenes.
 - **Solo en local**: recuerdos y resumen entran en el prompt (como datos sobre ti, no como instrucciones, con un tope
   de ~2.400 caracteres) solo si responde un modelo local (Ollama, LM Studio, vLLM). Con un proveedor en la nube no se
   mandan, y el resumen no se hace.

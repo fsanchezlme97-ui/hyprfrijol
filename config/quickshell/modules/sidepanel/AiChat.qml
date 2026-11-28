@@ -583,11 +583,13 @@ Item {
     }
     Timer { id: memWipeTimer; interval: 3000; onTriggered: root.memWipeArmed = false }
     // «+» (nueva conversación): antes de vaciar, Emma resume la que se cierra (hf-ai recap: solo el texto, en segundo
-    // plano) para retomarla en la siguiente. Borrar una conversación del historial no la resume.
+    // plano) para retomarla en la siguiente. Borrar una conversación del historial no la resume, ni se resume la que leyó
+    // datos de fuera (capturas, imágenes, documentos o consultas): el resumen va en cada prompt y podría traer órdenes.
     function newChat() {
+        const outside = messages.some(m => m.images?.length || m.files?.length || m.steps?.length);
         const ms = messages.filter(m => (m.role === "user" || m.role === "ai") && !m.error && !m.local && String(m.text ?? "").trim() !== "")
             .slice(-20).map(m => ({ role: m.role, text: String(m.text).slice(0, 600) }));
-        if (keepHistory && memoryOn && ms.some(m => m.role === "user") && ms.some(m => m.role === "ai"))
+        if (keepHistory && memoryOn && !outside && ms.some(m => m.role === "user") && ms.some(m => m.role === "ai"))
             Quickshell.execDetached(["sh", "-c", 'printf %s "$2" | "$1" recap >/dev/null 2>&1', "sh", Paths.script("hf-ai"), JSON.stringify(ms)]);
         clear();
     }
